@@ -2393,7 +2393,41 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     if (mode === "pdc") return `${ex.sets || "\u2014"}\xD7${ex.reps || "\u2014"}${unit} PDC${ex.weight ? ` (+${ex.weight} kg)` : ""}${rpe}`;
     return `${ex.sets || "\u2014"}\xD7${ex.reps || "\u2014"}${unit}${ex.weight ? ` @ ${ex.weight} kg` : ""}${rpe}`;
   }
-  function EntrainementsTab({ routinesApi, sessionsApi }) {
+  function TrainingPerformanceCard({ sessions }) {
+    const progress = useMemo(() => {
+      const byExercise = {};
+      [...sessions].sort((a, b) => a.date.localeCompare(b.date)).forEach((session) => {
+        (session.exercises || []).forEach((exercise) => {
+          if (!exercise.name || exercise.mode === "cardio") return;
+          const weight = num(exercise.weight);
+          const sets = num(exercise.sets);
+          const reps = num(exercise.reps);
+          if (!(weight > 0) || !(sets > 0) || !(reps > 0)) return;
+          const key = exercise.name.trim().toLocaleLowerCase("fr");
+          const volume = round(weight * sets * reps);
+          const item = { name: exercise.name.trim(), date: session.date, weight, volume };
+          if (!byExercise[key]) byExercise[key] = [];
+          byExercise[key].push(item);
+        });
+      });
+      return Object.values(byExercise).map((history) => {
+        const latest = history[history.length - 1];
+        const previous = history.length > 1 ? history[history.length - 2] : null;
+        const bestWeight = Math.max(...history.map((item) => item.weight));
+        const bestVolume = Math.max(...history.map((item) => item.volume));
+        return {
+          ...latest,
+          previousWeight: previous ? previous.weight : null,
+          weightDelta: previous ? round(latest.weight - previous.weight, 1) : null,
+          isWeightPB: latest.weight === bestWeight,
+          isVolumePB: latest.volume === bestVolume
+        };
+      }).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+    }, [sessions]);
+    if (!progress.length) return /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 22 } }, /* @__PURE__ */ React.createElement(SectionTitle, null, "Progression des charges"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: COLORS.textMuted, margin: "9px 0 0", lineHeight: 1.45 } }, "Enregistre séries, répétitions et charge dans tes séances : tes records et ta progression apparaîtront ici."));
+    return /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 22 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(SectionTitle, null, "Progression des charges"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10.5, color: COLORS.textFaint } }, "5 derniers exercices enregistrés")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7, marginTop: 10 } }, progress.map((item) => /* @__PURE__ */ React.createElement("div", { key: item.name, style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 10px", background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 9 } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, color: COLORS.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, item.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint, marginTop: 2 } }, fmtDateShort(item.date), " · volume ", item.volume, " kg")), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 600, fontSize: 12.5, color: item.isWeightPB ? COLORS.gold : COLORS.text } }, item.weight, " kg", item.isWeightPB ? " · record" : ""), item.weightDelta != null && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: item.weightDelta > 0 ? COLORS.good : item.weightDelta < 0 ? COLORS.warn : COLORS.textFaint, marginTop: 2 } }, item.weightDelta > 0 ? "+" : "", item.weightDelta, " kg vs dernière séance"))))));
+  }
+  function EntrainementsTabLegacy({ routinesApi, sessionsApi }) {
     const [routineModal, setRoutineModal] = useState(false);
     const [editingRoutine, setEditingRoutine] = useState(null);
     const [sessionModal, setSessionModal] = useState(false);
@@ -2465,6 +2499,9 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       var _a, _b, _c;
       return /* @__PURE__ */ React.createElement("button", { key: item.name, onClick: () => addFromLibrary(item), style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", textAlign: "left", width: "100%" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: COLORS.text } }, item.name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", flexShrink: 0 } }, item.mode === "cardio" ? (item.fields || []).map((f) => CARDIO_FIELD_DEFS[f].label).join(" \xB7 ") : `${((_a = item.defaults) == null ? void 0 : _a.sets) || 3}\xD7${((_b = item.defaults) == null ? void 0 : _b.reps) || ""}${((_c = item.defaults) == null ? void 0 : _c.repUnit) === "sec" ? " s" : ""} PDC`));
     })))))));
+  }
+  function EntrainementsTab({ routinesApi, sessionsApi }) {
+    return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(TrainingPerformanceCard, { sessions: sessionsApi.items }), /* @__PURE__ */ React.createElement(EntrainementsTabLegacy, { routinesApi, sessionsApi }));
   }
   function TendancesTab({ allData, profile, targets, weekStats, currentReport, reports, generating, genError, onGenerate, photos, onUploadPhoto, monthStats, currentMonthlyReport, monthlyReports, generatingMonthly, genErrorMonthly, onGenerateMonthly, apiKey }) {
     var _a;
