@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/restore_exercise_library.py'
       - 'index.html'
+      - '.github/workflows/restore-exercise-library.yml'
 
 permissions:
   contents: write
