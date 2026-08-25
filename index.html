@@ -304,10 +304,20 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
   const todayISO = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const parseISO = (s) => /* @__PURE__ */ new Date(s + "T00:00:00");
+  // Keep calendar dates in local time. Using toISOString() here shifts dates
+  // to the previous day in France/Europe because local midnight is still the
+  // previous UTC day during DST, which caused Journal navigation to jump by 2
+  // days backwards and made the next-day button appear stuck.
+  const toLocalISODate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
   const addDays = (dateStr, n) => {
     const d = parseISO(dateStr);
     d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
+    return toLocalISODate(d);
   };
   const fmtDateShort = (s) => !s ? "" : parseISO(s).toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "short" });
   const fmtDateLong = (s) => !s ? "" : parseISO(s).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
@@ -317,7 +327,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const day = d.getDay();
     const diff = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diff);
-    return d.toISOString().slice(0, 10);
+    return toLocalISODate(d);
   }
   const getWeekKey = (dateStr) => getMonday(dateStr);
   const getWeekRange = (weekKey) => ({ start: weekKey, end: addDays(weekKey, 6) });
