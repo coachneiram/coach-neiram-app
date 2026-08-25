@@ -1,0 +1,52 @@
+name: Fix training syntax
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-training-syntax.yml'
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fix missing comma in exercise library
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '    ] }\n    { group: "Golf — Mobilité & rotation"'
+          new = '    ] },\n    { group: "Golf — Mobilité & rotation"'
+          if old in s:
+              p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          elif new not in s:
+              raise SystemExit('Expected training library boundary not found')
+          PY
+
+      - name: Verify syntax boundary
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('index.html').read_text(encoding='utf-8')
+          assert '    ] },\n    { group: "Golf — Mobilité & rotation"' in s
+          assert 'mode: "warmup"' in s
+          assert 'option", { value: "warmup"' in s
+          print('Training syntax verified')
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'No changes needed'
+          else
+            git commit -m 'Fix training library syntax'
+            git push
+          fi
