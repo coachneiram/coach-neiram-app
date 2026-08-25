@@ -15,21 +15,56 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject search fix
+      - name: Inject search fix safely
         shell: python
         run: |
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
           tag = '<script src="food-search-fix.js"></script>'
+
+          # Undo the previous bad injection that landed inside the
+          # buildWeeklyReportHTML template literal. Keeping </script>
+          # inside the main inline script breaks HTML parsing and causes
+          # the app to render as a blank screen.
+          s = s.replace(
+              '</div><script src="food-search-fix.js"></script>\n</body></html>`;',
+              '</div></body></html>`;'
+          )
+
+          # Inject only immediately before the REAL document closing body.
+          # This must be the last occurrence, not the first </body> found
+          # inside a generated HTML template string.
           if tag not in s:
-              marker = '</body>'
+              marker = '\n</body>\n</html>'
               if marker not in s:
-                  raise SystemExit('index.html: </body> not found')
-              s = s.replace(marker, tag + '\n' + marker, 1)
-              p.write_text(s, encoding='utf-8')
+                  raise SystemExit('index.html: real document closing marker not found')
+              s = s.replace(marker, '\n' + tag + marker, 1)
           else:
-              print('Search fix already injected')
+              # If a tag exists elsewhere, normalize to one safe final tag.
+              bad = '</div><script src="food-search-fix.js"></script>\n</body></html>`;'
+              s = s.replace(bad, '</div></body></html>`;')
+              if s.count(tag) != 1 or not s.rstrip().endswith('</html>'):
+                  s = s.replace(tag, '')
+                  marker = '\n</body>\n</html>'
+                  if marker not in s:
+                      raise SystemExit('index.html: real document closing marker not found')
+                  s = s.replace(marker, '\n' + tag + marker, 1)
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Verify HTML structure
+        shell: python
+        run: |
+          from pathlib import Path
+          s = Path('index.html').read_text(encoding='utf-8')
+          tag = '<script src="food-search-fix.js"></script>'
+          assert s.count(tag) == 1, 'search fix tag count is not exactly 1'
+          assert s.rstrip().endswith('</html>'), 'index.html does not end with </html>'
+          pos = s.rfind(tag)
+          body_close = s.rfind('\n</body>\n</html>')
+          assert pos < body_close, 'search fix tag is not in the document body'
+          assert '</script>\n</body></html>`;' not in s, 'unsafe injection remains inside template literal'
 
       - name: Commit and push
         shell: bash
@@ -41,5 +76,5 @@ jobs:
             echo 'No changes to commit'
             exit 0
           fi
-          git commit -m 'Apply robust food search relevance ranking'
+          git commit -m 'Fix food search injection without breaking app'
           git push
