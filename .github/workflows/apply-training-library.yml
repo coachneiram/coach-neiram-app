@@ -1,0 +1,51 @@
+name: Apply golf training and warm-up library
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-training:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply training library and warm-up changes
+        run: python scripts/apply-training-library.py
+
+      - name: Verify training changes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s = Path('index.html').read_text(encoding='utf-8')
+          required = [
+              'Golf — Mobilité & rotation',
+              'Golf — Force & puissance du swing',
+              'Golf — Gainage & stabilité',
+              'Golf — Endurance parcours',
+              'Échauffement / Warm-up',
+              'value: "warmup"'
+          ]
+          for x in required:
+              assert x in s, f'Missing: {x}'
+          assert s.count('Golf — Mobilité & rotation') == 1
+          assert s.count('value: "warmup"') == 1
+          print('Training library verification OK')
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'No training changes to commit'
+            exit 0
+          fi
+          git commit -m 'Add golf exercises and warm-up mode'
+          git push
