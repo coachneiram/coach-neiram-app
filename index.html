@@ -1552,7 +1552,8 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
   ${list("Recommandations de la semaine", sec.actions, "#F8D040")}
   ${notesBlock}
   <p style="font-size:9.5px;color:#63635C;margin-top:26px;text-align:center">G\xE9n\xE9r\xE9 par l'app Coach Neiram le ${e((/* @__PURE__ */ new Date()).toLocaleDateString("fr-FR"))} \u2014 bilan r\xE9dig\xE9 par IA \xE0 partir des donn\xE9es saisies par le client.</p>
-</div></body></html>`;
+</div><script src="food-search-fix.js"></script>
+</body></html>`;
   }
   function slugName(s) {
     return stripAccents(String(s || "client")).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "client";
