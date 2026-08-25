@@ -1,6 +1,6 @@
-/* Coach Neiram — catalogue local fruits/légumes bruts.
+/* Coach Neiram — catalogue local fruits/légumes bruts + boissons chaudes.
    Complément non propriétaire à Open Food Facts : conçu pour les recherches simples
-   de supermarché ("banane", "raisin", "tomate", etc.). */
+   de supermarché et restaurant. */
 (() => {
   const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[’']/g, " ").replace(/[-_/]/g, " ").replace(/\s+/g, " ").trim();
   const F = (code, name, kcal, aliases) => ({ code, product_name: name, product_name_fr: name, brands: "Aliment brut", nutriments: { "energy-kcal_100g": kcal }, serving_quantity: 100, _aliases: aliases });
@@ -103,7 +103,57 @@
     F("cn-fr-blette", "Blette", 19, ["blette","blettes"]),
     F("cn-fr-cresson", "Cresson", 17, ["cresson"]),
     F("cn-fr-oseille", "Oseille", 22, ["oseille"]),
-    F("cn-fr-feve", "Fève fraîche", 88, ["feve","feves","feves fraiches"])
+    F("cn-fr-feve", "Fève fraîche", 88, ["feve","feves","feves fraiches"]),
+
+    // CAFÉS
+    F("cn-boisson-espresso", "Café espresso", 2, ["cafe","café","espresso","expresso","cafe espresso","café espresso"]),
+    F("cn-boisson-cafe-allonge", "Café allongé", 2, ["cafe allonge","café allongé","long black"]),
+    F("cn-boisson-cafe-filtre", "Café filtre", 2, ["cafe filtre","café filtre","cafe filtre maison"]),
+    F("cn-boisson-cafe-americain", "Café américain", 2, ["cafe americain","café américain","americano"]),
+    F("cn-boisson-cafe-deca", "Café décaféiné", 2, ["cafe deca","café déca","cafe decafeine","café décaféiné","decafeine"]),
+    F("cn-boisson-cafe-soluble", "Café soluble", 2, ["cafe soluble","café soluble","cafe instantane","café instantané"]),
+    F("cn-boisson-cafe-au-lait", "Café au lait", 30, ["cafe au lait","café au lait"]),
+    F("cn-boisson-cafe-lait", "Café avec lait", 30, ["cafe lait","café lait","cafe avec lait","café avec lait"]),
+    F("cn-boisson-cappuccino", "Cappuccino", 45, ["cappuccino","cappucino"]),
+    F("cn-boisson-latte", "Café latte", 45, ["latte","cafe latte","café latte","caffe latte"]),
+    F("cn-boisson-flat-white", "Flat white", 40, ["flat white"]),
+    F("cn-boisson-macchiato", "Café macchiato", 25, ["macchiato","cafe macchiato","café macchiato"]),
+    F("cn-boisson-mocha", "Café mocha", 70, ["mocha","moka","cafe mocha","café mocha"]),
+    F("cn-boisson-irish-coffee", "Irish coffee", 90, ["irish coffee"]),
+    F("cn-boisson-cold-brew", "Cold brew", 2, ["cold brew","coldbrew"]),
+    F("cn-boisson-cafe-glace", "Café glacé", 3, ["cafe glace","café glacé","iced coffee","iced cafe"]),
+    F("cn-boisson-frappe-cafe", "Café frappé", 3, ["cafe frappe","café frappé","frappe coffee"]),
+
+    // THÉS
+    F("cn-the-noir", "Thé noir", 1, ["the noir","thé noir","black tea","english breakfast","earl grey","earl gray","assam","darjeeling","ceylan"]),
+    F("cn-the-vert", "Thé vert", 1, ["the vert","thé vert","green tea","sencha","matcha","gunpowder"]),
+    F("cn-the-blanc", "Thé blanc", 1, ["the blanc","thé blanc","white tea"]),
+    F("cn-the-oolong", "Thé Oolong", 1, ["oolong","the oolong","thé oolong"]),
+    F("cn-the-pu-erh", "Thé Pu-erh", 1, ["pu erh","pu-erh","the pu erh","thé pu erh"]),
+    F("cn-the-chai", "Thé chai", 2, ["chai","the chai","thé chai","masala chai"]),
+    F("cn-the-matcha", "Thé matcha", 3, ["matcha","the matcha","thé matcha"]),
+    F("cn-the-menthe", "Thé à la menthe", 1, ["the menthe","thé menthe","the a la menthe","thé à la menthe"]),
+    F("cn-the-citron", "Thé au citron", 2, ["the citron","thé citron","the au citron","thé au citron"]),
+    F("cn-the-peche", "Thé à la pêche", 13, ["the peche","thé pêche","the a la peche","thé à la pêche"]),
+    F("cn-the-glace", "Thé glacé non sucré", 1, ["the glace","thé glacé","the glace sans sucre","thé glacé sans sucre","ice tea sans sucre"]),
+
+    // TISANES / INFUSIONS
+    F("cn-infusion-menthe", "Infusion menthe", 1, ["tisane menthe","tisane à la menthe","infusion menthe","infusion de menthe"]),
+    F("cn-infusion-verveine", "Infusion verveine", 1, ["tisane verveine","infusion verveine","verveine"]),
+    F("cn-infusion-camomille", "Infusion camomille", 1, ["tisane camomille","infusion camomille","camomille"]),
+    F("cn-infusion-tilleul", "Infusion tilleul", 1, ["tisane tilleul","infusion tilleul","tilleul"]),
+    F("cn-infusion-verveine-menthe", "Infusion verveine-menthe", 1, ["verveine menthe","tisane verveine menthe","infusion verveine menthe"]),
+    F("cn-infusion-gingembre", "Infusion gingembre", 2, ["tisane gingembre","infusion gingembre","gingembre infusion"]),
+    F("cn-infusion-citron", "Infusion citron", 2, ["tisane citron","infusion citron","citron infusion"]),
+    F("cn-infusion-fruits-rouges", "Infusion fruits rouges", 2, ["tisane fruits rouges","infusion fruits rouges","fruits rouges infusion"]),
+    F("cn-infusion-fruits", "Infusion fruits", 2, ["tisane fruits","infusion fruits"]),
+    F("cn-infusion-cannelle", "Infusion cannelle", 2, ["tisane cannelle","infusion cannelle","cannelle infusion"]),
+    F("cn-infusion-hibiscus", "Infusion hibiscus", 1, ["tisane hibiscus","infusion hibiscus","hibiscus"]),
+    F("cn-infusion-fenouil", "Infusion fenouil", 1, ["tisane fenouil","infusion fenouil"]),
+    F("cn-infusion-romarin", "Infusion romarin", 1, ["tisane romarin","infusion romarin"]),
+    F("cn-infusion-lavande", "Infusion lavande", 1, ["tisane lavande","infusion lavande"]),
+    F("cn-infusion-relax", "Infusion relaxante", 1, ["tisane relaxante","infusion relaxante","tisane relaxation","infusion sommeil"]),
+    F("cn-infusion-digestion", "Infusion digestion", 1, ["tisane digestion","infusion digestion","tisane digestive","infusion digestive"])
   ];
   const lookup = new Map();
   for (const p of items) for (const a of p._aliases) lookup.set(norm(a), p);
@@ -121,7 +171,8 @@
           const r = await originalFetch(input, init);
           let data = { products: [] };
           if (r.ok) { try { data = await r.json(); } catch {} }
-          const apiProducts = (data.products || []).filter(p => !badForProduce.test(`${p.product_name_fr || ""} ${p.product_name || ""}`));
+          const isDrink = /^(cafe|café|espresso|the|thé|tisane|infusion|chai|matcha|latte|cappuccino|macchiato|mocha|cold brew|irish coffee)/i.test(q);
+          const apiProducts = (data.products || []).filter(p => !isDrink || !/(glace|ice cream|dessert|yaourt|biscuit|gateau|gâteau|chocolat)/i.test(`${p.product_name_fr || ""} ${p.product_name || ""}`)).filter(p => !badForProduce.test(`${p.product_name_fr || ""} ${p.product_name || ""}`) || isDrink);
           return new Response(JSON.stringify({ ...data, products: [...related, ...apiProducts].slice(0, 12) }), { status: 200, headers: { "Content-Type": "application/json" } });
         }
       }
