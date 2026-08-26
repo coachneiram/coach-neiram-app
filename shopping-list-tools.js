@@ -52,7 +52,9 @@
     return text.replace(/\n/g,' ').replace(/^[-•" ]+|[" ]+$/g,'').slice(0,100);
   };
   const makeButton=(label,kind)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=label; Object.assign(b.style,{padding:'8px 10px',borderRadius:'9px',border:'1px solid #28282D',background:'#141416',color:'#F8D040',font:'600 12px Inter,sans-serif',cursor:'pointer',flex:'1'}); b.dataset.cnShopTool=kind; return b; };
+  let setupScheduled = false;
   const setup = () => {
+    setupScheduled = false;
     const input=findCourseInput(); if(!input) return;
     const parent=input.parentElement?.parentElement || input.parentElement; if(!parent || parent.querySelector('[data-cn-shop-toolbar]')) return;
     const toolbar=document.createElement('div'); toolbar.dataset.cnShopToolbar='1'; Object.assign(toolbar.style,{display:'flex',gap:'7px',marginTop:'8px',marginBottom:'4px'});
@@ -64,5 +66,17 @@
     photoInput.onchange=async()=>{ const f=photoInput.files?.[0]; photoInput.value=''; if(!f)return; try{notify('Analyse de la photo…'); const data=await resize(f); const name=await identifyFood(data); if(!name)throw new Error('no-name'); addToCourses(name); notify('Ajouté : '+name);}catch(e){notify(e.message==='key'?'Ajoute ta clé IA dans Réglages pour identifier la photo.':'Photo non reconnue — réessaie avec une photo plus nette.');} };
     barcodeInput.onchange=async()=>{ const f=barcodeInput.files?.[0]; barcodeInput.value=''; if(!f)return; try{notify('Lecture du code-barres…'); const data=await resize(f); const code=await readBarcode(data); if(!code)throw new Error('no-code'); const name=await lookupBarcode(code); if(!name)throw new Error('not-found'); addToCourses(name); notify('Ajouté : '+name);}catch(e){notify(e.message==='key'?'Scanne avec une photo ou ajoute ta clé IA dans Réglages.':e.message==='not-found'?'Produit introuvable dans Open Food Facts.':'Code-barres illisible — cadre-le bien à plat.');} };
   };
-  const obs=new MutationObserver(setup); obs.observe(document.documentElement,{childList:true,subtree:true}); setup();
+  const scheduleSetup = () => {
+    if (setupScheduled) return;
+    setupScheduled = true;
+    const run = () => setup();
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+    else setTimeout(run, 0);
+  };
+  const root = document.getElementById('root');
+  if (root) {
+    const obs = new MutationObserver(scheduleSetup);
+    obs.observe(root, { childList: true, subtree: true });
+  }
+  scheduleSetup();
 })();
