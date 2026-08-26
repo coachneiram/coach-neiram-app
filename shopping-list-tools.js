@@ -56,12 +56,18 @@
   const setup = () => {
     setupScheduled = false;
     const input=findCourseInput(); if(!input) return;
-    const parent=input.parentElement?.parentElement || input.parentElement; if(!parent || parent.querySelector('[data-cn-shop-toolbar]')) return;
+    const host=input.parentElement?.parentElement || input.parentElement; if(!host) return;
+    // React peut recréer l'input à chaque rendu. On marque le conteneur hôte,
+    // et on supprime toute ancienne barre liée à un input précédent pour éviter
+    // l'empilement Photo/Code-barres à l'infini.
+    const existing = host.parentElement?.querySelectorAll('[data-cn-shop-toolbar]') || [];
+    existing.forEach(el => { if (el !== host.querySelector('[data-cn-shop-toolbar]')) el.remove(); });
+    if (host.parentElement?.querySelector('[data-cn-shop-toolbar]')) return;
     const toolbar=document.createElement('div'); toolbar.dataset.cnShopToolbar='1'; Object.assign(toolbar.style,{display:'flex',gap:'7px',marginTop:'8px',marginBottom:'4px'});
-    const photo=makeButton('📷 Photo aliment','photo'); const barcode=makeButton('▥ Code-barres','barcode'); toolbar.append(photo,barcode); parent.parentElement.insertBefore(toolbar,parent);
+    const photo=makeButton('📷 Photo aliment','photo'); const barcode=makeButton('▥ Code-barres','barcode'); toolbar.append(photo,barcode); host.parentElement.insertBefore(toolbar,host);
     const photoInput=document.createElement('input'); photoInput.type='file'; photoInput.accept='image/*'; photoInput.capture='environment'; photoInput.style.display='none';
     const barcodeInput=document.createElement('input'); barcodeInput.type='file'; barcodeInput.accept='image/*'; barcodeInput.capture='environment'; barcodeInput.style.display='none';
-    parent.parentElement.append(photoInput,barcodeInput);
+    host.parentElement.append(photoInput,barcodeInput);
     photo.onclick=()=>photoInput.click(); barcode.onclick=()=>barcodeInput.click();
     photoInput.onchange=async()=>{ const f=photoInput.files?.[0]; photoInput.value=''; if(!f)return; try{notify('Analyse de la photo…'); const data=await resize(f); const name=await identifyFood(data); if(!name)throw new Error('no-name'); addToCourses(name); notify('Ajouté : '+name);}catch(e){notify(e.message==='key'?'Ajoute ta clé IA dans Réglages pour identifier la photo.':'Photo non reconnue — réessaie avec une photo plus nette.');} };
     barcodeInput.onchange=async()=>{ const f=barcodeInput.files?.[0]; barcodeInput.value=''; if(!f)return; try{notify('Lecture du code-barres…'); const data=await resize(f); const code=await readBarcode(data); if(!code)throw new Error('no-code'); const name=await lookupBarcode(code); if(!name)throw new Error('not-found'); addToCourses(name); notify('Ajouté : '+name);}catch(e){notify(e.message==='key'?'Scanne avec une photo ou ajoute ta clé IA dans Réglages.':e.message==='not-found'?'Produit introuvable dans Open Food Facts.':'Code-barres illisible — cadre-le bien à plat.');} };
