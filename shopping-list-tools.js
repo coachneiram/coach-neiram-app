@@ -24,12 +24,20 @@
     if (!n) { n = document.createElement('div'); n.id = 'cn-shop-tool-note'; Object.assign(n.style,{position:'fixed',left:'50%',bottom:'86px',transform:'translateX(-50%)',zIndex:9999,background:'#18181B',color:'#F5F5F2',border:'1px solid #F8D040',borderRadius:'10px',padding:'10px 13px',font:'12px Inter, sans-serif',maxWidth:'calc(100vw - 30px)',boxShadow:'0 8px 25px rgba(0,0,0,.45)'}); document.body.appendChild(n); } n.textContent=msg; clearTimeout(n._t); n._t=setTimeout(()=>n.remove(),3500);
   };
   const resize = file => new Promise((resolve,reject)=>{ const r=new FileReader(); r.onerror=()=>reject(new Error('image')); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const scale=Math.min(1,1000/img.width), c=document.createElement('canvas'); c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale); c.getContext('2d').drawImage(img,0,0,c.width,c.height); resolve(c.toDataURL('image/jpeg',.82)); }; img.onerror=()=>reject(new Error('image')); img.src=e.target.result; }; r.readAsDataURL(file); });
+  const readKey = () => {
+    let raw = '';
+    try { raw = localStorage.getItem('coach_gemini_key') || ''; } catch (_) { return ''; }
+    if (!raw) return '';
+    try { const p = JSON.parse(raw); if (typeof p === 'string') return p.trim(); } catch (_) {}
+    return raw.replace(/^"+|"+$/g, '').trim();
+  };
   const geminiVision = async (dataUrl, prompt) => {
-    const key = localStorage.getItem('coach_gemini_key') || '';
+    const key = readKey();
     if (!key) throw new Error('key');
     const body={contents:[{role:'user',parts:[{inlineData:{mimeType:'image/jpeg',data:dataUrl.split(',')[1]}},{text:prompt}]}],generationConfig:{maxOutputTokens:100,thinkingConfig:{thinkingLevel:'low'}}};
     for (const model of ['gemini-3.6-flash','gemini-3.5-flash-lite','gemini-flash-latest']) {
-      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      let r;
+      try { r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); } catch (_) { continue; }
       if (!r.ok) continue;
       const d=await r.json(); const text=(((d.candidates||[])[0]||{}).content?.parts||[]).map(p=>p.text||'').join('').trim(); if(text) return text;
     }
@@ -56,26 +64,41 @@
   const setup = () => {
     setupScheduled = false;
     const input=findCourseInput(); if(!input) return;
-    const host=input.parentElement?.parentElement || input.parentElement; if(!host) return;
-    // React peut recréer l'input à chaque rendu. On marque le conteneur hôte,
-    // et on supprime toute ancienne barre liée à un input précédent pour éviter
-    // l'empilement Photo/Code-barres à l'infini.
-    const existing = host.parentElement?.querySelectorAll('[data-cn-shop-toolbar]') || [];
-    existing.forEach(el => { if (el !== host.querySelector('[data-cn-shop-toolbar]')) el.remove(); });
-    if (host.parentElement?.querySelector('[data-cn-shop-toolbar]')) return;
-    const toolbar=document.createElement('div'); toolbar.dataset.cnShopToolbar='1'; Object.assign(toolbar.style,{display:'flex',gap:'7px',marginTop:'8px',marginBottom:'4px'});
-    const photo=makeButton('📷 Photo aliment','photo'); const barcode=makeButton('▥ Code-barres','barcode'); toolbar.append(photo,barcode); host.parentElement.insertBefore(toolbar,host);
-    const photoInput=document.createElement('input'); photoInput.type='file'; photoInput.accept='image/*'; photoInput.capture='environment'; photoInput.style.display='none';
-    const barcodeInput=document.createElement('input'); barcodeInput.type='file'; barcodeInput.accept='image/*'; barcodeInput.capture='environment'; barcodeInput.style.display='none';
-    host.parentElement.append(photoInput,barcodeInput);
-    photo.onclick=()=>photoInput.click(); barcode.onclick=()=>barcodeInput.click();
+    const parent=input.parentElement?.parentElement || input.parentElement; if(!parent || !parent.parentElement) return;
+    const grandParent = parent.parentElement;
+
+    // La toolbar est une SŒUR de parent, pas un descendant de parent.
+    // Le garde-fou vérifie donc uniquement les enfants directs du grand-parent.
+    grandParent.querySelectorAll(':scope > [data-cn-shop-toolbar]').forEach((el, index, list) => {
+      if (index > 0) el.remove();
+    });
+    if (grandParent.querySelector(':scope > [data-cn-shop-toolbar]')) return;
+
+    const toolbar=document.createElement('div');
+    toolbar.dataset.cnShopToolbar='1';
+    Object.assign(toolbar.style,{display:'flex',gap:'7px',marginTop:'8px',marginBottom:'4px'});
+    const photo=makeButton('📷 Photo aliment','photo');
+    const barcode=makeButton('▥ Code-barres','barcode');
+    toolbar.append(photo,barcode);
+
+    const photoInput=document.createElement('input');
+    photoInput.type='file'; photoInput.accept='image/*'; photoInput.capture='environment'; photoInput.style.display='none';
+    const barcodeInput=document.createElement('input');
+    barcodeInput.type='file'; barcodeInput.accept='image/*'; barcodeInput.capture='environment'; barcodeInput.style.display='none';
+    document.body.append(photoInput,barcodeInput);
+
+    photo.onclick=()=>photoInput.click();
+    barcode.onclick=()=>barcodeInput.click();
     photoInput.onchange=async()=>{ const f=photoInput.files?.[0]; photoInput.value=''; if(!f)return; try{notify('Analyse de la photo…'); const data=await resize(f); const name=await identifyFood(data); if(!name)throw new Error('no-name'); addToCourses(name); notify('Ajouté : '+name);}catch(e){notify(e.message==='key'?'Ajoute ta clé IA dans Réglages pour identifier la photo.':'Photo non reconnue — réessaie avec une photo plus nette.');} };
     barcodeInput.onchange=async()=>{ const f=barcodeInput.files?.[0]; barcodeInput.value=''; if(!f)return; try{notify('Lecture du code-barres…'); const data=await resize(f); const code=await readBarcode(data); if(!code)throw new Error('no-code'); const name=await lookupBarcode(code); if(!name)throw new Error('not-found'); addToCourses(name); notify('Ajouté : '+name);}catch(e){notify(e.message==='key'?'Scanne avec une photo ou ajoute ta clé IA dans Réglages.':e.message==='not-found'?'Produit introuvable dans Open Food Facts.':'Code-barres illisible — cadre-le bien à plat.');} };
+
+    // Toolbar = frère de parent (insertion juste avant parent).
+    parent.parentElement.insertBefore(toolbar, parent);
   };
   const scheduleSetup = () => {
     if (setupScheduled) return;
     setupScheduled = true;
-    const run = () => setup();
+    const run = () => { try { setup(); } catch (_) { setupScheduled = false; } };
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
     else setTimeout(run, 0);
   };
