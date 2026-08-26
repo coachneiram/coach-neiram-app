@@ -65,14 +65,17 @@
     setupScheduled = false;
     const input=findCourseInput(); if(!input) return;
     const parent=input.parentElement?.parentElement || input.parentElement; if(!parent || !parent.parentElement) return;
-    const grandParent = parent.parentElement;
+    const host = parent.parentElement;
 
-    // La toolbar est une SŒUR de parent, pas un descendant de parent.
-    // Le garde-fou vérifie donc uniquement les enfants directs du grand-parent.
-    grandParent.querySelectorAll(':scope > [data-cn-shop-toolbar]').forEach((el, index, list) => {
+    // Toolbar = FRÈRE de host/parent selon la structure React : elle est insérée
+    // au niveau du parent de host. Le garde-fou cherche au même niveau, jamais
+    // parmi les descendants de l'élément qui reçoit la toolbar.
+    const hostParent = host.parentElement;
+    if (!hostParent) return;
+    hostParent.querySelectorAll(':scope > [data-cn-shop-toolbar]').forEach((el, index) => {
       if (index > 0) el.remove();
     });
-    if (grandParent.querySelector(':scope > [data-cn-shop-toolbar]')) return;
+    if (hostParent.querySelector(':scope > [data-cn-shop-toolbar]')) return;
 
     const toolbar=document.createElement('div');
     toolbar.dataset.cnShopToolbar='1';
@@ -92,8 +95,8 @@
     photoInput.onchange=async()=>{ const f=photoInput.files?.[0]; photoInput.value=''; if(!f)return; try{notify('Analyse de la photo…'); const data=await resize(f); const name=await identifyFood(data); if(!name)throw new Error('no-name'); addToCourses(name); notify('Ajouté : '+name);}catch(e){notify(e.message==='key'?'Ajoute ta clé IA dans Réglages pour identifier la photo.':'Photo non reconnue — réessaie avec une photo plus nette.');} };
     barcodeInput.onchange=async()=>{ const f=barcodeInput.files?.[0]; barcodeInput.value=''; if(!f)return; try{notify('Lecture du code-barres…'); const data=await resize(f); const code=await readBarcode(data); if(!code)throw new Error('no-code'); const name=await lookupBarcode(code); if(!name)throw new Error('not-found'); addToCourses(name); notify('Ajouté : '+name);}catch(e){notify(e.message==='key'?'Scanne avec une photo ou ajoute ta clé IA dans Réglages.':e.message==='not-found'?'Produit introuvable dans Open Food Facts.':'Code-barres illisible — cadre-le bien à plat.');} };
 
-    // Toolbar = frère de parent (insertion juste avant parent).
-    parent.parentElement.insertBefore(toolbar, parent);
+    // La toolbar est un FRÈRE de host : insertion juste avant host.
+    hostParent.insertBefore(toolbar, host);
   };
   const scheduleSetup = () => {
     if (setupScheduled) return;
