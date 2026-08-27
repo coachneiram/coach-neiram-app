@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="app-version" content="2026-08-27.6-table-rpe"/>
+<meta name="app-version" content="2026-08-27.7-courses-natif"/>
 <meta name="theme-color" content="#0B0B0C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -2079,6 +2079,10 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const [adaptOn, setAdaptOn] = useState(true);
     const [idea, setIdea] = useState(null);
     const [freq, setFreq] = useState({});
+    const [toolBusy, setToolBusy] = useState(null);
+    const [toolMsg, setToolMsg] = useState(null);
+    const photoRef = useRef(null);
+    const scanRef = useRef(null);
     useEffect(() => {
       let live = true;
       Promise.all([loadKey("coach_shopping_checked", {}), loadKey("coach_shopping_custom", []), loadKey("coach_shopping_freq", {})]).then(([c, cu, fr]) => {
@@ -2122,12 +2126,24 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       await persistChecked(next);
       setIdea(null);
     };
-    const addCustom = async () => {
-      if (!draft.trim()) return;
-      const entry = { id: uid(), name: draft.trim(), pending: true };
+    const addCustomWithMacros = async (name, macros) => {
+      const clean = String(name || "").trim();
+      if (!clean) return;
+      const entry = { id: uid(), name: clean, pending: false, kcal: macros.kcal, p: macros.p, c: macros.c, f: macros.f, source: macros.source };
+      setCustom((cur) => {
+        const updated = [...cur, entry];
+        saveKey("coach_shopping_custom", updated.map(({ pending, ...rest }) => rest)).catch(() => {
+        });
+        return updated;
+      });
+    };
+    const addCustom = async (forcedName) => {
+      const raw = typeof forcedName === "string" ? forcedName : draft;
+      if (!String(raw || "").trim()) return;
+      const entry = { id: uid(), name: String(raw).trim(), pending: true };
       const next = [...custom, entry];
       setCustom(next);
-      setDraft("");
+      if (typeof forcedName !== "string") setDraft("");
       await saveKey("coach_shopping_custom", next.map((c) => ({ ...c, pending: void 0 })));
       const macros = await estimateCustomMacros(entry.name, apiKey);
       setCustom((cur) => {
@@ -2135,6 +2151,44 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
         saveKey("coach_shopping_custom", updated.map(({ pending, ...rest }) => rest));
         return updated;
       });
+    };
+    const runShopPhoto = async (file) => {
+      if (!file) return;
+      setToolBusy("photo");
+      setToolMsg("Analyse de la photo\u2026");
+      try {
+        const dataUrl = await resizeImageFile(file, 800, 0.78);
+        const r = await analyzeMealPhoto(dataUrl, apiKey);
+        const name = r && r.name ? String(r.name).trim() : "";
+        if (!name) throw new Error("name");
+        await addCustomWithMacros(name, { kcal: num(r.calories) || null, p: num(r.protein) || null, c: num(r.carbs) || null, f: num(r.fat) || null, source: "photo" });
+        setToolMsg(`Ajout\xE9 : ${name}`);
+      } catch (e) {
+        console.error("[Coach Neiram] Courses \u2014 photo :", e);
+        setToolMsg(e && e.message === "image-format" ? "Photo illisible par ce navigateur. Choisis une image JPEG ou PNG." : aiErrorMsg(e, "Aliment non reconnu. R\xE9essaie avec une photo plus nette, ou tape le nom."));
+      } finally {
+        setToolBusy(null);
+      }
+    };
+    const runShopScan = async (file) => {
+      if (!file) return;
+      setToolBusy("scan");
+      setToolMsg("Lecture du code-barres\u2026");
+      try {
+        const dataUrl = await resizeImageFile(file, 1100, 0.82);
+        const code = await readBarcodeFromImage(dataUrl, apiKey);
+        if (!code) throw new Error("unreadable");
+        const p = await fetchProductByBarcode(code);
+        if (!p) throw new Error("not-found");
+        await addCustomWithMacros(p.name, { kcal: p.kcal100, p: p.p100, c: p.c100, f: p.f100, source: "off" });
+        setToolMsg(`Ajout\xE9 : ${p.name}`);
+      } catch (e) {
+        console.error("[Coach Neiram] Courses \u2014 code-barres :", e);
+        const m = e && e.message;
+        setToolMsg(m === "unreadable" ? "Code-barres illisible. Cadre-le de pr\xE8s, bien \xE0 plat." : m === "not-found" ? "Produit introuvable dans Open Food Facts." : m === "image-format" ? "Photo illisible par ce navigateur. Choisis une image JPEG ou PNG." : aiErrorMsg(e, "Lecture impossible. R\xE9essaie ou tape le nom."));
+      } finally {
+        setToolBusy(null);
+      }
     };
     const removeCustom = async (id) => {
       const next = custom.filter((c) => c.id !== id);
@@ -2180,7 +2234,15 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       return /* @__PURE__ */ React.createElement(Card, { key: cat.id, style: { padding: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "Poppins", fontSize: 12.5, fontWeight: 700, color: COLORS.gold, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 } }, cat.label), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } }, items.map((it) => /* @__PURE__ */ React.createElement(CheckRow, { key: it.n, id: slug(cat.id, it.n), item: it }))));
     }), /* @__PURE__ */ React.createElement(Card, { style: { padding: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "Poppins", fontSize: 12.5, fontWeight: 700, color: COLORS.gold, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 } }, "\u2795 Mes ajouts"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 } }, custom.map((c) => /* @__PURE__ */ React.createElement(CheckRow, { key: c.id, id: c.id, item: { n: c.name, kcal: c.kcal, p: c.p, c: c.c, f: c.f }, pending: c.pending, onRemove: () => removeCustom(c.id) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(TextInput, { placeholder: "Ajouter un article...", value: draft, onChange: (e) => setDraft(e.target.value), onKeyDown: (e) => {
       if (e.key === "Enter") addCustom();
-    }, style: { flex: 1 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: addCustom, disabled: !draft.trim(), style: { padding: "10px 14px" } }, "OK"))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 9.5, color: COLORS.textFaint, margin: "0 2px" } }, "Macros pour 100 g. \xAB Adapter \xE0 mon profil \xBB masque les articles incompatibles avec ton r\xE9gime et tes allergies."));
+    }, style: { flex: 1 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: () => addCustom(), disabled: !draft.trim(), style: { padding: "10px 14px" } }, "OK")), hasAI(apiKey) && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8 } }, /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", ref: photoRef, style: { display: "none" }, onChange: (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      runShopPhoto(f);
+    } }), /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", ref: scanRef, style: { display: "none" }, onChange: (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      runShopScan(f);
+    } }), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", icon: toolBusy === "photo" ? Loader2 : Camera, disabled: !!toolBusy, onClick: () => photoRef.current && photoRef.current.click(), style: { flex: 1, fontSize: 12 } }, "Photo aliment"), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", icon: toolBusy === "scan" ? Loader2 : Barcode, disabled: !!toolBusy, onClick: () => scanRef.current && scanRef.current.click(), style: { flex: 1, fontSize: 12 } }, "Code-barres")), toolMsg && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: toolBusy ? COLORS.textMuted : COLORS.gold, margin: "8px 0 0" } }, toolMsg)), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 9.5, color: COLORS.textFaint, margin: "0 2px" } }, "Macros pour 100 g. \xAB Adapter \xE0 mon profil \xBB masque les articles incompatibles avec ton r\xE9gime et tes allergies."));
   }
   function AlimentsSection({ profile, targets, logEntries }) {
     const remaining = useMemo(() => computeRemainingToday(logEntries, targets), [logEntries, targets]);
@@ -3198,6 +3260,5 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
 })();
 
 </script>
-<script src="food-search-fix.js"></script>
 </body>
 </html>
