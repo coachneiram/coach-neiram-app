@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="app-version" content="2026-08-27.8-fix-entrainements"/>
+<meta name="app-version" content="2026-08-27.10-repas-motivation"/>
 <meta name="theme-color" content="#0B0B0C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -626,6 +626,122 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       style: { flex: 1, minWidth: 0, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: "none", border: "none", borderRadius: 8, padding: "9px 11px", cursor: "pointer", textAlign: "left" }
     }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: COLORS.text, minWidth: 0 } }, p.name, p.brand ? /* @__PURE__ */ React.createElement("span", { style: { color: COLORS.textFaint } }, " \u2014 ", p.brand) : null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", flexShrink: 0 } }, p.kcal100, " kcal \xB7 P", p.p100, " G", p.c100, " L", p.f100)), /* @__PURE__ */ React.createElement(FavStar, { active: isFav, onToggle: onToggleFav }));
   }
+  const MOTIVATION_VARIANTS = {
+    sessionsLeft: [
+      (v) => `Plus que ${v.left} s\xE9ance${v.left > 1 ? "s" : ""} pour atteindre ton objectif de la semaine.`,
+      (v) => `${v.done}/${v.target} s\xE9ances cette semaine \u2014 il en reste ${v.left}.`,
+      (v) => `Encore ${v.left} s\xE9ance${v.left > 1 ? "s" : ""} et la semaine est boucl\xE9e.`
+    ],
+    sessionsDone: [
+      (v) => `Objectif s\xE9ances atteint : ${v.done}/${v.target} cette semaine.`,
+      (v) => `${v.done} s\xE9ances au compteur, objectif rempli.`,
+      (v) => `Semaine compl\xE8te c\xF4t\xE9 entra\xEEnement : ${v.done}/${v.target}.`
+    ],
+    protein: [
+      (v) => `Il te reste ${v.g} g de prot\xE9ines \xE0 couvrir aujourd'hui.`,
+      (v) => `Prot\xE9ines : ${v.done} / ${v.target} g \u2014 encore ${v.g} g.`,
+      (v) => `${v.g} g de prot\xE9ines \xE0 aller chercher d'ici ce soir.`
+    ],
+    water: [
+      (v) => `Hydratation : il te reste ${v.l} \xE0 boire aujourd'hui.`,
+      (v) => `${v.l} d'eau \xE0 boire pour atteindre ton objectif du jour.`
+    ],
+    steps: [
+      (v) => `Encore ${v.n} pas pour atteindre ton objectif du jour.`,
+      (v) => `Pas : ${v.done} / ${v.target} \u2014 il en manque ${v.n}.`
+    ],
+    streak: [
+      (v) => `${v.days} jours de suivi d'affil\xE9e.`,
+      (v) => `${v.days} jours cons\xE9cutifs renseign\xE9s \u2014 la r\xE9gularit\xE9 paie.`
+    ],
+    weightGoal: [
+      (v) => `${v.kg} kg te s\xE9parent de ton poids objectif.`,
+      (v) => `Objectif poids : encore ${v.kg} kg.`
+    ],
+    logToday: [
+      () => "Rien de saisi aujourd'hui : renseigne tes repas et ta forme du jour.",
+      () => "Journ\xE9e vide pour l'instant \u2014 pense \xE0 loguer tes repas."
+    ]
+  };
+  function buildMotivation(ctx) {
+    // Messages concrets : ils s'appuient sur un chiffre r\xE9el du jour ou de la
+    // semaine. Le repli n'est utilis\xE9 que si aucun d'eux ne s'applique, sinon
+    // il monopolise l'affichage et masque les informations utiles.
+    const concrete = [];
+    const fallback = [];
+    const { target, done, left } = ctx.sessions;
+    if (target > 0) {
+      if (left > 0) concrete.push({ key: "sessionsLeft", v: { left, done, target } });
+      else concrete.push({ key: "sessionsDone", v: { done, target } });
+    }
+    if (ctx.proteinLeft != null && ctx.proteinLeft >= 15 && ctx.hour >= 12) {
+      concrete.push({ key: "protein", v: { g: Math.round(ctx.proteinLeft), done: Math.round(ctx.proteinDone), target: ctx.proteinTarget } });
+    }
+    if (ctx.waterLeftMl != null && ctx.waterLeftMl > 0 && ctx.hour >= 11) {
+      concrete.push({ key: "water", v: { l: fmtL(ctx.waterLeftMl) } });
+    }
+    if (ctx.stepsLeft != null && ctx.stepsLeft > 0 && ctx.stepsDone > 0) {
+      concrete.push({ key: "steps", v: { n: ctx.stepsLeft.toLocaleString("fr-FR"), done: ctx.stepsDone.toLocaleString("fr-FR"), target: ctx.stepsTarget.toLocaleString("fr-FR") } });
+    }
+    if (ctx.streakDays >= 3) concrete.push({ key: "streak", v: { days: ctx.streakDays } });
+    if (ctx.weightGapKg != null && ctx.weightGapKg > 0.3) concrete.push({ key: "weightGoal", v: { kg: round(ctx.weightGapKg, 1) } });
+    if (ctx.emptyToday) fallback.push({ key: "logToday", v: {} });
+    const c = concrete.length ? concrete : fallback;
+    if (!c.length) return null;
+    const pick = c[ctx.seed % c.length];
+    const variants = MOTIVATION_VARIANTS[pick.key] || [];
+    if (!variants.length) return null;
+    const rotation = Math.floor(ctx.seed / Math.max(1, c.length));
+    return variants[rotation % variants.length](pick.v);
+  }
+  function MotivationCard({ text }) {
+    if (!text) return null;
+    return /* @__PURE__ */ React.createElement("div", {
+      style: { display: "flex", alignItems: "center", gap: 10, background: `${COLORS.gold}0E`, border: `1px solid ${COLORS.gold}44`, borderRadius: 12, padding: "11px 13px", marginBottom: 16 }
+    }, /* @__PURE__ */ React.createElement(Flame, { size: 17, color: COLORS.gold, style: { flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: COLORS.text, lineHeight: 1.45 } }, text));
+  }
+  const MEAL_PRESET_KEY = "cn_meal_presets";
+  function useMealPresets() {
+    const [presets, setPresets] = useState([]);
+    useEffect(() => {
+      let live = true;
+      loadKey(MEAL_PRESET_KEY, []).then((v) => {
+        if (live) setPresets(Array.isArray(v) ? v : []);
+      }).catch(() => {
+      });
+      return () => {
+        live = false;
+      };
+    }, []);
+    const persist = useCallback((updater) => {
+      setPresets((prev) => {
+        const next = updater(prev);
+        saveKey(MEAL_PRESET_KEY, next).catch(() => {
+        });
+        return next;
+      });
+    }, []);
+    const save = useCallback((name, mealType, entries) => {
+      const items = (entries || []).map((e) => ({
+        name: e.name,
+        calories: num(e.calories),
+        protein: num(e.protein),
+        carbs: num(e.carbs),
+        fat: num(e.fat)
+      }));
+      if (!items.length) return;
+      persist((prev) => [{ id: uid(), name: String(name || "Repas").trim() || "Repas", mealType, items, createdAt: todayISO() }, ...prev].slice(0, 60));
+    }, [persist]);
+    const remove = useCallback((id) => persist((prev) => prev.filter((p) => p.id !== id)), [persist]);
+    const rename = useCallback((id, name) => persist((prev) => prev.map((p) => p.id === id ? { ...p, name: String(name || "").trim() || p.name } : p)), [persist]);
+    return { presets, save, remove, rename };
+  }
+  const presetTotals = (p) => (p.items || []).reduce((a, it) => ({
+    kcal: a.kcal + num(it.calories),
+    p: a.p + num(it.protein),
+    c: a.c + num(it.carbs),
+    f: a.f + num(it.fat)
+  }), { kcal: 0, p: 0, c: 0, f: 0 });
   function computeBMR({ sex, weightKg, heightCm, age }) {
     if (!weightKg || !heightCm || !age) return null;
     return sex === "homme" ? 88.362 + 13.397 * weightKg + 4.799 * heightCm - 5.677 * age : 447.593 + 9.247 * weightKg + 3.098 * heightCm - 4.33 * age;
@@ -1961,6 +2077,8 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const [pickerTab, setPickerTab] = useState("library");
     const [search, setSearch] = useState("");
     const [freehand, setFreehand] = useState({ name: "", calories: "", protein: "", carbs: "", fat: "" });
+    const presetApi = useMealPresets();
+    const [savePrompt, setSavePrompt] = useState(null);
     const dayEntries = logEntriesApi.items.filter((e) => e.date === date);
     const totals = dayEntries.reduce((a, e) => ({ calories: a.calories + num(e.calories), protein: a.protein + num(e.protein), carbs: a.carbs + num(e.carbs), fat: a.fat + num(e.fat) }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
     const body = bodyApi.getForDate(date) || {};
@@ -2017,7 +2135,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     };
     const openPicker = (mealType) => {
       setMealModal({ mealType });
-      setPickerTab("library");
+      setPickerTab(presetApi.presets.length ? "presets" : "library");
       setSearch("");
       setFreehand({ name: "", calories: "", protein: "", carbs: "", fat: "" });
     };
@@ -2025,22 +2143,70 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       await logEntriesApi.add({ date, mealType: mealModal.mealType, dishId: dish.id, name: dish.name, calories: dish.calories, protein: dish.protein, carbs: dish.carbs, fat: dish.fat });
       setMealModal(null);
     };
+    const addPreset = async (preset) => {
+      for (const it of preset.items || []) {
+        await logEntriesApi.add({ date, mealType: mealModal.mealType, dishId: null, name: it.name, calories: it.calories, protein: it.protein, carbs: it.carbs, fat: it.fat });
+      }
+      setMealModal(null);
+    };
+    const confirmSavePreset = () => {
+      if (!savePrompt) return;
+      const items = dayEntries.filter((e) => e.mealType === savePrompt.mealType);
+      presetApi.save(savePrompt.name, savePrompt.mealType, items);
+      setSavePrompt(null);
+    };
     const addFreehand = async () => {
       if (!freehand.name.trim()) return;
       await logEntriesApi.add({ date, mealType: mealModal.mealType, dishId: null, name: freehand.name, calories: num(freehand.calories), protein: num(freehand.protein), carbs: num(freehand.carbs), fat: num(freehand.fat) });
       setMealModal(null);
     };
     const filteredDishes = dishesApi.items.filter((d) => d.name.toLowerCase().includes(search.toLowerCase())).slice(0, 30);
-    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(DateNav, { date, onChange: setDate }), score != null && /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(ProgressRing, { value: score, size: 96, stroke: 9, label: scoreLabel }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 160 } }, scoreParts.map((p) => /* @__PURE__ */ React.createElement(MiniBar, { key: p.key, label: p.label, pct: p.value, valueLabel: `${Math.round(p.value)}%` }))))), /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement(SectionTitle, null, "Nutrition \u2014 mes repas du jour"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 12, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "Poppins", fontSize: 25, fontWeight: 600, color: COLORS.text } }, Math.round(totals.calories)), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: COLORS.textMuted } }, " / ", (_a = targets == null ? void 0 : targets.calories) != null ? _a : "\u2014", " kcal")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11.5, color: COLORS.textFaint } }, dayEntries.length, " aliment", dayEntries.length > 1 ? "s" : "")), /* @__PURE__ */ React.createElement(MiniBar, { label: "Prot\xE9ines", pct: (targets == null ? void 0 : targets.protein) ? totals.protein / targets.protein * 100 : 0, valueLabel: `${Math.round(totals.protein)} / ${(_b = targets == null ? void 0 : targets.protein) != null ? _b : "\u2014"} g`, color: COLORS.gold }), /* @__PURE__ */ React.createElement(MiniBar, { label: "Glucides", pct: (targets == null ? void 0 : targets.carbs) ? totals.carbs / targets.carbs * 100 : 0, valueLabel: `${Math.round(totals.carbs)} / ${(_c = targets == null ? void 0 : targets.carbs) != null ? _c : "\u2014"} g`, color: COLORS.blue }), /* @__PURE__ */ React.createElement(MiniBar, { label: "Lipides", pct: (targets == null ? void 0 : targets.fat) ? totals.fat / targets.fat * 100 : 0, valueLabel: `${Math.round(totals.fat)} / ${(_d = targets == null ? void 0 : targets.fat) != null ? _d : "\u2014"} g`, color: COLORS.orange }), suggestions.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, paddingTop: 12, borderTop: `1px solid ${COLORS.border}` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 } }, "Pour compl\xE9ter ta journ\xE9e \u2014 reste ", Math.round(remainingToday.kcal), " kcal (P ", Math.round(remainingToday.p), " \xB7 G ", Math.round(remainingToday.c), " \xB7 L ", Math.round(remainingToday.f), ")"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, suggestions.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: COLORS.bgAlt, borderRadius: 8, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: COLORS.text } }, it.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: COLORS.textFaint, fontFamily: "IBM Plex Mono" } }, it.kcal, " kcal \xB7 P", it.p, " G", it.c, " L", it.f)), /* @__PURE__ */ React.createElement("button", { onClick: () => addSuggestion(it), style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "5px 10px", color: COLORS.gold, fontSize: 11.5, fontWeight: 600, cursor: "pointer" } }, /* @__PURE__ */ React.createElement(Plus, { size: 12 }), "Ajouter")))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 9.5, color: COLORS.textFaint, margin: "8px 0 0" } }, "Suggestions filtr\xE9es selon ton r\xE9gime et tes allergies (r\xE9glables dans le profil).")), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16, display: "flex", flexDirection: "column", gap: 14 } }, MEAL_SECTIONS.map((sec) => {
+    const motivation = useMemo(() => {
+      if (date !== todayISO()) return null;
+      const wk = getMonday(date);
+      const doneS = sessionsApi.items.filter((s) => s.date >= wk && s.date <= date).length;
+      const targetS = profile.weeklyWorkoutTarget || 0;
+      let streak = 0;
+      for (let k = 0; k < 60; k++) {
+        const d = addDays(date, -k);
+        const any = logEntriesApi.items.some((e) => e.date === d) || formApi.items.some((f) => f.date === d) || sessionsApi.items.some((s) => s.date === d);
+        if (!any) break;
+        streak++;
+      }
+      const gap = profile.targetWeightKg && body.weightKg != null ? Math.abs(body.weightKg - profile.targetWeightKg) : null;
+      const seedDate = /* @__PURE__ */ new Date();
+      const seed = Math.floor(seedDate.getTime() / 36e5);
+      return buildMotivation({
+        sessions: { target: targetS, done: doneS, left: Math.max(0, targetS - doneS) },
+        proteinLeft: (targets == null ? void 0 : targets.protein) ? targets.protein - totals.protein : null,
+        proteinDone: totals.protein,
+        proteinTarget: (targets == null ? void 0 : targets.protein) || 0,
+        waterLeftMl: waterTargetMl - waterMl,
+        stepsLeft: stepsTarget - stepsToday,
+        stepsDone: stepsToday,
+        stepsTarget,
+        streakDays: streak,
+        weightGapKg: gap,
+        emptyToday: dayEntries.length === 0 && form.sleepHours == null && stepsToday === 0 && waterMl === 0,
+        hour: seedDate.getHours(),
+        seed
+      });
+    }, [date, sessionsApi.items, logEntriesApi.items, formApi.items, totals.protein, waterMl, stepsToday, dayEntries.length, profile, targets]);
+    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(DateNav, { date, onChange: setDate }), /* @__PURE__ */ React.createElement(MotivationCard, { text: motivation }), score != null && /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(ProgressRing, { value: score, size: 96, stroke: 9, label: scoreLabel }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 160 } }, scoreParts.map((p) => /* @__PURE__ */ React.createElement(MiniBar, { key: p.key, label: p.label, pct: p.value, valueLabel: `${Math.round(p.value)}%` }))))), /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement(SectionTitle, null, "Nutrition \u2014 mes repas du jour"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 12, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "Poppins", fontSize: 25, fontWeight: 600, color: COLORS.text } }, Math.round(totals.calories)), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: COLORS.textMuted } }, " / ", (_a = targets == null ? void 0 : targets.calories) != null ? _a : "\u2014", " kcal")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11.5, color: COLORS.textFaint } }, dayEntries.length, " aliment", dayEntries.length > 1 ? "s" : "")), /* @__PURE__ */ React.createElement(MiniBar, { label: "Prot\xE9ines", pct: (targets == null ? void 0 : targets.protein) ? totals.protein / targets.protein * 100 : 0, valueLabel: `${Math.round(totals.protein)} / ${(_b = targets == null ? void 0 : targets.protein) != null ? _b : "\u2014"} g`, color: COLORS.gold }), /* @__PURE__ */ React.createElement(MiniBar, { label: "Glucides", pct: (targets == null ? void 0 : targets.carbs) ? totals.carbs / targets.carbs * 100 : 0, valueLabel: `${Math.round(totals.carbs)} / ${(_c = targets == null ? void 0 : targets.carbs) != null ? _c : "\u2014"} g`, color: COLORS.blue }), /* @__PURE__ */ React.createElement(MiniBar, { label: "Lipides", pct: (targets == null ? void 0 : targets.fat) ? totals.fat / targets.fat * 100 : 0, valueLabel: `${Math.round(totals.fat)} / ${(_d = targets == null ? void 0 : targets.fat) != null ? _d : "\u2014"} g`, color: COLORS.orange }), suggestions.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, paddingTop: 12, borderTop: `1px solid ${COLORS.border}` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 } }, "Pour compl\xE9ter ta journ\xE9e \u2014 reste ", Math.round(remainingToday.kcal), " kcal (P ", Math.round(remainingToday.p), " \xB7 G ", Math.round(remainingToday.c), " \xB7 L ", Math.round(remainingToday.f), ")"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, suggestions.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: COLORS.bgAlt, borderRadius: 8, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: COLORS.text } }, it.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: COLORS.textFaint, fontFamily: "IBM Plex Mono" } }, it.kcal, " kcal \xB7 P", it.p, " G", it.c, " L", it.f)), /* @__PURE__ */ React.createElement("button", { onClick: () => addSuggestion(it), style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "5px 10px", color: COLORS.gold, fontSize: 11.5, fontWeight: 600, cursor: "pointer" } }, /* @__PURE__ */ React.createElement(Plus, { size: 12 }), "Ajouter")))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 9.5, color: COLORS.textFaint, margin: "8px 0 0" } }, "Suggestions filtr\xE9es selon ton r\xE9gime et tes allergies (r\xE9glables dans le profil).")), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16, display: "flex", flexDirection: "column", gap: 14 } }, MEAL_SECTIONS.map((sec) => {
       const items = dayEntries.filter((e) => e.mealType === sec.id);
-      return /* @__PURE__ */ React.createElement("div", { key: sec.id }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 600, color: COLORS.text } }, sec.icon, " ", sec.label), /* @__PURE__ */ React.createElement("button", { onClick: () => openPicker(sec.id), style: { background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "4px 10px", color: COLORS.gold, fontSize: 12, fontWeight: 600, cursor: "pointer" } }, "+ ajouter")), items.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.textFaint, margin: 0 } }, "Rien enregistr\xE9.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, items.map((it) => /* @__PURE__ */ React.createElement("div", { key: it.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.bgAlt, borderRadius: 8, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: COLORS.text } }, it.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint } }, "P", Math.round(it.protein), " \xB7 G", Math.round(it.carbs), " \xB7 L", Math.round(it.fat))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 12, color: COLORS.textMuted } }, Math.round(it.calories), " kcal"), /* @__PURE__ */ React.createElement("button", { onClick: () => logEntriesApi.remove(it.id), style: { background: "none", border: "none", color: COLORS.textFaint, cursor: "pointer" } }, /* @__PURE__ */ React.createElement(X, { size: 14 })))))));
+      return /* @__PURE__ */ React.createElement("div", { key: sec.id }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 600, color: COLORS.text } }, sec.icon, " ", sec.label), /* @__PURE__ */ React.createElement("button", { onClick: () => openPicker(sec.id), style: { background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "4px 10px", color: COLORS.gold, fontSize: 12, fontWeight: 600, cursor: "pointer" } }, "+ ajouter")), items.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.textFaint, margin: 0 } }, "Rien enregistr\xE9.") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { onClick: () => setSavePrompt({ mealType: sec.id, name: sec.label }), style: { background: "none", border: "none", padding: "0 0 6px", color: COLORS.gold, fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 } }, /* @__PURE__ */ React.createElement(Star, { size: 11 }), "Enregistrer ce repas"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, items.map((it) => /* @__PURE__ */ React.createElement("div", { key: it.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.bgAlt, borderRadius: 8, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: COLORS.text } }, it.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint } }, "P", Math.round(it.protein), " \xB7 G", Math.round(it.carbs), " \xB7 L", Math.round(it.fat))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 12, color: COLORS.textMuted } }, Math.round(it.calories), " kcal"), /* @__PURE__ */ React.createElement("button", { onClick: () => logEntriesApi.remove(it.id), style: { background: "none", border: "none", color: COLORS.textFaint, cursor: "pointer" } }, /* @__PURE__ */ React.createElement(X, { size: 14 }))))))));
     }))), /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement(SectionTitle, null, "Hydratation"), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "Poppins", fontSize: 15, fontWeight: 700, color: waterMl >= waterTargetMl ? COLORS.good : COLORS.text } }, fmtL(waterMl), " ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: COLORS.textMuted, fontWeight: 500 } }, "/ ", fmtL(waterTargetMl)))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement(MiniBar, { label: waterMl >= waterTargetMl ? "Objectif atteint \u{1F4AA}" : `Reste ${fmtL(waterTargetMl - waterMl)}`, pct: waterTargetMl ? waterMl / waterTargetMl * 100 : 0, valueLabel: `${Math.round(waterTargetMl ? waterMl / waterTargetMl * 100 : 0)}%`, color: COLORS.blue })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 7, flexWrap: "wrap", marginTop: 6 } }, [250, 330, 500, 750].map((ml) => /* @__PURE__ */ React.createElement("button", { key: ml, onClick: () => addWater(ml), style: { display: "flex", alignItems: "center", gap: 5, padding: "8px 12px", borderRadius: 9, border: `1px solid ${COLORS.border}`, background: COLORS.bgAlt, color: COLORS.text, fontSize: 12.5, fontWeight: 600, cursor: "pointer" } }, /* @__PURE__ */ React.createElement(Droplet, { size: 13, color: COLORS.blue }), "+", ml, " ml")), /* @__PURE__ */ React.createElement("button", { onClick: () => addWater(-250), disabled: waterMl <= 0, style: { padding: "8px 12px", borderRadius: 9, border: `1px solid ${COLORS.border}`, background: "transparent", color: COLORS.textMuted, fontSize: 12.5, fontWeight: 600, cursor: waterMl <= 0 ? "default" : "pointer", opacity: waterMl <= 0 ? 0.4 : 1 } }, "\u2212250 ml"))), /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement(SectionTitle, null, "Corps & composition"), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Poids (kg)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: (_e = body.weightKg) != null ? _e : "", onChange: (e) => bodyApi.upsert(date, { weightKg: e.target.value ? parseFloat(e.target.value) : null }) })), /* @__PURE__ */ React.createElement(Field, { label: "Masse grasse (%)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: (_f = body.bodyFatPct) != null ? _f : "", onChange: (e) => bodyApi.upsert(date, { bodyFatPct: e.target.value ? parseFloat(e.target.value) : null }) })), /* @__PURE__ */ React.createElement(Field, { label: "Muscle (kg)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: (_g = body.muscleKg) != null ? _g : "", onChange: (e) => bodyApi.upsert(date, { muscleKg: e.target.value ? parseFloat(e.target.value) : null }) })))), /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement(SectionTitle, null, "Activit\xE9 \u2014 pas du jour"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11.5, color: COLORS.textFaint } }, "obj. ", (profile.targetSteps || 8e3).toLocaleString("fr-FR"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 12 } }, /* @__PURE__ */ React.createElement(Footprints, { size: 20, color: COLORS.gold, style: { flexShrink: 0 } }), /* @__PURE__ */ React.createElement(NumberInput, { step: "500", placeholder: "Nombre de pas", value: (_h = form.steps) != null ? _h : "", onChange: (e) => formApi.upsert(date, { steps: e.target.value ? parseInt(e.target.value) : null }), style: { flex: 1 } })), stepsToday > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement(MiniBar, { label: stepsToday >= stepsTarget ? "Objectif atteint \u{1F4AA}" : `Reste ${(stepsTarget - stepsToday).toLocaleString("fr-FR")} pas`, pct: stepsToday / stepsTarget * 100, valueLabel: `${Math.round(stepsToday / stepsTarget * 100)}%`, color: COLORS.gold }))), /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement(SectionTitle, null, "Sommeil & forme"), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, /* @__PURE__ */ React.createElement(Field, { label: "Coucher" }, /* @__PURE__ */ React.createElement(TextInput, { type: "time", value: (_i = form.bedTime) != null ? _i : "", onChange: (e) => {
       const bedTime = e.target.value || null;
       formApi.upsert(date, { bedTime, sleepHours: computeSleepHours(bedTime, form.wakeTime) });
     } })), /* @__PURE__ */ React.createElement(Field, { label: "Lever" }, /* @__PURE__ */ React.createElement(TextInput, { type: "time", value: (_j = form.wakeTime) != null ? _j : "", onChange: (e) => {
       const wakeTime = e.target.value || null;
       formApi.upsert(date, { wakeTime, sleepHours: computeSleepHours(form.bedTime, wakeTime) });
-    } }))), form.sleepHours != null && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: COLORS.gold, fontFamily: "IBM Plex Mono", margin: "0 0 12px", fontWeight: 600 } }, "= ", form.sleepHours, " h de sommeil"), /* @__PURE__ */ React.createElement(ScaleField, { label: "Qualit\xE9 du sommeil", max: 5, value: form.sleepQuality, onChange: (v) => formApi.upsert(date, { sleepQuality: v }) }), /* @__PURE__ */ React.createElement(Field, { label: "Pourquoi bien / mal dormi ? (optionnel)" }, /* @__PURE__ */ React.createElement(TextArea, { rows: 2, placeholder: "Ex : couch\xE9 tard, r\xE9veils, caf\xE9 tardif, sport le soir...", value: (_k = form.sleepNote) != null ? _k : "", onChange: (e) => formApi.upsert(date, { sleepNote: e.target.value || null }) })), /* @__PURE__ */ React.createElement(ScaleField, { label: "\xC9nergie", max: 5, value: form.energy, onChange: (v) => formApi.upsert(date, { energy: v }) }), /* @__PURE__ */ React.createElement(ScaleField, { label: "Stress", max: 10, value: form.stress, onChange: (v) => formApi.upsert(date, { stress: v }) }), /* @__PURE__ */ React.createElement(Field, { label: "Raison du stress (optionnel)" }, /* @__PURE__ */ React.createElement(TextArea, { rows: 2, placeholder: "Ex : deadline au travail, examen, conflit, fatigue...", value: (_l = form.stressNote) != null ? _l : "", onChange: (e) => formApi.upsert(date, { stressNote: e.target.value || null }) })))), /* @__PURE__ */ React.createElement(Modal, { open: !!mealModal, onClose: () => setMealModal(null), title: mealModal ? `Ajouter \u2014 ${(_m = MEAL_SECTIONS.find((s) => s.id === mealModal.mealType)) == null ? void 0 : _m.label}` : "" }, mealModal && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 14 } }, [["library", "Mes plats"], ["finder", "Aliments & scan"], ["freehand", "Saisie libre"]].map(([id, label]) => /* @__PURE__ */ React.createElement("button", { key: id, onClick: () => setPickerTab(id), style: { flex: 1, padding: 8, borderRadius: 8, border: "none", cursor: "pointer", background: pickerTab === id ? COLORS.gold : COLORS.bgAlt, color: pickerTab === id ? "#1A1503" : COLORS.textMuted, fontWeight: 600, fontSize: 12.5 } }, label))), pickerTab === "library" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(TextInput, { placeholder: "Rechercher un plat...", value: search, onChange: (e) => setSearch(e.target.value), style: { marginBottom: 10 } }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" } }, filteredDishes.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted } }, "Aucun plat. Ajoute-en dans l'onglet Repas."), filteredDishes.map((d) => /* @__PURE__ */ React.createElement("button", { key: d.id, onClick: () => addFromLibrary(d), style: { display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "10px 12px", cursor: "pointer", textAlign: "left", width: "100%" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: COLORS.text } }, d.name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: COLORS.textFaint, fontFamily: "IBM Plex Mono" } }, d.calories, " kcal"))))), pickerTab === "finder" && /* @__PURE__ */ React.createElement(FoodFinder, { apiKey, onPick: async (item) => {
+    } }))), form.sleepHours != null && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: COLORS.gold, fontFamily: "IBM Plex Mono", margin: "0 0 12px", fontWeight: 600 } }, "= ", form.sleepHours, " h de sommeil"), /* @__PURE__ */ React.createElement(ScaleField, { label: "Qualit\xE9 du sommeil", max: 5, value: form.sleepQuality, onChange: (v) => formApi.upsert(date, { sleepQuality: v }) }), /* @__PURE__ */ React.createElement(Field, { label: "Pourquoi bien / mal dormi ? (optionnel)" }, /* @__PURE__ */ React.createElement(TextArea, { rows: 2, placeholder: "Ex : couch\xE9 tard, r\xE9veils, caf\xE9 tardif, sport le soir...", value: (_k = form.sleepNote) != null ? _k : "", onChange: (e) => formApi.upsert(date, { sleepNote: e.target.value || null }) })), /* @__PURE__ */ React.createElement(ScaleField, { label: "\xC9nergie", max: 5, value: form.energy, onChange: (v) => formApi.upsert(date, { energy: v }) }), /* @__PURE__ */ React.createElement(ScaleField, { label: "Stress", max: 10, value: form.stress, onChange: (v) => formApi.upsert(date, { stress: v }) }), /* @__PURE__ */ React.createElement(Field, { label: "Raison du stress (optionnel)" }, /* @__PURE__ */ React.createElement(TextArea, { rows: 2, placeholder: "Ex : deadline au travail, examen, conflit, fatigue...", value: (_l = form.stressNote) != null ? _l : "", onChange: (e) => formApi.upsert(date, { stressNote: e.target.value || null }) })))), /* @__PURE__ */ React.createElement(Modal, { open: !!savePrompt, onClose: () => setSavePrompt(null), title: "Enregistrer ce repas" }, savePrompt && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.textMuted, margin: "0 0 12px", lineHeight: 1.5 } }, dayEntries.filter((e) => e.mealType === savePrompt.mealType).length, " aliment", dayEntries.filter((e) => e.mealType === savePrompt.mealType).length > 1 ? "s" : "", " seront enregistr\xE9s avec leurs quantit\xE9s et leurs macros. Tu pourras r\xE9injecter ce repas en un clic."), /* @__PURE__ */ React.createElement(Field, { label: "Nom du repas" }, /* @__PURE__ */ React.createElement(TextInput, { placeholder: "Ex : Petit-d\xE9j prot\xE9in\xE9", value: savePrompt.name, onChange: (e) => setSavePrompt({ ...savePrompt, name: e.target.value }), onKeyDown: (e) => {
+      if (e.key === "Enter") confirmSavePreset();
+    } })), /* @__PURE__ */ React.createElement(Btn, { onClick: confirmSavePreset, disabled: !savePrompt.name.trim(), style: { width: "100%" } }, "Enregistrer"))), /* @__PURE__ */ React.createElement(Modal, { open: !!mealModal, onClose: () => setMealModal(null), title: mealModal ? `Ajouter \u2014 ${(_m = MEAL_SECTIONS.find((s) => s.id === mealModal.mealType)) == null ? void 0 : _m.label}` : "" }, mealModal && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 14 } }, [["presets", "Repas"], ["library", "Mes plats"], ["finder", "Aliments"], ["freehand", "Libre"]].map(([id, label]) => /* @__PURE__ */ React.createElement("button", { key: id, onClick: () => setPickerTab(id), style: { flex: 1, padding: 8, borderRadius: 8, border: "none", cursor: "pointer", background: pickerTab === id ? COLORS.gold : COLORS.bgAlt, color: pickerTab === id ? "#1A1503" : COLORS.textMuted, fontWeight: 600, fontSize: 12.5 } }, label))), pickerTab === "presets" && /* @__PURE__ */ React.createElement("div", null, presetApi.presets.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: COLORS.textMuted, lineHeight: 1.5, margin: 0 } }, "Aucun repas enregistr\xE9. Compose un repas dans le Journal, puis appuie sur \xAB Enregistrer ce repas \xBB pour le r\xE9utiliser en un clic.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, maxHeight: 340, overflowY: "auto" } }, presetApi.presets.map((p) => {
+      const t = presetTotals(p);
+      return /* @__PURE__ */ React.createElement("div", { key: p.id, style: { display: "flex", alignItems: "center", gap: 2, background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, paddingRight: 6 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => addPreset(p), style: { flex: 1, minWidth: 0, background: "none", border: "none", borderRadius: 8, padding: "10px 12px", cursor: "pointer", textAlign: "left" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: COLORS.text, fontWeight: 600 } }, p.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", marginTop: 2 } }, Math.round(t.kcal), " kcal \xB7 P", Math.round(t.p), " G", Math.round(t.c), " L", Math.round(t.f), " \xB7 ", (p.items || []).length, " aliment", (p.items || []).length > 1 ? "s" : "")), /* @__PURE__ */ React.createElement("button", { onClick: () => presetApi.remove(p.id), "aria-label": "Supprimer", style: { background: "none", border: "none", color: COLORS.textFaint, cursor: "pointer", padding: 6, display: "flex", flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Trash2, { size: 14 })));
+    }))), pickerTab === "library" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(TextInput, { placeholder: "Rechercher un plat...", value: search, onChange: (e) => setSearch(e.target.value), style: { marginBottom: 10 } }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" } }, filteredDishes.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted } }, "Aucun plat. Ajoute-en dans l'onglet Repas."), filteredDishes.map((d) => /* @__PURE__ */ React.createElement("button", { key: d.id, onClick: () => addFromLibrary(d), style: { display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "10px 12px", cursor: "pointer", textAlign: "left", width: "100%" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: COLORS.text } }, d.name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: COLORS.textFaint, fontFamily: "IBM Plex Mono" } }, d.calories, " kcal"))))), pickerTab === "finder" && /* @__PURE__ */ React.createElement(FoodFinder, { apiKey, onPick: async (item) => {
       await logEntriesApi.add({ date, mealType: mealModal.mealType, dishId: null, ...item });
       setMealModal(null);
     } }), pickerTab === "freehand" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Field, { label: "Nom" }, /* @__PURE__ */ React.createElement(TextInput, { value: freehand.name, onChange: (e) => setFreehand({ ...freehand, name: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 } }, /* @__PURE__ */ React.createElement(Field, { label: "Kcal" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.calories, onChange: (e) => setFreehand({ ...freehand, calories: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "P (g)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.protein, onChange: (e) => setFreehand({ ...freehand, protein: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "G (g)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.carbs, onChange: (e) => setFreehand({ ...freehand, carbs: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "L (g)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.fat, onChange: (e) => setFreehand({ ...freehand, fat: e.target.value }) }))), /* @__PURE__ */ React.createElement(Btn, { onClick: addFreehand, style: { width: "100%", marginTop: 8 } }, "Ajouter")))));
