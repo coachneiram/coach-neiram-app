@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="app-version" content="2026-08-27.21-programme-hebdo"/>
+<meta name="app-version" content="2026-08-27.22-douleurs-bilan"/>
 <meta name="theme-color" content="#0B0B0C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -940,6 +940,19 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const dayNotes = wForm.filter((f) => f.sleepNote || f.stressNote).sort((a, b) => a.date.localeCompare(b.date)).map((f) => `${fmtWeekShort(f.date)} :${f.sleepNote ? ` sommeil \xAB ${f.sleepNote} \xBB` : ""}${f.sleepNote && f.stressNote ? " \xB7" : ""}${f.stressNote ? ` stress \xAB ${f.stressNote} \xBB` : ""}`).slice(-5);
     const trunc = (t) => String(t).trim().slice(0, 140);
     const sessionNotes = wSessions.filter((s) => s.notes && String(s.notes).trim()).sort((a, b) => a.date.localeCompare(b.date)).map((s) => `${fmtWeekShort(s.date)}${s.rpe ? ` (RPE ${s.rpe})` : ""} : \xAB ${trunc(s.notes)} \xBB`).slice(-4);
+    // Douleurs de la semaine, regroupees par zone : une gene legere mais
+    // recurrente compte autant qu'un pic isole.
+    const painMap = {};
+    wSessions.forEach((sess) => (sess.pains || []).forEach((pn) => {
+      if (!pn || !pn.zone) return;
+      const lv = num(pn.level);
+      const e2 = painMap[pn.zone] || (painMap[pn.zone] = { zone: pn.zone, count: 0, max: 0 });
+      e2.count++;
+      if (lv > e2.max) e2.max = lv;
+    }));
+    const pains = Object.values(painMap).sort((a, b) => b.max - a.max || b.count - a.count);
+    const painLines = pains.map((pp) => pp.zone + " : " + pp.count + " s\xE9ance" + (pp.count > 1 ? "s" : "") + ", intensit\xE9 max " + pp.max + "/10");
+    const deloadCount = wSessions.filter((sess) => sess.deload).length;
     function deltaFor(field) {
       const wVals = wBody.filter((b) => b[field] != null);
       if (!wVals.length) return { latest: null, delta: null };
@@ -952,9 +965,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const fatD = deltaFor("bodyFatPct");
     const muscleD = deltaFor("muscleKg");
     const workoutsCount = wSessions.length;
+    const planRows = data.weekPlan ? weekPlanStatus(data.weekPlan, data.routines || [], data.sessions, weekKey === getWeekKey(todayISO()) ? todayISO() : end) : null;
+    const planSummary = planRows ? weekPlanSummary(planRows) : null;
     const loggedDaysCount = (/* @__PURE__ */ new Set([...wLog.map((e) => e.date), ...wForm.map((f) => f.date), ...wSessions.map((s) => s.date), ...wBody.map((b) => b.date)])).size;
     const subScores = [];
-    if (profile.weeklyWorkoutTarget) subScores.push(clamp(workoutsCount / profile.weeklyWorkoutTarget * 100, 0, 100));
+    if (planSummary && planSummary.planned > 0) subScores.push(clamp(planSummary.done / planSummary.planned * 100, 0, 100));
+    else if (profile.weeklyWorkoutTarget) subScores.push(clamp(workoutsCount / profile.weeklyWorkoutTarget * 100, 0, 100));
     if (avgCalories != null && targets.calories) subScores.push(clamp(100 - Math.abs(avgCalories - targets.calories) / targets.calories * 100, 0, 100));
     if (avgSleepH != null) subScores.push(clamp(avgSleepH / (profile.targetSleepHours || 8) * 100, 0, 100));
     subScores.push(clamp(loggedDaysCount / 7 * 100, 0, 100));
@@ -977,6 +993,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       avgSteps,
       dayNotes,
       sessionNotes,
+      pains,
+      painLines,
+      deloadCount,
+      planSummary,
       latestWeight: weightD.latest,
       weightDelta: weightD.delta,
       latestFatPct: fatD.latest,
@@ -1112,7 +1132,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const fmt = (s) => {
       var _a2, _b, _c, _d, _e, _f, _g;
       return !s ? "non disponible" : [
-        `S\xE9ances : ${s.workoutsCount}`,
+        "S\xE9ances : " + s.workoutsCount + (s.planSummary && s.planSummary.planned ? " (programme : " + s.planSummary.done + "/" + s.planSummary.planned + " respect\xE9es" + (s.planSummary.missed ? ", " + s.planSummary.missed + " manqu\xE9e" + (s.planSummary.missed > 1 ? "s" : "") : "") + ")" : "") + (s.deloadCount ? ", dont " + s.deloadCount + " en d\xE9load" : ""),
+        s.painLines && s.painLines.length ? "Douleurs signal\xE9es : " + s.painLines.join(" ; ") : null,
         `Sommeil moyen : ${(_a2 = s.avgSleepH) != null ? _a2 : "\u2014"} h${s.avgSleepQuality != null ? `, qualit\xE9 ${s.avgSleepQuality}/5` : ""}`,
         s.avgEnergy != null ? `\xC9nergie ${s.avgEnergy}/5, stress ${(_b = s.avgStress) != null ? _b : "\u2014"}/10` : null,
         s.avgWaterMl != null ? `Hydratation moyenne : ${fmtL(s.avgWaterMl)}/jour (objectif ${profile.targetWaterL || 2} L)` : null,
@@ -1135,6 +1156,7 @@ ${fmt(weekStats)}
 DONN\xC9ES SEMAINE PR\xC9C\xC9DENTE (pour comparaison) :
 ${fmt(lastWeekStats)}
 
+${weekStats.painLines && weekStats.painLines.length ? "Des douleurs ont \xE9t\xE9 signal\xE9es cette semaine : mentionne-les explicitement dans VIGILANCE, propose une adaptation de charge ou de mouvement, et rappelle de consulter un professionnel de sant\xE9 si la douleur persiste ou s'aggrave. Ne pose aucun diagnostic.\n" : ""}
 NOTES DU CLIENT CETTE SEMAINE (s\xE9ances d'entra\xEEnement, sommeil, stress \u2014 \xE0 prendre en compte dans l'analyse et les conseils) :
 S\xE9ances : ${weekStats.sessionNotes && weekStats.sessionNotes.length ? weekStats.sessionNotes.join(" | ") : "aucune note"}
 Sommeil/stress : ${weekStats.dayNotes && weekStats.dayNotes.length ? weekStats.dayNotes.join(" | ") : "aucune note"}
@@ -1856,7 +1878,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const s = weekStats;
     const stat = (label, value) => value == null || value === "" ? "" : `<div style="background:#141416;border:1px solid #28282D;border-radius:10px;padding:10px 12px"><div style="font-size:17px;font-weight:700;color:#F5F5F2">${e(value)}</div><div style="font-size:10px;color:#9C9C94;margin-top:2px">${e(label)}</div></div>`;
     const stats = [
-      stat("S\xE9ances", s.workoutsCount),
+      stat("S\xE9ances", s.planSummary && s.planSummary.planned ? s.workoutsCount + " (" + s.planSummary.done + "/" + s.planSummary.planned + " programm\xE9es)" : s.workoutsCount),
       stat("Sommeil moy.", s.avgSleepH != null ? s.avgSleepH + " h" : null),
       stat("Poids", s.latestWeight != null ? s.latestWeight + " kg" + (s.weightDelta != null ? ` (${s.weightDelta > 0 ? "+" : ""}${s.weightDelta})` : "") : null),
       stat("Masse grasse", s.latestFatPct != null ? s.latestFatPct + " %" + (s.fatPctDelta != null ? ` (${s.fatPctDelta > 0 ? "+" : ""}${s.fatPctDelta})` : "") : null),
@@ -1874,6 +1896,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const sec = report && report.sections ? report.sections : {};
     const list = (title, arr, color) => arr && arr.length ? `<h2 style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:${color};margin:18px 0 8px">${e(title)}</h2><ul style="margin:0;padding-left:18px">${arr.map((x) => `<li style="font-size:13px;line-height:1.55;color:#F5F5F2;margin-bottom:4px">${e(x)}</li>`).join("")}</ul>` : "";
     const para = (title, text) => text ? `<h2 style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#9C9C94;margin:18px 0 8px">${e(title)}</h2><p style="font-size:13.5px;line-height:1.6;color:#F5F5F2;margin:0">${e(text)}</p>` : "";
+    const painBlock = s.painLines && s.painLines.length ? '<h2 style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#F5B942;margin:18px 0 8px">Douleurs signal\xE9es</h2><ul style="margin:0;padding-left:18px">' + s.painLines.map((x) => '<li style="font-size:13px;line-height:1.55;color:#F5F5F2;margin-bottom:4px">' + e(x) + "</li>").join("") + "</ul>" : "";
     const notesBlock = s.sessionNotes && s.sessionNotes.length || s.dayNotes && s.dayNotes.length ? `<h2 style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#9C9C94;margin:18px 0 8px">Notes du client</h2><ul style="margin:0;padding-left:18px">${[...s.sessionNotes || [], ...s.dayNotes || []].map((x) => `<li style="font-size:12px;line-height:1.5;color:#9C9C94;margin-bottom:3px">${e(x)}</li>`).join("")}</ul>` : "";
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Bilan hebdo \u2014 ${e(profile.name || "Client")}</title></head>
 <body style="margin:0;background:#0B0B0C;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif">
@@ -1895,6 +1918,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
   ${list("Vigilance", sec.vigilance, "#F5B942")}
   ${list("\xC0 corriger", sec.a_corriger, "#F0645A")}
   ${list("Recommandations de la semaine", sec.actions, "#F8D040")}
+  ${painBlock}
   ${notesBlock}
   <p style="font-size:9.5px;color:#63635C;margin-top:26px;text-align:center">G\xE9n\xE9r\xE9 par l'app Coach Neiram le ${e((/* @__PURE__ */ new Date()).toLocaleDateString("fr-FR"))} \u2014 bilan r\xE9dig\xE9 par IA \xE0 partir des donn\xE9es saisies par le client.</p>
 </div></body></html>`;
@@ -3325,7 +3349,10 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       const prior = sessionsApi.items.filter((s) => s.routineId === routine.id).sort((a, b) => b.date.localeCompare(a.date))[0];
       setEditingSession({ id: null, date: typeof forcedDate === "string" ? forcedDate : todayISO(), routineId: routine.id, durationMin: "", rpe: "", notes: "", pains: [], exercises: ((_a = prior == null ? void 0 : prior.exercises) == null ? void 0 : _a.length) ? prior.exercises.map((ex) => {
         const sug = ex.mode === "cardio" ? null : suggestNextLoad(ex.weight, ex.rpe, ex.rir);
-        return { ...ex, id: uid(), rpe: "", rir: "", ...sug ? { weight: String(sug.weight), suggested: { from: num(ex.weight), delta: sug.delta, reason: sug.reason } } : {} };
+        // `suggested` est toujours remis a null : sans nouveau calcul, le
+        // bandeau de la seance precedente resterait affiche comme s'il venait
+        // d'etre etabli.
+        return { ...ex, id: uid(), rpe: "", rir: "", suggested: null, ...sug ? { weight: String(sug.weight), suggested: { from: num(ex.weight), delta: sug.delta, reason: sug.reason } } : {} };
       }) : [blankExercise()] });
       setSessionModal(true);
     };
@@ -3544,8 +3571,19 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const targets = useMemo(() => profile ? computeTargets(profile, currentWeight) : null, [profile, currentWeight]);
     const currentWeekKey = useMemo(() => getWeekKey(todayISO()), []);
     const lastWeekKey = useMemo(() => addDays(currentWeekKey, -7), [currentWeekKey]);
-    const weekStats = useMemo(() => profile && targets ? computeWeekStats(currentWeekKey, { sessions, dailyForm, bodyLogs, logEntries }, profile, targets) : null, [currentWeekKey, sessions, dailyForm, bodyLogs, logEntries, profile, targets]);
-    const lastWeekStats = useMemo(() => profile && targets ? computeWeekStats(lastWeekKey, { sessions, dailyForm, bodyLogs, logEntries }, profile, targets) : null, [lastWeekKey, sessions, dailyForm, bodyLogs, logEntries, profile, targets]);
+    const [weekPlan, setWeekPlan] = useState(null);
+    useEffect(() => {
+      let live = true;
+      loadKey(WEEK_PLAN_KEY, {}).then((v) => {
+        if (live) setWeekPlan(v && typeof v === "object" ? v : {});
+      }).catch(() => {
+      });
+      return () => {
+        live = false;
+      };
+    }, []);
+    const weekStats = useMemo(() => profile && targets ? computeWeekStats(currentWeekKey, { sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines }, profile, targets) : null, [currentWeekKey, sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines, profile, targets]);
+    const lastWeekStats = useMemo(() => profile && targets ? computeWeekStats(lastWeekKey, { sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines }, profile, targets) : null, [lastWeekKey, sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines, profile, targets]);
     const currentReport = reports.find((r) => r.weekKey === currentWeekKey) || null;
     const currentMonthKey = useMemo(() => getMonthKey(todayISO()), []);
     const prevMonthKey = useMemo(() => prevMonthKeyOf(currentMonthKey), [currentMonthKey]);
