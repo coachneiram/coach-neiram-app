@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="app-version" content="2026-08-27.15-portions-par-aliment"/>
+<meta name="app-version" content="2026-08-27.17-grammes-partout"/>
 <meta name="theme-color" content="#0B0B0C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -474,6 +474,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         await saveKey(key, next);
         return next;
       },
+      // Ajout de plusieurs entr\xE9es en une seule op\xE9ration. Appeler add() en
+      // boucle ne fonctionne pas : chaque appel repart de `items` fig\xE9 au
+      // rendu, donc seule la derni\xE8re entr\xE9e est conserv\xE9e.
+      addMany: async (entries) => {
+        const fresh = (entries || []).map((e) => ({ ...e, id: uid() }));
+        if (!fresh.length) return items;
+        const next = [...fresh, ...items];
+        setItems(next);
+        await saveKey(key, next);
+        return next;
+      },
       update: async (id, patch) => {
         const next = items.map((it) => it.id === id ? { ...it, ...patch } : it);
         setItems(next);
@@ -722,6 +733,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     return { unit: "x", qty: 1, label: it.name, per: macros };
   }
   const basisMacros = (b, qty) => scaleMacros(b.per, num(qty) > 0 ? num(qty) : 0);
+  // Convertit une ligne compt\xE9e en portions vers une base au gramme, une fois
+  // que l'utilisateur a indiqu\xE9 le poids de la portion enregistr\xE9e.
+  const toGramBasis = (b, refGrams) => {
+    const g = num(refGrams);
+    if (b.unit === "g" || !(g > 0)) return b;
+    return { unit: "g", qty: g, label: b.label,
+      per: { kcal: b.per.kcal / g, p: b.per.p / g, c: b.per.c / g, f: b.per.f / g } };
+  };
   const sumMacros = (list) => list.reduce((a, m) => ({
     kcal: a.kcal + m.kcal, p: round(a.p + m.p, 1), c: round(a.c + m.c, 1), f: round(a.f + m.f, 1)
   }), { kcal: 0, p: 0, c: 0, f: 0 });
@@ -736,18 +755,29 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     return Number.isInteger(v) ? String(v) : String(v).replace(".", ",");
   };
   function MealPortionEditor({ title, items, onAdd, onCancel }) {
-    const bases = useMemo(() => (items || []).map(itemBasis), [items]);
-    const [qty, setQty] = useState(() => bases.map((b) => String(b.qty)));
+    const raw = useMemo(() => (items || []).map(itemBasis), [items]);
+    const [refG, setRefG] = useState(() => raw.map(() => ""));
+    const bases = raw.map((b, i) => toGramBasis(b, refG[i]));
+    const [qty, setQty] = useState(() => raw.map((b) => String(b.qty)));
     const each = bases.map((b, i) => basisMacros(b, String(qty[i]).replace(",", ".")));
     const total = sumMacros(each);
     const setOne = (i, v) => setQty((prev) => prev.map((x, k) => k === i ? v : x));
     const scaleAll = (mult) => setQty(bases.map((b) => String(round(b.qty * mult, 2))));
+    // Saisir le poids d'une portion bascule la ligne en grammes et pr\xE9-remplit
+    // la quantit\xE9 avec ce m\xEAme poids : le repas reste identique tant qu'on n'y
+    // touche pas.
+    const setRef = (i, v) => {
+      setRefG((prev) => prev.map((x, k) => k === i ? v : x));
+      const g = num(String(v).replace(",", "."));
+      if (g > 0) setOne(i, String(g));
+      else setOne(i, "1");
+    };
     const lbl = (t) => /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: COLORS.textFaint, marginBottom: 3, textTransform: "uppercase", letterSpacing: 0.4 } }, t);
     return /* @__PURE__ */ React.createElement("div", { style: { background: COLORS.bgAlt, border: `1px solid ${COLORS.gold}66`, borderRadius: 10, padding: 12, marginTop: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 } }, title), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "0 0 10px" } }, "Ajuste la quantit\xE9 de chaque aliment : les macros suivent."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 } }, PORTION_STEPS.map((s) => /* @__PURE__ */ React.createElement("button", {
       key: s,
       onClick: () => scaleAll(s),
       style: { padding: "6px 10px", borderRadius: 8, border: `1px solid ${COLORS.border}`, background: "none", color: COLORS.textMuted, fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "IBM Plex Mono" }
-    }, "tout \xD7", fmtPortion(s)))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, bases.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "1fr 82px", gap: 8, alignItems: "center", paddingBottom: 8, borderBottom: i < bases.length - 1 ? `1px solid ${COLORS.border}` : "none" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: COLORS.text } }, b.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", marginTop: 2 } }, each[i].kcal, " kcal \xB7 P", each[i].p, " G", each[i].c, " L", each[i].f)), /* @__PURE__ */ React.createElement("div", null, lbl(b.unit === "g" ? "Grammes" : "Portions"), /* @__PURE__ */ React.createElement("input", { type: "number", step: b.unit === "g" ? "10" : "0.25", min: "0", value: qty[i], onChange: (e) => setOne(i, e.target.value), style: { ...inputBase, padding: "8px 8px", fontSize: 13, textAlign: "center" } }))))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.borderLight}` } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 } }, "Total"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: COLORS.gold, fontFamily: "IBM Plex Mono", fontWeight: 700 } }, total.kcal, " kcal \xB7 P", total.p, " G", total.c, " L", total.f)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: onCancel, style: { flex: 1, padding: "9px 12px", fontSize: 12.5 } }, "Annuler"), /* @__PURE__ */ React.createElement(Btn, { onClick: () => onAdd(bases.map((b, i) => ({ basis: b, qty: num(String(qty[i]).replace(",", ".")) }))), disabled: total.kcal <= 0, style: { flex: 1, padding: "9px 12px", fontSize: 12.5 } }, "Ajouter")));
+    }, "tout \xD7", fmtPortion(s)))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, bases.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "1fr 82px", gap: 8, alignItems: "center", paddingBottom: 8, borderBottom: i < bases.length - 1 ? `1px solid ${COLORS.border}` : "none" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: COLORS.text } }, b.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", marginTop: 2 } }, each[i].kcal, " kcal \xB7 P", each[i].p, " G", each[i].c, " L", each[i].f)), /* @__PURE__ */ React.createElement("div", null, lbl(b.unit === "g" ? "Grammes" : "Portions"), /* @__PURE__ */ React.createElement("input", { type: "number", step: b.unit === "g" ? "10" : "0.25", min: "0", value: qty[i], onChange: (e) => setOne(i, e.target.value), style: { ...inputBase, padding: "8px 8px", fontSize: 13, textAlign: "center" } })), raw[i].unit === "x" && /* @__PURE__ */ React.createElement("div", { style: { gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 8, marginTop: 2 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: COLORS.textFaint, flex: 1 } }, b.unit === "g" ? "Poids d'une portion enregistr\xE9e" : "Compter en grammes : indique le poids d'une portion"), /* @__PURE__ */ React.createElement("input", { type: "number", step: "10", min: "0", placeholder: "g", value: refG[i], onChange: (e) => setRef(i, e.target.value), style: { ...inputBase, width: 82, padding: "6px 8px", fontSize: 12, textAlign: "center" } }))))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.borderLight}` } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 } }, "Total"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: COLORS.gold, fontFamily: "IBM Plex Mono", fontWeight: 700 } }, total.kcal, " kcal \xB7 P", total.p, " G", total.c, " L", total.f)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: onCancel, style: { flex: 1, padding: "9px 12px", fontSize: 12.5 } }, "Annuler"), /* @__PURE__ */ React.createElement(Btn, { onClick: () => onAdd(bases.map((b, i) => ({ basis: b, qty: num(String(qty[i]).replace(",", ".")) }))), disabled: total.kcal <= 0, style: { flex: 1, padding: "9px 12px", fontSize: 12.5 } }, "Ajouter")));
   }
   function PortionPicker({ title, subtitle, base, onAdd, onCancel }) {
     const [draft, setDraft] = useState("1");
@@ -2147,7 +2177,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const [mealModal, setMealModal] = useState(null);
     const [pickerTab, setPickerTab] = useState("library");
     const [search, setSearch] = useState("");
-    const [freehand, setFreehand] = useState({ name: "", calories: "", protein: "", carbs: "", fat: "" });
+    const [freehand, setFreehand] = useState({ name: "", calories: "", protein: "", carbs: "", fat: "", grams: "" });
     const presetApi = useMealPresets();
     const [savePrompt, setSavePrompt] = useState(null);
     const [portionFor, setPortionFor] = useState(null);
@@ -2210,7 +2240,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       setPortionFor(null);
       setPickerTab(presetApi.presets.length ? "presets" : "library");
       setSearch("");
-      setFreehand({ name: "", calories: "", protein: "", carbs: "", fat: "" });
+      setFreehand({ name: "", calories: "", protein: "", carbs: "", fat: "", grams: "" });
     };
     const addFromLibrary = async (dish) => {
       await logEntriesApi.add({ date, mealType: mealModal.mealType, dishId: dish.id, name: dish.name, calories: dish.calories, protein: dish.protein, carbs: dish.carbs, fat: dish.fat });
@@ -2218,12 +2248,14 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     };
     const suffix = (mult) => mult === 1 ? "" : ` (\xD7${fmtPortion(mult)})`;
     const addPreset = async (preset, lines) => {
+      const entries = [];
       for (const { basis, qty } of lines || []) {
         if (!(qty > 0)) continue;
         const s = basisMacros(basis, qty);
         const label = basis.unit === "g" ? `${basis.label} (${fmtPortion(qty)} g)` : basis.label + suffix(qty);
-        await logEntriesApi.add({ date, mealType: mealModal.mealType, dishId: null, name: label, calories: s.kcal, protein: s.p, carbs: s.c, fat: s.f, ...basis.unit === "g" ? { grams: qty, baseName: basis.label } : {} });
+        entries.push({ date, mealType: mealModal.mealType, dishId: null, name: label, calories: s.kcal, protein: s.p, carbs: s.c, fat: s.f, ...basis.unit === "g" ? { grams: qty, baseName: basis.label } : {} });
       }
+      if (entries.length) await logEntriesApi.addMany(entries);
       setPortionFor(null);
       setMealModal(null);
     };
@@ -2242,7 +2274,8 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     };
     const addFreehand = async () => {
       if (!freehand.name.trim()) return;
-      await logEntriesApi.add({ date, mealType: mealModal.mealType, dishId: null, name: freehand.name, calories: num(freehand.calories), protein: num(freehand.protein), carbs: num(freehand.carbs), fat: num(freehand.fat) });
+      const fg = num(freehand.grams);
+      await logEntriesApi.add({ date, mealType: mealModal.mealType, dishId: null, name: fg > 0 ? `${freehand.name} (${fmtPortion(fg)} g)` : freehand.name, calories: num(freehand.calories), protein: num(freehand.protein), carbs: num(freehand.carbs), fat: num(freehand.fat), ...fg > 0 ? { grams: fg, baseName: freehand.name } : {} });
       setMealModal(null);
     };
     const filteredDishes = dishesApi.items.filter((d) => d.name.toLowerCase().includes(search.toLowerCase())).slice(0, 30);
@@ -2308,7 +2341,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     })), pickerTab === "finder" && /* @__PURE__ */ React.createElement(FoodFinder, { apiKey, onPick: async (item) => {
       await logEntriesApi.add({ date, mealType: mealModal.mealType, dishId: null, ...item });
       setMealModal(null);
-    } }), pickerTab === "freehand" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Field, { label: "Nom" }, /* @__PURE__ */ React.createElement(TextInput, { value: freehand.name, onChange: (e) => setFreehand({ ...freehand, name: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 } }, /* @__PURE__ */ React.createElement(Field, { label: "Kcal" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.calories, onChange: (e) => setFreehand({ ...freehand, calories: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "P (g)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.protein, onChange: (e) => setFreehand({ ...freehand, protein: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "G (g)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.carbs, onChange: (e) => setFreehand({ ...freehand, carbs: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "L (g)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.fat, onChange: (e) => setFreehand({ ...freehand, fat: e.target.value }) }))), /* @__PURE__ */ React.createElement(Btn, { onClick: addFreehand, style: { width: "100%", marginTop: 8 } }, "Ajouter")))));
+    } }), pickerTab === "freehand" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Field, { label: "Nom" }, /* @__PURE__ */ React.createElement(TextInput, { value: freehand.name, onChange: (e) => setFreehand({ ...freehand, name: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Quantit\xE9 en grammes (optionnel)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "10", min: "0", placeholder: "Permet d'ajuster la quantit\xE9 plus tard", value: freehand.grams, onChange: (e) => setFreehand({ ...freehand, grams: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 } }, /* @__PURE__ */ React.createElement(Field, { label: "Kcal" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.calories, onChange: (e) => setFreehand({ ...freehand, calories: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "P (g)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.protein, onChange: (e) => setFreehand({ ...freehand, protein: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "G (g)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.carbs, onChange: (e) => setFreehand({ ...freehand, carbs: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "L (g)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: freehand.fat, onChange: (e) => setFreehand({ ...freehand, fat: e.target.value }) }))), /* @__PURE__ */ React.createElement(Btn, { onClick: addFreehand, style: { width: "100%", marginTop: 8 } }, "Ajouter")))));
   }
   function PlatsSection({ api, apiKey }) {
     const [modalOpen, setModalOpen] = useState(false);
