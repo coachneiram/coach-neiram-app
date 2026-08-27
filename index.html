@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="app-version" content="2026-08-24.1-icone-app"/>
+<meta name="app-version" content="2026-08-27.1-fix-photo-favoris"/>
 <meta name="theme-color" content="#0B0B0C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -498,27 +498,133 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
     };
   }
+  const MAX_CANVAS_PX = 4096;
+  function drawToDataUrl(source, sw, sh, maxW, quality) {
+    if (!sw || !sh) throw new Error("image-format");
+    let scale = Math.min(1, maxW / sw);
+    const cap = MAX_CANVAS_PX / Math.max(sw, sh);
+    if (cap < scale) scale = cap;
+    const w = Math.max(1, Math.round(sw * scale)), h = Math.max(1, Math.round(sh * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("image-format");
+    ctx.drawImage(source, 0, 0, w, h);
+    const out = canvas.toDataURL("image/jpeg", quality);
+    canvas.width = 0;
+    canvas.height = 0;
+    if (!out || out.length < 64) throw new Error("image-format");
+    return out;
+  }
   function resizeImageFile(file, maxW, quality) {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error("read error"));
-      reader.onload = (e) => {
-        const img = new window.Image();
-        img.onerror = () => reject(new Error("image-format"));
-        img.onload = () => {
-          const scale = Math.min(1, maxW / img.width);
-          const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
-          const canvas = document.createElement("canvas");
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL("image/jpeg", quality));
-        };
-        img.src = e.target.result;
+      if (!file) return reject(new Error("read error"));
+      const viaBitmap = async () => {
+        if (typeof window.createImageBitmap !== "function") throw new Error("no-bitmap");
+        let bmp;
+        try {
+          bmp = await window.createImageBitmap(file, { imageOrientation: "from-image" });
+        } catch (e) {
+          bmp = await window.createImageBitmap(file);
+        }
+        try {
+          return drawToDataUrl(bmp, bmp.width, bmp.height, maxW, quality);
+        } finally {
+          if (bmp && bmp.close) bmp.close();
+        }
       };
-      reader.readAsDataURL(file);
+      const viaObjectUrl = () => new Promise((res, rej) => {
+        let url = null;
+        try {
+          url = URL.createObjectURL(file);
+        } catch (e) {
+          return rej(new Error("read error"));
+        }
+        const img = new window.Image();
+        const done = (fn, arg) => {
+          try {
+            URL.revokeObjectURL(url);
+          } catch (e) {
+          }
+          fn(arg);
+        };
+        const timer = setTimeout(() => done(rej, new Error("image-format")), 2e4);
+        img.onerror = () => {
+          clearTimeout(timer);
+          done(rej, new Error("image-format"));
+        };
+        img.onload = () => {
+          clearTimeout(timer);
+          try {
+            const out = drawToDataUrl(img, img.naturalWidth || img.width, img.naturalHeight || img.height, maxW, quality);
+            done(res, out);
+          } catch (e) {
+            done(rej, e);
+          }
+        };
+        img.src = url;
+      });
+      viaBitmap().then(resolve).catch(() => viaObjectUrl().then(resolve).catch(reject));
     });
+  }
+  const FOOD_FAV_KEY = "cn_food_favorites";
+  function useFoodFavorites() {
+    const [favs, setFavs] = useState([]);
+    const [ready, setReady] = useState(false);
+    useEffect(() => {
+      let live = true;
+      loadKey(FOOD_FAV_KEY, []).then((v) => {
+        if (live) {
+          setFavs(Array.isArray(v) ? v : []);
+          setReady(true);
+        }
+      }).catch(() => {
+        if (live) setReady(true);
+      });
+      return () => {
+        live = false;
+      };
+    }, []);
+    const isFav = useCallback((code) => favs.some((f) => f.code === code), [favs]);
+    const toggle = useCallback((p) => {
+      setFavs((prev) => {
+        const exists = prev.some((f) => f.code === p.code);
+        const next = exists ? prev.filter((f) => f.code !== p.code) : [{
+          code: p.code,
+          name: p.name,
+          brand: p.brand || "",
+          kcal100: p.kcal100,
+          p100: p.p100 || 0,
+          c100: p.c100 || 0,
+          f100: p.f100 || 0,
+          serving: p.serving || 100
+        }, ...prev].slice(0, 80);
+        saveKey(FOOD_FAV_KEY, next).catch(() => {
+        });
+        return next;
+      });
+    }, []);
+    return { favs, isFav, toggle, ready };
+  }
+  function FavStar({ active, onToggle }) {
+    return /* @__PURE__ */ React.createElement("button", {
+      onClick: (e) => {
+        e.stopPropagation();
+        onToggle();
+      },
+      "aria-label": active ? "Retirer des favoris" : "Ajouter aux favoris",
+      title: active ? "Retirer des favoris" : "Ajouter aux favoris",
+      style: { background: "none", border: "none", cursor: "pointer", padding: "6px 4px", display: "flex", alignItems: "center", flexShrink: 0 }
+    }, /* @__PURE__ */ React.createElement(Star, { size: 15, fill: active ? COLORS.gold : "none", color: active ? COLORS.gold : COLORS.textFaint }));
+  }
+  function FoodRow({ p, selected, onSelect, isFav, onToggleFav }) {
+    return /* @__PURE__ */ React.createElement("div", {
+      style: { display: "flex", alignItems: "center", gap: 2, background: selected ? `${COLORS.gold}14` : COLORS.bgAlt, border: `1px solid ${selected ? COLORS.gold : COLORS.border}`, borderRadius: 8, paddingRight: 6 }
+    }, /* @__PURE__ */ React.createElement("button", {
+      onClick: onSelect,
+      style: { flex: 1, minWidth: 0, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: "none", border: "none", borderRadius: 8, padding: "9px 11px", cursor: "pointer", textAlign: "left" }
+    }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: COLORS.text, minWidth: 0 } }, p.name, p.brand ? /* @__PURE__ */ React.createElement("span", { style: { color: COLORS.textFaint } }, " \u2014 ", p.brand) : null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", flexShrink: 0 } }, p.kcal100, " kcal \xB7 P", p.p100, " G", p.c100, " L", p.f100)), /* @__PURE__ */ React.createElement(FavStar, { active: isFav, onToggle: onToggleFav }));
   }
   function computeBMR({ sex, weightKg, heightCm, age }) {
     if (!weightKg || !heightCm || !age) return null;
@@ -1739,6 +1845,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const [photoPreview, setPhotoPreview] = useState(null);
     const [photoResult, setPhotoResult] = useState(null);
     const [codeDraft, setCodeDraft] = useState("");
+    const favApi = useFoodFavorites();
     const switchMode = (m) => {
       setMode(m);
       setErr(null);
@@ -1826,7 +1933,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const chip = (id, label, Icon) => /* @__PURE__ */ React.createElement("button", { key: id, onClick: () => switchMode(id), style: { display: "flex", alignItems: "center", gap: 6, padding: "7px 11px", borderRadius: 9, border: `1px solid ${mode === id ? COLORS.gold : COLORS.border}`, background: mode === id ? `${COLORS.gold}1A` : COLORS.bgAlt, color: mode === id ? COLORS.gold : COLORS.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer" } }, /* @__PURE__ */ React.createElement(Icon, { size: 14 }), label);
     return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 } }, chip("search", "Recherche", Search), hasAI(apiKey) && chip("photo", "Photo IA", Camera), chip("scan", "Code-barres", Barcode)), mode === "search" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(TextInput, { placeholder: "Ex : skyr, riz basmati, Danacol...", value: q, onChange: (e) => setQ(e.target.value), onKeyDown: (e) => {
       if (e.key === "Enter") runSearch();
-    }, style: { flex: 1 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: runSearch, disabled: busy || !q.trim(), icon: busy ? Loader2 : Search, style: { padding: "10px 14px" } }, busy ? "" : "Chercher")), results && results.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto", marginTop: 10 } }, results.map((p) => /* @__PURE__ */ React.createElement("button", { key: p.code, onClick: () => setSelected(p), style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: (selected == null ? void 0 : selected.code) === p.code ? `${COLORS.gold}14` : COLORS.bgAlt, border: `1px solid ${(selected == null ? void 0 : selected.code) === p.code ? COLORS.gold : COLORS.border}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", textAlign: "left", width: "100%" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: COLORS.text, minWidth: 0 } }, p.name, p.brand ? /* @__PURE__ */ React.createElement("span", { style: { color: COLORS.textFaint } }, " \u2014 ", p.brand) : null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", flexShrink: 0 } }, p.kcal100, " kcal/100g")))), selected && /* @__PURE__ */ React.createElement(ProductQuantity, { product: selected, onPick }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10, color: COLORS.textFaint, marginTop: 10, marginBottom: 0 } }, "Base ouverte Open Food Facts \u2014 valeurs d\xE9clar\xE9es par les fabricants, tr\xE8s bonne couverture des produits fran\xE7ais.")), mode === "photo" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", ref: photoInput, style: { display: "none" }, onChange: (e) => {
+    }, style: { flex: 1 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: runSearch, disabled: busy || !q.trim(), icon: busy ? Loader2 : Search, style: { padding: "10px 14px" } }, busy ? "" : "Chercher")), results && results.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto", marginTop: 10 } }, results.map((p) => /* @__PURE__ */ React.createElement(FoodRow, { key: p.code, p, selected: (selected == null ? void 0 : selected.code) === p.code, onSelect: () => setSelected(p), isFav: favApi.isFav(p.code), onToggleFav: () => favApi.toggle(p) }))), (!results || results.length === 0) && favApi.favs.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 } }, /* @__PURE__ */ React.createElement(Star, { size: 12, fill: COLORS.gold, color: COLORS.gold }), "Mes aliments favoris"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflowY: "auto" } }, favApi.favs.map((p) => /* @__PURE__ */ React.createElement(FoodRow, { key: p.code, p, selected: (selected == null ? void 0 : selected.code) === p.code, onSelect: () => setSelected(p), isFav: true, onToggleFav: () => favApi.toggle(p) })))), selected && /* @__PURE__ */ React.createElement(ProductQuantity, { product: selected, onPick }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10, color: COLORS.textFaint, marginTop: 10, marginBottom: 0 } }, "Base ouverte Open Food Facts \u2014 valeurs d\xE9clar\xE9es par les fabricants, tr\xE8s bonne couverture des produits fran\xE7ais.")), mode === "photo" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", ref: photoInput, style: { display: "none" }, onChange: (e) => {
       runPhoto(e.target.files[0]);
       e.target.value = "";
     } }), !photoResult && /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", icon: busy ? Loader2 : Camera, onClick: () => {
