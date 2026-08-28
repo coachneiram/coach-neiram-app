@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="app-version" content="2026-08-27.22-douleurs-bilan"/>
+<meta name="app-version" content="2026-08-28.01-seances-sheets"/>
 <meta name="theme-color" content="#0B0B0C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -203,6 +203,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     { id: "mensurations", label: "Mensurations", short: "Mesures", icon: Ruler },
     { id: "journal", label: "Journal", short: "Journal", icon: BookOpen },
     { id: "tendances", label: "Tendances", short: "Tendances", icon: TrendingUp }
+  ];
+  const TRAINING_MODES = [
+    { id: "app", label: "Dans l'application" },
+    { id: "sheets", label: "Sur mon Google Sheets (programme du coach)" }
   ];
   const DIET_TYPES = [
     { id: "aucun", label: "Aucun r\xE9gime particulier" },
@@ -2025,7 +2029,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
   }
   function ProfileFields({ value, onChange }) {
     const set = (patch) => onChange({ ...value, ...patch });
-    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Field, { label: "Pr\xE9nom (optionnel)" }, /* @__PURE__ */ React.createElement(TextInput, { value: value.name || "", onChange: (e) => set({ name: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Sexe" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [{ id: "homme", label: "Homme" }, { id: "femme", label: "Femme" }], value: value.sex || "homme", onChange: (e) => set({ sex: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "\xC2ge" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.age || "", onChange: (e) => set({ age: e.target.value ? parseInt(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Taille (cm)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.heightCm || "", onChange: (e) => set({ heightCm: e.target.value ? parseInt(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Poids de d\xE9part (kg)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: value.startWeightKg || "", onChange: (e) => set({ startWeightKg: e.target.value ? parseFloat(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement(Field, { label: "Activit\xE9 sportive (hors m\xE9tier)" }, /* @__PURE__ */ React.createElement(SelectInput, { options: ACTIVITY_LEVELS, value: value.activityLevel || "leger", onChange: (e) => set({ activityLevel: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif" }, /* @__PURE__ */ React.createElement(SelectInput, { options: GOALS, value: value.goal || "maintien", onChange: (e) => set({ goal: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Poids objectif (kg, optionnel)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: value.targetWeightKg || "", onChange: (e) => set({ targetWeightKg: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "S\xE9ances / semaine vis\xE9es" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.weeklyWorkoutTarget || "", onChange: (e) => set({ weeklyWorkoutTarget: e.target.value ? parseInt(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement(Field, { label: "Objectif sommeil (h/nuit)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.5", value: value.targetSleepHours || "", onChange: (e) => set({ targetSleepHours: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Type de m\xE9tier" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [{ id: "sedentaire", label: "S\xE9dentaire (bureau, assis)" }, { id: "actif", label: "Actif (debout, d\xE9placements)" }, { id: "tres-actif", label: "Tr\xE8s actif (physique, ex. ma\xE7on)" }], value: value.jobType || "sedentaire", onChange: (e) => set({ jobType: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif pas / jour" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "500", value: value.targetSteps || "", onChange: (e) => set({ targetSteps: e.target.value ? parseInt(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif hydratation (L / jour)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.25", value: value.targetWaterL || "", onChange: (e) => set({ targetWaterL: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "R\xE9gime alimentaire" }, /* @__PURE__ */ React.createElement(SelectInput, { options: DIET_TYPES, value: value.dietType || "aucun", onChange: (e) => set({ dietType: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Allergies / intol\xE9rances" }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 } }, ALLERGENS.map((a) => {
+    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Field, { label: "Pr\xE9nom (optionnel)" }, /* @__PURE__ */ React.createElement(TextInput, { value: value.name || "", onChange: (e) => set({ name: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Sexe" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [{ id: "homme", label: "Homme" }, { id: "femme", label: "Femme" }], value: value.sex || "homme", onChange: (e) => set({ sex: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "\xC2ge" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.age || "", onChange: (e) => set({ age: e.target.value ? parseInt(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Taille (cm)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.heightCm || "", onChange: (e) => set({ heightCm: e.target.value ? parseInt(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Poids de d\xE9part (kg)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: value.startWeightKg || "", onChange: (e) => set({ startWeightKg: e.target.value ? parseFloat(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement(Field, { label: "Activit\xE9 sportive (hors m\xE9tier)" }, /* @__PURE__ */ React.createElement(SelectInput, { options: ACTIVITY_LEVELS, value: value.activityLevel || "leger", onChange: (e) => set({ activityLevel: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif" }, /* @__PURE__ */ React.createElement(SelectInput, { options: GOALS, value: value.goal || "maintien", onChange: (e) => set({ goal: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Poids objectif (kg, optionnel)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: value.targetWeightKg || "", onChange: (e) => set({ targetWeightKg: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "S\xE9ances / semaine vis\xE9es" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.weeklyWorkoutTarget || "", onChange: (e) => set({ weeklyWorkoutTarget: e.target.value ? parseInt(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement(Field, { label: "O\xF9 se passent tes s\xE9ances" }, /* @__PURE__ */ React.createElement(SelectInput, { options: TRAINING_MODES, value: value.trainingMode || "app", onChange: (e) => set({ trainingMode: e.target.value }) }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 } }, value.trainingMode === "sheets" ? "Ton programme et tes charges se remplissent dans le Google Sheets du coach. L'appli ne garde que le pointage des s\xE9ances, pour le bilan hebdo." : "Tu construis et remplis tes s\xE9ances directement dans l'application.")), value.trainingMode === "sheets" && /* @__PURE__ */ React.createElement(Field, { label: "Lien Google Sheets de mon programme" }, /* @__PURE__ */ React.createElement(TextInput, { value: value.sheetsUrl || "", type: "url", placeholder: "https://docs.google.com/spreadsheets/...", onChange: (e) => set({ sheetsUrl: e.target.value.trim() }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif sommeil (h/nuit)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.5", value: value.targetSleepHours || "", onChange: (e) => set({ targetSleepHours: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Type de m\xE9tier" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [{ id: "sedentaire", label: "S\xE9dentaire (bureau, assis)" }, { id: "actif", label: "Actif (debout, d\xE9placements)" }, { id: "tres-actif", label: "Tr\xE8s actif (physique, ex. ma\xE7on)" }], value: value.jobType || "sedentaire", onChange: (e) => set({ jobType: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif pas / jour" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "500", value: value.targetSteps || "", onChange: (e) => set({ targetSteps: e.target.value ? parseInt(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif hydratation (L / jour)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.25", value: value.targetWaterL || "", onChange: (e) => set({ targetWaterL: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "R\xE9gime alimentaire" }, /* @__PURE__ */ React.createElement(SelectInput, { options: DIET_TYPES, value: value.dietType || "aucun", onChange: (e) => set({ dietType: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Allergies / intol\xE9rances" }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 } }, ALLERGENS.map((a) => {
       const on = (value.allergies || []).includes(a.id);
       return /* @__PURE__ */ React.createElement("label", { key: a.id, style: { display: "flex", alignItems: "center", gap: 8, background: COLORS.bgAlt, border: `1px solid ${on ? COLORS.gold : COLORS.border}`, borderRadius: 9, padding: "8px 10px", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: on, onChange: (e) => {
         const cur = value.allergies || [];
@@ -2034,7 +2038,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     }))));
   }
   function Onboarding({ onSave }) {
-    const [value, setValue] = useState({ sex: "homme", activityLevel: "leger", goal: "maintien", targetSleepHours: 8, weeklyWorkoutTarget: 3, targetWaterL: 2, dietType: "aucun", allergies: [], jobType: "sedentaire", targetSteps: 8e3 });
+    const [value, setValue] = useState({ sex: "homme", activityLevel: "leger", goal: "maintien", targetSleepHours: 8, weeklyWorkoutTarget: 3, targetWaterL: 2, dietType: "aucun", allergies: [], jobType: "sedentaire", targetSteps: 8e3, trainingMode: "app" });
     const canSave = value.age && value.heightCm && value.startWeightKg;
     return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 } }, /* @__PURE__ */ React.createElement("style", null, GLOBAL_CSS), /* @__PURE__ */ React.createElement(Card, { style: { maxWidth: 480, width: "100%" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement(Dumbbell, { size: 30, color: COLORS.gold, style: { transform: "rotate(-20deg)" } }), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "Poppins", fontSize: 24, fontWeight: 800, color: COLORS.text, textTransform: "uppercase", margin: "6px 0 0", letterSpacing: 0.5 } }, "Coach Neiram"), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "Poppins", fontSize: 10, letterSpacing: 3.5, color: COLORS.textMuted, textTransform: "uppercase", fontWeight: 600, marginTop: 4 } }, "Coaching Sportif"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted, marginTop: 14 } }, "Configure ton suivi : ces infos calculent tes objectifs caloriques et macros. Modifiable \xE0 tout moment.")), /* @__PURE__ */ React.createElement(ProfileFields, { value, onChange: setValue }), /* @__PURE__ */ React.createElement(Btn, { onClick: () => onSave(value), disabled: !canSave, style: { width: "100%", marginTop: 8 } }, "Commencer le suivi")));
   }
@@ -3464,9 +3468,75 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       return /* @__PURE__ */ React.createElement("div", { key: l.id, style: { display: "grid", gridTemplateColumns: "1fr 92px", gap: 10, alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: COLORS.text, fontWeight: 600 } }, l.label), b ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", marginTop: 2 } }, "Meilleure s\xE9rie : ", b.weight, " kg \xD7 ", b.reps, " \u2192 1RM estim\xE9 ", b.est, " kg \xB7 ", b.method, " (", fmtWeekShort(b.date), ")") : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint, marginTop: 2 } }, "Aucune s\xE9rie enregistr\xE9e pour l'instant.")), /* @__PURE__ */ React.createElement("input", { type: "number", step: "0.5", placeholder: "1RM kg", value: (_a = pl1rm.maxes[l.id]) != null ? _a : "", onChange: (e) => pl1rm.setMax(l.id, e.target.value), style: { ...inputBase, padding: "8px 8px", fontSize: 13, textAlign: "center" } }));
     })), /* @__PURE__ */ React.createElement(RpeChartTable, null));
   }
+  function SeancesSheetsTab({ sessionsApi, profile }) {
+    const url = (profile == null ? void 0 : profile.sheetsUrl) || "";
+    const [date, setDate] = useState(todayISO());
+    const [durationMin, setDurationMin] = useState("");
+    const [rpe, setRpe] = useState("");
+    const [notes, setNotes] = useState("");
+    const [saved, setSaved] = useState(false);
+    const target = (profile == null ? void 0 : profile.weeklyWorkoutTarget) || 0;
+    const weekKey = getWeekKey(todayISO());
+    const weekSessions = (sessionsApi.items || []).filter((x) => x.date && getWeekKey(x.date) === weekKey).sort((a, b) => b.date.localeCompare(a.date));
+    const alreadyToday = weekSessions.some((x) => x.date === date);
+    const save = async () => {
+      await sessionsApi.add({
+        date,
+        routineId: null,
+        source: "sheets",
+        durationMin: durationMin === "" ? "" : parseInt(durationMin),
+        rpe: rpe === "" ? "" : parseFloat(rpe),
+        notes: notes.trim(),
+        pains: [],
+        exercises: []
+      });
+      setDurationMin("");
+      setRpe("");
+      setNotes("");
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2600);
+    };
+    return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 20 } },
+      /* @__PURE__ */ React.createElement(Card, null,
+        /* @__PURE__ */ React.createElement(SectionTitle, null, "Ma s\xE9ance du jour"),
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted, lineHeight: 1.55, margin: "10px 0 14px" } }, "Ton programme, tes charges et tes RPE se remplissent dans le Google Sheets pr\xE9par\xE9 par ton coach. Ici, tu pointes simplement la s\xE9ance pour qu'elle compte dans ton bilan hebdomadaire."),
+        url ? /* @__PURE__ */ React.createElement(Btn, { icon: Dumbbell, style: { width: "100%" }, onClick: () => window.open(url, "_blank", "noopener") }, "Ouvrir mon programme") : /* @__PURE__ */ React.createElement("div", { style: { background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "12px 14px", fontSize: 13, color: COLORS.textMuted, lineHeight: 1.5 } }, "Aucun lien enregistr\xE9. Ouvre ", /* @__PURE__ */ React.createElement("strong", { style: { color: COLORS.gold } }, "Mon profil & r\xE9glages"), " et colle le lien Google Sheets que ton coach t'a envoy\xE9.")
+      ),
+      /* @__PURE__ */ React.createElement(Card, null,
+        /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 } },
+          /* @__PURE__ */ React.createElement(SectionTitle, null, "Pointer une s\xE9ance"),
+          target ? /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 12.5, color: weekSessions.length >= target ? COLORS.good : COLORS.textMuted } }, weekSessions.length, "/", target, " cette semaine") : null
+        ),
+        /* @__PURE__ */ React.createElement(Field, { label: "Date" }, /* @__PURE__ */ React.createElement(TextInput, { type: "date", value: date, onChange: (e) => setDate(e.target.value || todayISO()) })),
+        /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
+          /* @__PURE__ */ React.createElement(Field, { label: "Dur\xE9e (min)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: durationMin, placeholder: "60", onChange: (e) => setDurationMin(e.target.value) })),
+          /* @__PURE__ */ React.createElement(Field, { label: "RPE global (1-10)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.5", min: "1", max: "10", value: rpe, placeholder: "8", onChange: (e) => setRpe(e.target.value) }))
+        ),
+        /* @__PURE__ */ React.createElement(Field, { label: "Ressenti / note pour le coach" }, /* @__PURE__ */ React.createElement(TextArea, { rows: 2, value: notes, placeholder: "Ex : jambes lourdes, squat plus facile qu'en semaine 2...", onChange: (e) => setNotes(e.target.value) })),
+        alreadyToday && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: COLORS.warn, margin: "0 0 10px" } }, "Une s\xE9ance est d\xE9j\xE0 point\xE9e \xE0 cette date."),
+        /* @__PURE__ */ React.createElement(Btn, { icon: Plus, style: { width: "100%" }, onClick: save }, "S\xE9ance faite"),
+        saved && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.good, textAlign: "center", margin: "10px 0 0" } }, "S\xE9ance enregistr\xE9e.")
+      ),
+      /* @__PURE__ */ React.createElement(Card, null,
+        /* @__PURE__ */ React.createElement(SectionTitle, null, "Cette semaine"),
+        /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14 } }, weekSessions.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted, margin: 0 } }, "Aucune s\xE9ance point\xE9e pour l'instant.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, weekSessions.map((x) => /* @__PURE__ */ React.createElement("div", { key: x.id, style: { display: "flex", alignItems: "center", gap: 10, background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 12px" } },
+          /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, color: COLORS.text, fontWeight: 600 } }, fmtDateShort(x.date)),
+            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", marginTop: 2 } }, [x.durationMin ? x.durationMin + " min" : null, x.rpe ? "RPE " + x.rpe : null].filter(Boolean).join(" \xB7 ") || "\u2014"),
+            x.notes ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: COLORS.textMuted, marginTop: 4, lineHeight: 1.45 } }, x.notes) : null
+          ),
+          /* @__PURE__ */ React.createElement(IconBtn, { danger: true, onClick: () => sessionsApi.remove(x.id) }, /* @__PURE__ */ React.createElement(Trash2, { size: 15 }))
+        )))
+        )
+      )
+    );
+  }
   function EntrainementsTab({ routinesApi, sessionsApi, profile }) {
     const pl1rm = usePowerlifting1RM();
     const plOn = (profile == null ? void 0 : profile.goal) === "performance";
+    if ((profile == null ? void 0 : profile.trainingMode) === "sheets") {
+      return /* @__PURE__ */ React.createElement(SeancesSheetsTab, { sessionsApi, profile });
+    }
     return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(TrainingPerformanceCard, { sessions: sessionsApi.items }), /* @__PURE__ */ React.createElement(RecordsCard, { sessions: sessionsApi.items }), /* @__PURE__ */ React.createElement(EntrainementsTabLegacy, { routinesApi, sessionsApi, plOn, pl1rm }));
   }
   function TendancesTab({ allData, profile, targets, weekStats, currentReport, reports, generating, genError, onGenerate, photos, onUploadPhoto, monthStats, currentMonthlyReport, monthlyReports, generatingMonthly, genErrorMonthly, onGenerateMonthly, apiKey }) {
