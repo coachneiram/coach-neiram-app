@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="app-version" content="2026-08-28.02-base-videos"/>
+<meta name="app-version" content="2026-08-28.03-machines-salle"/>
 <meta name="theme-color" content="#0B0B0C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -3357,6 +3357,82 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     }).map((it) => ({ name: it.name, mode: it.mode, defaults: it.defaults }));
     if (items.length) EXERCISE_LIBRARY.push({ group: "Base vid\xE9os Coach Neiram", note: "Exercices de ton Google Sheets. Le bouton \u25B6 ouvre la d\xE9mo YouTube.", items });
   })();
+
+  // Machines libres et guidees d'une salle Fitness Park (Gym80, Hammer,
+  // Technogym, Panatta, Smith, zone charges libres). Ajoute apres la base
+  // videos pour que la deduplication porte sur toute la bibliotheque.
+  [
+    { group: "Machines à charge libre (Hammer / plate-loaded)", note: "Machines à disques : trajectoire guidée mais résistance libre. Charge par côté, attention à l'équilibrage droite/gauche.", items: [
+      { name: "Développé couché convergent", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Développé incliné convergent", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Développé décliné convergent", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Développé épaules convergent", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Tirage vertical convergent", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Tirage horizontal convergent", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Rowing unilatéral appui poitrine", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Tirage bûcheron machine", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Pull-over plate-loaded", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Shrug machine", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Curl biceps plate-loaded", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Extension triceps plate-loaded", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Soulevé de terre machine", mode: "muscu", defaults: { sets: 3, reps: 8 } }
+    ] },
+    { group: "Smith machine / barre guidée", note: "Barre sur rails : utile pour charger lourd en sécurité ou fixer une trajectoire.", items: [
+      { name: "Développé couché à la Smith", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Développé incliné à la Smith", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Développé militaire à la Smith", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Squat à la Smith", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Squat bulgare à la Smith", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Fentes à la Smith", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Hip thrust à la Smith", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Rowing à la Smith", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Soulevé de terre roumain à la Smith", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Mollets debout à la Smith", mode: "muscu", defaults: { sets: 4, reps: 15 } },
+      { name: "Shrug à la Smith", mode: "muscu", defaults: { sets: 3, reps: 12 } }
+    ] },
+    { group: "Machines guidées — complément", note: "Postes à charge sélectionnable moins courants dans la bibliothèque de base.", items: [
+      { name: "Crunch machine", mode: "muscu", defaults: { sets: 3, reps: 15 } },
+      { name: "Rotation du buste machine", mode: "muscu", defaults: { sets: 3, reps: 15 } },
+      { name: "Extension lombaires machine", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Leg curl debout", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Kickback fessier machine", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Chest press unilatéral", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Butterfly inversé machine", mode: "muscu", defaults: { sets: 3, reps: 15 } },
+      { name: "Tirage vertical prise large", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Tirage vertical prise serrée", mode: "muscu", defaults: { sets: 3, reps: 10 } }
+    ] },
+    { group: "Poulies — complément", note: "Variantes de prise et d'angle sur la zone poulies.", items: [
+      { name: "Tirage nuque poulie haute", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Crossover poulie haute", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Crossover poulie basse", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Kickback triceps poulie", mode: "muscu", defaults: { sets: 3, reps: 15 } },
+      { name: "Curl unilatéral poulie", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Extension triceps unilatérale poulie", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Crunch à la poulie haute", mode: "muscu", defaults: { sets: 3, reps: 15 } },
+      { name: "Rowing poulie basse prise large", mode: "muscu", defaults: { sets: 3, reps: 12 } }
+    ] },
+    { group: "Haltères & barre — complément", note: "Zone charges libres : barres olympiques, haltères, EZ, landmine.", items: [
+      { name: "Développé décliné haltères", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Développé Arnold", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Rowing Yates", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Curl incliné haltères", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Curl concentration", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Curl barre EZ", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Élévations frontales haltères", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Shrugs haltères", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Shrugs barre", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Pull-over haltère", mode: "muscu", defaults: { sets: 3, reps: 12 } },
+      { name: "Good morning barre", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Front squat barre", mode: "muscu", defaults: { sets: 3, reps: 8 } },
+      { name: "Soulevé de terre classique", mode: "muscu", defaults: { sets: 3, reps: 6 } },
+      { name: "Soulevé de terre sumo", mode: "muscu", defaults: { sets: 3, reps: 6 } },
+      { name: "Fentes latérales haltères", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Step-up haltères", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Landmine press", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Landmine row", mode: "muscu", defaults: { sets: 3, reps: 10 } },
+      { name: "Kettlebell swing", mode: "muscu", defaults: { sets: 4, reps: 15 } }
+    ] }
+  ].forEach((g) => EXERCISE_LIBRARY.push(g));
   function fmtExercise(ex) {
     const mode = ex.mode || "muscu";
     if (mode === "cardio") {
