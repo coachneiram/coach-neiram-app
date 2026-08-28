@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="app-version" content="2026-08-28.01-seances-sheets"/>
+<meta name="app-version" content="2026-08-28.02-base-videos"/>
 <meta name="theme-color" content="#0B0B0C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -3223,6 +3223,140 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     ] },
   ];
   EXERCISE_LIBRARY.push(PL_LIBRARY_GROUP);
+
+  // Base videos Coach Neiram - reprise de l'onglet "Base Videos" du Google Sheets
+  // du programme. Un exercice = un lien, une seule fois : la meme cle sert a
+  // retrouver la video depuis n'importe quel exercice deja present ailleurs
+  // dans la bibliotheque, sans dupliquer la ligne.
+  const EXERCISE_VIDEO_SOURCE = [
+    { name: "Abducteurs", mode: "muscu", video: "https://youtube.com/shorts/EqeOEtjAT1Y", defaults: { sets: 3, reps: 10 } },
+    { name: "Adducteurs", mode: "muscu", video: "https://youtube.com/shorts/IARHerJ1_Ww", defaults: { sets: 3, reps: 10 } },
+    { name: "Bench", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Bench 2CT", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Bench 4/2/0", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Butterfly", mode: "muscu", video: "https://youtube.com/shorts/Z1AohjrZAQg", defaults: { sets: 3, reps: 10 } },
+    { name: "Chest press", mode: "muscu", video: "https://youtube.com/shorts/PESSmrxQSAw", defaults: { sets: 3, reps: 10 } },
+    { name: "Chest press debout", mode: "muscu", video: "https://youtube.com/shorts/l-Vk6_V3J6Y", defaults: { sets: 3, reps: 10 } },
+    { name: "Comp Bench", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Comp DL", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Comp Squat", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Curl biceps rotatiton", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Curl marteau", mode: "muscu", video: "https://youtube.com/shorts/PYvRjPDa-GE", defaults: { sets: 3, reps: 10 } },
+    { name: "Curl marteau corde", mode: "muscu", video: "https://youtube.com/shorts/PYvRjPDa-GE", defaults: { sets: 3, reps: 10 } },
+    { name: "Curl marteau corde + Halteres", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Curl marteau haltères", mode: "muscu", video: "https://youtube.com/shorts/VysBBkBHNnQ", defaults: { sets: 3, reps: 10 } },
+    { name: "Curl pupitre", mode: "muscu", video: "https://youtube.com/shorts/vmoEP-ME2Hg", defaults: { sets: 3, reps: 10 } },
+    { name: "Deadlift", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Développé épaule machine", mode: "muscu", video: "https://youtube.com/shorts/gv4uJjNcEc0", defaults: { sets: 3, reps: 10 } },
+    { name: "Développé épaules", mode: "muscu", video: "https://youtube.com/shorts/gv4uJjNcEc0", defaults: { sets: 3, reps: 10 } },
+    { name: "Développé incliné machine", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Développé militaire", mode: "muscu", video: "https://youtube.com/shorts/gqJT6D1DbeQ", defaults: { sets: 3, reps: 10 } },
+    { name: "Dips", mode: "pdc", video: null, defaults: { sets: 3, reps: 12 } },
+    { name: "Dips assistées", mode: "muscu", video: "https://youtube.com/shorts/VkFtPkBOUOg", defaults: { sets: 3, reps: 10 } },
+    { name: "Dips machine", mode: "muscu", video: "https://youtube.com/shorts/j4LMR8rdwOg", defaults: { sets: 3, reps: 10 } },
+    { name: "Élévations frontales", mode: "muscu", video: "https://youtube.com/shorts/HKBWKsRzcgM", defaults: { sets: 3, reps: 10 } },
+    { name: "Élévations latérales", mode: "muscu", video: "https://youtube.com/shorts/wGLidlVqI9s", defaults: { sets: 3, reps: 10 } },
+    { name: "Extension triceps", mode: "muscu", video: "https://youtube.com/shorts/vkqd9_iTJ3k", defaults: { sets: 3, reps: 10 } },
+    { name: "Facepull", mode: "muscu", video: "https://youtube.com/shorts/5Rr1Meo0dLQ", defaults: { sets: 3, reps: 10 } },
+    { name: "Fentes arrière", mode: "pdc", video: null, defaults: { sets: 3, reps: 12 } },
+    { name: "Fentes bulgares", mode: "muscu", video: "https://youtube.com/shorts/BYJ3X_rGQkE", defaults: { sets: 3, reps: 10 } },
+    { name: "Fentes unilaterales", mode: "muscu", video: "https://youtube.com/shorts/r3aZfPPVmQg", defaults: { sets: 3, reps: 10 } },
+    { name: "Gainage", mode: "pdc", video: "https://youtube.com/shorts/XLDAZHTMdyE", defaults: { sets: 3, reps: 30, repUnit: "sec" } },
+    { name: "Hip thrust", mode: "muscu", video: "https://youtube.com/shorts/rA6QacIDBPE", defaults: { sets: 3, reps: 10 } },
+    { name: "Larsen 4/2/0", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Leg curl", mode: "muscu", video: "https://youtube.com/shorts/8oqpMStSWz0", defaults: { sets: 3, reps: 10 } },
+    { name: "Leg curl + pause", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Leg curl allongé", mode: "muscu", video: "https://youtube.com/shorts/p6geLJ-JRIM", defaults: { sets: 3, reps: 10 } },
+    { name: "Leg curl unilatéral", mode: "muscu", video: "https://youtube.com/shorts/4ww4zAN8VaQ", defaults: { sets: 3, reps: 10 } },
+    { name: "Leg extension", mode: "muscu", video: "https://youtube.com/shorts/meOJ_9YLPcw", defaults: { sets: 3, reps: 10 } },
+    { name: "Leg extension + pause", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Leg extension unilatéral", mode: "muscu", video: "https://youtube.com/shorts/51TgSnzAxUw", defaults: { sets: 3, reps: 10 } },
+    { name: "Lombaires + pause", mode: "pdc", video: null, defaults: { sets: 3, reps: 12 } },
+    { name: "Lombaires lestés", mode: "pdc", video: null, defaults: { sets: 3, reps: 12 } },
+    { name: "Mollets assis", mode: "muscu", video: "https://youtube.com/shorts/JVDPgb5hy6k", defaults: { sets: 3, reps: 10 } },
+    { name: "Mountain climber", mode: "pdc", video: "https://youtube.com/shorts/E6kOnrApXfY", defaults: { sets: 3, reps: 12 } },
+    { name: "Paused Squat 3CT", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Pendulum", mode: "muscu", video: "https://youtube.com/shorts/vHzfMG3BxB0", defaults: { sets: 3, reps: 10 } },
+    { name: "Pendulum ou V Squat", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Planche frontale", mode: "pdc", video: null, defaults: { sets: 3, reps: 30, repUnit: "sec" } },
+    { name: "Pompes", mode: "pdc", video: "https://youtube.com/shorts/BZ2QZfLgfsI", defaults: { sets: 3, reps: 12 } },
+    { name: "Pompes prise larges", mode: "pdc", video: "https://youtube.com/shorts/ue0NiIiID2Y", defaults: { sets: 3, reps: 12 } },
+    { name: "Poulies vis à vis", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Presse à cuisses", mode: "muscu", video: "https://youtube.com/shorts/YuLA9MY2sXg", defaults: { sets: 3, reps: 10 } },
+    { name: "Presse unilatérale", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "RDL", mode: "muscu", video: "https://youtube.com/shorts/OVYq-Gi0A28", defaults: { sets: 3, reps: 10 } },
+    { name: "Rowing barre pronation", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Semi Sumo DL", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Semi Sumo Paused DL", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Squat", mode: "muscu", video: "https://youtube.com/shorts/NCDdI_ZzxXY", defaults: { sets: 3, reps: 10 } },
+    { name: "Squat 3/1/0", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "T bar", mode: "muscu", video: "https://youtube.com/shorts/H4j-mSeLa24", defaults: { sets: 3, reps: 10 } },
+    { name: "T bar 0/1/3", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Tapis marche inclinée", mode: "cardio", video: null, defaults: { sets: 1, reps: "" } },
+    { name: "Tirage dos unilatéral", mode: "muscu", video: "https://youtube.com/shorts/rYSq3nioAYc", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage haut", mode: "muscu", video: "https://youtube.com/shorts/AvPSy_BlzjM", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage horizontal", mode: "muscu", video: "https://youtube.com/shorts/IGUfxUfuNBs", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage menton", mode: "muscu", video: "https://youtube.com/shorts/Bi32YLvMf1M", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage menton poulie basse", mode: "muscu", video: "https://youtube.com/shorts/Bi32YLvMf1M", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage vertical", mode: "muscu", video: "https://youtube.com/shorts/JdN64Ad98W8", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage vertical pronation + supination", mode: "muscu", video: null, defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage vertical supination", mode: "muscu", video: "https://youtube.com/shorts/rtd3XPQG9EA", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage vertical unilatéral", mode: "muscu", video: "https://youtube.com/shorts/uUItT-_l_DA", defaults: { sets: 3, reps: 10 } },
+    { name: "Tractions assistées", mode: "muscu", video: "https://youtube.com/shorts/I2jy0artTIQ", defaults: { sets: 3, reps: 10 } },
+    { name: "Développé militaire machine", mode: "muscu", video: "https://youtube.com/shorts/wwuzkOtrMgw", defaults: { sets: 3, reps: 10 } },
+    { name: "V Squat", mode: "muscu", video: "https://youtube.com/shorts/LOfNG1eWSZ8", defaults: { sets: 3, reps: 10 } },
+    { name: "Pompes prise serrée", mode: "pdc", video: "https://youtube.com/shorts/9NVkVWuCHMw", defaults: { sets: 3, reps: 12 } },
+    { name: "Curl biceps rotation", mode: "muscu", video: "https://youtube.com/shorts/K6iGNC1tid0", defaults: { sets: 3, reps: 10 } },
+    { name: "Traineau", mode: "pdc", video: "https://youtube.com/shorts/8AgKPiZgNSI", defaults: { sets: 3, reps: 12 } },
+    { name: "Tirage dos au sol", mode: "pdc", video: "https://youtube.com/shorts/_LMPOeR_DdA", defaults: { sets: 3, reps: 12 } },
+    { name: "Chaise", mode: "pdc", video: "https://youtube.com/shorts/ptQeP4hokPc", defaults: { sets: 3, reps: 30, repUnit: "sec" } },
+    { name: "Montée sur pointe", mode: "pdc", video: "https://youtube.com/shorts/cf2usMSBeMc", defaults: { sets: 3, reps: 12 } },
+    { name: "Extension lombaires", mode: "pdc", video: "https://youtube.com/shorts/P8_GzApYDf0", defaults: { sets: 3, reps: 12 } },
+    { name: "Curl biceps poulies basse", mode: "muscu", video: "https://youtube.com/shorts/FqvatjRUhB4", defaults: { sets: 3, reps: 10 } },
+    { name: "Leg curl assis", mode: "muscu", video: "https://youtube.com/shorts/8oqpMStSWz0", defaults: { sets: 3, reps: 10 } },
+    { name: "Presse horizontale", mode: "muscu", video: "https://youtube.com/shorts/YuLA9MY2sXg", defaults: { sets: 3, reps: 10 } },
+    { name: "Chest press convergent", mode: "muscu", video: "https://youtube.com/shorts/PESSmrxQSAw", defaults: { sets: 3, reps: 10 } },
+    { name: "Développé couché barre", mode: "muscu", video: "https://youtube.com/shorts/C3L_5cza3Q0", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage horizontal unilatéral", mode: "muscu", video: "https://youtube.com/shorts/rYSq3nioAYc", defaults: { sets: 3, reps: 10 } },
+    { name: "Presse à cuisses inclinée", mode: "muscu", video: "https://youtube.com/shorts/fRxbecOYJ3Y", defaults: { sets: 3, reps: 10 } },
+    { name: "Belt squat", mode: "muscu", video: "https://youtube.com/shorts/Rg41r2i_ZBU", defaults: { sets: 3, reps: 10 } },
+    { name: "Développé épaules debout", mode: "muscu", video: "https://youtube.com/shorts/CgHTZnOcxVo", defaults: { sets: 3, reps: 10 } },
+    { name: "Élévations latérales machine", mode: "muscu", video: "https://youtube.com/shorts/JdFKx_QvXuE", defaults: { sets: 3, reps: 10 } },
+    { name: "Chest press incliné", mode: "muscu", video: "https://youtube.com/shorts/BxkT0eKWPxw", defaults: { sets: 3, reps: 10 } },
+    { name: "Chest press allongé", mode: "muscu", video: "https://youtube.com/shorts/oz6HnDyW8VU", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage vertical pronation", mode: "muscu", video: "https://youtube.com/shorts/JdN64Ad98W8", defaults: { sets: 3, reps: 10 } },
+    { name: "Développé incliné haltères", mode: "muscu", video: "https://youtube.com/shorts/ImbzBExlwZQ", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage dos poulie haute", mode: "muscu", video: "https://youtube.com/shorts/N2DIh8ETS0Q", defaults: { sets: 3, reps: 10 } },
+    { name: "Tirage dos poulie basse", mode: "muscu", video: "https://youtube.com/shorts/brSP-yszxCk", defaults: { sets: 3, reps: 10 } },
+    { name: "Tractions", mode: "pdc", video: "https://youtube.com/shorts/6JsOgiFnnfA", defaults: { sets: 3, reps: 12 } },
+    { name: "Triceps extension", mode: "muscu", video: "https://youtube.com/shorts/vkqd9_iTJ3k", defaults: { sets: 3, reps: 10 } },
+    { name: "Rowing supination", mode: "muscu", video: "https://youtube.com/shorts/ERODBSgTdBQ", defaults: { sets: 3, reps: 10 } },
+    { name: "Rowing pronation", mode: "muscu", video: "https://youtube.com/shorts/vrvrgu-THt8", defaults: { sets: 3, reps: 10 } },
+    { name: "Dips sur banc", mode: "pdc", video: "https://youtube.com/shorts/RpL4sCl1V-M", defaults: { sets: 3, reps: 12 } },
+    { name: "Tirage bucheron", mode: "muscu", video: "https://youtube.com/shorts/97bGsPyUikA", defaults: { sets: 3, reps: 10 } },
+    { name: "Développé militaire haltères", mode: "muscu", video: "https://youtube.com/shorts/gqJT6D1DbeQ", defaults: { sets: 3, reps: 10 } },
+    { name: "Développé couché haltères", mode: "muscu", video: "https://youtube.com/shorts/nXM5LBIkwCY", defaults: { sets: 3, reps: 10 } },
+    { name: "Lombaires", mode: "pdc", video: "https://youtube.com/shorts/P8_GzApYDf0", defaults: { sets: 3, reps: 12 } },
+    { name: "Curl biceps", mode: "muscu", video: "https://youtube.com/shorts/FqvatjRUhB4", defaults: { sets: 3, reps: 10 } },
+    { name: "Gobelet Squat", mode: "muscu", video: "https://youtube.com/shorts/Q_5o2CrwiTQ", defaults: { sets: 3, reps: 10 } },
+    { name: "RDL aux haltères", mode: "muscu", video: "https://youtube.com/shorts/OVYq-Gi0A28", defaults: { sets: 3, reps: 10 } }
+  ];
+  const EXERCISE_VIDEOS = EXERCISE_VIDEO_SOURCE.reduce((acc, it) => {
+    if (it.video) acc[exKey(it.name)] = it.video;
+    return acc;
+  }, {});
+  const videoFor = (name) => EXERCISE_VIDEOS[exKey(name)] || null;
+  (() => {
+    const known = LIBRARY_NAMES();
+    const seen = /* @__PURE__ */ new Set();
+    const items = EXERCISE_VIDEO_SOURCE.filter((it) => {
+      const k = exKey(it.name);
+      if (known.has(k) || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).map((it) => ({ name: it.name, mode: it.mode, defaults: it.defaults }));
+    if (items.length) EXERCISE_LIBRARY.push({ group: "Base vid\xE9os Coach Neiram", note: "Exercices de ton Google Sheets. Le bouton \u25B6 ouvre la d\xE9mo YouTube.", items });
+  })();
   function fmtExercise(ex) {
     const mode = ex.mode || "muscu";
     if (mode === "cardio") {
@@ -3415,8 +3549,10 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     }, style: { ...smallInput, textAlign: "center" } }), /* @__PURE__ */ React.createElement("button", { onClick: () => setEditingSession({ ...editingSession, pains: editingSession.pains.filter((_, k) => k !== pi) }), style: { background: "none", border: "none", color: COLORS.textFaint, cursor: "pointer", display: "flex", justifyContent: "center" } }, /* @__PURE__ */ React.createElement(X, { size: 15 }))))), !(editingSession.pains || []).length && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "6px 0 0" } }, "Aucune douleur signal\xE9e. Ajoute une zone si quelque chose a g\xEAn\xE9 pendant la s\xE9ance.")), plOn && /* @__PURE__ */ React.createElement("button", { onClick: () => setEditingSession({ ...editingSession, deload: !editingSession.deload }), style: { display: "flex", alignItems: "center", gap: 8, width: "100%", background: editingSession.deload ? `${COLORS.gold}14` : "none", border: `1px solid ${editingSession.deload ? COLORS.gold : COLORS.border}`, borderRadius: 9, padding: "9px 11px", color: editingSession.deload ? COLORS.gold : COLORS.textMuted, fontSize: 12.5, fontWeight: 600, cursor: "pointer", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "IBM Plex Mono" } }, editingSession.deload ? "\u25A0" : "\u25A1"), "Semaine de d\xE9load"), /* @__PURE__ */ React.createElement(Field, { label: "Notes" }, /* @__PURE__ */ React.createElement(TextArea, { value: editingSession.notes, onChange: (e) => setEditingSession({ ...editingSession, notes: e.target.value }) })), /* @__PURE__ */ React.createElement(Btn, { onClick: saveSession, style: { width: "100%", marginTop: 4 } }, "Enregistrer la s\xE9ance"))), /* @__PURE__ */ React.createElement(Modal, { open: libraryOpen, onClose: () => setLibraryOpen(false), title: "Biblioth\xE8que d'exercices" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16 } }, [...customEx.items.length ? [{ group: "Mes exercices", custom: true, note: "Exercices que tu as saisis toi-m\xEAme, conserv\xE9s pour les r\xE9utiliser.", items: customEx.items }] : [], ...EXERCISE_LIBRARY.filter((g) => !g.plOnly || plOn)].map((group) => /* @__PURE__ */ React.createElement("div", { key: group.group }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "Poppins", fontSize: 12, fontWeight: 700, color: COLORS.gold, textTransform: "uppercase", letterSpacing: 0.6 } }, group.group), group.note && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10, color: COLORS.textFaint, margin: "3px 0 8px" } }, group.note), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } }, group.items.map((item) => {
       var _a, _b, _c;
       const meta = item.mode === "cardio" ? (item.fields || []).map((f) => CARDIO_FIELD_DEFS[f].label).join(" \xB7 ") : `${((_a = item.defaults) == null ? void 0 : _a.sets) || 3}\xD7${((_b = item.defaults) == null ? void 0 : _b.reps) || ""}${((_c = item.defaults) == null ? void 0 : _c.repUnit) === "sec" ? " s" : ""}`;
-      const pick = /* @__PURE__ */ React.createElement("button", { onClick: () => addFromLibrary(item), style: { flex: 1, minWidth: 0, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: group.custom ? "none" : COLORS.bgAlt, border: group.custom ? "none" : `1px solid ${COLORS.border}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", textAlign: "left", width: "100%" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: COLORS.text } }, item.name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", flexShrink: 0 } }, meta));
-      if (!group.custom) return /* @__PURE__ */ React.createElement(React.Fragment, { key: item.name }, pick);
+      const pick = /* @__PURE__ */ React.createElement("button", { onClick: () => addFromLibrary(item), style: { flex: 1, minWidth: 0, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: "none", border: "none", borderRadius: 8, padding: "9px 11px", cursor: "pointer", textAlign: "left", width: "100%" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: COLORS.text } }, item.name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", flexShrink: 0 } }, meta));
+      const vid = videoFor(item.name);
+      const playBtn = vid ? /* @__PURE__ */ React.createElement("button", { onClick: () => window.open(vid, "_blank", "noopener"), "aria-label": "Voir la d\xE9mo", style: { background: "none", border: "none", color: COLORS.gold, cursor: "pointer", padding: 6, display: "flex", flexShrink: 0, fontSize: 13 } }, "\u25B6") : null;
+      if (!group.custom) return /* @__PURE__ */ React.createElement("div", { key: item.name, style: { display: "flex", alignItems: "center", gap: 2, background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, paddingRight: vid ? 4 : 0 } }, pick, playBtn);
       return /* @__PURE__ */ React.createElement("div", { key: item.name, style: { display: "flex", alignItems: "center", gap: 2, background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, paddingRight: 6 } }, pick, /* @__PURE__ */ React.createElement("button", { onClick: () => customEx.remove(item.name), "aria-label": "Oublier cet exercice", style: { background: "none", border: "none", color: COLORS.textFaint, cursor: "pointer", padding: 6, display: "flex", flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Trash2, { size: 14 })));
     })))))));
   }
