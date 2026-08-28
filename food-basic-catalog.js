@@ -237,7 +237,7 @@
   }
 
   // Produits Open Food Facts à écarter quand la requête vise un aliment simple
-  const COMPOSITE = /(cordon bleu|nugget|pane|panne|farci|recette|plat |bolognaise|lasagne|quiche|tarte|gratin|pizza|burger|sandwich|wrap |salade compos|assiette|bowl|surgele|preparation|barre|biscuit|gateau|gaufre|cookie|dessert|compote|confiture|sirop|nectar|smoothie|chips|sauce|soupe|veloute|puree de |crumble|muesli|cereales)/i;
+  const COMPOSITE = /(cordon bleu|nugget|pane|panne|farci|recette|plat |bolognaise|lasagne|quiche|tarte|gratin|pizza|burger|sandwich|wrap |salade compos|assiette|bowl|surgele|preparation|barre|biscuit|gateau|gaufre|cookie|dessert|compote|confiture|sirop|nectar|smoothie|chips|sauce|soupe|veloute|crumble|muesli|cereales)/i;
 
   const clean = (p) => { const { _aliases, _cat, ...rest } = p; return rest; };
 
