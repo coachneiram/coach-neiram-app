@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="app-version" content="2026-08-28.05-recettes-portions"/>
+<meta name="app-version" content="2026-08-29.01-coaching-en-ligne"/>
 <meta name="theme-color" content="#0B0B0C"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -209,6 +209,30 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     { id: "app", label: "Dans l'application" },
     { id: "sheets", label: "Sur mon Google Sheets (programme du coach)" }
   ];
+  const COACHING_MODES = [
+    { id: "presentiel", label: "Presentiel (salle, avec le coach)" },
+    { id: "enligne", label: "En ligne (coaching a distance)" }
+  ];
+  const HARD_WEEK_REASONS = [
+    { id: "sommeil", label: "Sommeil / fatigue" },
+    { id: "travail", label: "Charge de travail" },
+    { id: "famille", label: "Enfants / famille" },
+    { id: "sante", label: "Maladie / douleur" },
+    { id: "autre", label: "Autre" }
+  ];
+  // Coaching en ligne : tolerance de +/- 2 h autour du creneau, 2 jours de
+  // grace pour pointer apres coup, alerte coach a 2 creneaux manques sur
+  // 14 jours glissants (une alerte par semaine au maximum).
+  const SLOT_TOLERANCE_MIN = 120;
+  const SLOT_GRACE_DAYS = 2;
+  const MISSED_WINDOW_DAYS = 14;
+  const MISSED_ALERT_THRESHOLD = 2;
+  const ALERT_COOLDOWN_DAYS = 7;
+  const HARD_WEEK_KEY = "cn_hard_weeks";
+  const COACH_OUTBOX_KEY = "cn_coach_outbox";
+  const COACH_ALERT_KEY = "cn_coach_alert_state";
+  const DEFAULT_COACH_SYNC_URL = "";
+  const COACH_WHATSAPP = "33675359069";
   const DIET_TYPES = [
     { id: "aucun", label: "Aucun r\xE9gime particulier" },
     { id: "vegetarien", label: "V\xE9g\xE9tarien" },
@@ -973,6 +997,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const pains = Object.values(painMap).sort((a, b) => b.max - a.max || b.count - a.count);
     const painLines = pains.map((pp) => pp.zone + " : " + pp.count + " s\xE9ance" + (pp.count > 1 ? "s" : "") + ", intensit\xE9 max " + pp.max + "/10");
     const deloadCount = wSessions.filter((sess) => sess.deload).length;
+    // Coaching en ligne : respect du creneau et semaine difficile.
+    const slotsProfile = normalizeSlots(profile);
+    const refDay = weekKey === getWeekKey(todayISO()) ? todayISO() : end;
+    const slotSummary = slotsProfile.length ? slotWeekSummary(computeSlotWeek(slotsProfile, data.sessions, weekKey, refDay).rows) : null;
+    const hardWeekEntry = hardWeekOf(data.hardWeeks, weekKey);
+    const hardWeek = !!(hardWeekEntry && hardWeekEntry.active);
+    const hardWeekReason = hardWeek ? (HARD_WEEK_REASONS.find((r) => r.id === hardWeekEntry.reason) || {}).label || hardWeekEntry.reason || null : null;
+    const maintenanceCount = wSessions.filter((sess) => sess.maintenance).length;
     function deltaFor(field) {
       const wVals = wBody.filter((b) => b[field] != null);
       if (!wVals.length) return { latest: null, delta: null };
@@ -989,7 +1021,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const planSummary = planRows ? weekPlanSummary(planRows) : null;
     const loggedDaysCount = (/* @__PURE__ */ new Set([...wLog.map((e) => e.date), ...wForm.map((f) => f.date), ...wSessions.map((s) => s.date), ...wBody.map((b) => b.date)])).size;
     const subScores = [];
-    if (planSummary && planSummary.planned > 0) subScores.push(clamp(planSummary.done / planSummary.planned * 100, 0, 100));
+    if (slotSummary && slotSummary.planned > 0) subScores.push(clamp(slotSummary.honored / slotSummary.planned * 100, 0, 100));
+    else if (planSummary && planSummary.planned > 0) subScores.push(clamp(planSummary.done / planSummary.planned * 100, 0, 100));
     else if (profile.weeklyWorkoutTarget) subScores.push(clamp(workoutsCount / profile.weeklyWorkoutTarget * 100, 0, 100));
     if (avgCalories != null && targets.calories) subScores.push(clamp(100 - Math.abs(avgCalories - targets.calories) / targets.calories * 100, 0, 100));
     if (avgSleepH != null) subScores.push(clamp(avgSleepH / (profile.targetSleepHours || 8) * 100, 0, 100));
@@ -1017,6 +1050,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       painLines,
       deloadCount,
       planSummary,
+      slotSummary,
+      hardWeek,
+      hardWeekReason,
+      maintenanceCount,
       latestWeight: weightD.latest,
       weightDelta: weightD.delta,
       latestFatPct: fatD.latest,
@@ -1153,6 +1190,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       var _a2, _b, _c, _d, _e, _f, _g;
       return !s ? "non disponible" : [
         "S\xE9ances : " + s.workoutsCount + (s.planSummary && s.planSummary.planned ? " (programme : " + s.planSummary.done + "/" + s.planSummary.planned + " respect\xE9es" + (s.planSummary.missed ? ", " + s.planSummary.missed + " manqu\xE9e" + (s.planSummary.missed > 1 ? "s" : "") : "") + ")" : "") + (s.deloadCount ? ", dont " + s.deloadCount + " en d\xE9load" : ""),
+        s.slotSummary && s.slotSummary.planned ? "Cr\xE9neaux du profil : " + s.slotSummary.honored + "/" + s.slotSummary.planned + " tenus" + (s.slotSummary.missed ? ", " + s.slotSummary.missed + " manqu\xE9(s)" : "") : null,
+        s.hardWeek ? "Semaine d\xE9clar\xE9e difficile par le client (motif : " + (s.hardWeekReason || "non pr\xE9cis\xE9") + "), programme bascul\xE9 en format maintien 15-20 min" + (s.maintenanceCount ? ", " + s.maintenanceCount + " s\xE9ance(s) maintien r\xE9alis\xE9e(s)" : ", aucune s\xE9ance maintien r\xE9alis\xE9e") : null,
         s.painLines && s.painLines.length ? "Douleurs signal\xE9es : " + s.painLines.join(" ; ") : null,
         `Sommeil moyen : ${(_a2 = s.avgSleepH) != null ? _a2 : "\u2014"} h${s.avgSleepQuality != null ? `, qualit\xE9 ${s.avgSleepQuality}/5` : ""}`,
         s.avgEnergy != null ? `\xC9nergie ${s.avgEnergy}/5, stress ${(_b = s.avgStress) != null ? _b : "\u2014"}/10` : null,
@@ -1176,7 +1215,7 @@ ${fmt(weekStats)}
 DONN\xC9ES SEMAINE PR\xC9C\xC9DENTE (pour comparaison) :
 ${fmt(lastWeekStats)}
 
-${weekStats.painLines && weekStats.painLines.length ? "Des douleurs ont \xE9t\xE9 signal\xE9es cette semaine : mentionne-les explicitement dans VIGILANCE, propose une adaptation de charge ou de mouvement, et rappelle de consulter un professionnel de sant\xE9 si la douleur persiste ou s'aggrave. Ne pose aucun diagnostic.\n" : ""}
+${weekStats.hardWeek ? "Le client a d\xE9clar\xE9 cette semaine comme difficile et bascul\xE9 en format maintien : n'augmente ni le volume ni les charges, valorise explicitement le fait d'avoir tenu le cr\xE9neau plut\xF4t que d'avoir tout arr\xEAt\xE9, et propose une reprise progressive la semaine suivante.\n" : ""}${weekStats.slotSummary && weekStats.slotSummary.missed ? "Des cr\xE9neaux ont \xE9t\xE9 manqu\xE9s : traite la cause (organisation, fatigue, n\xE9gociation du cr\xE9neau) dans A_CORRIGER, sans culpabiliser le client.\n" : ""}${weekStats.painLines && weekStats.painLines.length ? "Des douleurs ont \xE9t\xE9 signal\xE9es cette semaine : mentionne-les explicitement dans VIGILANCE, propose une adaptation de charge ou de mouvement, et rappelle de consulter un professionnel de sant\xE9 si la douleur persiste ou s'aggrave. Ne pose aucun diagnostic.\n" : ""}
 NOTES DU CLIENT CETTE SEMAINE (s\xE9ances d'entra\xEEnement, sommeil, stress \u2014 \xE0 prendre en compte dans l'analyse et les conseils) :
 S\xE9ances : ${weekStats.sessionNotes && weekStats.sessionNotes.length ? weekStats.sessionNotes.join(" | ") : "aucune note"}
 Sommeil/stress : ${weekStats.dayNotes && weekStats.dayNotes.length ? weekStats.dayNotes.join(" | ") : "aucune note"}
@@ -2045,7 +2084,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
   }
   function ProfileFields({ value, onChange }) {
     const set = (patch) => onChange({ ...value, ...patch });
-    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Field, { label: "Pr\xE9nom (optionnel)" }, /* @__PURE__ */ React.createElement(TextInput, { value: value.name || "", onChange: (e) => set({ name: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Sexe" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [{ id: "homme", label: "Homme" }, { id: "femme", label: "Femme" }], value: value.sex || "homme", onChange: (e) => set({ sex: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "\xC2ge" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.age || "", onChange: (e) => set({ age: e.target.value ? parseInt(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Taille (cm)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.heightCm || "", onChange: (e) => set({ heightCm: e.target.value ? parseInt(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Poids de d\xE9part (kg)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: value.startWeightKg || "", onChange: (e) => set({ startWeightKg: e.target.value ? parseFloat(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement(Field, { label: "Activit\xE9 sportive (hors m\xE9tier)" }, /* @__PURE__ */ React.createElement(SelectInput, { options: ACTIVITY_LEVELS, value: value.activityLevel || "leger", onChange: (e) => set({ activityLevel: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif" }, /* @__PURE__ */ React.createElement(SelectInput, { options: GOALS, value: value.goal || "maintien", onChange: (e) => set({ goal: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Poids objectif (kg, optionnel)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: value.targetWeightKg || "", onChange: (e) => set({ targetWeightKg: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "S\xE9ances / semaine vis\xE9es" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.weeklyWorkoutTarget || "", onChange: (e) => set({ weeklyWorkoutTarget: e.target.value ? parseInt(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement(Field, { label: "O\xF9 se passent tes s\xE9ances" }, /* @__PURE__ */ React.createElement(SelectInput, { options: TRAINING_MODES, value: value.trainingMode || "app", onChange: (e) => set({ trainingMode: e.target.value }) }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 } }, value.trainingMode === "sheets" ? "Ton programme et tes charges se remplissent dans le Google Sheets du coach. L'appli ne garde que le pointage des s\xE9ances, pour le bilan hebdo." : "Tu construis et remplis tes s\xE9ances directement dans l'application.")), value.trainingMode === "sheets" && /* @__PURE__ */ React.createElement(Field, { label: "Lien Google Sheets de mon programme" }, /* @__PURE__ */ React.createElement(TextInput, { value: value.sheetsUrl || "", type: "url", placeholder: "https://docs.google.com/spreadsheets/...", onChange: (e) => set({ sheetsUrl: e.target.value.trim() }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif sommeil (h/nuit)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.5", value: value.targetSleepHours || "", onChange: (e) => set({ targetSleepHours: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Type de m\xE9tier" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [{ id: "sedentaire", label: "S\xE9dentaire (bureau, assis)" }, { id: "actif", label: "Actif (debout, d\xE9placements)" }, { id: "tres-actif", label: "Tr\xE8s actif (physique, ex. ma\xE7on)" }], value: value.jobType || "sedentaire", onChange: (e) => set({ jobType: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif pas / jour" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "500", value: value.targetSteps || "", onChange: (e) => set({ targetSteps: e.target.value ? parseInt(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif hydratation (L / jour)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.25", value: value.targetWaterL || "", onChange: (e) => set({ targetWaterL: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "R\xE9gime alimentaire" }, /* @__PURE__ */ React.createElement(SelectInput, { options: DIET_TYPES, value: value.dietType || "aucun", onChange: (e) => set({ dietType: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Allergies / intol\xE9rances" }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 } }, ALLERGENS.map((a) => {
+    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Field, { label: "Pr\xE9nom (optionnel)" }, /* @__PURE__ */ React.createElement(TextInput, { value: value.name || "", onChange: (e) => set({ name: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Sexe" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [{ id: "homme", label: "Homme" }, { id: "femme", label: "Femme" }], value: value.sex || "homme", onChange: (e) => set({ sex: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "\xC2ge" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.age || "", onChange: (e) => set({ age: e.target.value ? parseInt(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Taille (cm)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.heightCm || "", onChange: (e) => set({ heightCm: e.target.value ? parseInt(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Poids de d\xE9part (kg)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: value.startWeightKg || "", onChange: (e) => set({ startWeightKg: e.target.value ? parseFloat(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement(Field, { label: "Activit\xE9 sportive (hors m\xE9tier)" }, /* @__PURE__ */ React.createElement(SelectInput, { options: ACTIVITY_LEVELS, value: value.activityLevel || "leger", onChange: (e) => set({ activityLevel: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif" }, /* @__PURE__ */ React.createElement(SelectInput, { options: GOALS, value: value.goal || "maintien", onChange: (e) => set({ goal: e.target.value }) })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, /* @__PURE__ */ React.createElement(Field, { label: "Poids objectif (kg, optionnel)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.1", value: value.targetWeightKg || "", onChange: (e) => set({ targetWeightKg: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "S\xE9ances / semaine vis\xE9es" }, /* @__PURE__ */ React.createElement(NumberInput, { value: value.weeklyWorkoutTarget || "", onChange: (e) => set({ weeklyWorkoutTarget: e.target.value ? parseInt(e.target.value) : "" }) }))), /* @__PURE__ */ React.createElement(Field, { label: "O\xF9 se passent tes s\xE9ances" }, /* @__PURE__ */ React.createElement(SelectInput, { options: TRAINING_MODES, value: value.trainingMode || "app", onChange: (e) => set({ trainingMode: e.target.value }) }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 } }, value.trainingMode === "sheets" ? "Ton programme et tes charges se remplissent dans le Google Sheets du coach. L'appli ne garde que le pointage des s\xE9ances, pour le bilan hebdo." : "Tu construis et remplis tes s\xE9ances directement dans l'application.")), value.trainingMode === "sheets" && /* @__PURE__ */ React.createElement(Field, { label: "Lien Google Sheets de mon programme" }, /* @__PURE__ */ React.createElement(TextInput, { value: value.sheetsUrl || "", type: "url", placeholder: "https://docs.google.com/spreadsheets/...", onChange: (e) => set({ sheetsUrl: e.target.value.trim() }) })), /* @__PURE__ */ React.createElement(CoachingFields, { value, set }), /* @__PURE__ */ React.createElement(Field, { label: "Objectif sommeil (h/nuit)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.5", value: value.targetSleepHours || "", onChange: (e) => set({ targetSleepHours: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Type de m\xE9tier" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [{ id: "sedentaire", label: "S\xE9dentaire (bureau, assis)" }, { id: "actif", label: "Actif (debout, d\xE9placements)" }, { id: "tres-actif", label: "Tr\xE8s actif (physique, ex. ma\xE7on)" }], value: value.jobType || "sedentaire", onChange: (e) => set({ jobType: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif pas / jour" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "500", value: value.targetSteps || "", onChange: (e) => set({ targetSteps: e.target.value ? parseInt(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "Objectif hydratation (L / jour)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.25", value: value.targetWaterL || "", onChange: (e) => set({ targetWaterL: e.target.value ? parseFloat(e.target.value) : "" }) })), /* @__PURE__ */ React.createElement(Field, { label: "R\xE9gime alimentaire" }, /* @__PURE__ */ React.createElement(SelectInput, { options: DIET_TYPES, value: value.dietType || "aucun", onChange: (e) => set({ dietType: e.target.value }) })), /* @__PURE__ */ React.createElement(Field, { label: "Allergies / intol\xE9rances" }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 } }, ALLERGENS.map((a) => {
       const on = (value.allergies || []).includes(a.id);
       return /* @__PURE__ */ React.createElement("label", { key: a.id, style: { display: "flex", alignItems: "center", gap: 8, background: COLORS.bgAlt, border: `1px solid ${on ? COLORS.gold : COLORS.border}`, borderRadius: 9, padding: "8px 10px", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: on, onChange: (e) => {
         const cur = value.allergies || [];
@@ -2054,7 +2093,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     }))));
   }
   function Onboarding({ onSave }) {
-    const [value, setValue] = useState({ sex: "homme", activityLevel: "leger", goal: "maintien", targetSleepHours: 8, weeklyWorkoutTarget: 3, targetWaterL: 2, dietType: "aucun", allergies: [], jobType: "sedentaire", targetSteps: 8e3, trainingMode: "app" });
+    const [value, setValue] = useState({ sex: "homme", activityLevel: "leger", goal: "maintien", targetSleepHours: 8, weeklyWorkoutTarget: 3, targetWaterL: 2, dietType: "aucun", allergies: [], jobType: "sedentaire", targetSteps: 8e3, trainingMode: "app", coachingMode: "presentiel", slots: [] });
     const canSave = value.age && value.heightCm && value.startWeightKg;
     return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 } }, /* @__PURE__ */ React.createElement("style", null, GLOBAL_CSS), /* @__PURE__ */ React.createElement(Card, { style: { maxWidth: 480, width: "100%" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement(Dumbbell, { size: 30, color: COLORS.gold, style: { transform: "rotate(-20deg)" } }), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "Poppins", fontSize: 24, fontWeight: 800, color: COLORS.text, textTransform: "uppercase", margin: "6px 0 0", letterSpacing: 0.5 } }, "Coach Neiram"), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "Poppins", fontSize: 10, letterSpacing: 3.5, color: COLORS.textMuted, textTransform: "uppercase", fontWeight: 600, marginTop: 4 } }, "Coaching Sportif"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted, marginTop: 14 } }, "Configure ton suivi : ces infos calculent tes objectifs caloriques et macros. Modifiable \xE0 tout moment.")), /* @__PURE__ */ React.createElement(ProfileFields, { value, onChange: setValue }), /* @__PURE__ */ React.createElement(Btn, { onClick: () => onSave(value), disabled: !canSave, style: { width: "100%", marginTop: 8 } }, "Commencer le suivi")));
   }
@@ -2824,6 +2863,190 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const missed = rows.filter((r) => r.status === "missed").length;
     return { planned, done, missed, left: Math.max(0, planned - done - missed) };
   };
+  // ---------------------------------------------------------------
+  // Coaching en ligne : creneaux, semaine difficile, synchro coach
+  // ---------------------------------------------------------------
+  const isOnline = (profile) => !!profile && profile.coachingMode === "enligne";
+  const nowHHMM = () => {
+    const d = /* @__PURE__ */ new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  };
+  const slotDayIndex = (dayId) => Math.max(0, WEEK_DAYS.findIndex((d) => d.id === dayId));
+  const slotDayLabel = (dayId) => {
+    const d = WEEK_DAYS.find((x) => x.id === dayId);
+    return d ? d.label : "\u2014";
+  };
+  const minutesOf = (hhmm) => {
+    if (!hhmm) return null;
+    const p = String(hhmm).split(":").map(Number);
+    if (p.length < 2 || p.some(isNaN)) return null;
+    return p[0] * 60 + p[1];
+  };
+  const normalizeSlots = (profile) => ((profile && profile.slots) || []).filter((s) => s && s.day).map((s) => ({ id: s.id || uid(), day: s.day, time: s.time || "", place: s.place || "" }));
+  const dayIdOf = (dateStr) => WEEK_DAYS[(parseISO(dateStr).getDay() + 6) % 7].id;
+  // Croise les creneaux declares dans le profil et les seances reellement
+  // pointees, semaine par semaine. Un creneau reste rattrapable pendant
+  // SLOT_GRACE_DAYS avant d'etre compte comme manque.
+  function computeSlotWeek(slots, sessions, weekKey, today) {
+    const used = /* @__PURE__ */ new Set();
+    const rows = (slots || []).map((s) => ({ slot: s, date: addDays(weekKey, slotDayIndex(s.day)) })).sort((a, b) => a.date.localeCompare(b.date) || String(a.slot.time).localeCompare(String(b.slot.time)));
+    const weekSessions = (sessions || []).filter((x) => x.date && getWeekKey(x.date) === weekKey);
+    rows.forEach((r) => {
+      const direct = weekSessions.find((x) => x.slotId && x.slotId === r.slot.id && !used.has(x.id));
+      if (direct) {
+        used.add(direct.id);
+        r.session = direct;
+        if (direct.date !== r.date) r.recovered = true;
+      }
+    });
+    rows.forEach((r) => {
+      if (r.session) return;
+      const sameDay = weekSessions.find((x) => x.date === r.date && !used.has(x.id));
+      if (sameDay) {
+        used.add(sameDay.id);
+        r.session = sameDay;
+      }
+    });
+    rows.forEach((r) => {
+      if (r.session || r.date > today) return;
+      const other = weekSessions.find((x) => !used.has(x.id) && x.date <= today);
+      if (other) {
+        used.add(other.id);
+        r.session = other;
+        r.recovered = true;
+      }
+    });
+    rows.forEach((r) => {
+      if (r.session) {
+        if (r.recovered) {
+          r.status = "rattrape";
+          r.detail = "Rattrap\xE9e le " + fmtDateShort(r.session.date);
+          return;
+        }
+        const planned = minutesOf(r.slot.time), actual = minutesOf(r.session.startTime);
+        if (planned != null && actual != null && Math.abs(actual - planned) > SLOT_TOLERANCE_MIN) {
+          r.status = "decale";
+          r.detail = "Faite \xE0 " + r.session.startTime + " au lieu de " + r.slot.time;
+        } else {
+          r.status = "tenu";
+          r.detail = r.session.startTime ? "Faite \xE0 " + r.session.startTime : "Point\xE9e";
+        }
+        return;
+      }
+      if (r.date > today) {
+        r.status = "todo";
+        r.detail = null;
+      } else if (r.date === today) {
+        r.status = "aujourdhui";
+        r.detail = "C'est aujourd'hui";
+      } else if (today < addDays(r.date, SLOT_GRACE_DAYS)) {
+        r.status = "attente";
+        r.detail = "Encore rattrapable";
+      } else {
+        r.status = "manque";
+        r.detail = "Manqu\xE9";
+      }
+    });
+    return { rows, bonus: weekSessions.filter((x) => !used.has(x.id)).length };
+  }
+  const SLOT_STATUS_META = {
+    tenu: { label: "Tenu", color: COLORS.good },
+    decale: { label: "D\xE9cal\xE9", color: COLORS.blue },
+    rattrape: { label: "Rattrap\xE9", color: COLORS.blue },
+    aujourdhui: { label: "Aujourd'hui", color: COLORS.gold },
+    attente: { label: "\xC0 rattraper", color: COLORS.warn },
+    todo: { label: "\xC0 venir", color: COLORS.textMuted },
+    manque: { label: "Manqu\xE9", color: COLORS.bad }
+  };
+  const SLOT_HONORED = ["tenu", "decale", "rattrape"];
+  const slotWeekSummary = (rows) => {
+    const honored = rows.filter((r) => SLOT_HONORED.indexOf(r.status) >= 0).length;
+    const missed = rows.filter((r) => r.status === "manque").length;
+    return { planned: rows.length, honored, missed, resolved: honored + missed, pct: honored + missed ? Math.round(honored / (honored + missed) * 100) : null };
+  };
+  // Taux de respect du creneau sur N semaines glissantes : le vrai indicateur
+  // de retention en coaching a distance.
+  function slotAdherence(slots, sessions, numWeeks, today) {
+    if (!(slots || []).length) return null;
+    let honored = 0, resolved = 0, missed = 0;
+    const thisMonday = getWeekKey(today);
+    for (let i = 0; i < numWeeks; i++) {
+      const s = slotWeekSummary(computeSlotWeek(slots, sessions, addDays(thisMonday, -7 * i), today).rows);
+      honored += s.honored;
+      resolved += s.resolved;
+      missed += s.missed;
+    }
+    return { honored, resolved, missed, pct: resolved ? Math.round(honored / resolved * 100) : null };
+  }
+  // Creneaux manques sur la fenetre glissante qui declenche l'alerte coach.
+  function recentMissedSlots(slots, sessions, today) {
+    if (!(slots || []).length) return [];
+    const from = addDays(today, -MISSED_WINDOW_DAYS);
+    const monday = getWeekKey(today);
+    const out = [];
+    [monday, addDays(monday, -7), addDays(monday, -14)].forEach((wk) => {
+      computeSlotWeek(slots, sessions, wk, today).rows.forEach((r) => {
+        if (r.status === "manque" && r.date > from && r.date <= today) out.push({ date: r.date, jour: slotDayLabel(r.slot.day), heure: r.slot.time || "", lieu: r.slot.place || "" });
+      });
+    });
+    return out.sort((a, b) => a.date.localeCompare(b.date));
+  }
+  const hardWeekOf = (hardWeeks, weekKey) => hardWeeks && hardWeeks[weekKey] || null;
+  const isHardWeek = (hardWeeks, weekKey) => {
+    const e = hardWeekOf(hardWeeks, weekKey);
+    return !!(e && e.active);
+  };
+  const MAINTIEN_HOME = [
+    { name: "Squat au poids du corps", detail: "3 tours \xD7 12" },
+    { name: "Pompes (ou pompes inclin\xE9es sur un meuble)", detail: "3 tours \xD7 8-10" },
+    { name: "Fentes altern\xE9es", detail: "3 tours \xD7 8 par jambe" },
+    { name: "Gainage planche", detail: "3 tours \xD7 30 s" }
+  ];
+  // Version allegee de la seance habituelle : memes mouvements, moitie du
+  // volume, aucune progression de charge. L'objectif est de tenir le creneau,
+  // pas de progresser.
+  function buildMaintien(routines, sessions, plan, today) {
+    const routineId = (plan || {})[dayIdOf(today)] || null;
+    const pool = (sessions || []).filter((s) => (routineId ? s.routineId === routineId : true) && (s.exercises || []).length && !s.maintenance).sort((a, b) => b.date.localeCompare(a.date));
+    const last = pool[0];
+    const routine = routineId ? (routines || []).find((r) => r.id === routineId) : null;
+    const fallback = { title: "Circuit maintien \u2014 15 \xE0 20 min", items: MAINTIEN_HOME, note: "Aucun mat\xE9riel n\xE9cessaire. 45 s de r\xE9cup\xE9ration entre les tours, RPE 6 maximum." };
+    if (!last) return fallback;
+    const items = (last.exercises || []).filter((e) => e.name && e.mode !== "cardio").slice(0, 3).map((e) => ({
+      name: e.name,
+      detail: "2 s\xE9ries \xD7 " + (e.reps || "8-10") + (e.weight ? " \xB7 " + e.weight + " kg (charge inchang\xE9e)" : "") + " \xB7 RPE 6 max"
+    }));
+    if (!items.length) return fallback;
+    return { title: "Maintien" + (routine ? " \u2014 " + routine.name : "") + " \u2014 15 \xE0 20 min", items, note: "Moiti\xE9 du volume habituel, charge inchang\xE9e, aucune progression cette semaine. 60 s de r\xE9cup\xE9ration." };
+  }
+  const coachSyncUrl = (profile) => profile && profile.coachSyncUrl || DEFAULT_COACH_SYNC_URL || "";
+  const coachWhatsappLink = (msg) => "https://wa.me/" + COACH_WHATSAPP + "?text=" + encodeURIComponent(msg);
+  // File d'attente locale : si le telephone est hors ligne au moment de
+  // l'evenement, il repart au prochain lancement de l'application.
+  async function flushCoachOutbox(profile) {
+    const url = coachSyncUrl(profile);
+    if (!url) return;
+    const box = await loadKey(COACH_OUTBOX_KEY, []);
+    if (!Array.isArray(box) || !box.length) return;
+    const left = [];
+    for (const ev of box) {
+      try {
+        await fetch(url, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(ev) });
+      } catch (e) {
+        left.push(ev);
+      }
+    }
+    await saveKey(COACH_OUTBOX_KEY, left);
+  }
+  async function queueCoachEvent(profile, event) {
+    const url = coachSyncUrl(profile);
+    if (!url) return false;
+    const payload = { ...event, client: profile && profile.name || "Client sans pr\xE9nom", envoyeLe: (/* @__PURE__ */ new Date()).toISOString() };
+    const box = await loadKey(COACH_OUTBOX_KEY, []);
+    await saveKey(COACH_OUTBOX_KEY, [...Array.isArray(box) ? box : [], payload].slice(-40));
+    await flushCoachOutbox(profile);
+    return true;
+  }
   function useWeeklyPlan() {
     const [plan, setPlan] = useState({});
     useEffect(() => {
@@ -3697,11 +3920,141 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       return /* @__PURE__ */ React.createElement("div", { key: l.id, style: { display: "grid", gridTemplateColumns: "1fr 92px", gap: 10, alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: COLORS.text, fontWeight: 600 } }, l.label), b ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", marginTop: 2 } }, "Meilleure s\xE9rie : ", b.weight, " kg \xD7 ", b.reps, " \u2192 1RM estim\xE9 ", b.est, " kg \xB7 ", b.method, " (", fmtWeekShort(b.date), ")") : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: COLORS.textFaint, marginTop: 2 } }, "Aucune s\xE9rie enregistr\xE9e pour l'instant.")), /* @__PURE__ */ React.createElement("input", { type: "number", step: "0.5", placeholder: "1RM kg", value: (_a = pl1rm.maxes[l.id]) != null ? _a : "", onChange: (e) => pl1rm.setMax(l.id, e.target.value), style: { ...inputBase, padding: "8px 8px", fontSize: 13, textAlign: "center" } }));
     })), /* @__PURE__ */ React.createElement(RpeChartTable, null));
   }
+  function CoachingFields({ value, set }) {
+    const online = value.coachingMode === "enligne";
+    const slots = (value.slots || []);
+    const setSlot = (id, patch) => set({ slots: slots.map((s) => s.id === id ? { ...s, ...patch } : s) });
+    const addSlot = () => set({ slots: [...slots, { id: uid(), day: "mon", time: "18:30", place: "" }] });
+    const delSlot = (id) => set({ slots: slots.filter((s) => s.id !== id) });
+    return /* @__PURE__ */ React.createElement(React.Fragment, null,
+      /* @__PURE__ */ React.createElement(Field, { label: "Type de coaching" },
+        /* @__PURE__ */ React.createElement(SelectInput, { options: COACHING_MODES, value: value.coachingMode || "presentiel", onChange: (e) => set({ coachingMode: e.target.value }) }),
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 } }, online ? "Mode en ligne : cr\xE9neaux, pointage compar\xE9 au cr\xE9neau, bouton semaine difficile et alerte coach activ\xE9s." : "Mode pr\xE9sentiel : l'application fonctionne comme avant.")
+      ),
+      online && /* @__PURE__ */ React.createElement("div", { style: { border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 12, marginBottom: 14, background: COLORS.bgAlt } },
+        /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 } }, "Mes cr\xE9neaux d'entra\xEEnement"),
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, margin: "0 0 10px", lineHeight: 1.45 } }, "Jour, heure et lieu de chaque s\xE9ance de la semaine. C'est la r\xE9f\xE9rence \xE0 laquelle ton pointage est compar\xE9."),
+        slots.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.textMuted, margin: "0 0 10px" } }, "Aucun cr\xE9neau pour l'instant."),
+        slots.map((s) => /* @__PURE__ */ React.createElement("div", { key: s.id, style: { display: "flex", gap: 6, alignItems: "center", marginBottom: 8 } },
+          /* @__PURE__ */ React.createElement(SelectInput, { options: WEEK_DAYS.map((d) => ({ id: d.id, label: d.label })), value: s.day, onChange: (e) => setSlot(s.id, { day: e.target.value }), style: { flex: "1 1 96px", minWidth: 0, padding: "9px 8px", fontSize: 13 } }),
+          /* @__PURE__ */ React.createElement(TextInput, { type: "time", value: s.time || "", onChange: (e) => setSlot(s.id, { time: e.target.value }), style: { flex: "0 0 104px", padding: "9px 8px", fontSize: 13 } }),
+          /* @__PURE__ */ React.createElement(TextInput, { value: s.place || "", placeholder: "Lieu", onChange: (e) => setSlot(s.id, { place: e.target.value }), style: { flex: "1 1 90px", minWidth: 0, padding: "9px 8px", fontSize: 13 } }),
+          /* @__PURE__ */ React.createElement(IconBtn, { danger: true, onClick: () => delSlot(s.id) }, /* @__PURE__ */ React.createElement(Trash2, { size: 15 }))
+        )),
+        /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", icon: Plus, onClick: addSlot, style: { width: "100%", padding: "9px 12px", fontSize: 13 } }, "Ajouter un cr\xE9neau")
+      ),
+      online && /* @__PURE__ */ React.createElement(Field, { label: "Lien de synchro coach (fourni par ton coach)" },
+        /* @__PURE__ */ React.createElement(TextInput, { type: "url", value: value.coachSyncUrl || "", placeholder: "https://script.google.com/macros/s/.../exec", onChange: (e) => set({ coachSyncUrl: e.target.value.trim() }) }),
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 } }, "Envoie tes pointages au tableau de bord du coach et le pr\xE9vient si deux s\xE9ances sont manqu\xE9es. Sans ce lien, l'application te propose de le pr\xE9venir toi-m\xEAme.")
+      )
+    );
+  }
+  function SlotRow({ row, onPoint, pointable }) {
+    const meta = SLOT_STATUS_META[row.status] || SLOT_STATUS_META.todo;
+    return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, background: COLORS.bgAlt, border: `1px solid ${row.status === "manque" ? COLORS.bad + "55" : COLORS.border}`, borderRadius: 10, padding: "10px 12px" } },
+      /* @__PURE__ */ React.createElement("div", { style: { width: 5, alignSelf: "stretch", minHeight: 30, borderRadius: 3, background: meta.color, flexShrink: 0 } }),
+      /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, color: COLORS.text, fontWeight: 600 } }, slotDayLabel(row.slot.day), row.slot.time ? " \xB7 " + row.slot.time : ""),
+        /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: COLORS.textFaint, marginTop: 2 } }, [row.slot.place || null, fmtDateShort(row.date), row.detail].filter(Boolean).join(" \xB7 "))
+      ),
+      pointable ? /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: () => onPoint(row), style: { padding: "7px 11px", fontSize: 12, flexShrink: 0 } }, "Pointer") : /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11.5, fontWeight: 600, color: meta.color, whiteSpace: "nowrap", flexShrink: 0 } }, meta.label)
+    );
+  }
+  // Pointage compare au creneau declare dans le profil.
+  function CreneauxCard({ profile, sessionsApi }) {
+    const today = todayISO();
+    const weekKey = getWeekKey(today);
+    const [msg, setMsg] = useState(null);
+    const slots = useMemo(() => normalizeSlots(profile), [profile]);
+    const week = useMemo(() => computeSlotWeek(slots, sessionsApi.items, weekKey, today), [slots, sessionsApi.items, weekKey, today]);
+    const four = useMemo(() => slotAdherence(slots, sessionsApi.items, 4, today), [slots, sessionsApi.items, today]);
+    const missed = useMemo(() => recentMissedSlots(slots, sessionsApi.items, today), [slots, sessionsApi.items, today]);
+    if (!slots.length) return /* @__PURE__ */ React.createElement(Card, null,
+      /* @__PURE__ */ React.createElement(SectionTitle, null, "Mes cr\xE9neaux"),
+      /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted, lineHeight: 1.55, margin: "10px 0 0" } }, "Aucun cr\xE9neau enregistr\xE9. Ouvre ", /* @__PURE__ */ React.createElement("strong", { style: { color: COLORS.gold } }, "Mon profil & r\xE9glages"), " et note le jour, l'heure et le lieu de chaque s\xE9ance de la semaine.")
+    );
+    const summary = slotWeekSummary(week.rows);
+    const point = async (row) => {
+      const isToday = row.date === today;
+      await sessionsApi.add({ date: row.date, slotId: row.slot.id, startTime: isToday ? nowHHMM() : row.slot.time || "", place: row.slot.place || "", source: "creneau", routineId: null, durationMin: "", rpe: "", notes: isToday ? "" : "Point\xE9e apr\xE8s coup", pains: [], exercises: [] });
+      queueCoachEvent(profile, { type: "pointage", date: row.date, creneau: slotDayLabel(row.slot.day) + (row.slot.time ? " " + row.slot.time : ""), lieu: row.slot.place || "", heureReelle: isToday ? nowHHMM() : row.slot.time || "", retard: !isToday });
+      setMsg("S\xE9ance point\xE9e sur le cr\xE9neau de " + slotDayLabel(row.slot.day).toLowerCase() + ".");
+      window.setTimeout(() => setMsg(null), 2600);
+    };
+    const alertOn = missed.length >= MISSED_ALERT_THRESHOLD;
+    const noSync = !coachSyncUrl(profile);
+    return /* @__PURE__ */ React.createElement(Card, null,
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" } },
+        /* @__PURE__ */ React.createElement(SectionTitle, null, "Mes cr\xE9neaux cette semaine"),
+        /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 12.5, color: summary.missed ? COLORS.warn : COLORS.textMuted } }, summary.honored, "/", summary.planned, " tenus")
+      ),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, week.rows.map((r, i) => /* @__PURE__ */ React.createElement(SlotRow, { key: r.slot.id + "-" + i, row: r, onPoint: point, pointable: r.status === "aujourdhui" || r.status === "attente" }))),
+      week.bonus > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: COLORS.textFaint, margin: "10px 0 0" } }, week.bonus, " s\xE9ance", week.bonus > 1 ? "s" : "", " en plus des cr\xE9neaux cette semaine."),
+      msg && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.good, margin: "10px 0 0" } }, msg),
+      four && four.pct != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16, paddingTop: 14, borderTop: `1px solid ${COLORS.border}` } },
+        /* @__PURE__ */ React.createElement(MiniBar, { label: "Respect du cr\xE9neau (4 derni\xE8res semaines)", pct: four.pct, valueLabel: four.pct + " %", color: four.pct >= 80 ? COLORS.good : four.pct >= 60 ? COLORS.warn : COLORS.bad }),
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, margin: 0 } }, four.honored, " cr\xE9neau", four.honored > 1 ? "x" : "", " tenu", four.honored > 1 ? "s" : "", " sur ", four.resolved, " arriv\xE9", four.resolved > 1 ? "s" : "", " \xE0 terme.")
+      ),
+      alertOn && noSync && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, background: `${COLORS.bad}14`, border: `1px solid ${COLORS.bad}55`, borderRadius: 10, padding: "12px 14px" } },
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.text, margin: "0 0 10px", lineHeight: 1.5 } }, missed.length, " cr\xE9neaux manqu\xE9s sur les 14 derniers jours. Prends 30 secondes pour le dire \xE0 ton coach : c'est l\xE0 qu'on ajuste, pas quand tout va bien."),
+        /* @__PURE__ */ React.createElement(Btn, { icon: Send, style: { width: "100%" }, onClick: () => window.open(coachWhatsappLink("Salut Marien, j'ai manqu\xE9 " + missed.length + " s\xE9ances ces deux derni\xE8res semaines. On en parle ?"), "_blank", "noopener") }, "Pr\xE9venir mon coach")
+      )
+    );
+  }
+  // Bouton semaine difficile : bascule le programme en format maintien court.
+  function SemaineDifficileCard({ profile, sessionsApi, hardWeeks, onSetHardWeek, routines, weekPlan }) {
+    const today = todayISO();
+    const weekKey = getWeekKey(today);
+    const entry = hardWeekOf(hardWeeks, weekKey);
+    const active = !!(entry && entry.active);
+    const [reason, setReason] = useState(entry && entry.reason || "sommeil");
+    const [saved, setSaved] = useState(false);
+    const maintien = useMemo(() => buildMaintien(routines, sessionsApi.items, weekPlan, today), [routines, sessionsApi.items, weekPlan, today]);
+    const twoInARow = active && isHardWeek(hardWeeks, addDays(weekKey, -7));
+    const doneToday = (sessionsApi.items || []).some((s) => s.date === today && s.maintenance);
+    const enable = async () => {
+      await onSetHardWeek(weekKey, { active: true, reason, at: (/* @__PURE__ */ new Date()).toISOString() });
+      queueCoachEvent(profile, { type: twoInARow ? "alerte_semaines_difficiles" : "semaine_difficile", weekKey, motif: (HARD_WEEK_REASONS.find((r) => r.id === reason) || {}).label || reason, message: "Semaine bascul\xE9e en format maintien 15-20 min." });
+    };
+    const disable = async () => {
+      await onSetHardWeek(weekKey, { active: false, reason, at: (/* @__PURE__ */ new Date()).toISOString() });
+    };
+    const logMaintien = async () => {
+      const slot = normalizeSlots(profile).find((s) => addDays(weekKey, slotDayIndex(s.day)) === today) || null;
+      await sessionsApi.add({ date: today, slotId: slot ? slot.id : null, startTime: nowHHMM(), place: slot ? slot.place || "" : "", source: "maintien", maintenance: true, routineId: null, durationMin: 18, rpe: 5, notes: "S\xE9ance maintien (semaine difficile)", pains: [], exercises: [] });
+      queueCoachEvent(profile, { type: "pointage", date: today, creneau: slot ? slotDayLabel(slot.day) + (slot.time ? " " + slot.time : "") : "hors cr\xE9neau", lieu: slot ? slot.place || "" : "", heureReelle: nowHHMM(), maintien: true });
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2600);
+    };
+    if (!active) return /* @__PURE__ */ React.createElement(Card, null,
+      /* @__PURE__ */ React.createElement(SectionTitle, null, "Semaine difficile ?"),
+      /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted, lineHeight: 1.55, margin: "10px 0 14px" } }, "Nuit courte, semaine charg\xE9e, enfant malade : bascule ton programme en format maintien de 15 \xE0 20 min plut\xF4t que de sauter la semaine. Une s\xE9ance maintien compte comme un cr\xE9neau tenu."),
+      /* @__PURE__ */ React.createElement(Field, { label: "Motif" }, /* @__PURE__ */ React.createElement(SelectInput, { options: HARD_WEEK_REASONS, value: reason, onChange: (e) => setReason(e.target.value) })),
+      /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", style: { width: "100%" }, onClick: enable }, "Passer en mode maintien cette semaine")
+    );
+    return /* @__PURE__ */ React.createElement(Card, { style: { borderColor: `${COLORS.gold}55` } },
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 10, flexWrap: "wrap" } },
+        /* @__PURE__ */ React.createElement(SectionTitle, null, "Mode maintien activ\xE9"),
+        /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11.5, color: COLORS.textFaint } }, (HARD_WEEK_REASONS.find((r) => r.id === (entry.reason || reason)) || {}).label || "")
+      ),
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 10 } }, maintien.title),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7 } }, maintien.items.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "9px 12px" } },
+        /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: COLORS.text, fontWeight: 600 } }, it.name),
+        /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", marginTop: 2 } }, it.detail)
+      ))),
+      /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: COLORS.textMuted, lineHeight: 1.5, margin: "10px 0 14px" } }, maintien.note),
+      twoInARow && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.warn, lineHeight: 1.5, margin: "0 0 12px" } }, "Deuxi\xE8me semaine maintien d'affil\xE9e : ton coach est pr\xE9venu. Ce n'est pas un reproche, c'est le signal qu'il faut revoir le cr\xE9neau avec toi."),
+      /* @__PURE__ */ React.createElement(Btn, { icon: Plus, style: { width: "100%" }, onClick: logMaintien, disabled: doneToday }, doneToday ? "S\xE9ance maintien d\xE9j\xE0 point\xE9e aujourd'hui" : "S\xE9ance maintien faite"),
+      saved && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.good, textAlign: "center", margin: "10px 0 0" } }, "S\xE9ance enregistr\xE9e."),
+      /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", style: { width: "100%", marginTop: 8 }, onClick: disable }, "Revenir au programme normal")
+    );
+  }
   function SeancesSheetsTab({ sessionsApi, profile }) {
     const url = (profile == null ? void 0 : profile.sheetsUrl) || "";
     const [date, setDate] = useState(todayISO());
     const [durationMin, setDurationMin] = useState("");
     const [rpe, setRpe] = useState("");
+    const [startTime, setStartTime] = useState(nowHHMM());
     const [notes, setNotes] = useState("");
     const [saved, setSaved] = useState(false);
     const target = (profile == null ? void 0 : profile.weeklyWorkoutTarget) || 0;
@@ -3709,16 +4062,21 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const weekSessions = (sessionsApi.items || []).filter((x) => x.date && getWeekKey(x.date) === weekKey).sort((a, b) => b.date.localeCompare(a.date));
     const alreadyToday = weekSessions.some((x) => x.date === date);
     const save = async () => {
+      const slot = normalizeSlots(profile).find((s) => addDays(getWeekKey(date), slotDayIndex(s.day)) === date) || null;
       await sessionsApi.add({
         date,
         routineId: null,
         source: "sheets",
+        slotId: slot ? slot.id : null,
+        startTime,
+        place: slot ? slot.place || "" : "",
         durationMin: durationMin === "" ? "" : parseInt(durationMin),
         rpe: rpe === "" ? "" : parseFloat(rpe),
         notes: notes.trim(),
         pains: [],
         exercises: []
       });
+      if (isOnline(profile)) queueCoachEvent(profile, { type: "pointage", date, creneau: slot ? slotDayLabel(slot.day) + (slot.time ? " " + slot.time : "") : "hors cr\xE9neau", lieu: slot ? slot.place || "" : "", heureReelle: startTime, dureeMin: durationMin, rpe, note: notes.trim() });
       setDurationMin("");
       setRpe("");
       setNotes("");
@@ -3737,9 +4095,10 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
           target ? /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 12.5, color: weekSessions.length >= target ? COLORS.good : COLORS.textMuted } }, weekSessions.length, "/", target, " cette semaine") : null
         ),
         /* @__PURE__ */ React.createElement(Field, { label: "Date" }, /* @__PURE__ */ React.createElement(TextInput, { type: "date", value: date, onChange: (e) => setDate(e.target.value || todayISO()) })),
-        /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
+        /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 } },
+          /* @__PURE__ */ React.createElement(Field, { label: "Heure de d\xE9but" }, /* @__PURE__ */ React.createElement(TextInput, { type: "time", value: startTime, onChange: (e) => setStartTime(e.target.value) })),
           /* @__PURE__ */ React.createElement(Field, { label: "Dur\xE9e (min)" }, /* @__PURE__ */ React.createElement(NumberInput, { value: durationMin, placeholder: "60", onChange: (e) => setDurationMin(e.target.value) })),
-          /* @__PURE__ */ React.createElement(Field, { label: "RPE global (1-10)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.5", min: "1", max: "10", value: rpe, placeholder: "8", onChange: (e) => setRpe(e.target.value) }))
+          /* @__PURE__ */ React.createElement(Field, { label: "RPE (1-10)" }, /* @__PURE__ */ React.createElement(NumberInput, { step: "0.5", min: "1", max: "10", value: rpe, placeholder: "8", onChange: (e) => setRpe(e.target.value) }))
         ),
         /* @__PURE__ */ React.createElement(Field, { label: "Ressenti / note pour le coach" }, /* @__PURE__ */ React.createElement(TextArea, { rows: 2, value: notes, placeholder: "Ex : jambes lourdes, squat plus facile qu'en semaine 2...", onChange: (e) => setNotes(e.target.value) })),
         alreadyToday && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: COLORS.warn, margin: "0 0 10px" } }, "Une s\xE9ance est d\xE9j\xE0 point\xE9e \xE0 cette date."),
@@ -3760,13 +4119,17 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       )
     );
   }
-  function EntrainementsTab({ routinesApi, sessionsApi, profile }) {
+  function EntrainementsTab({ routinesApi, sessionsApi, profile, weekPlan, hardWeeks, onSetHardWeek }) {
     const pl1rm = usePowerlifting1RM();
     const plOn = (profile == null ? void 0 : profile.goal) === "performance";
+    const head = isOnline(profile) ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 20, marginBottom: 20 } },
+      /* @__PURE__ */ React.createElement(CreneauxCard, { profile, sessionsApi }),
+      /* @__PURE__ */ React.createElement(SemaineDifficileCard, { profile, sessionsApi, hardWeeks, onSetHardWeek, routines: routinesApi.items, weekPlan })
+    ) : null;
     if ((profile == null ? void 0 : profile.trainingMode) === "sheets") {
-      return /* @__PURE__ */ React.createElement(SeancesSheetsTab, { sessionsApi, profile });
+      return /* @__PURE__ */ React.createElement(React.Fragment, null, head, /* @__PURE__ */ React.createElement(SeancesSheetsTab, { sessionsApi, profile }));
     }
-    return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(TrainingPerformanceCard, { sessions: sessionsApi.items }), /* @__PURE__ */ React.createElement(RecordsCard, { sessions: sessionsApi.items }), /* @__PURE__ */ React.createElement(EntrainementsTabLegacy, { routinesApi, sessionsApi, plOn, pl1rm }));
+    return /* @__PURE__ */ React.createElement(React.Fragment, null, head, /* @__PURE__ */ React.createElement(TrainingPerformanceCard, { sessions: sessionsApi.items }), /* @__PURE__ */ React.createElement(RecordsCard, { sessions: sessionsApi.items }), /* @__PURE__ */ React.createElement(EntrainementsTabLegacy, { routinesApi, sessionsApi, plOn, pl1rm }));
   }
   function TendancesTab({ allData, profile, targets, weekStats, currentReport, reports, generating, genError, onGenerate, photos, onUploadPhoto, monthStats, currentMonthlyReport, monthlyReports, generatingMonthly, genErrorMonthly, onGenerateMonthly, apiKey }) {
     var _a;
@@ -3881,8 +4244,27 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
         live = false;
       };
     }, []);
-    const weekStats = useMemo(() => profile && targets ? computeWeekStats(currentWeekKey, { sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines }, profile, targets) : null, [currentWeekKey, sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines, profile, targets]);
-    const lastWeekStats = useMemo(() => profile && targets ? computeWeekStats(lastWeekKey, { sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines }, profile, targets) : null, [lastWeekKey, sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines, profile, targets]);
+    const [hardWeeks, setHardWeeks] = useState({});
+    useEffect(() => {
+      let live = true;
+      loadKey(HARD_WEEK_KEY, {}).then((v) => {
+        if (live) setHardWeeks(v && typeof v === "object" ? v : {});
+      }).catch(() => {
+      });
+      return () => {
+        live = false;
+      };
+    }, []);
+    const setHardWeek = useCallback(async (weekKey, entry) => {
+      let next = null;
+      setHardWeeks((prev) => {
+        next = { ...prev || {}, [weekKey]: entry };
+        return next;
+      });
+      await saveKey(HARD_WEEK_KEY, next || { [weekKey]: entry });
+    }, []);
+    const weekStats = useMemo(() => profile && targets ? computeWeekStats(currentWeekKey, { sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines, hardWeeks }, profile, targets) : null, [currentWeekKey, sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines, hardWeeks, profile, targets]);
+    const lastWeekStats = useMemo(() => profile && targets ? computeWeekStats(lastWeekKey, { sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines, hardWeeks }, profile, targets) : null, [lastWeekKey, sessions, dailyForm, bodyLogs, logEntries, weekPlan, routines, hardWeeks, profile, targets]);
     const currentReport = reports.find((r) => r.weekKey === currentWeekKey) || null;
     const currentMonthKey = useMemo(() => getMonthKey(todayISO()), []);
     const prevMonthKey = useMemo(() => prevMonthKeyOf(currentMonthKey), [currentMonthKey]);
@@ -4108,12 +4490,48 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
         clearInterval(iv);
       };
     }, [loading, profile, showToast]);
+    useEffect(() => {
+      if (loading || !profile || !isOnline(profile)) return;
+      flushCoachOutbox(profile).catch(() => {
+      });
+    }, [loading, profile]);
+    // Alerte coach : 2 creneaux manques sur 14 jours glissants, une alerte par
+    // semaine au maximum. Une semaine difficile declaree n'en produit pas.
+    useEffect(() => {
+      if (loading || !profile || !isOnline(profile)) return;
+      const slots = normalizeSlots(profile);
+      if (!slots.length) return;
+      let cancelled = false;
+      (async () => {
+        const today = todayISO();
+        const missed = recentMissedSlots(slots, sessions, today);
+        if (missed.length < MISSED_ALERT_THRESHOLD) return;
+        const st = await loadKey(COACH_ALERT_KEY, {});
+        if (cancelled) return;
+        const lastAt = st && st.lastAt ? new Date(st.lastAt).getTime() : 0;
+        if (Date.now() - lastAt < ALERT_COOLDOWN_DAYS * 864e5) return;
+        const signature = missed.map((m) => m.date).join("|");
+        if (st && st.signature === signature) return;
+        const delivered = await queueCoachEvent(profile, {
+          type: "alerte_seances_manquees",
+          weekKey: getWeekKey(today),
+          nbManquees: missed.length,
+          creneauxManques: missed,
+          message: missed.length + " cr\xE9neaux manqu\xE9s sur les 14 derniers jours."
+        });
+        await saveKey(COACH_ALERT_KEY, { signature, lastAt: (/* @__PURE__ */ new Date()).toISOString(), delivered });
+        if (!cancelled && delivered) showToast("Ton coach a \xE9t\xE9 pr\xE9venu que deux cr\xE9neaux ont \xE9t\xE9 manqu\xE9s. Il va revenir vers toi pour ajuster.");
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [loading, profile, sessions, showToast]);
     if (loading) return /* @__PURE__ */ React.createElement(LoadingScreen, null);
     if (!profile) return /* @__PURE__ */ React.createElement(Onboarding, { onSave: async (p) => {
       setProfile(p);
       await saveKey(STORAGE_KEYS.profile, p);
     } });
-    return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: COLORS.bg, fontFamily: "Inter", color: COLORS.text } }, /* @__PURE__ */ React.createElement("style", null, GLOBAL_CSS), toast && /* @__PURE__ */ React.createElement("div", { className: "toast", role: "status" }, /* @__PURE__ */ React.createElement(Droplet, { size: 15, color: COLORS.blue, style: { flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { flex: 1 } }, toast), /* @__PURE__ */ React.createElement("button", { onClick: () => setToast(null), "aria-label": "Fermer", style: { background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 2, display: "flex" } }, /* @__PURE__ */ React.createElement(X, { size: 14 }))), /* @__PURE__ */ React.createElement("div", { className: "app-shell" }, /* @__PURE__ */ React.createElement("aside", { className: "sidebar" }, /* @__PURE__ */ React.createElement("div", { className: "brand" }, /* @__PURE__ */ React.createElement(Dumbbell, { size: 22, color: COLORS.gold, style: { transform: "rotate(-20deg)", flexShrink: 0 } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { lineHeight: 1.05 } }, "Coach Neiram"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 7.5, letterSpacing: 2.5, color: COLORS.textMuted, marginTop: 3, fontWeight: 600 } }, "COACHING SPORTIF"))), /* @__PURE__ */ React.createElement("nav", { className: "nav-list" }, TABS.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, onClick: () => setActiveTab(t.id), className: `nav-item ${activeTab === t.id ? "active" : ""}` }, /* @__PURE__ */ React.createElement(t.icon, { size: 17 }), /* @__PURE__ */ React.createElement("span", null, t.label)))), /* @__PURE__ */ React.createElement("button", { className: "profile-link", onClick: () => setSettingsOpen(true) }, /* @__PURE__ */ React.createElement(Settings, { size: 16 }), /* @__PURE__ */ React.createElement("span", null, "Mon profil & r\xE9glages"))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("header", { className: "mobile-header" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 9 } }, /* @__PURE__ */ React.createElement(Dumbbell, { size: 19, color: COLORS.gold, style: { transform: "rotate(-20deg)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "Poppins", fontWeight: 800, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.4, lineHeight: 1.05 } }, "Coach Neiram"), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "Poppins", fontSize: 6.5, letterSpacing: 2.2, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginTop: 2 } }, "Coaching Sportif"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setSettingsOpen(true), "aria-label": "R\xE9glages", style: { background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 8, color: COLORS.textMuted, cursor: "pointer", display: "flex" } }, /* @__PURE__ */ React.createElement(Settings, { size: 17 }))), /* @__PURE__ */ React.createElement("main", { className: "main-content" }, activeTab === "journal" && /* @__PURE__ */ React.createElement(JournalTab, { logEntriesApi, dishesApi, bodyApi, formApi, sessionsApi, targets, profile, apiKey, onToast: showToast }), activeTab === "repas" && /* @__PURE__ */ React.createElement(RepasTab, { api: dishesApi, apiKey, profile, targets, logEntries }), activeTab === "nutrition" && /* @__PURE__ */ React.createElement(NutritionTab, { profile, targets, currentWeight, bodyLogs, logEntries, onApplyCalibration: applyCalibration }), activeTab === "sommeil" && /* @__PURE__ */ React.createElement(SommeilTab, { formApi, profile }), activeTab === "mensurations" && /* @__PURE__ */ React.createElement(MensurationsTab, { api: measurementsApi, bodyApi }), activeTab === "entrainements" && /* @__PURE__ */ React.createElement(EntrainementsTab, { routinesApi, sessionsApi, profile }), activeTab === "tendances" && weekStats && /* @__PURE__ */ React.createElement(TendancesTab, { allData: { sessions, dailyForm, bodyLogs, logEntries, measurements }, profile, targets, weekStats, lastWeekStats, currentReport, reports, generating, genError, onGenerate: generateReport, photos, onUploadPhoto: uploadPhoto, monthStats, currentMonthlyReport, monthlyReports, generatingMonthly, genErrorMonthly, onGenerateMonthly: generateMonthlyReport, apiKey }))), /* @__PURE__ */ React.createElement("nav", { className: "bottom-nav" }, TABS.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, onClick: () => setActiveTab(t.id), className: activeTab === t.id ? "active" : "" }, /* @__PURE__ */ React.createElement(t.icon, { size: 19 }), /* @__PURE__ */ React.createElement("span", null, t.short))))), /* @__PURE__ */ React.createElement(SettingsModal, { open: settingsOpen, onClose: () => setSettingsOpen(false), profile, onSave: async (p) => {
+    return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: COLORS.bg, fontFamily: "Inter", color: COLORS.text } }, /* @__PURE__ */ React.createElement("style", null, GLOBAL_CSS), toast && /* @__PURE__ */ React.createElement("div", { className: "toast", role: "status" }, /* @__PURE__ */ React.createElement(Droplet, { size: 15, color: COLORS.blue, style: { flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { flex: 1 } }, toast), /* @__PURE__ */ React.createElement("button", { onClick: () => setToast(null), "aria-label": "Fermer", style: { background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer", padding: 2, display: "flex" } }, /* @__PURE__ */ React.createElement(X, { size: 14 }))), /* @__PURE__ */ React.createElement("div", { className: "app-shell" }, /* @__PURE__ */ React.createElement("aside", { className: "sidebar" }, /* @__PURE__ */ React.createElement("div", { className: "brand" }, /* @__PURE__ */ React.createElement(Dumbbell, { size: 22, color: COLORS.gold, style: { transform: "rotate(-20deg)", flexShrink: 0 } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { lineHeight: 1.05 } }, "Coach Neiram"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 7.5, letterSpacing: 2.5, color: COLORS.textMuted, marginTop: 3, fontWeight: 600 } }, "COACHING SPORTIF"))), /* @__PURE__ */ React.createElement("nav", { className: "nav-list" }, TABS.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, onClick: () => setActiveTab(t.id), className: `nav-item ${activeTab === t.id ? "active" : ""}` }, /* @__PURE__ */ React.createElement(t.icon, { size: 17 }), /* @__PURE__ */ React.createElement("span", null, t.label)))), /* @__PURE__ */ React.createElement("button", { className: "profile-link", onClick: () => setSettingsOpen(true) }, /* @__PURE__ */ React.createElement(Settings, { size: 16 }), /* @__PURE__ */ React.createElement("span", null, "Mon profil & r\xE9glages"))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("header", { className: "mobile-header" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 9 } }, /* @__PURE__ */ React.createElement(Dumbbell, { size: 19, color: COLORS.gold, style: { transform: "rotate(-20deg)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "Poppins", fontWeight: 800, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.4, lineHeight: 1.05 } }, "Coach Neiram"), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "Poppins", fontSize: 6.5, letterSpacing: 2.2, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginTop: 2 } }, "Coaching Sportif"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setSettingsOpen(true), "aria-label": "R\xE9glages", style: { background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 8, color: COLORS.textMuted, cursor: "pointer", display: "flex" } }, /* @__PURE__ */ React.createElement(Settings, { size: 17 }))), /* @__PURE__ */ React.createElement("main", { className: "main-content" }, activeTab === "journal" && /* @__PURE__ */ React.createElement(JournalTab, { logEntriesApi, dishesApi, bodyApi, formApi, sessionsApi, targets, profile, apiKey, onToast: showToast }), activeTab === "repas" && /* @__PURE__ */ React.createElement(RepasTab, { api: dishesApi, apiKey, profile, targets, logEntries }), activeTab === "nutrition" && /* @__PURE__ */ React.createElement(NutritionTab, { profile, targets, currentWeight, bodyLogs, logEntries, onApplyCalibration: applyCalibration }), activeTab === "sommeil" && /* @__PURE__ */ React.createElement(SommeilTab, { formApi, profile }), activeTab === "mensurations" && /* @__PURE__ */ React.createElement(MensurationsTab, { api: measurementsApi, bodyApi }), activeTab === "entrainements" && /* @__PURE__ */ React.createElement(EntrainementsTab, { routinesApi, sessionsApi, profile, weekPlan, hardWeeks, onSetHardWeek: setHardWeek }), activeTab === "tendances" && weekStats && /* @__PURE__ */ React.createElement(TendancesTab, { allData: { sessions, dailyForm, bodyLogs, logEntries, measurements }, profile, targets, weekStats, lastWeekStats, currentReport, reports, generating, genError, onGenerate: generateReport, photos, onUploadPhoto: uploadPhoto, monthStats, currentMonthlyReport, monthlyReports, generatingMonthly, genErrorMonthly, onGenerateMonthly: generateMonthlyReport, apiKey }))), /* @__PURE__ */ React.createElement("nav", { className: "bottom-nav" }, TABS.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, onClick: () => setActiveTab(t.id), className: activeTab === t.id ? "active" : "" }, /* @__PURE__ */ React.createElement(t.icon, { size: 19 }), /* @__PURE__ */ React.createElement("span", null, t.short))))), /* @__PURE__ */ React.createElement(SettingsModal, { open: settingsOpen, onClose: () => setSettingsOpen(false), profile, onSave: async (p) => {
       setProfile(p);
       await saveKey(STORAGE_KEYS.profile, p);
     }, apiKey, onSaveApiKey: async (k) => {
