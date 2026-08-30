@@ -241,6 +241,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const SLOT_REASON_KEY = "cn_slot_reasons";
   const COACH_OUTBOX_KEY = "cn_coach_outbox";
   const COACH_ALERT_KEY = "cn_coach_alert_state";
+  const COACH_WEEKLY_KEY = "cn_coach_weekly_state";
   const DEFAULT_COACH_SYNC_URL = "https://script.google.com/macros/s/AKfycbxgggRFTjbSv6v-_0mIx4LO7eLKQRj4XbJHuikYUCsBFHqrTTjm0Jp4fvBVczcfw4PI/exec";
   const COACH_WHATSAPP = "33675359069";
   const DIET_TYPES = [
@@ -4080,11 +4081,14 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const twoInARow = active && isHardWeek(hardWeeks, addDays(weekKey, -7));
     const doneToday = (sessionsApi.items || []).some((s) => s.date === today && s.maintenance);
     const enable = async () => {
-      await onSetHardWeek(weekKey, { active: true, reason, at: (/* @__PURE__ */ new Date()).toISOString() });
-      queueCoachEvent(profile, { type: twoInARow ? "alerte_semaines_difficiles" : "semaine_difficile", weekKey, motif: (HARD_WEEK_REASONS.find((r) => r.id === reason) || {}).label || reason, message: "Semaine bascul\xE9e en format maintien 15-20 min." });
+      const alreadyNotified = !!(entry && entry.notified);
+      await onSetHardWeek(weekKey, { active: true, reason, at: (/* @__PURE__ */ new Date()).toISOString(), notified: true });
+      if (!alreadyNotified) {
+        queueCoachEvent(profile, { type: twoInARow ? "alerte_semaines_difficiles" : "semaine_difficile", weekKey, motif: (HARD_WEEK_REASONS.find((r) => r.id === reason) || {}).label || reason, message: "Semaine bascul\xE9e en format maintien 15-20 min." });
+      }
     };
     const disable = async () => {
-      await onSetHardWeek(weekKey, { active: false, reason, at: (/* @__PURE__ */ new Date()).toISOString() });
+      await onSetHardWeek(weekKey, { active: false, reason, at: (/* @__PURE__ */ new Date()).toISOString(), notified: !!(entry && entry.notified) });
     };
     const logMaintien = async () => {
       const slot = normalizeSlots(profile).find((s) => addDays(weekKey, slotDayIndex(s.day)) === today) || null;
@@ -4629,6 +4633,38 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
         cancelled = true;
       };
     }, [loading, profile, sessions, slotReasons, showToast]);
+    // Resume hebdo envoye au coach : taux de respect sur 4 semaines glissantes,
+    // une fois par semaine par client en ligne. Sans cet envoi, le taux de
+    // respect n'existe que dans le navigateur du client et le coach ne peut
+    // jamais le voir cote Sheet.
+    useEffect(() => {
+      if (loading || !profile || !isOnline(profile)) return;
+      const slots = normalizeSlots(profile);
+      if (!slots.length) return;
+      let cancelled = false;
+      (async () => {
+        const today = todayISO();
+        const weekKey = getWeekKey(today);
+        const st = await loadKey(COACH_WEEKLY_KEY, {});
+        if (cancelled || st.lastWeekKey === weekKey) return;
+        const adherence = slotAdherence(slots, sessions, 4, today);
+        if (!adherence || adherence.resolved === 0) return;
+        const delivered = await queueCoachEvent(profile, {
+          type: "resume_hebdo",
+          weekKey,
+          honored: adherence.honored,
+          resolved: adherence.resolved,
+          missed: adherence.missed,
+          shifted: adherence.shifted,
+          pct: adherence.pct,
+          message: "Taux de respect sur 4 semaines : " + adherence.pct + "%."
+        });
+        if (delivered) await saveKey(COACH_WEEKLY_KEY, { lastWeekKey: weekKey });
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [loading, profile, sessions]);
     if (loading) return /* @__PURE__ */ React.createElement(LoadingScreen, null);
     if (!profile) return /* @__PURE__ */ React.createElement(Onboarding, { onSave: async (p) => {
       setProfile(p);
