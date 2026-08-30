@@ -2939,6 +2939,11 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
           r.detail = "Rattrap\xE9e le " + fmtDateShort(r.session.date);
           return;
         }
+        if (r.session.maintenance) {
+          r.status = "tenu";
+          r.detail = "S\xE9ance maintien (semaine difficile)";
+          return;
+        }
         const planned = minutesOf(r.slot.time), actual = minutesOf(r.session.startTime);
         if (planned != null && actual != null && Math.abs(actual - planned) > SLOT_TOLERANCE_MIN) {
           r.status = "decale";
