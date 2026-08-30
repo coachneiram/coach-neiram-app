@@ -2980,21 +2980,23 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const live = rows.filter((r) => r.status !== "avant");
     const honored = live.filter((r) => SLOT_HONORED.indexOf(r.status) >= 0).length;
     const missed = live.filter((r) => r.status === "manque").length;
-    return { planned: live.length, honored, missed, resolved: honored + missed, pct: honored + missed ? Math.round(honored / (honored + missed) * 100) : null };
+    const shifted = live.filter((r) => r.status === "decale" || r.status === "rattrape").length;
+    return { planned: live.length, honored, missed, shifted, resolved: honored + missed, pct: honored + missed ? Math.round(honored / (honored + missed) * 100) : null };
   };
   // Taux de respect du creneau sur N semaines glissantes : le vrai indicateur
   // de retention en coaching a distance.
   function slotAdherence(slots, sessions, numWeeks, today) {
     if (!(slots || []).length) return null;
-    let honored = 0, resolved = 0, missed = 0;
+    let honored = 0, resolved = 0, missed = 0, shifted = 0;
     const thisMonday = getWeekKey(today);
     for (let i = 0; i < numWeeks; i++) {
       const s = slotWeekSummary(computeSlotWeek(slots, sessions, addDays(thisMonday, -7 * i), today).rows);
       honored += s.honored;
       resolved += s.resolved;
       missed += s.missed;
+      shifted += s.shifted;
     }
-    return { honored, resolved, missed, pct: resolved ? Math.round(honored / resolved * 100) : null };
+    return { honored, resolved, missed, shifted, pct: resolved ? Math.round(honored / resolved * 100) : null };
   }
   // Creneaux manques sur la fenetre glissante qui declenche l'alerte coach.
   function recentMissedSlots(slots, sessions, today) {
@@ -4009,7 +4011,10 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     const point = async (row) => {
       const isToday = row.date === today;
       await sessionsApi.add({ date: row.date, slotId: row.slot.id, startTime: isToday ? nowHHMM() : row.slot.time || "", place: row.slot.place || "", source: "creneau", routineId: null, durationMin: "", rpe: "", notes: isToday ? "" : "Point\xE9e apr\xE8s coup", pains: [], exercises: [] });
-      queueCoachEvent(profile, { type: "pointage", date: row.date, creneau: slotDayLabel(row.slot.day) + (row.slot.time ? " " + row.slot.time : ""), lieu: row.slot.place || "", heureReelle: isToday ? nowHHMM() : row.slot.time || "", retard: !isToday });
+      const heureReelle = isToday ? nowHHMM() : row.slot.time || "";
+      const pl = minutesOf(row.slot.time), ac = minutesOf(heureReelle);
+      const ecart = pl != null && ac != null ? Math.abs(ac - pl) : 0;
+      queueCoachEvent(profile, { type: "pointage", date: row.date, creneau: slotDayLabel(row.slot.day) + (row.slot.time ? " " + row.slot.time : ""), lieu: row.slot.place || "", heureReelle, ecartMin: ecart, retard: !isToday || ecart > SLOT_TOLERANCE_MIN });
       setMsg("S\xE9ance point\xE9e sur le cr\xE9neau de " + slotDayLabel(row.slot.day).toLowerCase() + ".");
       window.setTimeout(() => setMsg(null), 2600);
     };
@@ -4029,7 +4034,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     return /* @__PURE__ */ React.createElement(Card, null,
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" } },
         /* @__PURE__ */ React.createElement(SectionTitle, null, "Mes cr\xE9neaux cette semaine"),
-        /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 12.5, color: summary.missed ? COLORS.warn : COLORS.textMuted } }, summary.honored, "/", summary.planned, " tenus")
+        /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 12.5, color: summary.missed ? COLORS.warn : COLORS.textMuted } }, summary.honored, "/", summary.planned, " honor\xE9s")
       ),
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, week.rows.map((r, i) => {
         const rea = reasonOf(r);
@@ -4049,7 +4054,8 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       msg && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.good, margin: "10px 0 0" } }, msg),
       four && four.pct != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16, paddingTop: 14, borderTop: `1px solid ${COLORS.border}` } },
         /* @__PURE__ */ React.createElement(MiniBar, { label: "Respect du cr\xE9neau (4 derni\xE8res semaines)", pct: four.pct, valueLabel: four.pct + " %", color: four.pct >= 80 ? COLORS.good : four.pct >= 60 ? COLORS.warn : COLORS.bad }),
-        /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, margin: 0 } }, four.honored, " cr\xE9neau", four.honored > 1 ? "x" : "", " tenu", four.honored > 1 ? "s" : "", " sur ", four.resolved, " arriv\xE9", four.resolved > 1 ? "s" : "", " \xE0 terme.")
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, margin: 0 } }, four.honored, " cr\xE9neau", four.honored > 1 ? "x" : "", " honor\xE9", four.honored > 1 ? "s" : "", " sur ", four.resolved, " arriv\xE9", four.resolved > 1 ? "s" : "", " \xE0 terme", four.shifted ? ", dont " + four.shifted + " hors du cr\xE9neau pr\xE9vu" : "", "."),
+        four.shifted >= 3 ? /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11.5, color: COLORS.warn, margin: "6px 0 0", lineHeight: 1.5 } }, "Les s\xE9ances se font, mais rarement \xE0 l'heure pr\xE9vue. C'est le cr\xE9neau qu'il faut revoir avec ton coach, pas ta r\xE9gularit\xE9.") : null
       ),
       alertOn && noSync && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, background: `${COLORS.bad}14`, border: `1px solid ${COLORS.bad}55`, borderRadius: 10, padding: "12px 14px" } },
         /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.text, margin: "0 0 10px", lineHeight: 1.5 } }, missed.length, " cr\xE9neaux manqu\xE9s sur les 14 derniers jours. Prends 30 secondes pour le dire \xE0 ton coach : c'est l\xE0 qu'on ajuste, pas quand tout va bien."),
