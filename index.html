@@ -2889,9 +2889,10 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
   // SLOT_GRACE_DAYS avant d'etre compte comme manque.
   function computeSlotWeek(slots, sessions, weekKey, today) {
     const used = /* @__PURE__ */ new Set();
-    const rows = (slots || []).map((s) => ({ slot: s, date: addDays(weekKey, slotDayIndex(s.day)) })).filter((r) => !(r.slot.createdAt && r.date < r.slot.createdAt)).sort((a, b) => a.date.localeCompare(b.date) || String(a.slot.time).localeCompare(String(b.slot.time)));
+    const rows = (slots || []).map((s) => ({ slot: s, date: addDays(weekKey, slotDayIndex(s.day)) })).map((r) => r.slot.createdAt && r.date < r.slot.createdAt ? { ...r, preStart: true } : r).sort((a, b) => a.date.localeCompare(b.date) || String(a.slot.time).localeCompare(String(b.slot.time)));
     const weekSessions = (sessions || []).filter((x) => x.date && getWeekKey(x.date) === weekKey);
     rows.forEach((r) => {
+      if (r.preStart) return;
       const direct = weekSessions.find((x) => x.slotId && x.slotId === r.slot.id && !used.has(x.id));
       if (direct) {
         used.add(direct.id);
@@ -2900,7 +2901,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       }
     });
     rows.forEach((r) => {
-      if (r.session) return;
+      if (r.session || r.preStart) return;
       const sameDay = weekSessions.find((x) => x.date === r.date && !used.has(x.id));
       if (sameDay) {
         used.add(sameDay.id);
@@ -2908,7 +2909,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       }
     });
     rows.forEach((r) => {
-      if (r.session || r.date > today) return;
+      if (r.session || r.preStart || r.date > today) return;
       const other = weekSessions.find((x) => !used.has(x.id) && x.date <= today);
       if (other) {
         used.add(other.id);
@@ -2917,6 +2918,11 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       }
     });
     rows.forEach((r) => {
+      if (r.preStart) {
+        r.status = "avant";
+        r.detail = "Avant la mise en place du cr\xE9neau";
+        return;
+      }
       if (r.session) {
         if (r.recovered) {
           r.status = "rattrape";
@@ -2956,13 +2962,15 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     aujourdhui: { label: "Aujourd'hui", color: COLORS.gold },
     attente: { label: "\xC0 rattraper", color: COLORS.warn },
     todo: { label: "\xC0 venir", color: COLORS.textMuted },
+    avant: { label: "Non suivi", color: COLORS.textFaint },
     manque: { label: "Manqu\xE9", color: COLORS.bad }
   };
   const SLOT_HONORED = ["tenu", "decale", "rattrape"];
   const slotWeekSummary = (rows) => {
-    const honored = rows.filter((r) => SLOT_HONORED.indexOf(r.status) >= 0).length;
-    const missed = rows.filter((r) => r.status === "manque").length;
-    return { planned: rows.length, honored, missed, resolved: honored + missed, pct: honored + missed ? Math.round(honored / (honored + missed) * 100) : null };
+    const live = rows.filter((r) => r.status !== "avant");
+    const honored = live.filter((r) => SLOT_HONORED.indexOf(r.status) >= 0).length;
+    const missed = live.filter((r) => r.status === "manque").length;
+    return { planned: live.length, honored, missed, resolved: honored + missed, pct: honored + missed ? Math.round(honored / (honored + missed) * 100) : null };
   };
   // Taux de respect du creneau sur N semaines glissantes : le vrai indicateur
   // de retention en coaching a distance.
