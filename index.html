@@ -227,6 +227,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const SLOT_GRACE_DAYS = 2;
   const MISSED_WINDOW_DAYS = 14;
   const MISSED_ALERT_THRESHOLD = 2;
+  const SHIFTED_WINDOW_DAYS = 28;
+  const SHIFTED_ALERT_THRESHOLD = 3;
   const ALERT_COOLDOWN_DAYS = 7;
   const MISSED_REASONS = [
     { id: "impr\xE9vu_pro", label: "Impr\xE9vu professionnel" },
@@ -241,6 +243,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const SLOT_REASON_KEY = "cn_slot_reasons";
   const COACH_OUTBOX_KEY = "cn_coach_outbox";
   const COACH_ALERT_KEY = "cn_coach_alert_state";
+  const COACH_SHIFT_ALERT_KEY = "cn_coach_shift_alert_state";
   const COACH_WEEKLY_KEY = "cn_coach_weekly_state";
   const DEFAULT_COACH_SYNC_URL = "https://script.google.com/macros/s/AKfycbxgggRFTjbSv6v-_0mIx4LO7eLKQRj4XbJHuikYUCsBFHqrTTjm0Jp4fvBVczcfw4PI/exec";
   const COACH_WHATSAPP = "33675359069";
@@ -3017,6 +3020,20 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     });
     return out.sort((a, b) => a.date.localeCompare(b.date));
   }
+  // Creneaux decales ou rattrapes (jamais manques) sur 4 semaines glissantes :
+  // le signal d'un horaire qui ne tient plus, avant que ca devienne des manques.
+  function recentShiftedSlots(slots, sessions, today) {
+    if (!(slots || []).length) return [];
+    const from = addDays(today, -SHIFTED_WINDOW_DAYS);
+    const monday = getWeekKey(today);
+    const out = [];
+    [monday, addDays(monday, -7), addDays(monday, -14), addDays(monday, -21), addDays(monday, -28)].forEach((wk) => {
+      computeSlotWeek(slots, sessions, wk, today).rows.forEach((r) => {
+        if ((r.status === "decale" || r.status === "rattrape") && r.date > from && r.date <= today) out.push({ date: r.date, jour: slotDayLabel(r.slot.day), heure: r.slot.time || "", lieu: r.slot.place || "", detail: r.detail || "" });
+      });
+    });
+    return out.sort((a, b) => a.date.localeCompare(b.date));
+  }
   const hardWeekOf = (hardWeeks, weekKey) => hardWeeks && hardWeeks[weekKey] || null;
   const isHardWeek = (hardWeeks, weekKey) => {
     const e = hardWeekOf(hardWeeks, weekKey);
@@ -4633,6 +4650,38 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
         cancelled = true;
       };
     }, [loading, profile, sessions, slotReasons, showToast]);
+    // Alerte coach : 3 creneaux decales/rattrapes sur 4 semaines glissantes,
+    // une alerte par semaine au maximum. Independante de l'alerte manques :
+    // ce signal repere un horaire qui derive avant que ca devienne des manques.
+    useEffect(() => {
+      if (loading || !profile || !isOnline(profile)) return;
+      const slots = normalizeSlots(profile);
+      if (!slots.length) return;
+      let cancelled = false;
+      (async () => {
+        const today = todayISO();
+        const shifted = recentShiftedSlots(slots, sessions, today);
+        if (shifted.length < SHIFTED_ALERT_THRESHOLD) return;
+        const st = await loadKey(COACH_SHIFT_ALERT_KEY, {});
+        if (cancelled) return;
+        const lastAt = st && st.lastAt ? new Date(st.lastAt).getTime() : 0;
+        if (Date.now() - lastAt < ALERT_COOLDOWN_DAYS * 864e5) return;
+        const signature = shifted.map((m) => m.date).join("|");
+        if (st && st.signature === signature) return;
+        const delivered = await queueCoachEvent(profile, {
+          type: "alerte_decalages",
+          weekKey: getWeekKey(today),
+          nbDecalages: shifted.length,
+          creneauxDecales: shifted,
+          message: shifted.length + " cr\xE9neaux d\xE9cal\xE9s ou rattrap\xE9s sur les 4 derni\xE8res semaines."
+        });
+        await saveKey(COACH_SHIFT_ALERT_KEY, { signature, lastAt: (/* @__PURE__ */ new Date()).toISOString(), delivered });
+        if (!cancelled && delivered) showToast("Ton coach a \xE9t\xE9 pr\xE9venu que ton cr\xE9neau d\xE9rive depuis plusieurs semaines.");
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [loading, profile, sessions, showToast]);
     // Resume hebdo envoye au coach : taux de respect sur 4 semaines glissantes,
     // une fois par semaine par client en ligne. Sans cet envoi, le taux de
     // respect n'existe que dans le navigateur du client et le coach ne peut
