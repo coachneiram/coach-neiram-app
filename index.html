@@ -2132,7 +2132,10 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     }, style: { width: 17, height: 17, accentColor: COLORS.gold } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text } }, "Rappels nutrition (calories & macros restantes)")), value.nutritionRemindersEnabled && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 } }, /* @__PURE__ */ React.createElement(Field, { label: "Intervalle" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [{ id: 120, label: "2 h" }, { id: 180, label: "3 h" }, { id: 240, label: "4 h" }], value: value.nutritionIntervalMin || 180, onChange: (e) => setValue({ ...value, nutritionIntervalMin: parseInt(e.target.value) }) })), /* @__PURE__ */ React.createElement(Field, { label: "De" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [9, 10, 11, 12].map((h) => ({ id: h, label: h + " h" })), value: (_c = value.nutritionStartHour) != null ? _c : 10, onChange: (e) => setValue({ ...value, nutritionStartHour: parseInt(e.target.value) }) })), /* @__PURE__ */ React.createElement(Field, { label: "Jusqu'\xE0" }, /* @__PURE__ */ React.createElement(SelectInput, { options: [19, 20, 21, 22].map((h) => ({ id: h, label: h + " h" })), value: (_d = value.nutritionEndHour) != null ? _d : 21, onChange: (e) => setValue({ ...value, nutritionEndHour: parseInt(e.target.value) }) }))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: 0 } }, "Chaque rappel indique les calories et macros restantes du jour, avec des id\xE9es d'aliments compatibles avec ton r\xE9gime et tes allergies."))), /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: value.reportReminderEnabled !== false, onChange: (e) => {
       setValue({ ...value, reportReminderEnabled: e.target.checked });
       if (e.target.checked && typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
-    }, style: { width: 17, height: 17, accentColor: COLORS.gold } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text } }, "Rappel du dimanche \u2014 envoyer mon bilan au coach"))), !IN_CLAUDE && /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement(Field, { label: "Cl\xE9 IA (fournie par ton coach)" }, /* @__PURE__ */ React.createElement(TextInput, { type: "password", placeholder: "Facultatif \u2014 une cl\xE9 est d\xE9j\xE0 int\xE9gr\xE9e", value: keyDraft, onChange: (e) => setKeyDraft(e.target.value), autoComplete: "off" }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "4px 0 0", lineHeight: 1.5 } }, "Active la photo de repas, le chatbot nutrition, la lecture des codes-barres et le bilan IA optionnel. Palier gratuit Google Gemini : quota quotidien partag\xE9, donn\xE9es pouvant \xEAtre utilis\xE9es par Google."))), /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 } }, "Sauvegarde des donn\xE9es"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "0 0 10px", lineHeight: 1.5 } }, "Le fichier contient tout ton suivi, photos comprises. Exporte r\xE9guli\xE8rement, et avant de changer de t\xE9l\xE9phone : Restaurer sur le nouvel appareil remet tout en place."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", icon: Download, onClick: async () => {
+    }, style: { width: 17, height: 17, accentColor: COLORS.gold } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text } }, "Rappel du dimanche \u2014 envoyer mon bilan au coach"))), isOnline(value) && /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: value.creneauReminderEnabled !== false, onChange: (e) => {
+      setValue({ ...value, creneauReminderEnabled: e.target.checked });
+      if (e.target.checked && typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
+    }, style: { width: 17, height: 17, accentColor: COLORS.gold } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text } }, "Rappel de cr\xE9neau (coaching en ligne)")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "6px 0 0" } }, "Une notification 1 h avant ton cr\xE9neau du jour, si tu ne l'as pas encore point\xE9.")), !IN_CLAUDE && /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement(Field, { label: "Cl\xE9 IA (fournie par ton coach)" }, /* @__PURE__ */ React.createElement(TextInput, { type: "password", placeholder: "Facultatif \u2014 une cl\xE9 est d\xE9j\xE0 int\xE9gr\xE9e", value: keyDraft, onChange: (e) => setKeyDraft(e.target.value), autoComplete: "off" }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "4px 0 0", lineHeight: 1.5 } }, "Active la photo de repas, le chatbot nutrition, la lecture des codes-barres et le bilan IA optionnel. Palier gratuit Google Gemini : quota quotidien partag\xE9, donn\xE9es pouvant \xEAtre utilis\xE9es par Google."))), /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 } }, "Sauvegarde des donn\xE9es"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "0 0 10px", lineHeight: 1.5 } }, "Le fichier contient tout ton suivi, photos comprises. Exporte r\xE9guli\xE8rement, et avant de changer de t\xE9l\xE9phone : Restaurer sur le nouvel appareil remet tout en place."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", icon: Download, onClick: async () => {
       const r = await exportAllData(value.name);
       setBackupMsg(r === "downloaded" ? "Sauvegarde t\xE9l\xE9charg\xE9e \u2014 garde ce fichier en lieu s\xFBr (Drive, mail...)." : r === "shared" ? "Sauvegarde partag\xE9e." : null);
     }, style: { flex: 1 } }, "Exporter mes donn\xE9es"), /* @__PURE__ */ React.createElement("input", { type: "file", accept: ".json,application/json", ref: importRef, style: { display: "none" }, onChange: (e) => {
@@ -4020,6 +4023,15 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
   }
   // Pointage compare au creneau declare dans le profil.
   const reasonKeyOf = (row) => row.slot.id + "|" + row.date;
+  // Message de motivation pour le bloc coaching en ligne : uniquement des
+  // messages positifs/neutres. Un créneau manqué a déjà sa propre carte
+  // ("à justifier") plus bas — pas de relance culpabilisante ici.
+  function buildCreneauMotivation(week, summary) {
+    const todayRow = (week.rows || []).find((r) => r.status === "aujourdhui");
+    if (todayRow) return "Ton créneau du jour" + (todayRow.slot.time ? " (" + todayRow.slot.time + ")" : "") + " t'attend. Le pointer prend 5 secondes.";
+    if (summary.planned > 0 && summary.missed === 0 && summary.honored === summary.planned) return summary.honored + "/" + summary.planned + " créneaux honorés cette semaine. Rien de plus à faire.";
+    return null;
+  }
   function CreneauxCard({ profile, sessionsApi, reasons, onSetReason }) {
     const today = todayISO();
     const weekKey = getWeekKey(today);
@@ -4036,6 +4048,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted, lineHeight: 1.55, margin: "10px 0 0" } }, "Aucun cr\xE9neau enregistr\xE9. Ouvre ", /* @__PURE__ */ React.createElement("strong", { style: { color: COLORS.gold } }, "Mon profil & r\xE9glages"), " et note le jour, l'heure et le lieu de chaque s\xE9ance de la semaine.")
     );
     const summary = slotWeekSummary(week.rows);
+    const creneauMotivation = useMemo(() => buildCreneauMotivation(week, summary), [week, summary]);
     const point = async (row) => {
       const isToday = row.date === today;
       await sessionsApi.add({ date: row.date, slotId: row.slot.id, startTime: isToday ? nowHHMM() : row.slot.time || "", place: row.slot.place || "", source: "creneau", routineId: null, durationMin: "", rpe: "", notes: isToday ? "" : "Point\xE9e apr\xE8s coup", pains: [], exercises: [] });
@@ -4060,6 +4073,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       window.setTimeout(() => setMsg(null), 2600);
     };
     return /* @__PURE__ */ React.createElement(Card, null,
+      /* @__PURE__ */ React.createElement(MotivationCard, { text: creneauMotivation }),
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" } },
         /* @__PURE__ */ React.createElement(SectionTitle, null, "Mes cr\xE9neaux cette semaine"),
         /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 12.5, color: summary.missed ? COLORS.warn : COLORS.textMuted } }, summary.honored, "/", summary.planned, " honor\xE9s")
@@ -4215,8 +4229,19 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
   // Bibliotheque de seances sans materiel (coaching en ligne). Chaque item est
   // deja au format attendu par une session (sets/reps/repUnit), independant
   // des defaults de EXERCISE_LIBRARY : la structure de la seance prime.
+  // Echauffement partage, en tete de chacune des 7 seances (5 min, non
+  // negociable quel que soit le niveau).
+  const ECHAUFFEMENT_SANS_MATERIEL = [
+    { name: "Rotations des épaules, bras tendus", mode: "warmup", sets: 1, reps: 30, repUnit: "sec" },
+    { name: "Cercles de bassin", mode: "warmup", sets: 1, reps: 30, repUnit: "sec" },
+    { name: "Chat / vache au sol", mode: "warmup", sets: 1, reps: 10 },
+    { name: "Fentes marchées sur place", mode: "warmup", sets: 1, reps: 10 },
+    { name: "Squat poids du corps", mode: "warmup", sets: 1, reps: 10 },
+    { name: "Montées de genoux contrôlées", mode: "warmup", sets: 1, reps: 30 }
+  ];
   const SEANCE_TEMPLATES = [
-    { id: "45a", name: "45-A — Bas du corps et gainage", durationMin: 45, color: "#2DD4BF", description: "45 min · Bas du corps & gainage", note: "Échauffement 5 min avant de démarrer. Repos 45-60 s selon exercice. RPE 7 maximum les 4 premières semaines.", exercises: [
+    { id: "45a", name: "45-A — Bas du corps et gainage", durationMin: 45, color: "#2DD4BF", description: "45 min · Bas du corps & gainage", note: "Repos 45-60 s selon exercice. RPE 7 maximum les 4 premières semaines.", exercises: [
+      ...ECHAUFFEMENT_SANS_MATERIEL,
       { name: "Squat au poids du corps", mode: "pdc", sets: 4, reps: 12 },
       { name: "Fentes alternées", mode: "pdc", sets: 3, reps: 10 },
       { name: "Pont fessier au sol", mode: "pdc", sets: 4, reps: 15 },
@@ -4224,7 +4249,8 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       { name: "Gainage latéral", mode: "pdc", sets: 3, reps: 20, repUnit: "sec" },
       { name: "Superman", mode: "pdc", sets: 3, reps: 12 }
     ] },
-    { id: "45b", name: "45-B — Haut du corps et tirage", durationMin: 45, color: "#9F8FEF", description: "45 min · Haut du corps & tirage", note: "Échauffement 5 min avant de démarrer. Repos 45-60 s selon exercice. RPE 7 maximum les 4 premières semaines.", exercises: [
+    { id: "45b", name: "45-B — Haut du corps et tirage", durationMin: 45, color: "#9F8FEF", description: "45 min · Haut du corps & tirage", note: "Repos 45-60 s selon exercice. RPE 7 maximum les 4 premières semaines.", exercises: [
+      ...ECHAUFFEMENT_SANS_MATERIEL,
       { name: "Pompes", mode: "pdc", sets: 4, reps: 8 },
       { name: "Rowing sous une table", mode: "pdc", sets: 4, reps: 10 },
       { name: "Dips sur chaise", mode: "pdc", sets: 3, reps: 10 },
@@ -4232,7 +4258,8 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       { name: "Gainage bras tendus (touches d'épaule)", mode: "pdc", sets: 3, reps: 20 },
       { name: "Extension thoracique au mur", mode: "pdc", sets: 2, reps: 10 }
     ] },
-    { id: "45c", name: "45-C — Circuit cardio, intensité contrôlée", durationMin: 45, color: "#4ADE80", description: "45 min · Circuit cardio", note: "Échauffement 5 min avant de démarrer. 4 tours, 40 s de travail / 20 s de récupération entre exercices, 90 s entre les tours. RPE 7 maximum.", exercises: [
+    { id: "45c", name: "45-C — Circuit cardio, intensité contrôlée", durationMin: 45, color: "#4ADE80", description: "45 min · Circuit cardio", note: "4 tours, 40 s de travail / 20 s de récupération entre exercices, 90 s entre les tours. RPE 7 maximum.", exercises: [
+      ...ECHAUFFEMENT_SANS_MATERIEL,
       { name: "Montées de genoux", mode: "pdc", sets: 4, reps: 40, repUnit: "sec" },
       { name: "Squat au poids du corps", mode: "pdc", sets: 4, reps: 40, repUnit: "sec" },
       { name: "Pompes", mode: "pdc", sets: 4, reps: 40, repUnit: "sec" },
@@ -4240,14 +4267,16 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       { name: "Planche dynamique (coudes puis mains)", mode: "pdc", sets: 4, reps: 40, repUnit: "sec" },
       { name: "Step-ups sur une marche", mode: "pdc", sets: 4, reps: 40, repUnit: "sec" }
     ] },
-    { id: "30a", name: "30-A — Corps entier", durationMin: 30, color: "#F0A155", description: "30 min · Corps entier", note: "Échauffement 5 min avant de démarrer. Repos 45 s. RPE 7 maximum.", exercises: [
+    { id: "30a", name: "30-A — Corps entier", durationMin: 30, color: "#F0A155", description: "30 min · Corps entier", note: "Repos 45 s. RPE 7 maximum.", exercises: [
+      ...ECHAUFFEMENT_SANS_MATERIEL,
       { name: "Squat au poids du corps", mode: "pdc", sets: 3, reps: 15 },
       { name: "Pompes", mode: "pdc", sets: 3, reps: 8 },
       { name: "Pont fessier au sol", mode: "pdc", sets: 3, reps: 15 },
       { name: "Rowing sous une table", mode: "pdc", sets: 3, reps: 10 },
       { name: "Gainage planche", mode: "pdc", sets: 3, reps: 30, repUnit: "sec" }
     ] },
-    { id: "30b", name: "30-B — Cardio et dos", durationMin: 30, color: "#5B9FEF", description: "30 min · Cardio & dos", note: "Échauffement 5 min avant de démarrer. 3 tours, 40 s de travail / 20 s de récupération.", exercises: [
+    { id: "30b", name: "30-B — Cardio et dos", durationMin: 30, color: "#5B9FEF", description: "30 min · Cardio & dos", note: "3 tours, 40 s de travail / 20 s de récupération.", exercises: [
+      ...ECHAUFFEMENT_SANS_MATERIEL,
       { name: "Montées de genoux", mode: "pdc", sets: 3, reps: 40, repUnit: "sec" },
       { name: "Fentes alternées", mode: "pdc", sets: 3, reps: 40, repUnit: "sec" },
       { name: "Superman", mode: "pdc", sets: 3, reps: 40, repUnit: "sec" },
@@ -4255,6 +4284,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       { name: "Gainage latéral", mode: "pdc", sets: 3, reps: 40, repUnit: "sec" }
     ] },
     { id: "15a", name: "15-A — Debout, sans se mettre au sol", durationMin: 15, color: "#F0645A", description: "15 min · Maintien, debout", note: "Séance de maintien pour les semaines difficiles. 2 tours, 40 s de travail / 20 s de récupération. RPE 6 maximum, aucune progression.", exercises: [
+      ...ECHAUFFEMENT_SANS_MATERIEL,
       { name: "Squat au poids du corps", mode: "pdc", sets: 2, reps: 40, repUnit: "sec" },
       { name: "Fentes alternées", mode: "pdc", sets: 2, reps: 40, repUnit: "sec" },
       { name: "Pompes (contre un mur ou un plan de travail)", mode: "pdc", sets: 2, reps: 40, repUnit: "sec" },
@@ -4263,7 +4293,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       { name: "Élévations sur pointes de pieds", mode: "pdc", sets: 2, reps: 40, repUnit: "sec" }
     ] },
     { id: "15b", name: "15-B — Dos et mobilité (mauvais sommeil)", durationMin: 15, color: "#2DD4BF", description: "15 min · Maintien, sommeil", note: "Séance de maintien pour les semaines de mauvais sommeil. Aucune progression, juste tenir le fil.", exercises: [
-      { name: "Chat / vache au sol", mode: "pdc", sets: 1, reps: 15 },
+      ...ECHAUFFEMENT_SANS_MATERIEL,
       { name: "Pont fessier au sol", mode: "pdc", sets: 2, reps: 15 },
       { name: "Superman", mode: "pdc", sets: 2, reps: 12 },
       { name: "Gainage planche", mode: "pdc", sets: 2, reps: 30, repUnit: "sec" },
@@ -4288,7 +4318,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: COLORS.textMuted, lineHeight: 1.55, margin: "10px 0 12px" } }, "7 séances prêtes à l'emploi (45, 30 ou 15 min), conçues par ton coach pour t'entraîner à la maison sans matériel."),
       manquantes.length > 0 ? /* @__PURE__ */ React.createElement(Btn, { icon: Plus, style: { width: "100%" }, onClick: ajouter }, "Ajouter les " + manquantes.length + (manquantes.length > 1 ? " séances" : " séance") + " à mes séances types") : /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12.5, color: COLORS.good, margin: 0 } }, "Les 7 séances du coach sont dans tes séances types, dans l'onglet ci-dessous."),
       msg && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: COLORS.good, margin: "10px 0 0" } }, msg),
-      /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, lineHeight: 1.5, margin: "12px 0 0" } }, "5 min d'échauffement avant chaque séance. RPE 7 maximum les 4 premières semaines. Une douleur qui persiste ou s'aggrave : note-la dans Douleurs pendant la séance, et consulte un professionnel de santé.")
+      /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: COLORS.textFaint, lineHeight: 1.5, margin: "12px 0 0" } }, "L'échauffement (5 min) est inclus au début de chaque séance. RPE 7 maximum les 4 premières semaines. Une douleur qui persiste ou s'aggrave : note-la dans Douleurs pendant la séance, et consulte un professionnel de santé.")
     );
   }
   function EntrainementsTab({ routinesApi, sessionsApi, profile, weekPlan, hardWeeks, onSetHardWeek, slotReasons, onSetSlotReason }) {
@@ -4687,6 +4717,47 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
       flushCoachOutbox(profile).catch(() => {
       });
     }, [loading, profile]);
+    // Rappel de creneau (coaching en ligne uniquement) : une seule notification,
+    // 1h avant le creneau du jour, si pas deja pointe.
+    useEffect(() => {
+      if (loading || !profile || !isOnline(profile) || profile.creneauReminderEnabled === false) return;
+      let stopped = false;
+      const check = async () => {
+        if (stopped) return;
+        const today = todayISO();
+        const todaySlot = normalizeSlots(profile).find((s) => s.day === dayIdOf(today));
+        if (!todaySlot || !todaySlot.time) return;
+        const done = sessionsApi.items.some((s) => s.date === today && (s.slotId === todaySlot.id || s.maintenance));
+        if (done) return;
+        const slotMin = minutesOf(todaySlot.time);
+        const now = /* @__PURE__ */ new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        if (slotMin == null || nowMin < slotMin - 60 || nowMin >= slotMin) return;
+        const st = await loadKey("coach_creneau_reminder_state", {});
+        if (st.firedDate === today) return;
+        const msg = "Ton cr\xE9neau de " + slotDayLabel(todaySlot.day).toLowerCase() + " \xE0 " + todaySlot.time + " approche.";
+        const canNotify = typeof Notification !== "undefined" && Notification.permission === "granted";
+        if (typeof document !== "undefined" && document.hidden && canNotify) {
+          try {
+            const n = new Notification("Coach Neiram \u23F0", { body: msg, tag: "coach-creneau" });
+            n.onclick = () => {
+              window.focus();
+              n.close();
+            };
+          } catch (e) {
+          }
+        } else {
+          showToast(msg);
+        }
+        await saveKey("coach_creneau_reminder_state", { firedDate: today });
+      };
+      check();
+      const iv = setInterval(check, 6e4);
+      return () => {
+        stopped = true;
+        clearInterval(iv);
+      };
+    }, [loading, profile, sessionsApi.items, showToast]);
     // Un creneau ne peut pas etre manque avant d'avoir ete cree : on date les
     // creneaux existants du jour ou l'app les decouvre, sinon les semaines
     // passees ressortent toutes en manque et declenchent une fausse alerte.
