@@ -183,3 +183,21 @@ export const Upload = mkIcon(
     <line x1="12" y1="3" x2="12" y2="15" />
   </>
 );
+
+export const Search = mkIcon(
+  <>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m21 21-4.3-4.3" />
+  </>
+);
+
+export const Barcode = mkIcon(
+  <>
+    <path d="M3 5v14" />
+    <path d="M7 5v14" />
+    <path d="M11 5v9" />
+    <path d="M15 5v14" />
+    <path d="M19 5v14" />
+    <path d="M11 17v2" />
+  </>
+);

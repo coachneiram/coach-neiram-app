@@ -139,7 +139,8 @@ const A_EXPOSER = [
   "isFreshPR",
   "SEANCE_TEMPLATES",
   "presetTotals",
-  "PORTION_STEPS"
+  "PORTION_STEPS",
+  "mapOFFProduct"
 ];
 
 function extraireScriptApplicatif(html) {

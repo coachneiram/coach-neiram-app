@@ -8,8 +8,6 @@
  * un repas deja enregistre, un plat de la bibliotheque, la recherche dans
  * le catalogue, la saisie libre. L'ordre n'est pas anodin — c'est celui
  * dans lequel un client pressé essaie.
- *
- * La recherche dans le catalogue (« Aliments ») n'est pas encore portee.
  */
 
 import { useState } from "react";
@@ -19,6 +17,7 @@ import { fmtPortion, scaleMacros } from "../lib/portions.js";
 import { PALIERS_PORTION, multiplicateur, totauxRepasType } from "../lib/repas-types.js";
 import { Btn, Field, Modal, NumberInput, TextInput } from "../ui/primitives.jsx";
 import { Trash2, X } from "../ui/icones.jsx";
+import { RechercheAliment } from "./RechercheAliment.jsx";
 
 const ONGLETS = [
   { id: "presets", label: "Repas" },
@@ -345,13 +344,7 @@ export function AjoutAliment({
           </div>
         )}
 
-        {/* MIGRATION-EN-COURS */}
-        {onglet === "finder" && (
-          <p style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.5, margin: 0 }}>
-            La recherche dans le catalogue n'est pas encore migrée. Elle reste servie par l'application actuelle.
-          </p>
-        )}
-        {/* FIN-MIGRATION-EN-COURS */}
+        {onglet === "finder" && <RechercheAliment onChoisir={onAjouterLibre} />}
 
         {onglet === "freehand" && (
           <div>
