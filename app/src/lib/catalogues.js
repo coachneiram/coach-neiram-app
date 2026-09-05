@@ -1042,3 +1042,71 @@ export const SUGGESTIONS = [
     "contains": []
   }
 ];
+
+/** Regimes alimentaires proposes dans le profil. */
+export const DIET_TYPES = [
+  {
+    "id": "aucun",
+    "label": "Aucun régime particulier"
+  },
+  {
+    "id": "vegetarien",
+    "label": "Végétarien"
+  },
+  {
+    "id": "vegetalien",
+    "label": "Végétalien / vegan"
+  },
+  {
+    "id": "keto",
+    "label": "Kéto (faible en glucides)"
+  }
+];
+
+/** Allergenes et intolerances proposes dans le profil. */
+export const ALLERGENS = [
+  {
+    "id": "gluten",
+    "label": "Gluten"
+  },
+  {
+    "id": "lactose",
+    "label": "Lactose / produits laitiers"
+  },
+  {
+    "id": "arachides",
+    "label": "Arachides"
+  },
+  {
+    "id": "fruits-a-coque",
+    "label": "Fruits à coque"
+  },
+  {
+    "id": "oeufs",
+    "label": "Œufs"
+  },
+  {
+    "id": "poisson",
+    "label": "Poisson"
+  },
+  {
+    "id": "crustaces",
+    "label": "Crustacés"
+  },
+  {
+    "id": "soja",
+    "label": "Soja"
+  }
+];
+
+/** Ou le client fait ses seances. */
+export const TRAINING_MODES = [
+  {
+    "id": "app",
+    "label": "Dans l'application"
+  },
+  {
+    "id": "sheets",
+    "label": "Sur mon Google Sheets (programme du coach)"
+  }
+];

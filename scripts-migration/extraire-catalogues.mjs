@@ -33,7 +33,10 @@ const TABLES = {
   EQUIV_PROTEINES: "Equivalences proteiques, pour ~120 g de viande ou poisson",
   EQUIV_LIPIDES: "Equivalences de matieres grasses",
   GOAL_FOOD_NOTES: "Conseil affiche selon l'objectif du client",
-  SUGGESTIONS: "Collations et petits repas proposes pour combler la journee"
+  SUGGESTIONS: "Collations et petits repas proposes pour combler la journee",
+  DIET_TYPES: "Regimes alimentaires proposes dans le profil",
+  ALLERGENS: "Allergenes et intolerances proposes dans le profil",
+  TRAINING_MODES: "Ou le client fait ses seances"
 };
 
 const corps = Object.entries(TABLES)

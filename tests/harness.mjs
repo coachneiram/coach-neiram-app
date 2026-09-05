@@ -127,7 +127,12 @@ const A_EXPOSER = [
   // Messages de motivation du Journal.
   "buildMotivation",
   "MOTIVATION_VARIANTS",
-  "computeSleepHours"
+  "computeSleepHours",
+  // Listes d'options du profil.
+  "DIET_TYPES",
+  "ALLERGENS",
+  "TRAINING_MODES",
+  "COACHING_MODES"
 ];
 
 function extraireScriptApplicatif(html) {
