@@ -163,12 +163,19 @@ async function relaiIa(request, env, cors, ip) {
 /* ------------------------------------------------------------------ */
 
 // Types d'evenements que l'application envoie reellement.
+//
+// alerte_decalages et resume_hebdo manquaient a cette liste : les deux
+// etaient donc rejetes en 400 par le proxy, y compris AVANT la migration.
+// Le coach n'a jamais recu ni la derive d'horaire, ni le taux de respect
+// hebdomadaire.
 const TYPES_AUTORISES = [
   "pointage",
   "justification",
   "semaine_difficile",
   "alerte_semaines_difficiles",
-  "alerte_seances_manquees"
+  "alerte_seances_manquees",
+  "alerte_decalages",
+  "resume_hebdo"
 ];
 
 const LONGUEUR_MAX_TEXTE = 500;
