@@ -114,7 +114,16 @@ const A_EXPOSER = [
   "EQUIV_PROTEINES",
   "EQUIV_LIPIDES",
   "SUGGESTIONS",
-  "pickSuggestions"
+  "pickSuggestions",
+  // Portions et mise a l'echelle des macronutriments.
+  "parseGrams",
+  "stripGrams",
+  "itemBasis",
+  "basisMacros",
+  "toGramBasis",
+  "sumMacros",
+  "scaleMacros",
+  "fmtPortion"
 ];
 
 function extraireScriptApplicatif(html) {
