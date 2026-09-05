@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: in_progress
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 27
-  completed_plans: 13
-  percent: 48
+  completed_plans: 19
+  percent: 62
 ---
 
 # Project State
@@ -18,22 +18,56 @@ See: .planning/PROJECT.md (updated 2026-09-01)
 **Core value:** Permettre à un client de suivre sa nutrition, ses entraînements et sa
 progression au quotidien, et à son coach de recevoir automatiquement les signaux de
 suivi, sans jamais casser l'application en production.
-**Current focus:** Phases 1, 2, 3, 4 et 6 terminées. Phase 7 préparée, en attente d'activation. Restent les phases 5 (migration écran par écran), 7 (activation), 8 (bascule) et 9 (nettoyage), à faire avec l'utilisateur.
+**Current focus:** Phases 1, 2, 3, 4, 6 et 7 terminées et en production. Phase 5 (migration écran par écran) à mi-parcours : 4 écrans sur 8 portés, et TOUTE la logique de calcul risquée portée et vérifiée par parité contre l'original. Restent les phases 5 (écrans restants), 8 (bascule) et 9 (nettoyage), à faire avec l'utilisateur.
 
 ## Current Position
 
-Phases terminées : 1, 2, 3, 4, 6
-Phase 7 : préparée, non activée
-Restent : 5 (migration écrans), 7 (activation), 8 (bascule), 9 (nettoyage)
-Status: Phase complete
-Last activity: 2026-09-05 — Phases 3, 4, 6 et 7 (préparation) livrées en autonomie. 165 tests au total. Phase 2 livrée : 87 tests automatisés (63 sur l'application, 24 sur le proxy), sans toucher à index.html. Phase 1 déployée et vérifiée de bout en bout : proxy Cloudflare en service, script Apps Script durci et verrouillé (EXIGER_SECRET = true), `index.html` publié sur `main` (commit 4c0e18a).
+Phases terminées et en production : 1, 2, 3, 4, 6, 7
+Phase 5 : à mi-parcours
+Restent : 5 (écrans restants), 8 (bascule), 9 (nettoyage)
+Status: In progress
+Last activity: 2026-09-05 — Phase 7 activée : le site est déployé par GitHub Actions, et les tests conditionnent désormais la mise en ligne. Mode hors ligne vérifié en production sur téléphone (mode avion). Phase 5 à mi-parcours.
 
-Progress: [█████░░░░░] 48%
+### Écrans migrés (4 sur 8)
+
+Sommeil, Mensurations, Nutrition, Séances. Rendu validé visuellement par
+l'utilisateur sur une page d'aperçu publiée.
+
+Restent : Journal (le plus gros, ~62 ko), Repas (~31 ko), Entraînements,
+Tendances (~26 ko).
+
+### Logique de calcul portée et vérifiée par parité
+
+Toute la logique risquée est désormais portée hors de index.html, et
+chaque portage est comparé à l'implémentation d'origine sur des centaines
+de situations tirées au sort :
+
+- créneaux d'entraînement (400 situations)
+- filtrage des aliments par régime et allergies (11 000 comparaisons)
+- programme hebdomadaire et semaines difficiles (300 situations)
+- bilan hebdomadaire (250 semaines, champ par champ)
+- bilan mensuel (250 mois, février bissextile et mois en cours inclus)
+- estimation de force 1RM (2 000 comparaisons)
+- lecture des bilans rédigés par l'IA (frontières balayées)
+
+Méthode systématique : chaque portage est ensuite saboté volontairement
+pour vérifier que le test réagit. Cinq angles morts ont ainsi été trouvés
+et comblés — dont un générateur qui ne produisait jamais d'écart horaire
+dans la fenêtre de tolérance, et un test de longueur de titre qui ne
+testait rien.
+
+### Ce qui reste avant la bascule (phase 8)
+
+Migrer les 4 écrans restants, la coque de navigation, et le branchement
+sur les données réelles. La bascule elle-même demandera une session
+dédiée avec l'utilisateur devant l'écran.
+
+Progress: [██████░░░░] 62%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 12
 - Average duration: -
 - Total execution time: -
 

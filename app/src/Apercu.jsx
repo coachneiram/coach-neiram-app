@@ -12,11 +12,19 @@
 
 import { useState } from "react";
 import { COLORS, POLICES } from "./tokens.js";
+import { Coque } from "./ui/Coque.jsx";
 import { addDays, todayISO } from "./lib/dates.js";
 import { Sommeil } from "./ecrans/Sommeil.jsx";
 import { Mensurations } from "./ecrans/Mensurations.jsx";
 import { Nutrition } from "./ecrans/Nutrition.jsx";
 import { Seances } from "./ecrans/Seances.jsx";
+import { Repas } from "./ecrans/Repas.jsx";
+import { Journal } from "./ecrans/Journal.jsx";
+import { Tendances } from "./ecrans/Tendances.jsx";
+import { Reglages } from "./ecrans/Reglages.jsx";
+import { Entrainements } from "./ecrans/Entrainements.jsx";
+import { bilanHebdomadaire } from "./lib/bilan.js";
+import { getWeekKey } from "./lib/semaine.js";
 
 const jour = (n) => addDays(todayISO(), -n);
 
@@ -70,6 +78,14 @@ const PROFIL_SEANCES = {
   slots: [{ id: "cr1", day: "wed", time: "18:30", place: "Salle Neiram" }]
 };
 
+const PROFIL_TENDANCES = {
+  targetSleepHours: 8,
+  targetWaterL: 2,
+  targetSteps: 8000,
+  weeklyWorkoutTarget: 3,
+  slots: []
+};
+
 const OBJECTIFS_EXEMPLE = { calories: 2200, protein: 155, carbs: 220, fat: 70 };
 
 const ONGLETS = [
@@ -81,79 +97,140 @@ const ONGLETS = [
 
 export default function Apercu() {
   const [onglet, setOnglet] = useState("sommeil");
+  const [reglagesOuverts, setReglagesOuverts] = useState(false);
+  const [profilExemple, setProfilExemple] = useState({
+    name: "Marien",
+    sex: "homme",
+    age: 34,
+    heightCm: 178,
+    startWeightKg: 79,
+    goal: "prise",
+    activityLevel: "modere",
+    weeklyWorkoutTarget: 3,
+    targetSleepHours: 8,
+    targetWaterL: 2,
+    targetSteps: 8000,
+    trainingMode: "sheets",
+    coachingMode: "presentiel",
+    dietType: "aucun",
+    allergies: []
+  });
+
+  // Ecrans pas encore migres : on le dit plutot que d'afficher du vide.
+  const migres = {
+    sommeil: <Sommeil formApi={apiFactice(JOURNAL_EXEMPLE)} profile={{ targetSleepHours: 8 }} />,
+    mensurations: <Mensurations api={apiFactice(MESURES_EXEMPLE)} bodyApi={CORPS_FACTICE} />,
+    nutrition: (
+      <Nutrition
+        profile={{}}
+        targets={OBJECTIFS_EXEMPLE}
+        currentWeight={78.4}
+        bodyLogs={CORPS_EXEMPLE}
+        logEntries={CALORIES_EXEMPLE}
+        onApplyCalibration={() => {}}
+      />
+    ),
+    entrainements: (
+      <Entrainements
+        routinesApi={apiFactice([])}
+        sessionsApi={apiFactice(SEANCES_EXEMPLE)}
+        profile={PROFIL_SEANCES}
+      />
+    ),
+    repas: (
+      <Repas
+        api={apiFactice([])}
+        profile={{ goal: "perte", dietType: "aucun", allergies: [] }}
+        targets={OBJECTIFS_EXEMPLE}
+        logEntries={CALORIES_EXEMPLE.slice(0, 2)}
+      />
+    ),
+    tendances: (
+      <Tendances
+        allData={{
+          sessions: SEANCES_EXEMPLE,
+          dailyForm: JOURNAL_EXEMPLE,
+          bodyLogs: CORPS_EXEMPLE,
+          logEntries: CALORIES_EXEMPLE,
+          weekPlan: null,
+          routines: [],
+          hardWeeks: null
+        }}
+        profile={PROFIL_TENDANCES}
+        targets={OBJECTIFS_EXEMPLE}
+        weekStats={bilanHebdomadaire(
+          getWeekKey(todayISO()),
+          {
+            sessions: SEANCES_EXEMPLE,
+            dailyForm: JOURNAL_EXEMPLE,
+            bodyLogs: CORPS_EXEMPLE,
+            logEntries: CALORIES_EXEMPLE,
+            weekPlan: null,
+            routines: [],
+            hardWeeks: null
+          },
+          PROFIL_TENDANCES,
+          OBJECTIFS_EXEMPLE
+        )}
+        monthStats={{ monthKey: "septembre 2026", workoutsCount: 2 }}
+        photos={{}}
+      />
+    ),
+    journal: (
+      <Journal
+        dishesApi={apiFactice([{ id: "p1", name: "Poulet riz brocoli", calories: 520, protein: 45, carbs: 60, fat: 8 }])}
+        logEntriesApi={apiFactice(CALORIES_EXEMPLE.slice(0, 3).map((e) => ({ ...e, date: todayISO(), mealType: "dejeuner", name: "Exemple" })))}
+        bodyApi={CORPS_FACTICE}
+        formApi={{ ...apiFactice(JOURNAL_EXEMPLE), getForDate: () => JOURNAL_EXEMPLE[0], upsert: async () => {} }}
+        sessionsApi={apiFactice(SEANCES_EXEMPLE)}
+        targets={OBJECTIFS_EXEMPLE}
+        profile={{ targetSleepHours: 8, targetWaterL: 2, targetSteps: 8000, weeklyWorkoutTarget: 3 }}
+      />
+    )
+  };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: COLORS.bg,
-        color: COLORS.text,
-        fontFamily: POLICES.texte,
-        padding: "20px 16px 48px"
-      }}
-    >
-      <div style={{ maxWidth: 620, margin: "0 auto" }}>
-        <p
+    <Coque ongletActif={onglet} onChangerOnglet={setOnglet} onOuvrirReglages={() => setReglagesOuverts(true)}>
+      <div
+        style={{
+          background: COLORS.surface,
+          border: `1px solid ${COLORS.gold}44`,
+          borderRadius: 12,
+          padding: "12px 14px",
+          marginBottom: 18
+        }}
+      >
+        <div
           style={{
             fontSize: 10,
-            letterSpacing: 2.5,
-            color: COLORS.textMuted,
+            letterSpacing: 2,
+            color: COLORS.gold,
             textTransform: "uppercase",
-            fontWeight: 600,
-            margin: 0
+            fontWeight: 700
           }}
         >
           Aperçu de migration
-        </p>
-        <h1 style={{ fontFamily: POLICES.titre, fontSize: 24, margin: "6px 0 4px", color: COLORS.gold }}>
-          Coach Neiram
-        </h1>
-        <p style={{ fontSize: 12, color: COLORS.textFaint, margin: "0 0 18px", lineHeight: 1.6 }}>
+        </div>
+        <p style={{ fontSize: 12, color: COLORS.textMuted, margin: "6px 0 0", lineHeight: 1.6 }}>
           Écrans portés vers la nouvelle architecture, avec des données d'exemple. Ce n'est pas
           l'application : rien n'est enregistré, et le suivi réel reste servi par index.html.
         </p>
-
-        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-          {ONGLETS.map((o) => (
-            <button
-              key={o.id}
-              onClick={() => setOnglet(o.id)}
-              style={{
-                flex: 1,
-                background: onglet === o.id ? COLORS.surface : "transparent",
-                border: `1px solid ${onglet === o.id ? COLORS.gold : COLORS.border}`,
-                color: onglet === o.id ? COLORS.gold : COLORS.textMuted,
-                borderRadius: 10,
-                padding: "9px 12px",
-                fontFamily: POLICES.texte,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-
-        {onglet === "sommeil" && (
-          <Sommeil formApi={apiFactice(JOURNAL_EXEMPLE)} profile={{ targetSleepHours: 8 }} />
-        )}
-        {onglet === "mensurations" && <Mensurations api={apiFactice(MESURES_EXEMPLE)} bodyApi={CORPS_FACTICE} />}
-        {onglet === "seances" && (
-          <Seances sessionsApi={apiFactice(SEANCES_EXEMPLE)} profile={PROFIL_SEANCES} />
-        )}
-        {onglet === "nutrition" && (
-          <Nutrition
-            profile={{}}
-            targets={OBJECTIFS_EXEMPLE}
-            currentWeight={78.4}
-            bodyLogs={CORPS_EXEMPLE}
-            logEntries={CALORIES_EXEMPLE}
-            onApplyCalibration={() => {}}
-          />
-        )}
       </div>
-    </div>
+
+      {migres[onglet] || (
+        <div style={{ textAlign: "center", padding: "60px 16px", color: COLORS.textMuted }}>
+          <p style={{ fontSize: 14, margin: 0, fontFamily: POLICES.texte }}>Écran pas encore migré.</p>
+          <p style={{ fontSize: 12.5, color: COLORS.textFaint, marginTop: 8, lineHeight: 1.6 }}>
+            Il reste servi normalement par l'application actuelle.
+          </p>
+        </div>
+      )}
+      <Reglages
+        open={reglagesOuverts}
+        onClose={() => setReglagesOuverts(false)}
+        profile={profilExemple}
+        onSave={setProfilExemple}
+      />
+    </Coque>
   );
 }

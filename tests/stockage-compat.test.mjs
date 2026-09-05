@@ -40,8 +40,36 @@ describe("les noms de cles sont identiques", () => {
     }
   });
 
-  test("la file d'attente coach garde son nom", () => {
-    assert.equal(stockage.CLES_ANNEXES.outboxCoach, ancien.COACH_OUTBOX_KEY);
+  /**
+   * Les cles hors prefixe coach_ sont les plus dangereuses : elles
+   * n'apparaissent dans AUCUN export, donc une faute de frappe ne se
+   * rattrape pas depuis une sauvegarde. Le client perd ses justifications
+   * de creneaux, ses semaines maintien ou son plan de la semaine, en
+   * silence, et rien ne le signale.
+   *
+   * Cette table a d'ailleurs deja pris une faute : j'avais ecrit
+   * « cn_week_plan » la ou l'application utilise « cn_weekly_plan ».
+   */
+  test("chaque cle annexe porte exactement le nom d'index.html", () => {
+    const attendues = {
+      outboxCoach: ancien.COACH_OUTBOX_KEY,
+      raisonsCreneaux: ancien.SLOT_REASON_KEY,
+      semainesDifficiles: ancien.HARD_WEEK_KEY,
+      planSemaine: ancien.WEEK_PLAN_KEY,
+      maxisForce: ancien.PL_1RM_KEY
+    };
+    for (const [nom, attendue] of Object.entries(attendues)) {
+      assert.ok(attendue, `${nom} : cle introuvable dans index.html`);
+      assert.equal(stockage.CLES_ANNEXES[nom], attendue, `cle annexe « ${nom} »`);
+    }
+  });
+
+  test("aucune cle annexe ne porte le prefixe des sauvegardes", () => {
+    // Une cle en coach_ partirait dans les exports et reviendrait dans les
+    // restaurations : ce ne sont pas des donnees de suivi.
+    for (const [nom, cle] of Object.entries(stockage.CLES_ANNEXES)) {
+      assert.ok(!cle.startsWith(stockage.PREFIXE), `${nom} (${cle}) serait exportee a tort`);
+    }
   });
 
   test("le prefixe d'inventaire est le meme", () => {

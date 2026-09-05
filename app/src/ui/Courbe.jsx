@@ -1,5 +1,5 @@
 /**
- * Courbe d'evolution (SVG, sans bibliotheque).
+ * Graphiques d'evolution (SVG, sans bibliotheque).
  *
  * Portage fidele de LineChartSVG / ChartAxes de index.html (lignes 99-121).
  * Le SVG est genere a la main : aucune dependance de graphiques n'est
@@ -105,6 +105,79 @@ export function Courbe({ data, color, refY, height = 190 }) {
             </text>
           )
       )}
+    </svg>
+  );
+}
+
+
+/**
+ * Histogramme.
+ *
+ * Portage fidele de BarChartSVG (index.html, ligne 123). Il sert aux
+ * grandeurs qui se cumulent sur une periode — hydratation, pas, calories
+ * moyennes — la ou la courbe sert aux grandeurs continues comme le poids.
+ *
+ * L'echelle descend toujours jusqu'a zero : des barres tronquees a mi-hauteur
+ * exagereraient visuellement des ecarts minimes.
+ *
+ * Le message d'absence differe volontairement de celui de la courbe : une
+ * barre isolee reste lisible, la ou une courbe a besoin d'au moins deux
+ * points.
+ */
+export function Histogramme({ data, color, refY, height = 190 }) {
+  const W = 620;
+  const H = height;
+  const padL = 46;
+  const padR = 12;
+  const padT = 12;
+  const padB = 26;
+
+  const vals = data.map((d) => d.value).filter((v) => v != null);
+  if (!vals.length) {
+    return (
+      <p style={{ fontSize: 12, color: COLORS.textFaint, margin: "8px 0 0" }}>Pas encore de données.</p>
+    );
+  }
+
+  const { mn: mnBrut, mx } = chartScale(vals, refY);
+  const mn = Math.min(0, mnBrut);
+  const pw = W - padL - padR;
+  const ph = H - padT - padB;
+  const emplacement = pw / data.length;
+  const largeurBarre = emplacement * 0.55;
+  const yAt = (v) => padT + (1 - (v - mn) / (mx - mn)) * ph;
+  const ticks = [(mn + mx) / 2, mx - (mx - mn) * 0.1];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} role="img">
+      <Axes W={W} padL={padL} padR={padR} yAt={yAt} ticks={ticks} refY={refY} />
+      {data.map(
+        (d, i) =>
+          d.value != null && (
+            <rect
+              key={i}
+              x={padL + i * emplacement + (emplacement - largeurBarre) / 2}
+              y={yAt(d.value)}
+              width={largeurBarre}
+              height={Math.max(0, yAt(mn) - yAt(d.value))}
+              rx="3"
+              fill={color}
+            />
+          )
+      )}
+      {data.map((d, i) => (
+        <text
+          key={"l" + i}
+          x={padL + i * emplacement + emplacement / 2}
+          y={H - 8}
+          textAnchor="middle"
+          fontSize="9.5"
+          fill={COLORS.textFaint}
+          fontFamily="Inter"
+        >
+          {d.label}
+        </text>
+      ))}
     </svg>
   );
 }

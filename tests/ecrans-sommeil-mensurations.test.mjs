@@ -34,7 +34,10 @@ const ICI = dirname(fileURLToPath(import.meta.url));
 const SOURCE_LEGACY = readFileSync(join(ICI, "..", "index.html"), "utf8")
   // index.html est minifie : les accents y sont echappes en \xNN / \uNNNN.
   .replace(/\\x([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-  .replace(/\\u([0-9A-Fa-f]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+  .replace(/\\u([0-9A-Fa-f]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+  // Les emojis sont echappes avec des accolades : \u{1F4AA}. Sans ce
+  // decodage, tout texte en contenant un paraissait absent de l'original.
+  .replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
 
 describe("les conseils sont repris mot pour mot de l'application actuelle", () => {
   const tous = [

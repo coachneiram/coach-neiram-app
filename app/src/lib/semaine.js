@@ -88,3 +88,16 @@ export const normaliserCreneaux = (profil) =>
 /** Creneau correspondant a une date donnee, s'il en existe un. */
 export const creneauPourDate = (profil, date) =>
   normaliserCreneaux(profil).find((s) => addDays(getWeekKey(date), slotDayIndex(s.day)) === date) || null;
+
+/**
+ * Premier et dernier jour d'un mois.
+ *
+ * `new Date(annee, mois, 0)` designe le dernier jour du mois precedent :
+ * en passant le numero du mois tel quel (janvier = 1), on obtient donc le
+ * dernier jour de ce mois-la, fevrier bissextile compris.
+ */
+export function getMonthRange(cleMois) {
+  const [annee, mois] = cleMois.split("-").map(Number);
+  const dernierJour = new Date(annee, mois, 0).getDate();
+  return { start: cleMois + "-01", end: cleMois + "-" + String(dernierJour).padStart(2, "0") };
+}
