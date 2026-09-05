@@ -26,7 +26,11 @@
 (() => {
   const { useState, useEffect, useMemo, useCallback, useRef } = React;
   const IN_CLAUDE = typeof window !== "undefined" && window.storage && typeof window.storage.get === "function";
-  const hasAI = (key) => IN_CLAUDE || !!(key || DEFAULT_GEMINI_KEY);
+  // Proxy Cloudflare : garde la cle IA et le secret de synchro coach cote
+  // serveur, hors du navigateur. Tant que cette valeur reste vide,
+  // l'application fonctionne exactement comme avant.
+  const PROXY_BASE_URL = "https://coach-neiram-proxy.pelissier-marien.workers.dev";
+  const hasAI = (key) => IN_CLAUDE || !!PROXY_BASE_URL || !!(key || DEFAULT_GEMINI_KEY);
   function mkIcon(children) {
     return function Icon({ size = 16, color = "currentColor", fill = "none", style, className }) {
       return /* @__PURE__ */ React.createElement("svg", { className, width: size, height: size, viewBox: "0 0 24 24", fill, stroke: color, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style }, children);
@@ -1334,21 +1338,40 @@ ACTIONS:
   const DEFAULT_GEMINI_KEY = "";
   const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"];
   async function callGeminiRaw({ model, apiKey, systemPrompt, messages, maxTokens }) {
-    const body = {
-      contents: messages,
-      generationConfig: { maxOutputTokens: maxTokens || 1024, thinkingConfig: { thinkingLevel: "low" } }
-    };
-    if (systemPrompt) body.systemInstruction = { parts: [{ text: systemPrompt }] };
-    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
-    const doFetch = (viaQueryParam) => fetch(viaQueryParam ? url + "?key=" + encodeURIComponent(apiKey) : url, {
-      method: "POST",
-      headers: viaQueryParam ? { "Content-Type": "application/json" } : { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify(body)
-    });
-    let r = await doFetch(false);
-    if (r.status === 400 || r.status === 401 || r.status === 403) {
-      const r2 = await doFetch(true);
-      if (r2.status !== 400 && r2.status !== 401 && r2.status !== 403) r = r2;
+    let r = null;
+    // Voie normale : le proxy ajoute la cle du coach cote serveur, elle ne
+    // transite jamais par le navigateur du client.
+    if (PROXY_BASE_URL) {
+      try {
+        r = await fetch(PROXY_BASE_URL + "/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model, systemPrompt, messages, maxTokens })
+        });
+      } catch (e) {
+        r = null;
+      }
+    }
+    // Repli : cle personnelle, comme avant. Sert tant que le proxy n'est pas
+    // deploye, ou s'il est momentanement injoignable.
+    if (!r) {
+      if (!apiKey) throw new Error("missing-key");
+      const body = {
+        contents: messages,
+        generationConfig: { maxOutputTokens: maxTokens || 1024, thinkingConfig: { thinkingLevel: "low" } }
+      };
+      if (systemPrompt) body.systemInstruction = { parts: [{ text: systemPrompt }] };
+      const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
+      const doFetch = (viaQueryParam) => fetch(viaQueryParam ? url + "?key=" + encodeURIComponent(apiKey) : url, {
+        method: "POST",
+        headers: viaQueryParam ? { "Content-Type": "application/json" } : { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify(body)
+      });
+      r = await doFetch(false);
+      if (r.status === 400 || r.status === 401 || r.status === 403) {
+        const r2 = await doFetch(true);
+        if (r2.status !== 400 && r2.status !== 401 && r2.status !== 403) r = r2;
+      }
     }
     if (r.status === 429) throw new Error("quota");
     if (r.status === 400 || r.status === 401 || r.status === 403) throw new Error("bad-key");
@@ -1383,7 +1406,8 @@ ACTIONS:
       return text;
     }
     const key = apiKey || DEFAULT_GEMINI_KEY;
-    if (!key) throw new Error("missing-key");
+    // Avec le proxy, aucune cle n'est necessaire cote client.
+    if (!key && !PROXY_BASE_URL) throw new Error("missing-key");
     let messages;
     if (history) {
       messages = history.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.text }] }));
@@ -2135,7 +2159,7 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     }, style: { width: 17, height: 17, accentColor: COLORS.gold } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text } }, "Rappel du dimanche \u2014 envoyer mon bilan au coach"))), isOnline(value) && /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: value.creneauReminderEnabled !== false, onChange: (e) => {
       setValue({ ...value, creneauReminderEnabled: e.target.checked });
       if (e.target.checked && typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
-    }, style: { width: 17, height: 17, accentColor: COLORS.gold } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text } }, "Rappel de cr\xE9neau (coaching en ligne)")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "6px 0 0" } }, "Une notification 1 h avant ton cr\xE9neau du jour, si tu ne l'as pas encore point\xE9.")), !IN_CLAUDE && /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement(Field, { label: "Cl\xE9 IA (fournie par ton coach)" }, /* @__PURE__ */ React.createElement(TextInput, { type: "password", placeholder: "Facultatif \u2014 une cl\xE9 est d\xE9j\xE0 int\xE9gr\xE9e", value: keyDraft, onChange: (e) => setKeyDraft(e.target.value), autoComplete: "off" }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "4px 0 0", lineHeight: 1.5 } }, "Active la photo de repas, le chatbot nutrition, la lecture des codes-barres et le bilan IA optionnel. Palier gratuit Google Gemini : quota quotidien partag\xE9, donn\xE9es pouvant \xEAtre utilis\xE9es par Google."))), /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 } }, "Sauvegarde des donn\xE9es"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "0 0 10px", lineHeight: 1.5 } }, "Le fichier contient tout ton suivi, photos comprises. Exporte r\xE9guli\xE8rement, et avant de changer de t\xE9l\xE9phone : Restaurer sur le nouvel appareil remet tout en place."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", icon: Download, onClick: async () => {
+    }, style: { width: 17, height: 17, accentColor: COLORS.gold } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text } }, "Rappel de cr\xE9neau (coaching en ligne)")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "6px 0 0" } }, "Une notification 1 h avant ton cr\xE9neau du jour, si tu ne l'as pas encore point\xE9.")), !IN_CLAUDE && !PROXY_BASE_URL && /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement(Field, { label: "Cl\xE9 IA (fournie par ton coach)" }, /* @__PURE__ */ React.createElement(TextInput, { type: "password", placeholder: "Facultatif \u2014 une cl\xE9 est d\xE9j\xE0 int\xE9gr\xE9e", value: keyDraft, onChange: (e) => setKeyDraft(e.target.value), autoComplete: "off" }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "4px 0 0", lineHeight: 1.5 } }, "Active la photo de repas, le chatbot nutrition, la lecture des codes-barres et le bilan IA optionnel. Palier gratuit Google Gemini : quota quotidien partag\xE9, donn\xE9es pouvant \xEAtre utilis\xE9es par Google."))), /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${COLORS.border}`, paddingTop: 14, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 } }, "Sauvegarde des donn\xE9es"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10.5, color: COLORS.textFaint, margin: "0 0 10px", lineHeight: 1.5 } }, "Le fichier contient tout ton suivi, photos comprises. Exporte r\xE9guli\xE8rement, et avant de changer de t\xE9l\xE9phone : Restaurer sur le nouvel appareil remet tout en place."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", icon: Download, onClick: async () => {
       const r = await exportAllData(value.name);
       setBackupMsg(r === "downloaded" ? "Sauvegarde t\xE9l\xE9charg\xE9e \u2014 garde ce fichier en lieu s\xFBr (Drive, mail...)." : r === "shared" ? "Sauvegarde partag\xE9e." : null);
     }, style: { flex: 1 } }, "Exporter mes donn\xE9es"), /* @__PURE__ */ React.createElement("input", { type: "file", accept: ".json,application/json", ref: importRef, style: { display: "none" }, onChange: (e) => {
@@ -3088,18 +3112,43 @@ LISTE DE COURSES DE R\xC9F\xC9RENCE : ${SHOPPING_LIST.map((c) => c.label.replace
     return { title: "Maintien" + (routine ? " \u2014 " + routine.name : "") + " \u2014 15 \xE0 20 min", items, note: "Moiti\xE9 du volume habituel, charge inchang\xE9e, aucune progression cette semaine. 60 s de r\xE9cup\xE9ration." };
   }
   const coachSyncUrl = (profile) => profile && profile.coachSyncUrl || DEFAULT_COACH_SYNC_URL || "";
+  // Avec le proxy, c'est lui qui connait l'adresse du script coach : elle
+  // n'a plus besoin d'etre portee par l'application. coachSyncUrl ne sert
+  // alors plus qu'a savoir si la synchro est activee pour ce client.
+  const coachSyncEndpoint = (profile) => PROXY_BASE_URL ? PROXY_BASE_URL + "/coach-sync" : coachSyncUrl(profile);
   const coachWhatsappLink = (msg) => "https://wa.me/" + COACH_WHATSAPP + "?text=" + encodeURIComponent(msg);
   // File d'attente locale : si le telephone est hors ligne au moment de
   // l'evenement, il repart au prochain lancement de l'application.
   async function flushCoachOutbox(profile) {
-    const url = coachSyncUrl(profile);
-    if (!url) return;
+    if (!coachSyncUrl(profile)) return;
+    const cible = coachSyncEndpoint(profile);
+    if (!cible) return;
     const box = await loadKey(COACH_OUTBOX_KEY, []);
     if (!Array.isArray(box) || !box.length) return;
     const left = [];
     for (const ev of box) {
       try {
-        await fetch(url, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(ev) });
+        if (PROXY_BASE_URL) {
+          // Requete CORS normale : la reponse est lisible, donc un evenement
+          // refuse est garde pour un nouvel essai au lieu d'etre perdu en
+          // silence comme avec le mode no-cors.
+          const r = await fetch(cible, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(ev)
+          });
+          if (!r.ok) {
+            left.push(ev);
+            continue;
+          }
+          const d = await r.json().catch(() => ({ ok: true }));
+          if (d && d.ok === false) {
+            left.push(ev);
+            continue;
+          }
+        } else {
+          await fetch(cible, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(ev) });
+        }
       } catch (e) {
         left.push(ev);
       }
