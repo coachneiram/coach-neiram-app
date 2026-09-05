@@ -81,3 +81,14 @@ ils ne sont plus servis, mais ils sont le chemin de retour en arrière.
 À supprimer une fois la bascule stable depuis quelques jours d'usage réel —
 pas avant. Tant que personne n'a utilisé la nouvelle version un week-end
 complet, le retour en arrière vaut plus que la propreté du dépôt.
+
+## Champ fibres — pas fait, et pourquoi
+
+Le catalogue signale le manque : les graines de chia annoncent 490 kcal alors
+que leurs macros n'en donnent que 379. L'ecart, ce sont les fibres, qui ne
+sont comptees nulle part.
+
+Ce n'est pas une correction, c'est une fonctionnalite : il faut un champ dans
+le journal, dans les fiches d'aliments, dans les objectifs, dans le bilan, et
+une valeur pour les 648 aliments du catalogue. A faire dans une passe dediee,
+pas en marge d'autre chose.

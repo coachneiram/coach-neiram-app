@@ -10,6 +10,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { chargerApp } from "./harness.mjs";
+import * as nutrition from "../app/src/lib/nutrition.js";
 
 const app = chargerApp();
 
@@ -246,5 +247,96 @@ describe("computeRemainingToday — ce qu'il reste a manger", () => {
   test("sans objectifs definis : renvoie null", () => {
     assert.equal(app.computeRemainingToday([], null), null);
     assert.equal(app.computeRemainingToday([], { calories: null }), null);
+  });
+});
+
+/**
+ * Poids de reference des proteines et des lipides.
+ *
+ * Ces tests pinglent des VALEURS, pas seulement des inegalites. Une premiere
+ * version ne verifiait que « les proteines ne montent jamais » : quatre
+ * mutations differentes du plafond passaient au travers, dont une qui le
+ * desactivait completement. Une inegalite ne suffit pas a decrire une regle.
+ */
+describe("poids de reference — proteines et lipides suivent la masse maigre", () => {
+  const CLIENT = {
+    sex: "homme",
+    age: 40,
+    heightCm: 175,
+    startWeightKg: 110,
+    targetWeightKg: 80,
+    activityLevel: "leger",
+    goal: "perte",
+    jobType: "sedentaire"
+  };
+
+  test("la reference est plafonnee a 10 % au-dessus du poids cible", () => {
+    // 80 kg de cible -> reference 88 kg, et non 110.
+    assert.equal(nutrition.poidsDeReference(CLIENT, 110), 88);
+    assert.equal(nutrition.poidsDeReference({ ...CLIENT, targetWeightKg: 60 }, 110), 66);
+  });
+
+  test("un client sous ou a son objectif garde son poids reel", () => {
+    assert.equal(nutrition.poidsDeReference(CLIENT, 75), 75);
+    assert.equal(nutrition.poidsDeReference(CLIENT, 80), 80);
+  });
+
+  test("sans poids cible, la reference est le poids reel", () => {
+    assert.equal(nutrition.poidsDeReference({ ...CLIENT, targetWeightKg: null }, 110), 110);
+    assert.equal(nutrition.poidsDeReference({ ...CLIENT, targetWeightKg: 0 }, 110), 110);
+    assert.equal(nutrition.poidsDeReference({ ...CLIENT, targetWeightKg: undefined }, 110), 110);
+  });
+
+  test("les proteines sont calculees sur la reference, pas sur le poids actuel", () => {
+    // 2 g/kg de 88 kg = 176 g. Sur le poids actuel, ce serait 220 g — soit
+    // 2,8 g/kg du poids cible, une quantite que personne ne mange.
+    assert.equal(nutrition.computeTargets(CLIENT, 110).protein, 176);
+    assert.equal(nutrition.computeTargets({ ...CLIENT, targetWeightKg: null }, 110).protein, 220);
+  });
+
+  test("les lipides suivent la meme reference", () => {
+    // 0,6 g/kg de 88 kg = 52,8 -> 53 g, si le plancher ne prime pas.
+    const t = nutrition.computeTargets(CLIENT, 110);
+    const plancher = Math.ceil((t.calories * 0.2) / 9);
+    assert.equal(t.fat, Math.max(53, plancher));
+  });
+
+  test("les calories, elles, restent calculees sur le poids reel", () => {
+    // C'est le corps d'aujourd'hui qui depense, pas celui qu'on vise.
+    const avec = nutrition.computeTargets(CLIENT, 110).calories;
+    const sans = nutrition.computeTargets({ ...CLIENT, targetWeightKg: null }, 110).calories;
+    assert.equal(avec, sans);
+  });
+
+  test("les glucides recuperent ce que les proteines liberent", () => {
+    const avec = nutrition.computeTargets(CLIENT, 110);
+    const sans = nutrition.computeTargets({ ...CLIENT, targetWeightKg: null }, 110);
+    assert.equal(avec.calories, sans.calories);
+    assert.ok(avec.carbs > sans.carbs, "les calories liberees doivent aller quelque part");
+  });
+});
+
+describe("plancher de lipides", () => {
+  const CLIENTE = {
+    sex: "femme",
+    age: 35,
+    heightCm: 165,
+    startWeightKg: 50,
+    activityLevel: "modere",
+    goal: "perte",
+    jobType: "sedentaire"
+  };
+
+  test("une cliente legere en deficit atteint bien 20 % des calories", () => {
+    const t = nutrition.computeTargets(CLIENTE, 50);
+    assert.ok(t.fat * 9 >= t.calories * 0.2, `${t.fat} g pour ${t.calories} kcal`);
+    // 0,6 g/kg donnait 30 g, soit 18 % : le plancher doit avoir joue.
+    assert.ok(t.fat > 30, "le plancher n'a pas joue");
+  });
+
+  test("le plancher ne change rien quand la regle au poids suffit deja", () => {
+    // En prise de masse, 1 g/kg depasse largement les 20 %.
+    const t = nutrition.computeTargets({ ...CLIENTE, goal: "prise" }, 80);
+    assert.equal(t.fat, 80);
   });
 });

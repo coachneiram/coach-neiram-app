@@ -151,7 +151,7 @@
        obligerait soit a afficher une valeur incoherente, soit a inventer
        des macros pour retomber sur le bon total. Ni l'un ni l'autre. */
     F('cn-b-levure-nutritionnelle','Levure nutritionnelle',350,45.0,20.0,5.0,['levure maltee','levure nutritionnelle']),
-    F('cn-b-cacao-degraisse','Cacao en poudre non sucré',230,20.0,15.0,11.0,['cacao','cacao non sucre']),
+    F('cn-b-cacao-degraisse','Cacao en poudre dégraissé',230,20.0,15.0,11.0,['cacao degraisse','cacao maigre','cacao allege']),
     F('cn-b-caroube','Caroube en poudre',220,4.6,49.0,0.7,['caroube']),
     F('cn-b-agar-agar','Agar-agar',26,0.5,6.0,0.0,['agar agar']),
     F('cn-b-graines-germees','Graines germées (mélange)',30,3.0,3.0,0.5,['graines germees','pousses'])

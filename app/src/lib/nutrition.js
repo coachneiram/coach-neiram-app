@@ -27,6 +27,46 @@ export const ACTIVITY_LEVELS = [
 
 export const GOAL_CAL_ADJUST = { perte: -0.2, prise: 0.1, maintien: 0, performance: 0.05 };
 
+/**
+ * Part minimale des calories venant des lipides.
+ *
+ * En dessous d'environ 20 %, la production hormonale est affectee — c'est
+ * documente, et cela touche d'abord les clientes legeres en deficit, chez
+ * qui 0,6 g/kg ne represente que 18 % des calories. Ce plancher ne change
+ * rien pour les autres : il ne s'applique que quand la regle au poids
+ * descend en dessous.
+ */
+const PART_LIPIDES_MIN = 0.2;
+
+/**
+ * Marge au-dessus du poids cible servant de reference aux proteines.
+ *
+ * Les besoins en proteines suivent la masse maigre, pas la masse totale.
+ * Chez un client tres au-dessus de son objectif, 2 g/kg du poids ACTUEL
+ * donne des quantites que personne ne mange (220 g par jour pour quelqu'un
+ * dont l'objectif est 80 kg), et qui prennent la place du reste de
+ * l'assiette. On plafonne donc la reference un peu au-dessus du poids cible.
+ */
+const MARGE_POIDS_CIBLE = 1.1;
+
+/**
+ * Poids servant de base aux proteines et aux lipides.
+ *
+ * C'est le poids actuel, sauf pour un client sensiblement au-dessus de son
+ * objectif : la reference est alors plafonnee pres du poids cible. Les
+ * CALORIES, elles, restent calculees sur le poids reel — c'est bien le corps
+ * d'aujourd'hui qui depense.
+ */
+export function poidsDeReference(profile, poidsActuel) {
+  const cible = num(profile.targetWeightKg);
+  if (!poidsActuel) return poidsActuel;
+  // La condition « poidsActuel <= cible » est redondante avec le Math.min
+  // ci-dessous — verifie par mutation. Elle est gardee parce qu'elle dit la
+  // regle : un client a son objectif, ou en dessous, garde son poids reel.
+  if (!cible || cible <= 0 || poidsActuel <= cible) return poidsActuel;
+  return Math.min(poidsActuel, cible * MARGE_POIDS_CIBLE);
+}
+
 /** Majoration liee au metier, cumulee au niveau d'activite sportive. */
 const MAJORATION_METIER = { sedentaire: 0, actif: 0.05, "tres-actif": 0.12 };
 
@@ -73,8 +113,27 @@ export function computeTargets(profile, currentWeightKg) {
 
   const proteinPerKg = 2;
   const fatPerKg = profile.goal === "perte" ? 0.6 : 1;
-  const protein = weight ? Math.round(weight * proteinPerKg) : null;
-  const fat = weight ? Math.round(weight * fatPerKg) : null;
+
+  // Proteines et lipides suivent la masse maigre ; les calories suivent le
+  // corps reel. D'ou deux poids differents dans le meme calcul.
+  const reference = poidsDeReference(profile, weight);
+
+  const protein = reference ? Math.round(reference * proteinPerKg) : null;
+
+  const lipidesAuPoids = reference ? reference * fatPerKg : null;
+  const lipidesPlancher = calories != null ? (calories * PART_LIPIDES_MIN) / 9 : null;
+
+  // Le plancher est arrondi vers le HAUT, la regle au poids vers le plus
+  // proche. Arrondir le plancher vers le bas le ferait repasser sous les
+  // 20 %, et il ne tiendrait pas ce qu'il promet — y compris dans le cas
+  // limite ou les deux valeurs sont a un dixieme de gramme l'une de l'autre.
+  const fat =
+    lipidesAuPoids != null
+      ? Math.max(
+          Math.round(lipidesAuPoids),
+          lipidesPlancher != null ? Math.ceil(lipidesPlancher) : 0
+        )
+      : null;
 
   // Les glucides absorbent ce qui reste une fois proteines et lipides poses.
   const remainingKcal =
