@@ -47,6 +47,7 @@ const RESSOURCES_LOCALES = [
   "./index.html",
   "./manifest.json",
   "./food-basic-catalog.js",
+  "./food-fibres.js",
   "./food-bruts-catalog.js",
   "./food-extended-catalog.js",
   "./food-staples-catalog.js",

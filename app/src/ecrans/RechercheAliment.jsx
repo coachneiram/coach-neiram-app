@@ -20,6 +20,7 @@ import { COLORS } from "../tokens.js";
 import { num, round } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
 import { chercherAliments, chercherParCodeBarres } from "../lib/recherche-aliments.js";
+import { mentionEtat } from "../lib/fibres.js";
 import { redimensionnerPhoto } from "../lib/images.js";
 import { analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
 import { messageErreur } from "../lib/ia.js";
@@ -133,6 +134,16 @@ function LigneAliment({ p, choisi, onChoisir, estFavori, onBasculerFavori }) {
         <span style={{ fontSize: 12.5, color: COLORS.text, minWidth: 0 }}>
           {p.name}
           {p.brand ? <span style={{ color: COLORS.textFaint }}> — {p.brand}</span> : null}
+          {/* TEXTE-NOUVEAU
+              Mention « pesé cru » / « pesé cuit », ajoutee apres la bascule.
+              Le boulgour affiche 345 kcal cru et 83 kcal cuit : sans cette
+              mention, un client qui pese son assiette se trompe d'un facteur
+              quatre, et rien ne le signale.
+          */}
+          {mentionEtat(p.etat) ? (
+            <span style={{ color: COLORS.gold, fontSize: 10.5 }}> · {mentionEtat(p.etat)}</span>
+          ) : null}
+          {/* FIN-TEXTE-NOUVEAU */}
         </span>
         <span
           style={{ fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", flexShrink: 0 }}
@@ -434,6 +445,20 @@ export function RechercheAliment({ onChoisir }) {
           )}
 
           {choisi && <QuantiteProduit produit={choisi} onChoisir={onChoisir} />}
+
+          {/* TEXTE-NOUVEAU
+              Reponse a une question posee par une cliente : « ce qui est
+              difficile c'est de savoir si on doit peser cru ou cuit, je
+              pense que c'est cru pour tout ». C'est faux, et l'erreur va
+              jusqu'a un facteur quatre sur le boulgour. La reponse doit
+              etre la, au moment ou elle pese, pas dans un message a part.
+          */}
+          <p style={{ fontSize: 10.5, color: COLORS.textMuted, marginTop: 12, marginBottom: 0, lineHeight: 1.5 }}>
+            <strong style={{ color: COLORS.gold }}>Cru ou cuit ?</strong> Ce n'est pas cru pour tout : chaque
+            aliment le précise. Fie-toi à la mention affichée, et pèse dans cet état-là. Sur le riz ou les
+            pâtes, se tromper fausse le calcul d'un facteur trois.
+          </p>
+          {/* FIN-TEXTE-NOUVEAU */}
 
           <p style={{ fontSize: 10, color: COLORS.textFaint, marginTop: 10, marginBottom: 0 }}>
             Base ouverte Open Food Facts — valeurs déclarées par les fabricants, très bonne couverture des

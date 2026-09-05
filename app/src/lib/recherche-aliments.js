@@ -41,6 +41,10 @@ export function convertirProduitOFF(p) {
     p100: n.proteins_100g != null ? round(n.proteins_100g, 1) : 0,
     c100: n.carbohydrates_100g != null ? round(n.carbohydrates_100g, 1) : 0,
     f100: n.fat_100g != null ? round(n.fat_100g, 1) : 0,
+    // Les fibres restent NULLES quand la fiche ne les donne pas : la
+    // plupart des fiches Open Food Facts ne les renseignent pas, et
+    // ecrire 0 affirmerait que le produit n'en contient aucune.
+    fibres100: n.fiber_100g != null ? round(n.fiber_100g, 1) : null,
     serving: p.serving_quantity ? parseFloat(p.serving_quantity) : null
   };
 }
@@ -49,8 +53,23 @@ export function convertirProduitOFF(p) {
 export function chercherLocalement(requete, env = globalThis) {
   const moteur = env.__CN_FOOD_SEARCH__;
   if (typeof moteur !== "function") return [];
+  const fibres = env.__CN_FOOD_FIBRES__ || {};
+  const etats = env.__CN_FOOD_ETATS__ || {};
   try {
-    return (moteur(requete) || []).map((r) => convertirProduitOFF(r.item || r));
+    return (moteur(requete) || []).map((r) => {
+      const brut = r.item || r;
+      const produit = convertirProduitOFF(brut);
+      // La table de fibres est indexee par code d'aliment. Un aliment
+      // absent garde fibres100 a null : teneur inconnue, pas teneur nulle.
+      const teneur = fibres[brut.code];
+      return {
+        ...produit,
+        fibres100: teneur != null ? teneur : produit.fibres100,
+        // « cru » ou « cuit » : c'est la plus grosse source d'erreur du
+        // journal, et elle est invisible sans cette mention.
+        etat: etats[brut.code] || null
+      };
+    });
   } catch (e) {
     // Un moteur en panne ne doit pas empecher la recherche en ligne.
     return [];

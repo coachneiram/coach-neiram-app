@@ -196,7 +196,11 @@ describe("fiche produit par code-barres", () => {
       "3017620422003",
       env({ ok: true, json: async () => ({ product: fiche }) })
     );
-    assert.deepEqual(r, JSON.parse(JSON.stringify(legacy.mapOFFProduct(fiche))));
+    // « fibres100 » est un ajout volontaire : l'application d'origine ne
+    // suivait pas les fibres. Le reste doit rester identique.
+    const { fibres100, ...reste } = r;
+    assert.deepEqual(reste, JSON.parse(JSON.stringify(legacy.mapOFFProduct(fiche))));
+    assert.equal(fibres100, null, "une fiche sans fibres ne doit pas donner zero");
   });
 
   test("un code inconnu rend null", async () => {

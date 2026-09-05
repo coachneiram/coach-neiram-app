@@ -8,7 +8,7 @@
  * des centaines de profils avant toute bascule.
  */
 
-import { addDays, avg, num, parseISO, todayISO } from "./dates.js";
+import { addDays, avg, num, parseISO, round, todayISO } from "./dates.js";
 
 export const GOALS = [
   { id: "perte", label: "Perte de poids" },
@@ -149,6 +149,31 @@ const MAJORATION_METIER = { sedentaire: 0, actif: 0.05, "tres-actif": 0.12 };
  */
 const PAL_MAX = 2.1;
 
+/**
+ * Ecart maximal tolere entre la maintenance calibree et celle de la formule.
+ *
+ * La variation reelle du metabolisme entre deux personnes de meme
+ * morphologie est de l'ordre de 15 a 20 %. Au-dela de 25 %, ce n'est plus
+ * une particularite metabolique : c'est un journal incomplet.
+ *
+ * SANS CETTE BORNE, LE CALIBRAGE S'EMBALLE. Il moyenne les calories des
+ * jours LOGUES : un repas oublie fait baisser la moyenne, donc la
+ * maintenance estimee, donc l'objectif — et le client suivant un objectif
+ * plus bas logue encore moins. Chaque tour resserre la boucle. Un client
+ * s'est ainsi retrouve a 1320 kcal par jour, sous son propre metabolisme de
+ * base, sans que rien ne le signale.
+ */
+const ECART_CALIBRAGE_MAX = 0.25;
+
+/**
+ * Part des jours qui doivent porter une saisie pour que le calibrage soit
+ * considere comme fiable.
+ *
+ * En dessous, la moyenne ne decrit pas ce que le client mange : elle decrit
+ * ce qu'il a pris le temps de noter.
+ */
+export const COUVERTURE_CALIBRAGE_MIN = 0.8;
+
 /** Metabolisme de base, formule de Mifflin-St Jeor. */
 export function computeBMR({ sex, weightKg, heightCm, age }) {
   if (!weightKg || !heightCm || !age) return null;
@@ -156,26 +181,104 @@ export function computeBMR({ sex, weightKg, heightCm, age }) {
   return sex === "homme" ? base + 5 : base - 161;
 }
 
+/**
+ * Maintenance calibree, ou la formule quand le calibrage n'est pas croyable.
+ *
+ * Deux niveaux de defense, et ils ne font pas la meme chose :
+ *
+ * 1. SOUS LE METABOLISME DE BASE, LE CALIBRAGE EST REJETE. Personne ne
+ *    maintient son poids en mangeant moins que ce que son corps consomme au
+ *    repos complet. Une telle valeur n'est pas imprecise, elle est
+ *    arithmetiquement impossible : la donnee d'entree est fausse, et la
+ *    ramener a un plancher reviendrait a garder une conclusion tiree de
+ *    chiffres faux. On revient donc a la formule.
+ *
+ *    C'est le cas qui s'est produit en production : une pratiquante de force
+ *    a six seances par semaine s'est vue attribuer une maintenance de
+ *    1650 kcal, soit 240 de MOINS que son metabolisme de base, et un
+ *    objectif de 1320 kcal.
+ *
+ * 2. AU-DELA DE 25 % D'ECART AVEC LA FORMULE, la valeur est ramenee dans la
+ *    plage. La variation reelle entre deux personnes de meme morphologie est
+ *    de l'ordre de 15 a 20 % : un ecart plus grand traduit un journal
+ *    incomplet, pas une particularite metabolique.
+ *
+ * Rend la valeur telle quelle quand la formule n'est pas calculable : sans
+ * point de comparaison, il n'y a rien a verifier.
+ */
+export function etatCalibrage(profile, poidsActuel) {
+  const valeur = num(profile && profile.calibratedMaintenanceKcal);
+  if (!(valeur > 0)) return null;
+
+  const poids = poidsActuel || profile.startWeightKg;
+  const bmr = computeBMR({
+    sex: profile.sex,
+    weightKg: poids,
+    heightCm: profile.heightCm,
+    age: profile.age
+  });
+  const activite = ACTIVITY_LEVELS.find((a) => a.id === profile.activityLevel) || ACTIVITY_LEVELS[1];
+  const pal = Math.min(PAL_MAX, activite.mult * (1 + (MAJORATION_METIER[profile.jobType] || 0)));
+  const formule = bmr ? bmr * pal : null;
+  if (!formule) return null;
+
+  const couvertureFaible =
+    profile.calibratedCoverage != null && profile.calibratedCoverage < COUVERTURE_CALIBRAGE_MIN;
+  const retenue = couvertureFaible ? formule : maintenanceCalibree(valeur, formule, bmr);
+
+  return {
+    declaree: valeur,
+    retenue: Math.round(retenue),
+    formule: Math.round(formule),
+    // « ignore » : la valeur n'est pas utilisee du tout.
+    // « limite » : elle est ramenee dans la plage plausible.
+    // « appliquee » : elle est utilisee telle quelle.
+    statut: couvertureFaible || (bmr && valeur < bmr) ? "ignore" : Math.round(retenue) !== Math.round(valeur) ? "limite" : "appliquee",
+    couvertureFaible
+  };
+}
+
+export function maintenanceCalibree(calibree, tdeeFormule, bmr) {
+  const valeur = num(calibree);
+  if (!(valeur > 0)) return tdeeFormule;
+  if (!tdeeFormule) return valeur;
+
+  // Impossible physiologiquement : on ne corrige pas, on ecarte.
+  if (bmr && valeur < bmr) return tdeeFormule;
+
+  const plancher = tdeeFormule * (1 - ECART_CALIBRAGE_MAX);
+  const plafond = tdeeFormule * (1 + ECART_CALIBRAGE_MAX);
+  return Math.min(plafond, Math.max(plancher, valeur));
+}
+
 /** Objectifs journaliers : calories et macros. */
 export function computeTargets(profile, currentWeightKg) {
   const weight = currentWeightKg || profile.startWeightKg;
   let tdee;
 
+  const bmr = computeBMR({
+    sex: profile.sex,
+    weightKg: weight,
+    heightCm: profile.heightCm,
+    age: profile.age
+  });
+  const activity = ACTIVITY_LEVELS.find((a) => a.id === profile.activityLevel) || ACTIVITY_LEVELS[1];
+  const jobMult = MAJORATION_METIER[profile.jobType] || 0;
+  const pal = Math.min(PAL_MAX, activity.mult * (1 + jobMult));
+  const tdeeFormule = bmr ? bmr * pal : null;
+
   if (profile.calibratedMaintenanceKcal) {
-    // Une maintenance mesuree sur les donnees reelles prime sur toute formule.
-    tdee = profile.calibratedMaintenanceKcal;
+    // Une maintenance mesuree sur les donnees reelles vaut mieux qu'une
+    // formule — mais seulement tant qu'elle reste plausible. Elle CORRIGE
+    // la formule, elle ne la remplace pas.
+    // Un calibrage explicitement marque comme peu fiable — journal trop
+    // incomplet sur la periode — n'est pas applique du tout.
+    tdee =
+      profile.calibratedCoverage != null && profile.calibratedCoverage < COUVERTURE_CALIBRAGE_MIN
+        ? tdeeFormule
+        : maintenanceCalibree(profile.calibratedMaintenanceKcal, tdeeFormule, bmr);
   } else {
-    const bmr = computeBMR({
-      sex: profile.sex,
-      weightKg: weight,
-      heightCm: profile.heightCm,
-      age: profile.age
-    });
-    const activity =
-      ACTIVITY_LEVELS.find((a) => a.id === profile.activityLevel) || ACTIVITY_LEVELS[1];
-    const jobMult = MAJORATION_METIER[profile.jobType] || 0;
-    const pal = Math.min(PAL_MAX, activity.mult * (1 + jobMult));
-    tdee = bmr ? bmr * pal : null;
+    tdee = tdeeFormule;
   }
 
   const direction = directionPerformance(profile);
@@ -246,6 +349,16 @@ export function computeCalibration(bodyLogs, logEntries, windowDays) {
   const loggedDays = Object.keys(dayTotals);
   if (loggedDays.length < 7) return null;
 
+  /*
+   * Couverture du journal sur la fenetre.
+   *
+   * La moyenne ne porte que sur les jours saisis. Si le client n'en a
+   * rempli que la moitie, elle ne decrit pas ce qu'il mange mais ce qu'il a
+   * pris le temps de noter — et elle sous-estime toujours, jamais l'inverse
+   * : on oublie de noter un repas, on n'en invente pas.
+   */
+  const couverture = loggedDays.length / windowDays;
+
   const avgCal = avg(loggedDays.map((d) => dayTotals[d]));
   const weightChange = weights[weights.length - 1].weightKg - weights[0].weightKg;
   const daysSpan = Math.max(
@@ -255,7 +368,13 @@ export function computeCalibration(bodyLogs, logEntries, windowDays) {
 
   // 7700 kcal ~ 1 kg de masse corporelle.
   const estimate = Math.round((avgCal - (weightChange * 7700) / daysSpan) / 10) * 10;
-  return { estimate, days: windowDays, loggedDaysCount: loggedDays.length };
+  return {
+    estimate,
+    days: windowDays,
+    loggedDaysCount: loggedDays.length,
+    couverture: round(couverture, 2),
+    fiable: couverture >= COUVERTURE_CALIBRAGE_MIN
+  };
 }
 
 /**
