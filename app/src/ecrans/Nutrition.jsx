@@ -14,13 +14,14 @@
 import { useMemo } from "react";
 import { COLORS } from "../tokens.js";
 import { fmtDateShort } from "../lib/dates.js";
-import { computeCalibration } from "../lib/nutrition.js";
+import { computeCalibration, etatCalibrage } from "../lib/nutrition.js";
 import { Btn, Card, MacroTarget, SectionTitle } from "../ui/primitives.jsx";
 
 /** Fenetre d'observation du calibrage, en jours. Valeur d'origine. */
 const FENETRE_CALIBRAGE = 28;
 
 export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntries, onApplyCalibration }) {
+  const etatCal = etatCalibrage(profile, currentWeight);
   const calibration = useMemo(
     () => computeCalibration(bodyLogs, logEntries, FENETRE_CALIBRAGE),
     [bodyLogs, logEntries]
@@ -65,6 +66,14 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
               calibrage moyennait un journal incomplet — et rien ne permettait
               de revenir en arriere une fois l'estimation appliquee.
           */}
+          {etatCal && etatCal.statut !== "appliquee" && (
+            <p style={{ fontSize: 12, color: COLORS.warn, marginTop: 8, lineHeight: 1.5 }}>
+              {etatCal.statut === "ignore"
+                ? `Ton calibrage de ${etatCal.declaree} kcal n'est pas appliqué : il s'écarte trop de ce que ton profil laisse attendre (~${etatCal.formule} kcal). L'objectif repart de la formule.`
+                : `Ton calibrage de ${etatCal.declaree} kcal est ramené à ${etatCal.retenue} kcal : l'écart avec ton profil (~${etatCal.formule} kcal) est trop grand pour venir du seul métabolisme. Le plus souvent, il manque des calories au journal — vérifie que tu pèses bien tes aliments dans l'état indiqué, cru ou cuit.`}
+            </p>
+          )}
+
           {calibration.fiable === false && (
             <p style={{ fontSize: 12, color: COLORS.warn, marginTop: 8, lineHeight: 1.5 }}>
               Journal rempli {Math.round(calibration.couverture * 100)} % des jours seulement. Cette

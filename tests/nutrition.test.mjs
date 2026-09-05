@@ -578,3 +578,81 @@ describe("garde-fous du calibrage calorique", () => {
     });
   });
 });
+
+/**
+ * Explication du calibrage a l'ecran.
+ *
+ * Sans elle, un client dont le calibrage est plafonne voit son objectif
+ * corrige sans savoir pourquoi. C'est le cas exact d'une cliente : son
+ * journal etait rempli presque tous les jours, donc l'avertissement de
+ * couverture ne se declenchait pas, et rien ne lui aurait explique la
+ * difference entre son estimation et son objectif.
+ */
+describe("explication du calibrage", () => {
+  const SABINE = {
+    sex: "femme",
+    age: 35,
+    heightCm: 167,
+    startWeightKg: 71.1,
+    activityLevel: "actif",
+    goal: "perte",
+    jobType: "sedentaire"
+  };
+
+  test("sans calibrage, il n'y a rien a expliquer", () => {
+    assert.equal(nutrition.etatCalibrage(SABINE, 71.1), null);
+    assert.equal(nutrition.etatCalibrage({ ...SABINE, calibratedMaintenanceKcal: 0 }, 71.1), null);
+  });
+
+  test("un calibrage plausible est declare applique", () => {
+    const e = nutrition.etatCalibrage({ ...SABINE, calibratedMaintenanceKcal: 2200 }, 71.1);
+    assert.equal(e.statut, "appliquee");
+    assert.equal(e.retenue, 2200);
+  });
+
+  test("un calibrage trop bas est declare limite, avec les deux chiffres", () => {
+    // Le cas de la cliente : journal complet, mais estimation trop basse.
+    const e = nutrition.etatCalibrage({ ...SABINE, calibratedMaintenanceKcal: 1650 }, 71.1);
+    assert.equal(e.statut, "limite");
+    assert.equal(e.declaree, 1650);
+    assert.ok(e.retenue > e.declaree, "la valeur retenue doit etre remontee");
+    assert.ok(e.formule > e.retenue, "la formule doit rester au-dessus");
+    assert.equal(e.couvertureFaible, false, "son journal etait complet");
+  });
+
+  test("un calibrage sous le metabolisme de base est declare ignore", () => {
+    const e = nutrition.etatCalibrage({ ...SABINE, calibratedMaintenanceKcal: 1200 }, 71.1);
+    assert.equal(e.statut, "ignore");
+    assert.equal(e.retenue, e.formule);
+  });
+
+  test("un journal a trous est declare ignore, et signale comme tel", () => {
+    const e = nutrition.etatCalibrage(
+      { ...SABINE, calibratedMaintenanceKcal: 1650, calibratedCoverage: 0.35 },
+      71.1
+    );
+    assert.equal(e.statut, "ignore");
+    assert.equal(e.couvertureFaible, true);
+  });
+
+  test("l'etat concorde toujours avec l'objectif reellement calcule", () => {
+    // Sans cela, l'explication affichee pourrait contredire le chiffre.
+    for (const kcal of [1200, 1650, 1900, 2200, 2600, 3400]) {
+      for (const couverture of [null, 0.35, 0.95]) {
+        const profil = {
+          ...SABINE,
+          goal: "maintien",
+          calibratedMaintenanceKcal: kcal,
+          calibratedCoverage: couverture
+        };
+        const e = nutrition.etatCalibrage(profil, 71.1);
+        const objectif = nutrition.computeTargets(profil, 71.1).calories;
+        assert.equal(
+          Math.round(e.retenue / 10) * 10,
+          objectif,
+          `${kcal} kcal, couverture ${couverture} : explication ${e.retenue} vs objectif ${objectif}`
+        );
+      }
+    }
+  });
+});

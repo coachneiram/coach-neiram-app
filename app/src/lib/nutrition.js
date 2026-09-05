@@ -206,6 +206,38 @@ export function computeBMR({ sex, weightKg, heightCm, age }) {
  * Rend la valeur telle quelle quand la formule n'est pas calculable : sans
  * point de comparaison, il n'y a rien a verifier.
  */
+export function etatCalibrage(profile, poidsActuel) {
+  const valeur = num(profile && profile.calibratedMaintenanceKcal);
+  if (!(valeur > 0)) return null;
+
+  const poids = poidsActuel || profile.startWeightKg;
+  const bmr = computeBMR({
+    sex: profile.sex,
+    weightKg: poids,
+    heightCm: profile.heightCm,
+    age: profile.age
+  });
+  const activite = ACTIVITY_LEVELS.find((a) => a.id === profile.activityLevel) || ACTIVITY_LEVELS[1];
+  const pal = Math.min(PAL_MAX, activite.mult * (1 + (MAJORATION_METIER[profile.jobType] || 0)));
+  const formule = bmr ? bmr * pal : null;
+  if (!formule) return null;
+
+  const couvertureFaible =
+    profile.calibratedCoverage != null && profile.calibratedCoverage < COUVERTURE_CALIBRAGE_MIN;
+  const retenue = couvertureFaible ? formule : maintenanceCalibree(valeur, formule, bmr);
+
+  return {
+    declaree: valeur,
+    retenue: Math.round(retenue),
+    formule: Math.round(formule),
+    // « ignore » : la valeur n'est pas utilisee du tout.
+    // « limite » : elle est ramenee dans la plage plausible.
+    // « appliquee » : elle est utilisee telle quelle.
+    statut: couvertureFaible || (bmr && valeur < bmr) ? "ignore" : Math.round(retenue) !== Math.round(valeur) ? "limite" : "appliquee",
+    couvertureFaible
+  };
+}
+
 export function maintenanceCalibree(calibree, tdeeFormule, bmr) {
   const valeur = num(calibree);
   if (!(valeur > 0)) return tdeeFormule;
