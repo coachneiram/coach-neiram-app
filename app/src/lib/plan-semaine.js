@@ -11,8 +11,9 @@
  * ne le soit pas.
  */
 
-import { addDays } from "./dates.js";
-import { JOURS_SEMAINE, getMonday } from "./semaine.js";
+import { addDays, num } from "./dates.js";
+import { JOURS_SEMAINE, dayIdOf, getMonday } from "./semaine.js";
+import { MAINTIEN_SLEEP, MAINTIEN_STANDING } from "./catalogues.js";
 
 export const RAISONS_SEMAINE_DIFFICILE = [
   { id: "sommeil", label: "Sommeil / fatigue" },
@@ -67,6 +68,23 @@ export function bilanPlanSemaine(lignes) {
   return { prevus, faits, manques, restants: Math.max(0, prevus - faits - manques) };
 }
 
+/**
+ * Marque, couleur et libelle de chaque statut du programme.
+ *
+ * La marque compte autant que la couleur : sur un ecran de telephone en
+ * plein soleil, un rond gris et un rond vert se ressemblent. La couleur est
+ * un NOM de token, pas une valeur, pour que cette table reste utilisable
+ * hors du navigateur.
+ */
+export const META_PLAN = {
+  done: { couleur: "good", marque: "✓", texte: "Fait" },
+  today: { couleur: "gold", marque: "●", texte: "Aujourd'hui" },
+  todo: { couleur: "textMuted", marque: "○", texte: "À venir" },
+  missed: { couleur: "bad", marque: "✕", texte: "Manquée" },
+  rest: { couleur: "textFaint", marque: "–", texte: "Repos" },
+  bonus: { couleur: "blue", marque: "+", texte: "Hors programme" }
+};
+
 export const semaineDifficileDe = (semainesDifficiles, cleSemaine) =>
   (semainesDifficiles && semainesDifficiles[cleSemaine]) || null;
 
@@ -80,4 +98,83 @@ export function raisonSemaineDifficile(entree) {
   if (!entree || !entree.active) return null;
   const trouvee = RAISONS_SEMAINE_DIFFICILE.find((r) => r.id === entree.reason);
   return (trouvee && trouvee.label) || entree.reason || null;
+}
+
+/**
+ * Seance maintien d'une semaine difficile.
+ *
+ * Portage de buildMaintien (index.html 3070).
+ *
+ * L'idee n'est pas de proposer une bonne seance : c'est de proposer une
+ * seance FAISABLE un jour ou le client aurait sinon tout sauté. Moitie du
+ * volume, charge inchangee, aucune progression. Sauter une semaine coute
+ * bien plus qu'une semaine allegee.
+ *
+ * Le contenu part de la derniere vraie seance du client sur la routine du
+ * jour : des mouvements qu'il connait deja, pas une liste generique. A
+ * defaut d'historique, on retombe sur une seance sans materiel.
+ */
+export function seanceMaintien(routines, seances, plan, aujourdhui, motif) {
+  const idRoutine = (plan || {})[dayIdOf(aujourdhui)] || null;
+
+  const candidates = (seances || [])
+    .filter(
+      (s) =>
+        (idRoutine ? s.routineId === idRoutine : true) &&
+        (s.exercises || []).length &&
+        // Une seance maintien ne sert pas de modele a la suivante.
+        !s.maintenance
+    )
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const derniere = candidates[0];
+  const routine = idRoutine ? (routines || []).find((r) => r.id === idRoutine) : null;
+
+  // Apres une nuit courte, du sol et de la mobilite plutot que du debout.
+  const sansMateriel = motif === "sommeil" ? MAINTIEN_SLEEP : MAINTIEN_STANDING;
+
+  const repli = {
+    title: motif === "sommeil" ? "Dos et mobilité — 15 à 20 min" : "Circuit maintien — 15 à 20 min",
+    items: sansMateriel,
+    note:
+      motif === "sommeil"
+        ? "Aucun matériel nécessaire. RPE 6 maximum. Pensé pour les nuits courtes."
+        : "Aucun matériel nécessaire. 45 s de récupération entre les tours, RPE 6 maximum."
+  };
+
+  if (!derniere) return repli;
+
+  const items = (derniere.exercises || [])
+    .filter((e) => e.name && e.mode !== "cardio")
+    .slice(0, 3)
+    .map((e) => {
+      const reps = num(e.reps);
+      // Une seance de force a 3 repetitions n'est pas un format maintien :
+      // on repasse en series longues et on allege la charge.
+      const lourd = reps > 0 && reps < 6;
+      const charge = num(e.weight);
+      return {
+        name: e.name,
+        detail: lourd
+          ? "2 séries × 8" +
+            (charge ? " · " + Math.round((charge * 0.6) / 2.5) * 2.5 + " kg (charge allégée)" : "") +
+            " · RPE 6 max"
+          : "2 séries × " +
+            (e.reps || "8-10") +
+            (e.weight ? " · " + e.weight + " kg (charge inchangée)" : "") +
+            " · RPE 6 max"
+      };
+    });
+
+  if (!items.length) return repli;
+
+  // Moins de 3 exercices dans l'historique : on complete au poids du corps
+  // pour tenir les 15 a 20 min annoncees.
+  while (items.length < 3) items.push(sansMateriel[items.length]);
+
+  return {
+    title: "Maintien" + (routine ? " — " + routine.name : "") + " — 15 à 20 min",
+    items,
+    note: "Moitié du volume habituel, charge inchangée, aucune progression cette semaine. 60 s de récupération."
+  };
 }

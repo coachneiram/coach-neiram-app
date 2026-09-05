@@ -51,7 +51,9 @@ const TABLES = {
   EXERCISE_LIBRARY: "Bibliotheque d'exercices, par groupe",
   PL_SET_TYPES: "Types de series en force athletique",
   EXERCISE_VIDEOS: "Video de demonstration par exercice, indexee par cle d'exercice",
-  MISSED_REASONS: "Motifs proposes pour justifier un creneau manque"
+  MISSED_REASONS: "Motifs proposes pour justifier un creneau manque",
+  MAINTIEN_SLEEP: "Seance maintien apres une nuit courte : sol, mobilite, aucune charge",
+  MAINTIEN_STANDING: "Seance maintien debout, sans materiel"
 };
 
 const corps = Object.entries(TABLES)

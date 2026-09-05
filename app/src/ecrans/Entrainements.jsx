@@ -22,7 +22,9 @@ import { SEANCE_TEMPLATES } from "../lib/catalogues.js";
 import { ConstructeurSeances } from "./ConstructeurSeances.jsx";
 import { Seances } from "./Seances.jsx";
 import { Creneaux } from "./Creneaux.jsx";
+import { SemaineDifficile } from "./SemaineDifficile.jsx";
 import { SeancesCoach } from "./SeancesCoach.jsx";
+import { ProgressionCharges } from "./ProgressionCharges.jsx";
 import { Records } from "./Records.jsx";
 
 export function Entrainements({
@@ -30,7 +32,13 @@ export function Entrainements({
   sessionsApi,
   profile,
   raisonsCreneaux,
-  onDefinirRaisonCreneau
+  onDefinirRaisonCreneau,
+  semainesDifficiles,
+  onDefinirSemaineDifficile,
+  planSemaine,
+  onAssignerJour,
+  maxisForce,
+  onDefinirMaxiForce
 }) {
   const enTete = enLigne(profile) ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 20 }}>
@@ -39,6 +47,14 @@ export function Entrainements({
         sessionsApi={sessionsApi}
         raisons={raisonsCreneaux}
         onDefinirRaison={onDefinirRaisonCreneau}
+      />
+      <SemaineDifficile
+        profile={profile}
+        sessionsApi={sessionsApi}
+        semainesDifficiles={semainesDifficiles}
+        onDefinirSemaineDifficile={onDefinirSemaineDifficile}
+        routines={routinesApi.items}
+        planSemaine={planSemaine}
       />
       <SeancesCoach routinesApi={routinesApi} modeles={SEANCE_TEMPLATES} />
     </div>
@@ -58,11 +74,16 @@ export function Entrainements({
   return (
     <>
       {enTete}
+      <ProgressionCharges sessions={sessionsApi.items} />
       <Records sessions={sessionsApi.items} />
       <ConstructeurSeances
         routinesApi={routinesApi}
         sessionsApi={sessionsApi}
         plOn={profile?.goal === "performance"}
+        planSemaine={planSemaine}
+        onAssignerJour={onAssignerJour}
+        maxisForce={maxisForce}
+        onDefinirMaxiForce={onDefinirMaxiForce}
       />
     </>
   );

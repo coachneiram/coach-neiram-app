@@ -37,6 +37,8 @@ export const CLES_ANNEXES = {
   alerteCreneaux: "cn_coach_shift_alert_state",
   raisonsCreneaux: "cn_slot_reasons",
   semainesDifficiles: "cn_hard_weeks",
+  planSemaine: "cn_weekly_plan",
+  maxisForce: "cn_pl_1rm",
   bilanHebdo: "cn_coach_weekly_state"
 };
 

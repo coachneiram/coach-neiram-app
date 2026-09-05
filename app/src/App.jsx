@@ -69,6 +69,15 @@ export default function App() {
    */
   const [raisonsCreneaux, setRaisonsCreneaux] = useState({});
 
+  /** Semaines basculees en format maintien, indexees par lundi. */
+  const [semainesDifficiles, setSemainesDifficiles] = useState({});
+
+  /** Seance type assignee a chaque jour de la semaine. */
+  const [planSemaine, setPlanSemaine] = useState({});
+
+  /** Maxis de reference en force athletique, par mouvement. */
+  const [maxisForce, setMaxisForce] = useState({});
+
   useEffect(() => {
     setProfile(charger(STORAGE_KEYS.profile, null));
     setDishes(listeStockee(STORAGE_KEYS.dishes));
@@ -79,6 +88,9 @@ export default function App() {
     setMeasurements(listeStockee(STORAGE_KEYS.measurements));
     setRoutines(listeStockee(STORAGE_KEYS.routines));
     setRaisonsCreneaux(charger(CLES_ANNEXES.raisonsCreneaux, {}) || {});
+    setSemainesDifficiles(charger(CLES_ANNEXES.semainesDifficiles, {}) || {});
+    setPlanSemaine(charger(CLES_ANNEXES.planSemaine, {}) || {});
+    setMaxisForce(charger(CLES_ANNEXES.maxisForce, {}) || {});
     setPret(true);
   }, []);
 
@@ -112,7 +124,7 @@ export default function App() {
     [profile, poidsCourant]
   );
 
-  const donneesCompletes = { sessions, dailyForm, bodyLogs, logEntries, measurements, weekPlan: null, routines, hardWeeks: null };
+  const donneesCompletes = { sessions, dailyForm, bodyLogs, logEntries, measurements, weekPlan: planSemaine, routines, hardWeeks: semainesDifficiles };
 
   const weekStats = useMemo(
     () => (profile && targets ? bilanHebdomadaire(getWeekKey(todayISO()), donneesCompletes, profile, targets) : null),
@@ -128,6 +140,28 @@ export default function App() {
     const suivant = { ...raisonsCreneaux, [cle]: entree };
     setRaisonsCreneaux(suivant);
     enregistrer(CLES_ANNEXES.raisonsCreneaux, suivant);
+  };
+
+  const definirSemaineDifficile = (cleSemaine, entree) => {
+    const suivant = { ...semainesDifficiles, [cleSemaine]: entree };
+    setSemainesDifficiles(suivant);
+    enregistrer(CLES_ANNEXES.semainesDifficiles, suivant);
+  };
+
+  const assignerJour = (idJour, idRoutine) => {
+    const suivant = { ...planSemaine };
+    // Un jour sans seance sort du plan plutot que de valoir null : c'est le
+    // format qu'ecrit l'application actuelle.
+    if (idRoutine) suivant[idJour] = idRoutine;
+    else delete suivant[idJour];
+    setPlanSemaine(suivant);
+    enregistrer(CLES_ANNEXES.planSemaine, suivant);
+  };
+
+  const definirMaxiForce = (mouvement, valeur) => {
+    const suivant = { ...maxisForce, [mouvement]: valeur };
+    setMaxisForce(suivant);
+    enregistrer(CLES_ANNEXES.maxisForce, suivant);
   };
 
   const enregistrerProfil = (suivant) => {
@@ -195,6 +229,12 @@ export default function App() {
         profile={profil}
         raisonsCreneaux={raisonsCreneaux}
         onDefinirRaisonCreneau={definirRaisonCreneau}
+        semainesDifficiles={semainesDifficiles}
+        onDefinirSemaineDifficile={definirSemaineDifficile}
+        planSemaine={planSemaine}
+        onAssignerJour={assignerJour}
+        maxisForce={maxisForce}
+        onDefinirMaxiForce={definirMaxiForce}
       />
     ),
     tendances: weekStats ? (

@@ -35,6 +35,8 @@ import {
   videoExercice
 } from "../lib/constructeur-seances.js";
 import { charger, enregistrer } from "../lib/stockage.js";
+import { ForceAthletique } from "./ForceAthletique.jsx";
+import { PlanSemaine } from "./PlanSemaine.jsx";
 import {
   Btn,
   Card,
@@ -114,7 +116,15 @@ function useExercicesPerso() {
   return { items, retenir, oublier };
 }
 
-export function ConstructeurSeances({ routinesApi, sessionsApi, plOn }) {
+export function ConstructeurSeances({
+  routinesApi,
+  sessionsApi,
+  plOn,
+  planSemaine,
+  onAssignerJour,
+  maxisForce,
+  onDefinirMaxiForce
+}) {
   const exercicesPerso = useExercicesPerso();
   const [modaleRoutine, setModaleRoutine] = useState(false);
   const [routineEditee, setRoutineEditee] = useState(null);
@@ -195,6 +205,22 @@ export function ConstructeurSeances({ routinesApi, sessionsApi, plOn }) {
 
   return (
     <div>
+      <PlanSemaine
+        plan={planSemaine}
+        onAssigner={onAssignerJour}
+        routines={routinesApi.items}
+        sessions={sessionsApi.items}
+        onDemarrer={demarrerSeance}
+      />
+
+      {plOn && (
+        <ForceAthletique
+          maxis={maxisForce}
+          onDefinirMaxi={onDefinirMaxiForce}
+          sessions={sessionsApi.items}
+        />
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <SectionTitle>Séances types</SectionTitle>
         <Btn variant="ghost" icon={Plus} onClick={nouvelleRoutine}>

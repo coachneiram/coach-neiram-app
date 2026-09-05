@@ -5538,3 +5538,59 @@ export const MISSED_REASONS = [
     "label": "Autre"
   }
 ];
+
+/** Seance maintien apres une nuit courte : sol, mobilite, aucune charge. */
+export const MAINTIEN_SLEEP = [
+  {
+    "name": "Chat / vache au sol",
+    "detail": "15 allers-retours lents"
+  },
+  {
+    "name": "Pont fessier au sol",
+    "detail": "2 × 15"
+  },
+  {
+    "name": "Superman",
+    "detail": "2 × 12"
+  },
+  {
+    "name": "Gainage planche",
+    "detail": "2 × 30 s"
+  },
+  {
+    "name": "Étirement fessier allongé",
+    "detail": "45 s par côté"
+  },
+  {
+    "name": "Ouverture thoracique au sol",
+    "detail": "10 par côté"
+  }
+];
+
+/** Seance maintien debout, sans materiel. */
+export const MAINTIEN_STANDING = [
+  {
+    "name": "Squat au poids du corps",
+    "detail": "2 tours × 40 s"
+  },
+  {
+    "name": "Fentes alternées",
+    "detail": "2 tours × 40 s"
+  },
+  {
+    "name": "Pompes (contre un mur ou un plan de travail)",
+    "detail": "2 tours × 40 s"
+  },
+  {
+    "name": "Montées de genoux",
+    "detail": "2 tours × 40 s"
+  },
+  {
+    "name": "Chaise contre le mur",
+    "detail": "2 tours × 40 s"
+  },
+  {
+    "name": "Élévations sur pointes de pieds",
+    "detail": "2 tours × 40 s"
+  }
+];
