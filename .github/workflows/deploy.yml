@@ -1,11 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────
-# NE PAS ACTIVER SANS AVOIR LU worker/../DEPLOIEMENT.md
+# Deploiement du site — voir DEPLOIEMENT.md
 # ─────────────────────────────────────────────────────────────────────
 #
-# Ce fichier porte volontairement l'extension « .a-activer » : GitHub ne
-# l'execute pas tant qu'il ne s'appelle pas « deploy.yml ».
-#
-# Il remplace le mode « Deploy from a branch » de GitHub Pages par un
+# Ce workflow remplace le mode « Deploy from a branch » de GitHub Pages par un
 # deploiement pilote ici. Tant qu'il n'est pas active, le site continue
 # d'etre servi comme aujourd'hui.
 #
@@ -58,8 +55,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # enablement: true bascule le reglage « Source » de Pages sur
+      # GitHub Actions si ce n'est pas deja fait. Sans lui, il faudrait le
+      # changer a la main entre deux deploiements, et le site resterait
+      # indisponible pendant cet intervalle.
       - name: Preparer Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Rassembler les fichiers a publier
         run: |
