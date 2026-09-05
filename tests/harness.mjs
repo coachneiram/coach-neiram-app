@@ -93,7 +93,14 @@ const A_EXPOSER = [
   "computeMonthStats",
   "getWeekRange",
   "clamp",
-  "fmtWeekShort"
+  "fmtWeekShort",
+  // Estimation de la force : ces valeurs prescrivent des charges reelles.
+  "pctFromRPE",
+  "rpeFromRIR",
+  "epley1RM",
+  "est1RMFromSet",
+  "chargeFrom1RM",
+  "RPE_CHART"
 ];
 
 function extraireScriptApplicatif(html) {
