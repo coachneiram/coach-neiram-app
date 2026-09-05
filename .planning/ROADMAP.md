@@ -13,12 +13,12 @@ car elles réduisent le risque et donnent un filet de sécurité pour tout ce qu
 
 ## Phases
 
-- [ ] **Phase 1: Sécurité IA + webhook** - Sécuriser la clé API IA et le webhook coach avant toute autre évolution
-- [ ] **Phase 2: Tests et infrastructure de développement** - Filet de sécurité (tests) sur les fonctionnalités critiques avant de toucher à l'architecture
-- [ ] **Phase 3: Bootstrap Vite en parallèle** - Nouvel outillage à côté de l'existant, zéro impact sur la prod
-- [ ] **Phase 4: Extraction progressive des couches communes** - Stockage, IA, design tokens extraits en modules testés
+- [x] **Phase 1: Sécurité IA + webhook** - Sécuriser la clé API IA et le webhook coach avant toute autre évolution
+- [x] **Phase 2: Tests et infrastructure de développement** - Filet de sécurité (tests) sur les fonctionnalités critiques avant de toucher à l'architecture
+- [x] **Phase 3: Bootstrap Vite en parallèle** - Nouvel outillage à côté de l'existant, zéro impact sur la prod
+- [x] **Phase 4: Extraction progressive des couches communes** - Stockage, IA, design tokens extraits en modules testés
 - [ ] **Phase 5: Migration écran par écran** - Chaque tab migré individuellement, legacy toujours disponible en secours
-- [ ] **Phase 6: PWA complète** - Service worker et usage offline réel
+- [x] **Phase 6: PWA complète** - Service worker et usage offline réel
 - [ ] **Phase 7: GitHub Actions + migration GitHub Pages vers le build Vite** - Build automatisé, même geste de déploiement pour l'utilisateur
 - [ ] **Phase 8: Bascule définitive** - `index.html` legacy remplacé par l'app Vite en production
 - [ ] **Phase 9: Nettoyage et nouvelles fonctionnalités** - Suppression du code legacy, reprise du développement fonctionnel
@@ -246,12 +246,12 @@ Phases 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Sécurité IA + webhook | 0/3 | Not started | - |
-| 2. Tests et infrastructure | 0/3 | Not started | - |
-| 3. Bootstrap Vite en parallèle | 0/2 | Not started | - |
-| 4. Extraction couches communes | 0/3 | Not started | - |
+| 1. Sécurité IA + webhook | 3/3 | Terminée | 2026-09-05 |
+| 2. Tests et infrastructure | 3/3 | Terminée | 2026-09-05 |
+| 3. Bootstrap Vite en parallèle | 2/2 | Terminée | 2026-09-05 |
+| 4. Extraction couches communes | 3/3 | Terminée | 2026-09-05 |
 | 5. Migration écran par écran | 0/5 | Not started | - |
-| 6. PWA complète | 0/2 | Not started | - |
-| 7. GitHub Actions + Pages | 0/3 | Not started | - |
+| 6. PWA complète | 2/2 | Terminée | 2026-09-05 |
+| 7. GitHub Actions + Pages | 1/3 | Préparée, en attente d'activation | - |
 | 8. Bascule définitive | 0/3 | Not started | - |
 | 9. Nettoyage + nouvelles features | 0/3 | Not started | - |

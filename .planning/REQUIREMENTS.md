@@ -18,12 +18,12 @@ Requirements pour la migration progressive. Chaque item correspond à une phase 
 
 ### Tests et infrastructure (TEST)
 
-- [ ] **TEST-01**: Tests unitaires sur le calcul des objectifs nutritionnels/macros
-- [ ] **TEST-02**: Tests unitaires sur le calibrage calorique adaptatif
-- [ ] **TEST-03**: Tests sur la couche de stockage (round-trip `saveKey`/`loadKey`)
-- [ ] **TEST-04**: Tests sur l'export/import JSON (non-perte de données)
-- [ ] **TEST-05**: Tests avec mocks sur les appels IA (pas de dépendance réseau réelle dans les tests)
-- [ ] **TEST-06**: Tests sur la file d'attente de synchronisation coach (`queueCoachEvent`/`flushCoachOutbox`)
+- [x] **TEST-01**: Tests unitaires sur le calcul des objectifs nutritionnels/macros
+- [x] **TEST-02**: Tests unitaires sur le calibrage calorique adaptatif
+- [x] **TEST-03**: Tests sur la couche de stockage (round-trip `saveKey`/`loadKey`)
+- [x] **TEST-04**: Tests sur l'export/import JSON (non-perte de données)
+- [x] **TEST-05**: Tests avec mocks sur les appels IA (pas de dépendance réseau réelle dans les tests)
+- [x] **TEST-06**: Tests sur la file d'attente de synchronisation coach (`queueCoachEvent`/`flushCoachOutbox`)
 
 ### Migration technique (MIG)
 
@@ -66,7 +66,7 @@ Which phases cover which requirements. Mis à jour lors de la création de la ro
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SEC-01, SEC-02, SEC-03, SEC-04 | Phase 1 | Pending |
-| TEST-01 à TEST-06 | Phase 2 | Pending |
+| TEST-01 à TEST-06 | Phase 2 | Fait |
 | MIG-01 | Phase 3 | Pending |
 | MIG-02, MIG-03, MIG-04 | Phase 4 | Pending |
 | MIG-05 | Phase 5 | Pending |
