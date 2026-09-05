@@ -19,7 +19,27 @@ import { fmtL } from "../lib/score-jour.js";
 import { serieCorporelle, serieHebdomadaire } from "../lib/tendances.js";
 import { Btn, Card, ProgressRing, SectionTitle, StatChip } from "../ui/primitives.jsx";
 import { Courbe, Histogramme } from "../ui/Courbe.jsx";
-import { Camera, Droplet, Dumbbell, Flame, Footprints, Moon, Scale, Share, Sparkles } from "../ui/icones.jsx";
+import { BilanSections } from "../ui/BilanSections.jsx";
+import { Camera, Droplet, Dumbbell, Flame, Footprints, Loader2, Moon, Scale, Share, Sparkles } from "../ui/icones.jsx";
+
+/** Attente et erreur de generation, communes aux deux bilans. */
+const styleAttente = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  fontSize: 13,
+  color: COLORS.textMuted,
+  margin: "0 0 14px"
+};
+
+const styleErreur = {
+  fontSize: 12.5,
+  color: COLORS.bad,
+  textAlign: "center",
+  lineHeight: 1.5,
+  margin: "0 0 12px"
+};
 
 /** Nombre de semaines affichees sur les graphiques. */
 const SEMAINES_AFFICHEES = 8;
@@ -61,6 +81,12 @@ export function Tendances({
   onGenerate,
   onGenerateMonthly,
   onPartager,
+  bilanCourant,
+  bilanMensuelCourant,
+  enGeneration,
+  enGenerationMensuelle,
+  erreurGeneration,
+  erreurGenerationMensuelle,
   iaDisponible = true
 }) {
   const serie = useMemo(
@@ -142,15 +168,29 @@ export function Tendances({
 
         <div style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${COLORS.border}` }}>
           {weekStats.hasAnyData ? (
-            <div style={{ textAlign: "center" }}>
+            <div>
+              {enGeneration ? (
+                <p style={styleAttente}>
+                  <Loader2 size={16} /> Génération du bilan par le coach IA...
+                </p>
+              ) : (
+                bilanCourant && (
+                  <div style={{ marginBottom: 16, textAlign: "left" }}>
+                    <BilanSections sections={bilanCourant.sections} />
+                  </div>
+                )
+              )}
+
+              {erreurGeneration && <p style={styleErreur}>{erreurGeneration}</p>}
+
               <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                 {iaDisponible && (
-                  <Btn icon={Sparkles} onClick={onGenerate}>
-                    Bilan IA (optionnel)
+                  <Btn icon={Sparkles} onClick={onGenerate} disabled={enGeneration}>
+                    {bilanCourant ? "Régénérer" : "Bilan IA (optionnel)"}
                   </Btn>
                 )}
                 <Btn variant="ghost" icon={Share} onClick={onPartager}>
-                  Envoyer sans bilan IA
+                  {bilanCourant ? "Envoyer à mon coach" : "Envoyer sans bilan IA"}
                 </Btn>
               </div>
             </div>
@@ -179,11 +219,27 @@ export function Tendances({
               {monthStats.workoutsCount} séance{monthStats.workoutsCount > 1 ? "s" : ""}
             </span>
           </div>
-          <div style={{ textAlign: "center" }}>
-            <Btn icon={Sparkles} onClick={onGenerateMonthly}>
-              Générer le bilan mensuel
-            </Btn>
-          </div>
+          {enGenerationMensuelle ? (
+            <p style={styleAttente}>
+              <Loader2 size={16} /> Génération du bilan mensuel...
+            </p>
+          ) : (
+            bilanMensuelCourant && (
+              <div style={{ marginBottom: 16 }}>
+                <BilanSections sections={bilanMensuelCourant.sections} />
+              </div>
+            )
+          )}
+
+          {erreurGenerationMensuelle && <p style={styleErreur}>{erreurGenerationMensuelle}</p>}
+
+          {iaDisponible && (
+            <div style={{ textAlign: "center" }}>
+              <Btn icon={Sparkles} onClick={onGenerateMonthly} disabled={enGenerationMensuelle}>
+                {bilanMensuelCourant ? "Régénérer" : "Générer le bilan mensuel"}
+              </Btn>
+            </div>
+          )}
         </Card>
       )}
 

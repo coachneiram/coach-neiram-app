@@ -186,6 +186,14 @@ const A_EXPOSER = [
   "shareWeeklyReport",
   "escapeHtml",
   "slugName",
+
+  // bilans rediges par l'IA
+  "callBilanAPI",
+  "callBilanMensuelAPI",
+  "dietProfileLine",
+  "fmtMonthLong",
+  "prevMonthKeyOf",
+  "parseBilan",
 ];
 
 function extraireScriptApplicatif(html) {
