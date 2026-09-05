@@ -85,3 +85,27 @@ export const notesDeStress = (entrees) =>
     .filter((f) => f.stressNote)
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
+
+/**
+ * Duree de sommeil entre une heure de coucher et une heure de lever.
+ *
+ * Portage fidele de computeSleepHours (index.html, ligne ~430).
+ *
+ * Le passage de minuit est la subtilite : coucher a 23 h 30, lever a
+ * 6 h 45 donne un ecart negatif, auquel il faut ajouter une journee. Et
+ * deux heures identiques ne signifient pas « 24 h de sommeil » mais « le
+ * client n'a rien saisi de coherent » — d'ou le refus explicite.
+ */
+export function dureeDeSommeil(coucher, lever) {
+  if (!coucher || !lever) return null;
+
+  const c = String(coucher).split(":").map(Number);
+  const l = String(lever).split(":").map(Number);
+  if (c.length < 2 || l.length < 2 || c.some(isNaN) || l.some(isNaN)) return null;
+
+  let minutes = l[0] * 60 + l[1] - (c[0] * 60 + c[1]);
+  if (minutes <= 0) minutes += 1440;
+  if (minutes === 1440) return null;
+
+  return round(minutes / 60, 1);
+}

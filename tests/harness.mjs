@@ -126,7 +126,8 @@ const A_EXPOSER = [
   "fmtPortion",
   // Messages de motivation du Journal.
   "buildMotivation",
-  "MOTIVATION_VARIANTS"
+  "MOTIVATION_VARIANTS",
+  "computeSleepHours"
 ];
 
 function extraireScriptApplicatif(html) {

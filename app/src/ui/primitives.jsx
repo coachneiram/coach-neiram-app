@@ -571,3 +571,31 @@ export function SectionedBilan({ sections }) {
     </div>
   );
 }
+
+/**
+ * Bandeau d'encouragement du Journal.
+ *
+ * Repris de MotivationCard (index.html, ligne ~769). Rien ne s'affiche
+ * quand il n'y a pas de message : un bandeau vide occuperait la place la
+ * plus visible de l'ecran pour ne rien dire.
+ */
+export function MotivationCard({ text, icone: Icone }) {
+  if (!text) return null;
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        background: `${COLORS.gold}0E`,
+        border: `1px solid ${COLORS.gold}44`,
+        borderRadius: 12,
+        padding: "11px 13px",
+        marginBottom: 16
+      }}
+    >
+      {Icone && <Icone size={17} color={COLORS.gold} style={{ flexShrink: 0 }} />}
+      <span style={{ fontSize: 12.5, color: COLORS.text, lineHeight: 1.45 }}>{text}</span>
+    </div>
+  );
+}

@@ -116,3 +116,22 @@ export const Settings = mkIcon(
 export const ChevronDown = mkIcon(<polyline points="6 9 12 15 18 9" />);
 
 export const ChevronUp = mkIcon(<polyline points="6 15 12 9 18 15" />);
+
+export const Flame = mkIcon(
+  <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+);
+
+export const ChevronLeft = mkIcon(<polyline points="15 18 9 12 15 6" />);
+
+export const ChevronRight = mkIcon(<polyline points="9 18 15 12 9 6" />);
+
+export const Droplet = mkIcon(<path d="M12 2.5c3.5 4.2 6.5 7.6 6.5 11a6.5 6.5 0 1 1-13 0c0-3.4 3-6.8 6.5-11Z" />);
+
+export const Footprints = mkIcon(
+  <>
+    <path d="M7.5 3C9.4 3 10.5 5 10.5 7.5S9.3 12 7.8 12 4.5 10.3 4.5 7.8 5.6 3 7.5 3Z" />
+    <path d="M6 14h4v1.5a2 2 0 0 1-4 0Z" />
+    <path d="M16.5 9c1.9 0 3 2 3 4.5s-1.2 4.5-2.7 4.5-3.3-1.7-3.3-4.2 1.1-4.8 3-4.8Z" />
+    <path d="M15 20h4v1a2 2 0 0 1-4 0Z" />
+  </>
+);

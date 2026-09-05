@@ -11,6 +11,18 @@
  * a l'utilisateur, et verifie que chacun existe mot pour mot dans
  * index.html. Il couvre automatiquement les ecrans a venir : il suffit de
  * les ajouter au dossier ecrans/.
+ *
+ * LIMITE CONNUE : la comparaison cherche chaque phrase comme sous-chaine du
+ * fichier d'origine. Elle attrape donc toute reformulation, mais pas une
+ * TRONCATURE qui laisse un debut valide — retirer l'emoji final de
+ * « Objectif atteint 💪 » passe inapercu, puisque « Objectif atteint »
+ * figure bien dans l'original. Verifie en le mutant.
+ *
+ * Rendre la comparaison exacte demanderait de reconstruire les chaines de
+ * index.html telles que le moteur JavaScript les evalue, ce que sa
+ * minification rend peu fiable. Le compromis est assume : le risque
+ * couvert (une reformulation involontaire) est bien plus probable qu'une
+ * troncature exactement alignee sur un debut de phrase.
  */
 
 import { test, describe } from "node:test";
@@ -34,7 +46,10 @@ const DOSSIERS_SURVEILLES = [
 /** index.html est minifie : les accents y sont echappes en \xNN / \uNNNN. */
 const LEGACY = readFileSync(join(RACINE, "index.html"), "utf8")
   .replace(/\\x([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-  .replace(/\\u([0-9A-Fa-f]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+  .replace(/\\u([0-9A-Fa-f]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+  // Les emojis sont echappes avec des accolades : \u{1F4AA}. Sans ce
+  // decodage, tout texte en contenant un paraissait absent de l'original.
+  .replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
 
 /**
  * Phrases affichees a l'utilisateur dans un fichier JSX.

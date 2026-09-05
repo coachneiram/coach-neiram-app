@@ -25,3 +25,17 @@ export const ONGLETS = [
   { id: "journal", label: "Journal", short: "Journal" },
   { id: "tendances", label: "Tendances", short: "Tendances" }
 ];
+
+/**
+ * Sections de repas d'une journee.
+ *
+ * Repris de MEAL_SECTIONS (index.html, ligne ~1638). Les emojis font partie
+ * du libelle dans l'application actuelle : ils servent de reperes visuels
+ * pour retrouver une section d'un coup d'oeil en faisant defiler.
+ */
+export const SECTIONS_REPAS = [
+  { id: "petit-dejeuner", label: "Petit-déjeuner", icon: "🌅" },
+  { id: "dejeuner", label: "Déjeuner", icon: "☀️" },
+  { id: "gouter", label: "Collation", icon: "🍎" },
+  { id: "diner", label: "Dîner", icon: "🌙" }
+];
