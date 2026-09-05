@@ -21,6 +21,7 @@ import { Seances } from "./ecrans/Seances.jsx";
 import { Repas } from "./ecrans/Repas.jsx";
 import { Journal } from "./ecrans/Journal.jsx";
 import { Tendances } from "./ecrans/Tendances.jsx";
+import { Reglages } from "./ecrans/Reglages.jsx";
 import { bilanHebdomadaire } from "./lib/bilan.js";
 import { getWeekKey } from "./lib/semaine.js";
 
@@ -95,6 +96,24 @@ const ONGLETS = [
 
 export default function Apercu() {
   const [onglet, setOnglet] = useState("sommeil");
+  const [reglagesOuverts, setReglagesOuverts] = useState(false);
+  const [profilExemple, setProfilExemple] = useState({
+    name: "Marien",
+    sex: "homme",
+    age: 34,
+    heightCm: 178,
+    startWeightKg: 79,
+    goal: "prise",
+    activityLevel: "modere",
+    weeklyWorkoutTarget: 3,
+    targetSleepHours: 8,
+    targetWaterL: 2,
+    targetSteps: 8000,
+    trainingMode: "sheets",
+    coachingMode: "presentiel",
+    dietType: "aucun",
+    allergies: []
+  });
 
   // Ecrans pas encore migres : on le dit plutot que d'afficher du vide.
   const migres = {
@@ -163,7 +182,7 @@ export default function Apercu() {
   };
 
   return (
-    <Coque ongletActif={onglet} onChangerOnglet={setOnglet} onOuvrirReglages={() => {}}>
+    <Coque ongletActif={onglet} onChangerOnglet={setOnglet} onOuvrirReglages={() => setReglagesOuverts(true)}>
       <div
         style={{
           background: COLORS.surface,
@@ -198,6 +217,13 @@ export default function Apercu() {
           </p>
         </div>
       )}
+      <Reglages
+        open={reglagesOuverts}
+        onClose={() => setReglagesOuverts(false)}
+        profile={profilExemple}
+        onSave={setProfilExemple}
+        onExporter={async () => null}
+      />
     </Coque>
   );
 }

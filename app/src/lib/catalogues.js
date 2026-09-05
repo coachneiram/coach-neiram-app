@@ -1110,3 +1110,15 @@ export const TRAINING_MODES = [
     "label": "Sur mon Google Sheets (programme du coach)"
   }
 ];
+
+/** Presentiel ou coaching a distance. */
+export const COACHING_MODES = [
+  {
+    "id": "presentiel",
+    "label": "Presentiel (salle, avec le coach)"
+  },
+  {
+    "id": "enligne",
+    "label": "En ligne (coaching a distance)"
+  }
+];
