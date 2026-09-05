@@ -21,6 +21,13 @@ import { collectionApi, journalDuJourApi } from "./lib/collections.js";
 import { computeTargets } from "./lib/nutrition.js";
 import { bilanHebdomadaire } from "./lib/bilan.js";
 import { bilanMensuel } from "./lib/bilan-mensuel.js";
+import { partagerBilan } from "./lib/bilan-html.js";
+import { redimensionnerPhoto } from "./lib/images.js";
+import {
+  PERIODE_VERIFICATION_MS,
+  marquerBilanEnvoye,
+  verifierRappelDimanche
+} from "./lib/rappel-dimanche.js";
 import { Coque } from "./ui/Coque.jsx";
 import { Droplet, Loader2 } from "./ui/icones.jsx";
 import { Journal } from "./ecrans/Journal.jsx";
@@ -109,6 +116,98 @@ export default function App() {
     setToast(message);
     window.setTimeout(() => setToast(null), DUREE_TOAST);
   };
+
+  /**
+   * Photos de progression de la semaine en cours.
+   *
+   * Elles vivent sous « coach_photos_<semaine> », une cle par semaine :
+   * c'est ce que fait l'application d'origine, et c'est aussi ce qui
+   * permet de les purger semaine par semaine quand le stockage sature.
+   */
+  const cleSemaineCourante = getWeekKey(todayISO());
+  const clePhotos = "coach_photos_" + cleSemaineCourante;
+  const [photos, setPhotos] = useState(() => charger(clePhotos, {}) || {});
+
+  /**
+   * Choix d'une photo.
+   *
+   * L'application d'origine gardait un <input type=file> cache par pose.
+   * Ici l'ecran ne connait que la pose et remonte l'intention ; l'input
+   * est cree a la volee. Meme resultat pour le client, un champ de moins
+   * a maintenir dans l'ecran.
+   */
+  const choisirPhoto = (pose) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => {
+      const fichier = input.files && input.files[0];
+      if (!fichier) return;
+      redimensionnerPhoto(fichier, 500, 0.72)
+        .then((dataUrl) => {
+          const suivant = { ...photos, [pose]: dataUrl };
+          setPhotos(suivant);
+          if (!enregistrer(clePhotos, suivant)) {
+            afficherToast("Stockage plein : la photo n'a pas pu être enregistrée.");
+          }
+        })
+        .catch((e) => {
+          afficherToast(
+            e && e.message === "image-format"
+              ? "Photo illisible dans ce format (souvent les HEIC d'iPhone ouvertes sur ordinateur). Essaie une photo JPEG/PNG."
+              : "Photo illisible, réessaie avec une autre."
+          );
+        });
+    };
+    input.click();
+  };
+
+  /**
+   * Envoi du bilan au coach.
+   *
+   * « Bilan envoye » n'est note que si le partage a abouti : un partage
+   * annule doit laisser le rappel du dimanche revenir.
+   */
+  const envoyerBilan = async () => {
+    if (!profile || !weekStats) return;
+    const resultat = await partagerBilan({
+      profile,
+      weekStats,
+      report: null,
+      photos,
+      targets
+    });
+    if (resultat === "shared" || resultat === "downloaded") {
+      marquerBilanEnvoye(weekStats.weekKey);
+    }
+    if (resultat === "downloaded") {
+      afficherToast("Rapport téléchargé — envoie le fichier à ton coach (WhatsApp, mail...).");
+    }
+  };
+
+  /**
+   * Le rappel du dimanche.
+   *
+   * Une verification au montage puis une par minute, comme dans
+   * l'application d'origine : le client peut ouvrir l'app a 9 h 58 un
+   * dimanche, il faut que le rappel parte a 10 h sans qu'il ait a la
+   * relancer. La decision elle-meme est dans lib/rappel-dimanche.js,
+   * pour etre testable sans navigateur.
+   */
+  useEffect(() => {
+    if (!pret || !profile) return;
+    let arrete = false;
+    const verifier = () => {
+      if (arrete) return;
+      verifierRappelDimanche({ profile, afficherToast });
+    };
+    verifier();
+    const minuteur = window.setInterval(verifier, PERIODE_VERIFICATION_MS);
+    return () => {
+      arrete = true;
+      window.clearInterval(minuteur);
+    };
+  }, [pret, profile]);
 
   const dishesApi = collectionApi(STORAGE_KEYS.dishes, dishes, setDishes);
   const logEntriesApi = collectionApi(STORAGE_KEYS.logEntries, logEntries, setLogEntries);
@@ -263,7 +362,10 @@ export default function App() {
         targets={targets}
         weekStats={weekStats}
         monthStats={monthStats}
-        photos={{}}
+        photos={photos}
+        onUploadPhoto={choisirPhoto}
+        onPartager={envoyerBilan}
+        iaDisponible={false}
       />
     ) : null
   };
