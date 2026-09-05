@@ -106,7 +106,13 @@ const A_EXPOSER = [
   // Series temporelles des tendances.
   "buildWeeklySeries",
   // Coque de navigation.
-  "TABS"
+  "TABS",
+  // Catalogues alimentaires, extraits vers l'application migree.
+  "GOAL_FOOD_NOTES",
+  "EQUIV_GLUCIDES",
+  "EQUIV_FRUITS",
+  "EQUIV_PROTEINES",
+  "EQUIV_LIPIDES"
 ];
 
 function extraireScriptApplicatif(html) {

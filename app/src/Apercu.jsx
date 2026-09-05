@@ -18,6 +18,7 @@ import { Sommeil } from "./ecrans/Sommeil.jsx";
 import { Mensurations } from "./ecrans/Mensurations.jsx";
 import { Nutrition } from "./ecrans/Nutrition.jsx";
 import { Seances } from "./ecrans/Seances.jsx";
+import { Aliments } from "./ecrans/Aliments.jsx";
 
 const jour = (n) => addDays(todayISO(), -n);
 
@@ -97,7 +98,14 @@ export default function Apercu() {
         onApplyCalibration={() => {}}
       />
     ),
-    entrainements: <Seances sessionsApi={apiFactice(SEANCES_EXEMPLE)} profile={PROFIL_SEANCES} />
+    entrainements: <Seances sessionsApi={apiFactice(SEANCES_EXEMPLE)} profile={PROFIL_SEANCES} />,
+    repas: (
+      <Aliments
+        profile={{ goal: "perte", dietType: "aucun", allergies: [] }}
+        targets={OBJECTIFS_EXEMPLE}
+        logEntries={CALORIES_EXEMPLE.slice(0, 2)}
+      />
+    )
   };
 
   return (
