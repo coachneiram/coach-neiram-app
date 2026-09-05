@@ -140,7 +140,10 @@ const A_EXPOSER = [
   "SEANCE_TEMPLATES",
   "presetTotals",
   "PORTION_STEPS",
-  "mapOFFProduct"
+  "mapOFFProduct",
+  "extractJsonObject",
+  "stripJsonFences",
+  "drawToDataUrl"
 ];
 
 function extraireScriptApplicatif(html) {

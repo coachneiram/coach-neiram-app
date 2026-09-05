@@ -104,3 +104,25 @@ export async function chercherAliments(requete, env = globalThis) {
       return true;
     });
 }
+
+/**
+ * Fiche produit a partir d'un code-barres.
+ *
+ * Rend null si le code est inconnu, ou si la fiche existe mais n'a pas de
+ * valeur energetique : une fiche sans calories ne sert a rien dans un
+ * journal alimentaire, autant dire au client que le produit est introuvable
+ * que de lui ajouter une ligne a 0 kcal.
+ */
+export async function chercherParCodeBarres(code, env = globalThis) {
+  const url =
+    "https://world.openfoodfacts.org/api/v2/product/" +
+    encodeURIComponent(code) +
+    ".json?fields=" +
+    CHAMPS_OFF;
+  const reponse = await (env.fetch || fetch)(url);
+  if (!reponse.ok) return null;
+  const donnees = await reponse.json();
+  if (!donnees.product) return null;
+  const produit = convertirProduitOFF(donnees.product);
+  return produit.kcal100 != null ? produit : null;
+}

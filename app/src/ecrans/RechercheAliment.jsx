@@ -1,8 +1,9 @@
 /**
  * Recherche d'un aliment (FoodFinder, index.html 2204-2330).
  *
- * Portage du mode « Recherche » : barre de recherche, liste de resultats,
- * favoris, et choix de la quantite en grammes.
+ * Trois facons d'identifier un aliment, selon ce que le client a sous la
+ * main : le chercher par son nom, photographier l'assiette, ou scanner le
+ * code-barres de l'emballage.
  *
  * Les valeurs affichees sont celles pour 100 g, parce que c'est ce que le
  * client lit sur l'etiquette. Quand la fiche produit indique une portion de
@@ -14,15 +15,26 @@
  * dans une sauvegarde de journal.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { num, round } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
-import { chercherAliments } from "../lib/recherche-aliments.js";
+import { chercherAliments, chercherParCodeBarres } from "../lib/recherche-aliments.js";
+import { redimensionnerPhoto } from "../lib/images.js";
+import { analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
+import { messageErreur } from "../lib/ia.js";
 import { Btn, Field, NumberInput, TextInput } from "../ui/primitives.jsx";
-import { Loader2, Search, Star } from "../ui/icones.jsx";
+import { Barcode, Camera, Loader2, Search, Star } from "../ui/icones.jsx";
 
 const CLE_FAVORIS = "cn_food_favorites";
+
+/**
+ * Un HEIC d'iPhone ouvert depuis un ordinateur n'est decodable par aucun
+ * navigateur de bureau. Le dire explicitement evite au client de croire que
+ * l'analyse est en panne.
+ */
+const MSG_FORMAT_PHOTO =
+  "Ce fichier photo n'est pas dans un format lisible par ce navigateur (souvent le cas des photos HEIC d'iPhone ouvertes depuis un ordinateur). Choisis une photo JPEG/PNG, ou utilise Safari sur iPhone.";
 
 /** Au-dela, la liste des favoris n'est plus un raccourci mais un catalogue. */
 const MAX_FAVORIS = 80;
@@ -200,20 +212,27 @@ function QuantiteProduit({ produit, onChoisir }) {
 }
 
 export function RechercheAliment({ onChoisir }) {
+  const [mode, setMode] = useState("search");
   const [q, setQ] = useState("");
   const [resultats, setResultats] = useState(null);
   const [choisi, setChoisi] = useState(null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState(null);
+  const champPhoto = useRef(null);
+  const champScan = useRef(null);
+  const [apercuPhoto, setApercuPhoto] = useState(null);
+  const [resultatPhoto, setResultatPhoto] = useState(null);
+  const [codeSaisi, setCodeSaisi] = useState("");
   const favApi = useFavorisAliments();
 
-  /* MIGRATION-EN-COURS
-   * Les modes « Photo IA » et « Code-barres » de FoodFinder ne sont pas
-   * encore portes : ils dependent de analyzeMealPhoto, readBarcodeFromImage
-   * et fetchProductByBarcode, qui restent a migrer. Le selecteur de mode est
-   * masque tant qu'ils n'existent pas, plutot que d'afficher des onglets
-   * inertes.
-   * FIN-MIGRATION-EN-COURS */
+  const changerMode = (m) => {
+    setMode(m);
+    setErreur(null);
+    setChoisi(null);
+    setResultats(null);
+    setResultatPhoto(null);
+    setApercuPhoto(null);
+  };
 
   const chercher = async () => {
     if (!q.trim()) return;
@@ -234,93 +253,350 @@ export function RechercheAliment({ onChoisir }) {
     }
   };
 
+  const analyserPhoto = async (fichier) => {
+    if (!fichier) return;
+    setEnCours(true);
+    setErreur(null);
+    setResultatPhoto(null);
+    try {
+      // 800 px suffisent au modele pour reconnaitre une assiette, et
+      // divisent par dix le poids envoye depuis un mobile.
+      const dataUrl = await redimensionnerPhoto(fichier, 800, 0.78);
+      setApercuPhoto(dataUrl);
+      setResultatPhoto(await analyserPhotoRepas(dataUrl));
+    } catch (e) {
+      console.error("[Coach Neiram] Photo repas — erreur:", e);
+      setErreur(
+        e && e.message === "image-format"
+          ? MSG_FORMAT_PHOTO
+          : messageErreur(
+              e,
+              "Analyse impossible. Réessaie avec une photo plus nette (assiette entière, bien éclairée) ou passe en saisie libre."
+            )
+      );
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const chercherCode = async (code) => {
+    setEnCours(true);
+    setErreur(null);
+    setChoisi(null);
+    try {
+      const p = await chercherParCodeBarres(code);
+      if (p) setChoisi(p);
+      else setErreur(`Code ${code} introuvable dans Open Food Facts. Vérifie le numéro ou passe en saisie libre.`);
+    } catch (e) {
+      setErreur("Base produits injoignable ici. Utilise la photo IA ou la saisie libre.");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const scannerPhoto = async (fichier) => {
+    if (!fichier) return;
+    setEnCours(true);
+    setErreur(null);
+    setChoisi(null);
+    try {
+      // Plus de definition que pour un repas : les barres fines d'un EAN-13
+      // deviennent illisibles en dessous.
+      const dataUrl = await redimensionnerPhoto(fichier, 1100, 0.82);
+      const code = await lireCodeBarres(dataUrl);
+      if (!code) {
+        setErreur("Code-barres illisible sur la photo. Cadre-le de près, bien à plat, ou tape le numéro.");
+      } else {
+        setCodeSaisi(code);
+        await chercherCode(code);
+      }
+    } catch (e) {
+      setErreur(
+        e && e.message === "image-format"
+          ? MSG_FORMAT_PHOTO
+          : messageErreur(e, "Lecture du code impossible. Tape le numéro sous le code-barres.")
+      );
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const puce = (id, libelle, Icone) => (
+    <button
+      key={id}
+      onClick={() => changerMode(id)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "7px 11px",
+        borderRadius: 9,
+        border: `1px solid ${mode === id ? COLORS.gold : COLORS.border}`,
+        background: mode === id ? `${COLORS.gold}1A` : COLORS.bgAlt,
+        color: mode === id ? COLORS.gold : COLORS.textMuted,
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: "pointer"
+      }}
+    >
+      <Icone size={14} />
+      {libelle}
+    </button>
+  );
+
   return (
     <div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <TextInput
-          placeholder="Ex : skyr, riz basmati, Danacol..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") chercher();
-          }}
-          style={{ flex: 1 }}
-        />
-        <Btn
-          onClick={chercher}
-          disabled={enCours || !q.trim()}
-          icon={enCours ? Loader2 : Search}
-          style={{ padding: "10px 14px" }}
-        >
-          {enCours ? "" : "Chercher"}
-        </Btn>
+      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 }}>
+        {puce("search", "Recherche", Search)}
+        {puce("photo", "Photo IA", Camera)}
+        {puce("scan", "Code-barres", Barcode)}
       </div>
 
-      {resultats && resultats.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-            maxHeight: 260,
-            overflowY: "auto",
-            marginTop: 10
-          }}
-        >
-          {resultats.map((p) => (
-            <LigneAliment
-              key={p.code}
-              p={p}
-              choisi={choisi?.code === p.code}
-              onChoisir={() => setChoisi(p)}
-              estFavori={favApi.estFavori(p.code)}
-              onBasculerFavori={() => favApi.basculer(p)}
+      {mode === "search" && (
+        <div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <TextInput
+              placeholder="Ex : skyr, riz basmati, Danacol..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") chercher();
+              }}
+              style={{ flex: 1 }}
             />
-          ))}
+            <Btn
+              onClick={chercher}
+              disabled={enCours || !q.trim()}
+              icon={enCours ? Loader2 : Search}
+              style={{ padding: "10px 14px" }}
+            >
+              {enCours ? "" : "Chercher"}
+            </Btn>
+          </div>
+
+          {resultats && resultats.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                maxHeight: 260,
+                overflowY: "auto",
+                marginTop: 10
+              }}
+            >
+              {resultats.map((p) => (
+                <LigneAliment
+                  key={p.code}
+                  p={p}
+                  choisi={choisi?.code === p.code}
+                  onChoisir={() => setChoisi(p)}
+                  estFavori={favApi.estFavori(p.code)}
+                  onBasculerFavori={() => favApi.basculer(p)}
+                />
+              ))}
+            </div>
+          )}
+
+          {(!resultats || resultats.length === 0) && favApi.favoris.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: COLORS.textMuted,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  marginBottom: 8
+                }}
+              >
+                <Star size={12} fill={COLORS.gold} color={COLORS.gold} />
+                Mes aliments favoris
+              </div>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflowY: "auto" }}
+              >
+                {favApi.favoris.map((p) => (
+                  <LigneAliment
+                    key={p.code}
+                    p={p}
+                    choisi={choisi?.code === p.code}
+                    onChoisir={() => setChoisi(p)}
+                    estFavori
+                    onBasculerFavori={() => favApi.basculer(p)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {choisi && <QuantiteProduit produit={choisi} onChoisir={onChoisir} />}
+
+          <p style={{ fontSize: 10, color: COLORS.textFaint, marginTop: 10, marginBottom: 0 }}>
+            Base ouverte Open Food Facts — valeurs déclarées par les fabricants, très bonne couverture des
+            produits français.
+          </p>
         </div>
       )}
 
-      {(!resultats || resultats.length === 0) && favApi.favoris.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 10.5,
-              fontWeight: 600,
-              color: COLORS.textMuted,
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-              marginBottom: 8
+      {mode === "photo" && (
+        <div>
+          <input
+            type="file"
+            accept="image/*"
+            ref={champPhoto}
+            style={{ display: "none" }}
+            onChange={(e) => {
+              analyserPhoto(e.target.files[0]);
+              // Sans ce vidage, rechoisir la meme photo ne declenche rien.
+              e.target.value = "";
             }}
-          >
-            <Star size={12} fill={COLORS.gold} color={COLORS.gold} />
-            Mes aliments favoris
-          </div>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflowY: "auto" }}
-          >
-            {favApi.favoris.map((p) => (
-              <LigneAliment
-                key={p.code}
-                p={p}
-                choisi={choisi?.code === p.code}
-                onChoisir={() => setChoisi(p)}
-                estFavori
-                onBasculerFavori={() => favApi.basculer(p)}
-              />
-            ))}
-          </div>
+          />
+          {!resultatPhoto && (
+            <Btn
+              variant="ghost"
+              icon={enCours ? Loader2 : Camera}
+              onClick={() => champPhoto.current?.click()}
+              disabled={enCours}
+              style={{ width: "100%" }}
+            >
+              {enCours ? "Analyse de la photo en cours..." : "Prendre / choisir une photo du repas"}
+            </Btn>
+          )}
+          {apercuPhoto && (
+            <img
+              src={apercuPhoto}
+              alt="Repas"
+              style={{ width: "100%", maxHeight: 170, objectFit: "cover", borderRadius: 10, marginTop: 10 }}
+            />
+          )}
+          {resultatPhoto && (
+            <div
+              style={{
+                background: COLORS.bgAlt,
+                border: `1px solid ${COLORS.borderLight}`,
+                borderRadius: 10,
+                padding: 12,
+                marginTop: 10
+              }}
+            >
+              <div style={{ fontSize: 11, color: COLORS.textFaint, marginBottom: 8 }}>
+                Estimation IA ({resultatPhoto.confidence})
+                {resultatPhoto.portion ? ` · ${resultatPhoto.portion}` : ""} — ajuste les valeurs si besoin.
+              </div>
+              <Field label="Nom">
+                <TextInput
+                  value={resultatPhoto.name}
+                  onChange={(e) => setResultatPhoto({ ...resultatPhoto, name: e.target.value })}
+                />
+              </Field>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+                <Field label="Kcal">
+                  <NumberInput
+                    value={resultatPhoto.calories}
+                    onChange={(e) => setResultatPhoto({ ...resultatPhoto, calories: e.target.value })}
+                  />
+                </Field>
+                <Field label="P (g)">
+                  <NumberInput
+                    value={resultatPhoto.protein}
+                    onChange={(e) => setResultatPhoto({ ...resultatPhoto, protein: e.target.value })}
+                  />
+                </Field>
+                <Field label="G (g)">
+                  <NumberInput
+                    value={resultatPhoto.carbs}
+                    onChange={(e) => setResultatPhoto({ ...resultatPhoto, carbs: e.target.value })}
+                  />
+                </Field>
+                <Field label="L (g)">
+                  <NumberInput
+                    value={resultatPhoto.fat}
+                    onChange={(e) => setResultatPhoto({ ...resultatPhoto, fat: e.target.value })}
+                  />
+                </Field>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn
+                  variant="ghost"
+                  onClick={() => {
+                    setResultatPhoto(null);
+                    setApercuPhoto(null);
+                    champPhoto.current?.click();
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  Autre photo
+                </Btn>
+                <Btn
+                  onClick={() =>
+                    onChoisir({
+                      name: resultatPhoto.name,
+                      calories: num(resultatPhoto.calories),
+                      protein: num(resultatPhoto.protein),
+                      carbs: num(resultatPhoto.carbs),
+                      fat: num(resultatPhoto.fat)
+                    })
+                  }
+                  style={{ flex: 1 }}
+                >
+                  Ajouter
+                </Btn>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {choisi && <QuantiteProduit produit={choisi} onChoisir={onChoisir} />}
-
-      <p style={{ fontSize: 10, color: COLORS.textFaint, marginTop: 10, marginBottom: 0 }}>
-        Base ouverte Open Food Facts — valeurs déclarées par les fabricants, très bonne couverture des produits
-        français.
-      </p>
+      {mode === "scan" && (
+        <div>
+          <input
+            type="file"
+            accept="image/*"
+            ref={champScan}
+            style={{ display: "none" }}
+            onChange={(e) => {
+              scannerPhoto(e.target.files[0]);
+              e.target.value = "";
+            }}
+          />
+          <Btn
+            variant="ghost"
+            icon={enCours ? Loader2 : Camera}
+            onClick={() => champScan.current?.click()}
+            disabled={enCours}
+            style={{ width: "100%" }}
+          >
+            {enCours ? "Lecture en cours..." : "Photographier le code-barres"}
+          </Btn>
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <TextInput
+              placeholder="ou tape le numéro (ex : 3017620422003)"
+              inputMode="numeric"
+              value={codeSaisi}
+              onChange={(e) => setCodeSaisi(e.target.value.replace(/[^0-9]/g, ""))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && codeSaisi.length >= 8) chercherCode(codeSaisi);
+              }}
+              style={{ flex: 1 }}
+            />
+            <Btn
+              onClick={() => chercherCode(codeSaisi)}
+              disabled={enCours || codeSaisi.length < 8}
+              style={{ padding: "10px 14px" }}
+            >
+              OK
+            </Btn>
+          </div>
+          {choisi && <QuantiteProduit produit={choisi} onChoisir={onChoisir} />}
+          <p style={{ fontSize: 10, color: COLORS.textFaint, marginTop: 10, marginBottom: 0 }}>
+            Produits reconnus via la base ouverte Open Food Facts.
+          </p>
+        </div>
+      )}
 
       {erreur && (
         <p style={{ fontSize: 12, color: COLORS.bad, marginTop: 10, marginBottom: 0 }}>{erreur}</p>
