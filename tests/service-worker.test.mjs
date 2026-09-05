@@ -46,10 +46,11 @@ function chargerServiceWorker() {
 
   vm.createContext(bacASable);
   vm.runInContext(readFileSync(SW, "utf8"), bacASable, { filename: "sw.js" });
-  return { ...bacASable.__SW_TEST__, ecouteurs };
+  return { ...bacASable.__SW_TEST__, ecouteurs, bacASable };
 }
 
 const sw = chargerServiceWorker();
+const source = readFileSync(SW, "utf8");
 const APP = "https://coachneiram.github.io";
 
 const strategie = (url, options = {}) =>
@@ -144,14 +145,12 @@ describe("les fichiers de l'application", () => {
 });
 
 describe("ressources externes necessaires au demarrage", () => {
-  test("React est mis en cache : sans lui, rien ne s'affiche hors ligne", () => {
+  test("React n'est plus charge depuis un CDN", () => {
+    // Il est desormais inclus dans le fichier construit : l'application ne
+    // depend plus de la disponibilite de cdnjs pour s'afficher.
     assert.equal(
       strategie("https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"),
-      "cache-d-abord"
-    );
-    assert.equal(
-      strategie("https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"),
-      "cache-d-abord"
+      "ignorer"
     );
   });
 
@@ -168,8 +167,11 @@ describe("ressources externes necessaires au demarrage", () => {
   });
 
   test("un domaine ressemblant n'est pas autorise", () => {
-    assert.equal(strategie("https://cdnjs.cloudflare.com.attaquant.test/react.js"), "ignorer");
-    assert.equal(strategie("https://evil-cdnjs.cloudflare.com/react.js"), "ignorer");
+    // Piege classique : une comparaison approximative mettrait en cache la
+    // reponse d'un domaine controle par un tiers.
+    assert.equal(strategie("https://fonts.googleapis.com.attaquant.test/x.css"), "ignorer");
+    assert.equal(strategie("https://evil-fonts.googleapis.com/x.css"), "ignorer");
+    assert.equal(strategie("https://fonts.gstatic.com.attaquant.test/x.woff2"), "ignorer");
   });
 });
 
@@ -195,30 +197,58 @@ describe("liste des ressources et versionnage", () => {
     }
   });
 
-  test("React est precache : sans lui, rien ne s'affiche hors ligne", () => {
-    // Un simple « cache d'abord » ne suffit pas : une balise <script src>
-    // emet une requete no-cors dont la reponse opaque n'est pas conservable.
-    // Seul le precache explicite, en mode cors, garantit la disponibilite.
-    assert.equal(sw.RESSOURCES_REACT.length, 2, "react et react-dom attendus");
-    assert.ok(sw.RESSOURCES_REACT.some((u) => u.includes("/react/")));
-    assert.ok(sw.RESSOURCES_REACT.some((u) => u.includes("/react-dom/")));
+  /**
+   * LE POINT LE PLUS FRAGILE DE LA BASCULE.
+   *
+   * Le code de l'application porte une empreinte qui change a chaque
+   * construction (assets/index-CnbfxMEa.js). Il ne peut donc PAS figurer
+   * dans une liste ecrite a la main. La construction produit
+   * assets-manifest.json, et le service worker le lit a l'installation.
+   *
+   * Sans ce mecanisme, le precache ne contiendrait pas le code de
+   * l'application : le premier lancement hors ligne afficherait une page
+   * blanche. Aucune erreur, aucun message — la panne exacte que le mode
+   * hors ligne est cense empecher.
+   */
+  test("le service worker lit le manifeste de construction", () => {
+    assert.ok(sw.MANIFESTE_ASSETS, "aucun manifeste declare");
+    assert.equal(typeof sw.assetsDuManifeste, "function");
+    assert.ok(
+      source.includes("RESSOURCES_LOCALES.concat(assets)"),
+      "les fichiers du manifeste ne sont pas ajoutes au precache"
+    );
   });
 
-  test("les versions de React concordent avec celles de index.html", () => {
-    // Si index.html passe a une autre version sans que sw.js suive, le cache
-    // contiendrait une version morte et l'application resterait blanche hors
-    // ligne. Ce test attrape la divergence.
-    const html = readFileSync(join(ICI, "..", "index.html"), "utf8");
-    const dansLeHtml = [...html.matchAll(/src="(https:\/\/cdnjs\.cloudflare\.com[^"]+)"/g)].map(
-      (m) => m[1]
-    );
-    assert.ok(dansLeHtml.length > 0, "aucun script cdnjs trouve dans index.html");
-    for (const url of dansLeHtml) {
-      assert.ok(
-        sw.RESSOURCES_REACT.includes(url),
-        "script charge par index.html mais absent du precache : " + url
-      );
+  test("un manifeste illisible n'empeche pas l'installation", async () => {
+    // Mieux vaut un mode hors ligne degrade qu'un service worker qui refuse
+    // de s'installer : l'application resterait alors inutilisable en ligne
+    // comme hors ligne.
+    const vraiFetch = sw.bacASable.fetch;
+    try {
+      for (const reponse of [
+        () => Promise.reject(new Error("hors ligne")),
+        () => Promise.resolve({ ok: false }),
+        () => Promise.resolve({ ok: true, json: () => Promise.resolve(null) }),
+        () => Promise.resolve({ ok: true, json: () => Promise.resolve({ pas: "un tableau" }) }),
+        () => Promise.resolve({ ok: true, json: () => Promise.reject(new Error("json")) })
+      ]) {
+        sw.bacASable.fetch = reponse;
+        assert.deepEqual(Array.from(await sw.assetsDuManifeste()), []);
+      }
+
+      // Une entree qui n'est pas une chaine ne doit pas finir dans cache.add.
+      sw.bacASable.fetch = () =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve(["./a.js", 42, null, "./b.css"]) });
+      assert.deepEqual(Array.from(await sw.assetsDuManifeste()), ["./a.js", "./b.css"]);
+    } finally {
+      sw.bacASable.fetch = vraiFetch;
     }
+  });
+
+  test("le manifeste est demande sans passer par le cache HTTP", () => {
+    // Un manifeste servi depuis le cache du navigateur listerait les
+    // fichiers de la version precedente, qui n'existent plus.
+    assert.match(source, /MANIFESTE_ASSETS,\s*\{\s*cache:\s*"no-cache"\s*\}/);
   });
 
   test("le nom du cache porte la version, pour permettre le nettoyage", () => {

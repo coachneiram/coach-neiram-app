@@ -6,11 +6,17 @@
 # deploiement pilote ici. Tant qu'il n'est pas active, le site continue
 # d'etre servi comme aujourd'hui.
 #
-# Point de conception important : dans un premier temps, ce workflow publie
-# la RACINE DU DEPOT, exactement ce que Pages sert deja. Changer le mecanisme
-# de deploiement et changer ce qui est deploye sont deux risques distincts ;
-# les separer permet de verifier le premier sans rien casser. Le passage au
-# build Vite se fera plus tard, en modifiant seulement le chemin publie.
+# Point de conception important : le changement de mecanisme de deploiement
+# et le changement de ce qui est deploye ont ete faits SEPAREMENT. Le
+# mecanisme a d'abord ete verifie en publiant la racine du depot, exactement
+# ce que Pages servait deja. Ce workflow publie desormais la construction
+# Vite (app/dist).
+#
+# RETOUR EN ARRIERE : remplacer l'etape « Rassembler les fichiers a publier »
+# par la version qui copie la racine (voir l'historique git de ce fichier).
+# L'ancienne application reste dans le depot, intacte, a la racine. Un retour
+# en arriere ne demande donc aucune restauration de donnees : les deux
+# versions lisent les memes cles de stockage.
 
 name: Deploiement
 
@@ -55,6 +61,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # La construction Vite tourne sous Node : sans cette etape, npm ci
+      # utiliserait la version par defaut du runner, qui peut changer sans
+      # prevenir. On fige la meme version que pour les tests.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
       # enablement: true bascule le reglage « Source » de Pages sur
       # GitHub Actions si ce n'est pas deja fait. Sans lui, il faudrait le
       # changer a la main entre deux deploiements, et le site resterait
@@ -64,14 +79,43 @@ jobs:
         with:
           enablement: true
 
+      - name: Installer les dependances
+        working-directory: app
+        run: npm ci
+
+      - name: Construire l'application
+        working-directory: app
+        run: npm run build
+
+      # Le service worker ne peut pas deviner le nom des fichiers construits :
+      # ils portent une empreinte qui change a chaque construction. La
+      # construction ecrit assets-manifest.json, et sans lui le premier
+      # lancement hors ligne afficherait une page blanche.
+      - name: Verifier que la construction est complete
+        run: |
+          set -e
+          for fichier in index.html sw.js manifest.json assets-manifest.json \
+                         favicon.png apple-touch-icon.png icon-192.png icon-512.png \
+                         food-basic-catalog.js food-bruts-catalog.js \
+                         food-extended-catalog.js food-staples-catalog.js; do
+            test -f "app/dist/$fichier" || { echo "ABSENT de la construction : $fichier"; exit 1; }
+          done
+          # Chaque fichier annonce par le manifeste doit exister reellement.
+          node -e '
+            const { readFileSync, existsSync } = require("node:fs");
+            const liste = JSON.parse(readFileSync("app/dist/assets-manifest.json", "utf8"));
+            if (!liste.length) { console.error("manifeste vide"); process.exit(1); }
+            for (const f of liste) {
+              const chemin = "app/dist/" + f.replace(/^\.\//, "");
+              if (!existsSync(chemin)) { console.error("annonce mais absent : " + f); process.exit(1); }
+            }
+            console.log("Manifeste verifie : " + liste.length + " fichiers");
+          '
+
       - name: Rassembler les fichiers a publier
         run: |
           mkdir -p _site
-          # On publie ce que Pages sert deja : l'application et ses ressources.
-          cp index.html manifest.json sw.js _site/
-          cp food-*.js _site/
-          cp *.png _site/
-          # Les dossiers de developpement n'ont rien a faire en ligne.
+          cp -r app/dist/. _site/
           echo "Contenu publie :"
           ls -la _site
 
