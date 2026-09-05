@@ -123,7 +123,10 @@ const A_EXPOSER = [
   "toGramBasis",
   "sumMacros",
   "scaleMacros",
-  "fmtPortion"
+  "fmtPortion",
+  // Messages de motivation du Journal.
+  "buildMotivation",
+  "MOTIVATION_VARIANTS"
 ];
 
 function extraireScriptApplicatif(html) {
