@@ -20,6 +20,7 @@ import { COLORS } from "../tokens.js";
 import { num, round } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
 import { chercherAliments, chercherParCodeBarres } from "../lib/recherche-aliments.js";
+import { mentionEtat } from "../lib/fibres.js";
 import { redimensionnerPhoto } from "../lib/images.js";
 import { analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
 import { messageErreur } from "../lib/ia.js";
@@ -133,6 +134,16 @@ function LigneAliment({ p, choisi, onChoisir, estFavori, onBasculerFavori }) {
         <span style={{ fontSize: 12.5, color: COLORS.text, minWidth: 0 }}>
           {p.name}
           {p.brand ? <span style={{ color: COLORS.textFaint }}> — {p.brand}</span> : null}
+          {/* TEXTE-NOUVEAU
+              Mention « pesé cru » / « pesé cuit », ajoutee apres la bascule.
+              Le boulgour affiche 345 kcal cru et 83 kcal cuit : sans cette
+              mention, un client qui pese son assiette se trompe d'un facteur
+              quatre, et rien ne le signale.
+          */}
+          {mentionEtat(p.etat) ? (
+            <span style={{ color: COLORS.gold, fontSize: 10.5 }}> · {mentionEtat(p.etat)}</span>
+          ) : null}
+          {/* FIN-TEXTE-NOUVEAU */}
         </span>
         <span
           style={{ fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", flexShrink: 0 }}

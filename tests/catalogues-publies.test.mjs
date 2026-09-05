@@ -36,7 +36,9 @@ const CATALOGUES = [
   "food-extended-catalog.js",
   "food-staples-catalog.js",
   "food-bruts-catalog.js",
-  "food-basic-catalog.js"
+  "food-basic-catalog.js",
+  // Charge apres les catalogues : il complete leurs entrees en fibres.
+  "food-fibres.js"
 ];
 
 const lire = (...morceaux) => readFileSync(join(RACINE, ...morceaux), "utf8");
@@ -88,7 +90,7 @@ describe("catalogues servis aux deux versions", () => {
 
   test("les deux index.html chargent les memes catalogues dans le meme ordre", () => {
     const ordreDe = (html) =>
-      [...html.matchAll(/src="\.?\/?(food-[a-z]+-catalog\.js)"/g)].map((m) => m[1]);
+      [...html.matchAll(/src="\.?\/?(food-[a-z-]+\.js)"/g)].map((m) => m[1]);
 
     const legacy = ordreDe(lire("index.html"));
     const vite = ordreDe(lire("app", "index.html"));

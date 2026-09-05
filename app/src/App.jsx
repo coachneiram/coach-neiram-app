@@ -215,8 +215,16 @@ export default function App() {
         currentWeight={poidsCourant}
         bodyLogs={bodyLogs}
         logEntries={logEntries}
-        onApplyCalibration={(kcal) =>
-          enregistrerProfil({ ...profil, calibratedMaintenanceKcal: kcal, calibratedAt: new Date().toISOString() })
+        onApplyCalibration={(kcal, couverture) =>
+          enregistrerProfil({
+            ...profil,
+            calibratedMaintenanceKcal: kcal,
+            // La couverture du journal est enregistree AVEC l'estimation :
+            // sans elle, on ne peut plus savoir, plus tard, si le calibrage
+            // reposait sur un journal complet.
+            calibratedCoverage: kcal ? (couverture ?? null) : null,
+            calibratedAt: kcal ? new Date().toISOString() : null
+          })
         }
       />
     ),

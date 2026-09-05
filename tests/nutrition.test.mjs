@@ -464,3 +464,117 @@ describe("force athletique — direction sur l'objectif performance", () => {
     for (const d of nutrition.PERFORMANCE_DIRECTIONS) assert.ok(d.label, "direction sans libelle");
   });
 });
+
+/**
+ * Garde-fous du calibrage calorique.
+ *
+ * INCIDENT REEL, en production. Une pratiquante de force a six seances par
+ * semaine s'est vue attribuer un objectif de 1320 kcal par jour.
+ *
+ * Le calibrage moyenne les calories des jours LOGUES. Un journal incomplet
+ * le tire vers le bas — on oublie de noter un repas, on n'en invente pas —
+ * l'objectif descend, le client mange moins, et le calibrage suivant
+ * descend encore. La boucle se resserre a chaque tour, et rien ne la
+ * signale : le total reste plausible.
+ *
+ * Ces tests pinglent des VALEURS. Une premiere version ne verifiait que des
+ * proprietes generales, et six mutations passaient au travers — dont la
+ * suppression pure et simple des bornes.
+ */
+describe("garde-fous du calibrage calorique", () => {
+  const FORMULE = 2400;
+  const BMR = 1400;
+
+  test("une maintenance sous le metabolisme de base est ecartee, pas rabotee", () => {
+    // Personne ne maintient son poids en mangeant moins que ce que son
+    // corps consomme au repos complet. La valeur n'est pas imprecise : elle
+    // est impossible, donc la donnee d'entree est fausse. La ramener a un
+    // plancher reviendrait a garder une conclusion tiree de chiffres faux.
+    assert.equal(nutrition.maintenanceCalibree(1200, FORMULE, BMR), FORMULE);
+    assert.equal(nutrition.maintenanceCalibree(1399, FORMULE, BMR), FORMULE);
+  });
+
+  test("au-dela de 25 % d'ecart, la valeur est ramenee dans la plage", () => {
+    // Trop basse : ramenee au plancher.
+    assert.equal(nutrition.maintenanceCalibree(1600, FORMULE, BMR), 1800);
+    // Trop haute : ramenee au plafond.
+    assert.equal(nutrition.maintenanceCalibree(4000, FORMULE, BMR), 3000);
+  });
+
+  test("un calibrage plausible est respecte a l'unite pres", () => {
+    // Le correctif ne doit pas ecraser une mesure legitime : c'est tout
+    // l'interet du calibrage.
+    for (const v of [1900, 2100, 2400, 2700, 2990]) {
+      assert.equal(nutrition.maintenanceCalibree(v, FORMULE, BMR), v, String(v));
+    }
+  });
+
+  test("sans formule de reference, il n'y a rien a verifier", () => {
+    assert.equal(nutrition.maintenanceCalibree(1200, null, BMR), 1200);
+  });
+
+  test("sans calibrage, la formule s'applique", () => {
+    for (const v of [null, 0, undefined, ""]) {
+      assert.equal(nutrition.maintenanceCalibree(v, FORMULE, BMR), FORMULE, String(v));
+    }
+  });
+
+  /** Le cas exact de la cliente, reconstitue. */
+  describe("le cas qui a declenche le correctif", () => {
+    const SABINE = {
+      sex: "femme",
+      age: 35,
+      heightCm: 167,
+      startWeightKg: 71.1,
+      activityLevel: "actif",
+      goal: "perte",
+      jobType: "sedentaire"
+    };
+
+    test("l'objectif ne retombe plus a 1320 kcal", () => {
+      const t = nutrition.computeTargets({ ...SABINE, calibratedMaintenanceKcal: 1650 }, 71.1);
+      assert.ok(t.calories > 1320, "objectif : " + t.calories);
+      // Et il reste au-dessus du metabolisme de base : en dessous, ce n'est
+      // plus un deficit, c'est de la sous-alimentation.
+      const bmr = nutrition.computeBMR({ sex: "femme", weightKg: 71.1, heightCm: 167, age: 35 });
+      assert.ok(t.calories >= bmr, `${t.calories} kcal pour un metabolisme de base de ${Math.round(bmr)}`);
+    });
+
+    test("un calibrage marque comme peu fiable n'est pas applique du tout", () => {
+      const avec = nutrition.computeTargets(
+        { ...SABINE, calibratedMaintenanceKcal: 1650, calibratedCoverage: 0.35 },
+        71.1
+      );
+      const sans = nutrition.computeTargets(SABINE, 71.1);
+      assert.equal(avec.calories, sans.calories, "un journal a trous ne doit pas fixer l'objectif");
+    });
+
+    test("un calibrage issu d'un journal complet reste applique", () => {
+      const t = nutrition.computeTargets(
+        { ...SABINE, calibratedMaintenanceKcal: 2200, calibratedCoverage: 0.9 },
+        71.1
+      );
+      const sans = nutrition.computeTargets(SABINE, 71.1);
+      assert.notEqual(t.calories, sans.calories, "le calibrage fiable a ete ignore");
+    });
+
+    test("la spirale ne peut plus se refermer", () => {
+      // On simule cinq calibrages successifs, chacun tire vers le bas par
+      // un journal incomplet. Sans garde-fou, l'objectif s'effondre.
+      let profil = { ...SABINE };
+      const objectifs = [];
+      for (let tour = 0; tour < 5; tour++) {
+        const t = nutrition.computeTargets(profil, 71.1);
+        objectifs.push(t.calories);
+        // Le client ne logue que 70 % de ce que l'objectif demande.
+        profil = { ...profil, calibratedMaintenanceKcal: Math.round(t.calories * 0.7) };
+      }
+      const bmr = nutrition.computeBMR({ sex: "femme", weightKg: 71.1, heightCm: 167, age: 35 });
+      for (const o of objectifs) {
+        assert.ok(o >= bmr, `objectif descendu a ${o} kcal : ${objectifs.join(" -> ")}`);
+      }
+      // Et l'objectif se stabilise au lieu de descendre indefiniment.
+      assert.equal(objectifs[3], objectifs[4], "l'objectif descend encore : " + objectifs.join(" -> "));
+    });
+  });
+});

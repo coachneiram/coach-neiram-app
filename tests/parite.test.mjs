@@ -75,17 +75,54 @@ function profilAleatoire(hasard) {
 describe("computeTargets : divergences volontaires et rien d'autre", () => {
   const PART_LIPIDES_MIN = 0.2;
 
-  test("les calories restent identiques a l'ancienne version", () => {
+  /**
+   * TROISIEME DIVERGENCE VOLONTAIRE, ajoutee apres un incident en
+   * production : les calibrages caloriques invraisemblables sont desormais
+   * ecartes ou ramenes dans une plage plausible.
+   *
+   * Le calibrage moyenne les calories des jours LOGUES. Un journal
+   * incomplet le tire vers le bas, l'objectif descend, le client mange
+   * moins, et le calibrage suivant descend encore. Une pratiquante de force
+   * a six seances par semaine s'est ainsi vue attribuer 1320 kcal par jour.
+   *
+   * Les calories ne peuvent donc plus etre identiques a l'ancienne version
+   * SUR LES PROFILS CALIBRES. Elles doivent l'etre partout ailleurs, et la
+   * correction doit toujours RAPPROCHER de la formule — jamais l'inverse.
+   *
+   * Ma premiere version de ce test affirmait « l'objectif ne baisse
+   * jamais ». C'etait faux : un calibrage trop HAUT est ramene vers le bas,
+   * et c'est aussi legitime. Ce qui compte n'est pas le sens du
+   * mouvement, c'est qu'il aille vers la valeur plausible.
+   */
+  test("les calories restent identiques hors calibrage invraisemblable", () => {
     const hasard = generateur(20260905);
+    let corriges = 0;
     for (let i = 0; i < 400; i++) {
       const profil = profilAleatoire(hasard);
       const poids = hasard() < 0.3 ? null : Math.round(45 + hasard() * 80);
-      assert.equal(
-        neuf.computeTargets(profil, poids).calories,
-        plat(ancien.computeTargets(profil, poids)).calories,
-        "les calories ont bouge sur " + JSON.stringify({ ...profil, poids })
+      const contexte = JSON.stringify({ ...profil, poids });
+
+      const avant = plat(ancien.computeTargets(profil, poids)).calories;
+      const apres = neuf.computeTargets(profil, poids).calories;
+
+      if (avant === apres) continue;
+
+      corriges++;
+      assert.ok(
+        profil.calibratedMaintenanceKcal,
+        "calories modifiees sur un profil NON calibre : " + contexte
+      );
+
+      // La reference : ce que donnerait la formule seule, sans calibrage.
+      const { calibratedMaintenanceKcal, ...sansCalibrage } = profil;
+      const formule = neuf.computeTargets(sansCalibrage, poids).calories;
+
+      assert.ok(
+        Math.abs(apres - formule) <= Math.abs(avant - formule),
+        "la correction eloigne de la formule au lieu de s'en rapprocher : " + contexte
       );
     }
+    assert.ok(corriges > 0, "aucun calibrage corrige : le test ne verifie rien");
   });
 
   test("sans poids cible, seul le plancher de lipides peut differer", () => {
@@ -102,6 +139,10 @@ describe("computeTargets : divergences volontaires et rien d'autre", () => {
       // Sans poids cible, la reference reste le poids actuel : les
       // proteines ne peuvent pas bouger.
       assert.equal(n.protein, a.protein, "proteines modifiees sans poids cible : " + contexte);
+
+      // Un calibrage corrige change les calories, donc les lipides via le
+      // plancher : ce cas est couvert par le test precedent.
+      if (n.calories !== a.calories) continue;
 
       if (n.fat !== a.fat) {
         planchers++;
@@ -222,7 +263,16 @@ describe("computeCalibration : parite", () => {
     return d.toISOString().slice(0, 10);
   };
 
-  test("sur 100 historiques generes", () => {
+  /**
+   * L'estimation elle-meme est inchangee. Ce qui est AJOUTE, c'est la
+   * couverture du journal : sur combien des jours de la fenetre le client
+   * a reellement note quelque chose.
+   *
+   * Sans cette information, il etait impossible de distinguer « cette
+   * personne mange peu » de « cette personne note peu ». Les deux donnent
+   * la meme moyenne, et seule la seconde est une erreur de mesure.
+   */
+  test("l'estimation reste identique a l'ancienne version", () => {
     const hasard = generateur(777);
     for (let i = 0; i < 100; i++) {
       const nbJours = Math.floor(hasard() * 20);
@@ -235,12 +285,45 @@ describe("computeCalibration : parite", () => {
         weightKg: Math.round((60 + hasard() * 40) * 10) / 10
       }));
 
-      assert.deepEqual(
-        neuf.computeCalibration(pesees, journal, 28),
-        plat(ancien.computeCalibration(pesees, journal, 28)),
-        "divergence sur un historique de " + nbJours + " jours et " + pesees.length + " pesees"
-      );
+      const a = plat(ancien.computeCalibration(pesees, journal, 28));
+      const n = neuf.computeCalibration(pesees, journal, 28);
+      const contexte = "historique de " + nbJours + " jours et " + pesees.length + " pesees";
+
+      if (a === null) {
+        assert.equal(n, null, "estimation produite la ou l'ancienne se taisait : " + contexte);
+        continue;
+      }
+
+      // Champ par champ : les anciens doivent etre intacts.
+      for (const champ of ["estimate", "days", "loggedDaysCount"]) {
+        assert.equal(n[champ], a[champ], `${champ} a change — ${contexte}`);
+      }
+      assert.equal(n.couverture, Math.round((n.loggedDaysCount / 28) * 100) / 100, contexte);
+      assert.equal(n.fiable, n.couverture >= 0.8, contexte);
     }
+  });
+
+  test("un journal a trous se declare non fiable", () => {
+    // 10 jours notes sur 28 : la moyenne decrit ce qui a ete note, pas ce
+    // qui a ete mange. C'est le mecanisme qui a fait tomber une cliente a
+    // 1320 kcal par jour.
+    const journal = Array.from({ length: 10 }, (_, j) => ({ date: jour(j), calories: 1500 }));
+    const pesees = [
+      { date: jour(27), weightKg: 71 },
+      { date: jour(0), weightKg: 71 }
+    ];
+    const r = neuf.computeCalibration(pesees, journal, 28);
+    assert.equal(r.fiable, false);
+    assert.ok(r.couverture < 0.5, "couverture : " + r.couverture);
+  });
+
+  test("un journal complet se declare fiable", () => {
+    const journal = Array.from({ length: 26 }, (_, j) => ({ date: jour(j), calories: 2200 }));
+    const pesees = [
+      { date: jour(27), weightKg: 71 },
+      { date: jour(0), weightKg: 71 }
+    ];
+    assert.equal(neuf.computeCalibration(pesees, journal, 28).fiable, true);
   });
 });
 

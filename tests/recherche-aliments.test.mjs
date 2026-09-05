@@ -41,8 +41,31 @@ const PRODUIT_OFF = {
 };
 
 describe("conversion d'une fiche Open Food Facts", () => {
-  test("elle concorde avec l'application actuelle", () => {
-    assert.deepEqual({ ...convertirProduitOFF(PRODUIT_OFF) }, { ...legacy.mapOFFProduct(PRODUIT_OFF) });
+  /**
+   * DIVERGENCE VOLONTAIRE : la conversion ajoute « fibres100 », absent de
+   * l'application d'origine qui ne suivait pas les fibres. Tout le reste
+   * doit rester identique — c'est ce que verifie ce test, champ par champ,
+   * plutot que par une egalite globale qui ne dirait plus rien.
+   */
+  const SANS_FIBRES = (produit) => {
+    const { fibres100, ...reste } = produit;
+    return reste;
+  };
+
+  test("elle concorde avec l'application actuelle, fibres mises a part", () => {
+    assert.deepEqual(SANS_FIBRES(convertirProduitOFF(PRODUIT_OFF)), { ...legacy.mapOFFProduct(PRODUIT_OFF) });
+  });
+
+  test("les fibres sont reprises quand la fiche les donne", () => {
+    const avec = { ...PRODUIT_OFF, nutriments: { ...PRODUIT_OFF.nutriments, fiber_100g: 2.7 } };
+    assert.equal(convertirProduitOFF(avec).fibres100, 2.7);
+  });
+
+  test("une fiche sans fibres donne null, jamais zero", () => {
+    // La plupart des fiches Open Food Facts ne renseignent pas les fibres.
+    // Ecrire 0 affirmerait que le produit n'en contient aucune, et le total
+    // du jour du client serait faussement bas.
+    assert.equal(convertirProduitOFF(PRODUIT_OFF).fibres100, null);
   });
 
   test("le nom francais est prefere", () => {
