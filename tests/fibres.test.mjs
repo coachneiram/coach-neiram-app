@@ -17,7 +17,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { FIBRES_PAR_1000_KCAL, fibresPour, mentionEtat, objectifFibres, totalFibres } from "../app/src/lib/fibres.js";
+import {
+  FIBRES_PAR_1000_KCAL,
+  HABITUDES_PESEE,
+  fibresPour,
+  mentionEtat,
+  objectifFibres,
+  totalFibres,
+  trierSelonPesee
+} from "../app/src/lib/fibres.js";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE = join(ICI, "..");
@@ -300,5 +308,111 @@ describe("etat cru / cuit", () => {
     assert.equal(mentionEtat("telquel"), null);
     assert.equal(mentionEtat(null), null);
     assert.equal(mentionEtat(undefined), null);
+  });
+});
+
+/**
+ * Habitude de pesee : cru ou cuit.
+ *
+ * CONSTAT EN PRODUCTION. Sur « pates », « riz » et « lentilles », la fiche
+ * CUITE sortait en premier ; sur « quinoa » et « boulgour », c'etait la
+ * fiche CRUE. L'ordre etait celui du catalogue, donc arbitraire — un client
+ * ne pouvait prendre aucune habitude fiable.
+ *
+ * Une cliente qui pese cru et prend le premier resultat loguait 126 kcal
+ * pour 288 reels sur ses pates. Sur trois feculents d'une journee, 450 kcal
+ * non comptes.
+ *
+ * La correction n'est pas de choisir un ordre a sa place — les deux facons
+ * de peser sont legitimes — mais de lui demander une fois comment il pese.
+ */
+describe("habitude de pesee", () => {
+  const R = (name, etat) => ({ name, etat });
+  const LISTE = [R("Pâtes cuites", "cuit"), R("Pâtes crues", "cru"), R("Huile", "telquel"), R("Sel", null)];
+
+  test("sans preference, l'ordre d'origine est intact", () => {
+    for (const h of [null, undefined, "", "autre"]) {
+      assert.deepEqual(trierSelonPesee(LISTE, h), LISTE, String(h));
+    }
+  });
+
+  test("le client qui pese cru voit les fiches crues en premier", () => {
+    assert.equal(trierSelonPesee(LISTE, "cru")[0].name, "Pâtes crues");
+  });
+
+  test("le client qui pese cuit voit les fiches cuites en premier", () => {
+    assert.equal(trierSelonPesee(LISTE, "cuit")[0].name, "Pâtes cuites");
+  });
+
+  test("aucun resultat n'est perdu au passage", () => {
+    for (const h of ["cru", "cuit"]) {
+      const tries = trierSelonPesee(LISTE, h);
+      assert.equal(tries.length, LISTE.length, h);
+      for (const r of LISTE) assert.ok(tries.includes(r), `${r.name} disparu avec « ${h} »`);
+    }
+  });
+
+  test("l'ordre de pertinence est preserve a l'interieur de chaque groupe", () => {
+    // Le tri departage des egalites, il ne remplace pas la recherche.
+    const liste = [R("Riz cru", "cru"), R("Riz complet cru", "cru"), R("Riz cuit", "cuit")];
+    assert.deepEqual(
+      trierSelonPesee(liste, "cru").map((r) => r.name),
+      ["Riz cru", "Riz complet cru", "Riz cuit"]
+    );
+  });
+
+  test("un aliment sans etat n'est jamais relegue derriere", () => {
+    // Le sel ou l'huile n'ont pas de piege cru/cuit : les faire descendre
+    // pour rien degraderait la recherche.
+    const liste = [R("Sel", null), R("Riz cuit", "cuit")];
+    assert.equal(trierSelonPesee(liste, "cuit")[0].name, "Riz cuit");
+    assert.equal(trierSelonPesee(liste, "cru")[0].name, "Sel");
+  });
+
+  test("une liste vide ne leve pas", () => {
+    for (const v of [[], null, undefined]) assert.deepEqual(trierSelonPesee(v, "cru"), v === null || v === undefined ? [] : []);
+  });
+
+  test("les trois choix sont proposes, « sans préférence » en premier", () => {
+    assert.deepEqual(HABITUDES_PESEE.map((h) => h.id), ["", "cru", "cuit"]);
+  });
+});
+
+/**
+ * Chaine de branchement de l'habitude de pesee.
+ *
+ * Le tri est teste unitairement, mais un tri correct branche nulle part ne
+ * sert a rien. Deux bugs de cette session etaient exactement de cette
+ * nature : les deux cotes justes, le raccord faux, et aucun test unitaire
+ * capable de le voir.
+ *
+ * Ce test relit les fichiers et verifie que le reglage du profil arrive
+ * bien jusqu'a la recherche, maillon par maillon.
+ */
+describe("branchement de l'habitude de pesee", () => {
+  const lire = (chemin) => readFileSync(join(RACINE, chemin), "utf8");
+
+  test("le reglage est ecrit dans le profil sous « weighsStaples »", () => {
+    const champs = lire("app/src/ecrans/ChampsProfil.jsx");
+    assert.match(champs, /set\(\{ weighsStaples: e\.target\.value \}\)/);
+    assert.match(champs, /HABITUDES_PESEE/);
+  });
+
+  test("le journal transmet le reglage a la fenetre d'ajout", () => {
+    assert.match(lire("app/src/ecrans/Journal.jsx"), /habitudePesee=\{profile\?\.weighsStaples\}/);
+  });
+
+  test("la fenetre d'ajout le transmet a la recherche", () => {
+    const ajout = lire("app/src/ecrans/AjoutAliment.jsx");
+    assert.match(ajout, /habitudePesee\b/, "le parametre n'est pas recu");
+    assert.match(ajout, /<RechercheAliment[^>]*habitudePesee=\{habitudePesee\}/s);
+  });
+
+  test("la recherche le passe reellement au tri", () => {
+    assert.match(
+      lire("app/src/ecrans/RechercheAliment.jsx"),
+      /chercherAliments\(q\.trim\(\), undefined, habitudePesee\)/
+    );
+    assert.match(lire("app/src/lib/recherche-aliments.js"), /trierSelonPesee\(resultats, habitudePesee\)/);
   });
 });

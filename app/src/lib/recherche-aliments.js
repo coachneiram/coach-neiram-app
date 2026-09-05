@@ -20,6 +20,7 @@
  */
 
 import { round } from "./dates.js";
+import { trierSelonPesee } from "./fibres.js";
 
 /** Champs demandes a Open Food Facts. */
 const CHAMPS_OFF = "code,product_name,product_name_fr,brands,nutriments,serving_quantity";
@@ -82,7 +83,7 @@ export function chercherLocalement(requete, env = globalThis) {
  * Les doublons sont ecartes sur le nom normalise : un aliment present dans
  * les deux sources n'apparait qu'une fois, dans sa version locale.
  */
-export async function chercherAliments(requete, env = globalThis) {
+export async function chercherAliments(requete, env = globalThis, habitudePesee = null) {
   const texte = String(requete || "").trim();
   if (!texte) return [];
 
@@ -114,7 +115,7 @@ export async function chercherAliments(requete, env = globalThis) {
       .trim();
 
   const vus = new Set();
-  return [...locaux, ...distants]
+  const resultats = [...locaux, ...distants]
     .filter((p) => p.kcal100 != null)
     .filter((p) => {
       const cle = normaliser(p.name);
@@ -122,6 +123,11 @@ export async function chercherAliments(requete, env = globalThis) {
       vus.add(cle);
       return true;
     });
+
+  // Le client pese-t-il ses feculents crus ou cuits ? Les fiches qui
+  // correspondent a son habitude remontent : sans cela, il prend le
+  // premier resultat, et l'ordre du catalogue decide a sa place.
+  return trierSelonPesee(resultats, habitudePesee);
 }
 
 /**
