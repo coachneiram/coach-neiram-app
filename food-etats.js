@@ -69,7 +69,14 @@
     "cn-b-haricot-plat"
   ];
 
-  /* Deja cuits, meme si le nom ne le dit pas. */
+  /* Deja cuits, meme si le nom ne le dit pas.
+
+     Une cliente a resume le probleme mieux que moi : « ce qui est difficile
+     c'est de savoir si on doit peser cru ou cuit, je pense que c'est cru
+     pour tout ». C'est faux, et c'est justement le piege : un plat cuisine
+     ou une viande rotie se pesent dans l'assiette, un blanc de poulet ou du
+     riz se pesent avant cuisson. Sans mention, personne ne peut deviner
+     lequel est lequel. */
   const CUITS = [
     "cn-p-x-oeuf-dur",
     "cn-p-x-oeuf-plat",
@@ -78,8 +85,14 @@
     "cn-fr-x-pdt-four",
     "cn-r-steak-fries",
     "cn-r-carbonara",
-    "cn-r-bolognese"
+    "cn-r-bolognese",
+    "cn-p-chicken-roast",
+    "cn-fr-x-pdt-vapeur",
+    "cn-fr-x-pdt-rissolees"
   ];
+
+  /* Aliments crus supplementaires, moins evidents que les viandes. */
+  const CRUS_SUPPLEMENTAIRES = ["cn-p-chicken-mince", "cn-v-potato", "cn-fr-pomme-terre"];
 
   /* Facteur de conversion cru -> cuit, en poids.
      100 g de riz cru donnent environ 250 g de riz cuit ; 100 g de poulet
@@ -105,7 +118,7 @@
     const trouve = PAR_NOM.find(([re]) => re.test(item.product_name_fr));
     if (trouve) etats[item.code] = trouve[1];
   }
-  for (const code of CRUS) etats[code] = "cru";
+  for (const code of CRUS.concat(CRUS_SUPPLEMENTAIRES)) etats[code] = "cru";
   for (const code of CUITS) etats[code] = "cuit";
   for (const code of TEL_QUEL) etats[code] = "telquel";
 
