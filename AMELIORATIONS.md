@@ -71,3 +71,13 @@ plutôt que d'y inscrire des valeurs incohérentes.
 
 **Piste.** Ajouter un champ `fiber_100g` et l'exclure du calcul
 énergétique.
+
+## Nettoyer l'ancienne application après la bascule (CLEAN-02)
+
+La bascule du 05/09/2026 a mis l'application Vite en production. `index.html`
+et ses composants dupliqués (`EntrainementsTabLegacy`) restent dans le dépôt :
+ils ne sont plus servis, mais ils sont le chemin de retour en arrière.
+
+À supprimer une fois la bascule stable depuis quelques jours d'usage réel —
+pas avant. Tant que personne n'a utilisé la nouvelle version un week-end
+complet, le retour en arrière vaut plus que la propreté du dépôt.

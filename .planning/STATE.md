@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: in_progress
 progress:
   total_phases: 9
-  completed_phases: 6
+  completed_phases: 8
   total_plans: 27
   completed_plans: 19
-  percent: 62
+  percent: 89
 ---
 
 # Project State
@@ -18,11 +18,11 @@ See: .planning/PROJECT.md (updated 2026-09-01)
 **Core value:** Permettre à un client de suivre sa nutrition, ses entraînements et sa
 progression au quotidien, et à son coach de recevoir automatiquement les signaux de
 suivi, sans jamais casser l'application en production.
-**Current focus:** Phases 1, 2, 3, 4, 6 et 7 terminées et en production. Phase 5 (migration écran par écran) à mi-parcours : 4 écrans sur 8 portés, et TOUTE la logique de calcul risquée portée et vérifiée par parité contre l'original. Restent les phases 5 (écrans restants), 8 (bascule) et 9 (nettoyage), à faire avec l'utilisateur.
+**Current focus:** Bascule faite le 05/09/2026 : l'application Vite est en production, vérifiée sur téléphone, mode hors ligne compris. Reste la seconde moitié de la Phase 9 (CLEAN-02, suppression des composants dupliqués dans `index.html`), à faire une fois la bascule stable depuis quelques jours.
 
 ## Current Position
 
-Phases terminées et en production : 1, 2, 3, 4, 6, 7
+Phases terminées et en production : 1, 2, 3, 4, 5, 6, 7, 8. Phase 9 à moitié faite (CLEAN-01).
 Phase 5 : à mi-parcours
 Restent : 5 (écrans restants), 8 (bascule), 9 (nettoyage)
 Status: In progress

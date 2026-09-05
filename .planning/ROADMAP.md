@@ -17,10 +17,10 @@ car elles réduisent le risque et donnent un filet de sécurité pour tout ce qu
 - [x] **Phase 2: Tests et infrastructure de développement** - Filet de sécurité (tests) sur les fonctionnalités critiques avant de toucher à l'architecture
 - [x] **Phase 3: Bootstrap Vite en parallèle** - Nouvel outillage à côté de l'existant, zéro impact sur la prod
 - [x] **Phase 4: Extraction progressive des couches communes** - Stockage, IA, design tokens extraits en modules testés
-- [ ] **Phase 5: Migration écran par écran** - Chaque tab migré individuellement, legacy toujours disponible en secours
+- [x] **Phase 5: Migration écran par écran** - Chaque tab migré individuellement, legacy toujours disponible en secours
 - [x] **Phase 6: PWA complète** - Service worker et usage offline réel
-- [ ] **Phase 7: GitHub Actions + migration GitHub Pages vers le build Vite** - Build automatisé, même geste de déploiement pour l'utilisateur
-- [ ] **Phase 8: Bascule définitive** - `index.html` legacy remplacé par l'app Vite en production
+- [x] **Phase 7: GitHub Actions + migration GitHub Pages vers le build Vite** - Build automatisé, même geste de déploiement pour l'utilisateur
+- [x] **Phase 8: Bascule définitive** - Faite le 05/09/2026. Le workflow publie `app/dist`. `index.html` reste dans le dépôt, intact, pour un retour en arrière d'un seul commit.
 - [~] **Phase 9: Nettoyage et nouvelles fonctionnalités** - Scripts Python supprimés (CLEAN-01). CLEAN-02 (composants dupliqués dans `index.html`) attend la Phase 8 : `index.html` est l'application que les clients utilisent aujourd'hui.
 
 ## Phase Details
