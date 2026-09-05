@@ -82,7 +82,18 @@ const A_EXPOSER = [
   "foodRecoOrder",
   "sortFoodsForGoal",
   "FOOD_DB",
-  "FOOD_CATS"
+  "FOOD_CATS",
+  // Programme hebdomadaire, semaines difficiles et bilans.
+  "weekPlanStatus",
+  "weekPlanSummary",
+  "hardWeekOf",
+  "isHardWeek",
+  "HARD_WEEK_REASONS",
+  "computeWeekStats",
+  "computeMonthStats",
+  "getWeekRange",
+  "clamp",
+  "fmtWeekShort"
 ];
 
 function extraireScriptApplicatif(html) {
