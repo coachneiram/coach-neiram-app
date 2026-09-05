@@ -5,6 +5,11 @@
  * deux versions restent indistinguables pendant la migration.
  */
 
+/* Repris de GLOBAL_CSS : sans lui, les paddings ne tombent pas pareil. */
+* {
+  box-sizing: border-box;
+}
+
 html,
 body {
   margin: 0;
