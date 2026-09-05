@@ -63,7 +63,20 @@ const A_EXPOSER = [
   "parseISO",
   "num",
   "avg",
-  "round"
+  "round",
+  // Creneaux : le calcul le plus lourd de consequences de l'application,
+  // compare ligne a ligne avec sa version migree.
+  "computeSlotWeek",
+  "slotWeekSummary",
+  "slotAdherence",
+  "recentMissedSlots",
+  "recentShiftedSlots",
+  "getMonday",
+  "getWeekKey",
+  "minutesOf",
+  "slotDayIndex",
+  "slotDayLabel",
+  "normalizeSlots"
 ];
 
 function extraireScriptApplicatif(html) {
