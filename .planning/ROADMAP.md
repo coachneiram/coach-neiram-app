@@ -21,7 +21,7 @@ car elles réduisent le risque et donnent un filet de sécurité pour tout ce qu
 - [x] **Phase 6: PWA complète** - Service worker et usage offline réel
 - [ ] **Phase 7: GitHub Actions + migration GitHub Pages vers le build Vite** - Build automatisé, même geste de déploiement pour l'utilisateur
 - [ ] **Phase 8: Bascule définitive** - `index.html` legacy remplacé par l'app Vite en production
-- [ ] **Phase 9: Nettoyage et nouvelles fonctionnalités** - Suppression du code legacy, reprise du développement fonctionnel
+- [~] **Phase 9: Nettoyage et nouvelles fonctionnalités** - Scripts Python supprimés (CLEAN-01). CLEAN-02 (composants dupliqués dans `index.html`) attend la Phase 8 : `index.html` est l'application que les clients utilisent aujourd'hui.
 
 ## Phase Details
 
