@@ -21,7 +21,15 @@ import { dirname, join } from "node:path";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE = join(ICI, "..");
-const DOSSIER_ECRANS = join(RACINE, "app", "src", "ecrans");
+/**
+ * Les primitives portent elles aussi du texte visible (« Points forts »,
+ * « Actions pour la semaine prochaine »). Les laisser hors du controle
+ * revenait a proteger les ecrans et pas ce qu'ils affichent.
+ */
+const DOSSIERS_SURVEILLES = [
+  join(RACINE, "app", "src", "ecrans"),
+  join(RACINE, "app", "src", "ui")
+];
 
 /** index.html est minifie : les accents y sont echappes en \xNN / \uNNNN. */
 const LEGACY = readFileSync(join(RACINE, "index.html"), "utf8")
@@ -44,9 +52,7 @@ function phrasesAffichees(source) {
    * faux fragment courant sur plusieurs lignes de JavaScript.
    */
   const estDuTexte = (t) =>
-    t.includes(" ") &&
-    t.length >= 15 &&
-    !/[={}`;\\|]|\/\/|\/>|:\/\//.test(t) &&
+    !/[={}`;\\|]|\/\/|\/>|:\/\/|&&|\|\|/.test(t) &&
     // Un acces a une propriete (« seance.rpe ») trahit du code, pas du texte :
     // en francais, un point est toujours suivi d'une espace.
     !/\w\.\w/.test(t);
@@ -58,35 +64,59 @@ function phrasesAffichees(source) {
    */
   const aplatir = (t) => t.replace(/\s+/g, " ").trim();
 
-  for (const m of source.matchAll(/>([^<>{}]{15,})</g)) {
+  /*
+   * Texte libre entre balises JSX, meme court : « Aujourd'hui » ou
+   * « Points forts » sont des libelles que le client lit tous les jours.
+   * Un seuil de longueur les laissait passer.
+   */
+  for (const m of source.matchAll(/>([^<>{}]{4,})</g)) {
     const t = aplatir(m[1]);
-    if (estDuTexte(t)) phrases.add(t);
+    if (t && estDuTexte(t)) phrases.add(t);
   }
+
+  /*
+   * Chaines longues : messages et phrases completes.
+   */
   for (const m of source.matchAll(/"([^"\\\n]{15,})"/g)) {
     const t = aplatir(m[1]);
+    if (t.includes(" ") && estDuTexte(t)) phrases.add(t);
+  }
+
+  /*
+   * Chaines courtes portees par une cle qui designe explicitement du texte
+   * affiche. Les viser nommement evite d'avoir a deviner, a partir de sa
+   * seule forme, si « center » est un libelle ou une valeur de style.
+   */
+  for (const m of source.matchAll(/\b(?:titre|label|title|message|ctaLabel|placeholder)\s*:\s*"([^"\\\n]{4,})"/g)) {
+    const t = aplatir(m[1]);
     if (estDuTexte(t)) phrases.add(t);
   }
+
   return [...phrases];
 }
 
-const ecrans = readdirSync(DOSSIER_ECRANS).filter((f) => f.endsWith(".jsx"));
+const fichiers = DOSSIERS_SURVEILLES.flatMap((dossier) =>
+  readdirSync(dossier)
+    .filter((f) => f.endsWith(".jsx"))
+    .map((f) => ({ nom: f, chemin: join(dossier, f) }))
+);
 
 describe("chaque ecran migre reprend les textes de l'application actuelle", () => {
   test("au moins un ecran est migre", () => {
-    assert.ok(ecrans.length > 0, "aucun ecran dans app/src/ecrans/");
+    assert.ok(fichiers.length > 0, "aucun fichier surveillé");
   });
 
-  for (const fichier of ecrans) {
-    test(fichier, () => {
-      const source = readFileSync(join(DOSSIER_ECRANS, fichier), "utf8");
+  for (const { nom, chemin } of fichiers) {
+    test(nom, () => {
+      const source = readFileSync(chemin, "utf8");
       const phrases = phrasesAffichees(source);
-      assert.ok(phrases.length > 0, "aucun texte detecte dans " + fichier);
+      if (!phrases.length) return; // fichier purement structurel
 
       const derives = phrases.filter((p) => !LEGACY.includes(p));
       assert.deepEqual(
         derives,
         [],
-        "textes absents de index.html (reformules au passage de la migration ?) dans " + fichier
+        "textes absents de index.html (reformules au passage de la migration ?) dans " + nom
       );
     });
   }
