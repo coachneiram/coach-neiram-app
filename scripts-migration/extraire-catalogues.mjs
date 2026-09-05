@@ -39,7 +39,10 @@ const TABLES = {
   TRAINING_MODES: "Ou le client fait ses seances",
   COACHING_MODES: "Presentiel ou coaching a distance",
   SHOPPING_LIST: "Liste de courses par rayon",
-  SEANCE_TEMPLATES: "Seances sans materiel preparees par le coach"
+  SEANCE_TEMPLATES: "Seances sans materiel preparees par le coach",
+  ROLE_PORTIONS: "Portion de reference par role, en grammes",
+  ROLE_LABELS: "Libelle affiche de chaque role",
+  ROLE_PREFS: "Aliments preferes par role et par objectif, pour composer une idee de repas"
 };
 
 const corps = Object.entries(TABLES)

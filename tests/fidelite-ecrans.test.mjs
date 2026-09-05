@@ -81,6 +81,10 @@ function phrasesAffichees(source) {
     // Un acces a une propriete (« seance.rpe ») trahit du code, pas du texte :
     // en francais, un point est toujours suivi d'une espace.
     !/\w\.\w/.test(t) &&
+    // Un identifiant colle a une parenthese ouvrante (« setBrouillon( ») est
+    // un appel de fonction. En francais, une parenthese ouvrante est toujours
+    // precedee d'une espace, donc aucune phrase affichee ne ressemble a cela.
+    !/\w\(/.test(t) &&
     // Au moins trois lettres : sans cela, une queue d'expression comme
     // « 0 ? ( » passait pour du texte affiche.
     (t.match(/[A-Za-zÀ-ÿ]/g) || []).length >= 3;

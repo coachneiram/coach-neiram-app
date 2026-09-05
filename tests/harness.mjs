@@ -141,6 +141,11 @@ const A_EXPOSER = [
   "presetTotals",
   "PORTION_STEPS",
   "mapOFFProduct",
+  "ROLE_PORTIONS",
+  "ROLE_LABELS",
+  "ROLE_PREFS",
+  "shoppingFlat",
+  "mealIdeaFor",
   "extractJsonObject",
   "stripJsonFences",
   "drawToDataUrl"

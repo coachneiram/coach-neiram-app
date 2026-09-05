@@ -2884,3 +2884,118 @@ export const SEANCE_TEMPLATES = [
     ]
   }
 ];
+
+/** Portion de reference par role, en grammes. */
+export const ROLE_PORTIONS = {
+  "proteine": 120,
+  "glucide": 70,
+  "legume": 200,
+  "lipide": 10,
+  "fruit": 120
+};
+
+/** Libelle affiche de chaque role. */
+export const ROLE_LABELS = {
+  "proteine": "protéine",
+  "glucide": "glucides",
+  "legume": "légumes",
+  "lipide": "lipides",
+  "fruit": "fruit"
+};
+
+/** Aliments preferes par role et par objectif, pour composer une idee de repas. */
+export const ROLE_PREFS = {
+  "proteine": {
+    "perte": [
+      "Filet de cabillaud / colin",
+      "Blanc de poulet",
+      "Blanc de dinde",
+      "Crevettes",
+      "Thon en boîte (eau)",
+      "Skyr nature",
+      "Tofu ferme",
+      "Lentilles cuites (bocal)",
+      "Fromage blanc 0%"
+    ],
+    "prise": [
+      "Blanc de poulet",
+      "Viande hachée 5%",
+      "Saumon",
+      "Œufs (bio de préférence)",
+      "Tempeh",
+      "Pois chiches",
+      "Yaourt grec nature"
+    ],
+    "default": [
+      "Blanc de poulet",
+      "Saumon",
+      "Œufs (bio de préférence)",
+      "Tofu ferme",
+      "Thon en boîte (eau)",
+      "Lentilles cuites (bocal)",
+      "Skyr nature"
+    ]
+  },
+  "collation": {
+    "default": [
+      "Skyr nature",
+      "Yaourt grec nature",
+      "Fromage blanc 0%",
+      "Yaourt nature / lait de coco",
+      "Œufs (bio de préférence)"
+    ]
+  },
+  "glucide": {
+    "perte": [
+      "Patates douces",
+      "Quinoa",
+      "Lentilles sèches",
+      "Riz basmati / complet",
+      "Sarrasin"
+    ],
+    "prise": [
+      "Riz basmati / complet",
+      "Pâtes complètes",
+      "Flocons d'avoine",
+      "Pain complet",
+      "Semoule"
+    ],
+    "default": [
+      "Riz basmati / complet",
+      "Quinoa",
+      "Patates douces",
+      "Pâtes complètes",
+      "Sarrasin"
+    ]
+  },
+  "legume": {
+    "default": [
+      "Brocolis",
+      "Courgettes",
+      "Haricots verts",
+      "Épinards",
+      "Poivrons",
+      "Champignons",
+      "Tomates"
+    ]
+  },
+  "lipide": {
+    "perte": [
+      "Huile d'olive vierge extra",
+      "Avocats",
+      "Olives"
+    ],
+    "prise": [
+      "Amandes non salées",
+      "Beurre de cacahuète naturel",
+      "Huile d'olive vierge extra",
+      "Avocats"
+    ],
+    "default": [
+      "Huile d'olive vierge extra",
+      "Avocats",
+      "Amandes non salées",
+      "Graines de courge"
+    ]
+  }
+};
