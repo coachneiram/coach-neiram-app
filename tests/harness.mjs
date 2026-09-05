@@ -179,7 +179,13 @@ const A_EXPOSER = [
   "mealIdeaFor",
   "extractJsonObject",
   "stripJsonFences",
-  "drawToDataUrl"
+  "drawToDataUrl",
+
+  // bilan hebdomadaire envoye au coach
+  "buildWeeklyReportHTML",
+  "shareWeeklyReport",
+  "escapeHtml",
+  "slugName",
 ];
 
 function extraireScriptApplicatif(html) {
