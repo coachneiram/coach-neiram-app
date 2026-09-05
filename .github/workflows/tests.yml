@@ -1,0 +1,34 @@
+# Lance la suite de tests a chaque envoi de code.
+#
+# Sans risque : ce workflow ne deploie rien et ne touche pas au site. Il
+# signale simplement, par une croix rouge sur le commit, qu'une modification
+# a casse quelque chose — avant que les clients ne s'en apercoivent.
+
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Application et proxy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Aucune dependance a installer : la suite repose sur le lanceur de
+      # tests integre a Node.
+      - name: Tests de l'application
+        run: node --test tests/*.test.mjs
+
+      - name: Tests du proxy Cloudflare
+        run: node worker/test-worker.mjs

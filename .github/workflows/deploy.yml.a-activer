@@ -1,0 +1,82 @@
+# ─────────────────────────────────────────────────────────────────────
+# NE PAS ACTIVER SANS AVOIR LU worker/../DEPLOIEMENT.md
+# ─────────────────────────────────────────────────────────────────────
+#
+# Ce fichier porte volontairement l'extension « .a-activer » : GitHub ne
+# l'execute pas tant qu'il ne s'appelle pas « deploy.yml ».
+#
+# Il remplace le mode « Deploy from a branch » de GitHub Pages par un
+# deploiement pilote ici. Tant qu'il n'est pas active, le site continue
+# d'etre servi comme aujourd'hui.
+#
+# Point de conception important : dans un premier temps, ce workflow publie
+# la RACINE DU DEPOT, exactement ce que Pages sert deja. Changer le mecanisme
+# de deploiement et changer ce qui est deploye sont deux risques distincts ;
+# les separer permet de verifier le premier sans rien casser. Le passage au
+# build Vite se fera plus tard, en modifiant seulement le chemin publie.
+
+name: Deploiement
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+# Autorisations minimales necessaires au deploiement de Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un seul deploiement a la fois ; on n'interrompt pas celui en cours.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Tests avant deploiement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Tests de l'application
+        run: node --test tests/*.test.mjs
+      - name: Tests du proxy
+        run: node worker/test-worker.mjs
+
+  deploiement:
+    name: Publication sur GitHub Pages
+    # Un echec des tests empeche la mise en ligne. C'est tout l'interet.
+    needs: tests
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publication.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparer Pages
+        uses: actions/configure-pages@v5
+
+      - name: Rassembler les fichiers a publier
+        run: |
+          mkdir -p _site
+          # On publie ce que Pages sert deja : l'application et ses ressources.
+          cp index.html manifest.json sw.js _site/
+          cp food-*.js _site/
+          cp *.png _site/
+          # Les dossiers de developpement n'ont rien a faire en ligne.
+          echo "Contenu publie :"
+          ls -la _site
+
+      - name: Deposer l'artefact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Publier
+        id: publication
+        uses: actions/deploy-pages@v4
