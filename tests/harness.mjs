@@ -100,7 +100,9 @@ const A_EXPOSER = [
   "epley1RM",
   "est1RMFromSet",
   "chargeFrom1RM",
-  "RPE_CHART"
+  "RPE_CHART",
+  // Lecture des bilans rediges par l'IA.
+  "parseBilan"
 ];
 
 function extraireScriptApplicatif(html) {
