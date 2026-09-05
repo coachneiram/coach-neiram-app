@@ -42,7 +42,15 @@ const TABLES = {
   SEANCE_TEMPLATES: "Seances sans materiel preparees par le coach",
   ROLE_PORTIONS: "Portion de reference par role, en grammes",
   ROLE_LABELS: "Libelle affiche de chaque role",
-  ROLE_PREFS: "Aliments preferes par role et par objectif, pour composer une idee de repas"
+  ROLE_PREFS: "Aliments preferes par role et par objectif, pour composer une idee de repas",
+  ROUTINE_COLORS: "Couleurs proposees pour identifier une seance type",
+  PAIN_ZONES: "Zones de douleur proposees a la fin d'une seance",
+  PROGRESSION_RULES: "Progression de charge deduite du RPE de la derniere seance",
+  CARDIO_FIELD_DEFS: "Champs saisissables pour un exercice cardio",
+  DEFAULT_CARDIO_FIELDS: "Champs cardio affiches par defaut",
+  EXERCISE_LIBRARY: "Bibliotheque d'exercices, par groupe",
+  PL_SET_TYPES: "Types de series en force athletique",
+  EXERCISE_VIDEOS: "Video de demonstration par exercice, indexee par cle d'exercice"
 };
 
 const corps = Object.entries(TABLES)

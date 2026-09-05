@@ -2999,3 +2999,2510 @@ export const ROLE_PREFS = {
     ]
   }
 };
+
+/** Couleurs proposees pour identifier une seance type. */
+export const ROUTINE_COLORS = [
+  "#2DD4BF",
+  "#9F8FEF",
+  "#4ADE80",
+  "#F0A155",
+  "#5B9FEF",
+  "#F0645A"
+];
+
+/** Zones de douleur proposees a la fin d'une seance. */
+export const PAIN_ZONES = [
+  "Cervicales",
+  "Épaule droite",
+  "Épaule gauche",
+  "Coude droit",
+  "Coude gauche",
+  "Poignet",
+  "Dos (haut)",
+  "Lombaires",
+  "Hanche droite",
+  "Hanche gauche",
+  "Genou droit",
+  "Genou gauche",
+  "Cheville",
+  "Autre"
+];
+
+/** Progression de charge deduite du RPE de la derniere seance. */
+export const PROGRESSION_RULES = [
+  {
+    "maxRpe": 6.5,
+    "pct": 0.05,
+    "label": "série facile"
+  },
+  {
+    "maxRpe": 7.5,
+    "pct": 0.04,
+    "label": "marge confortable"
+  },
+  {
+    "maxRpe": 8.5,
+    "pct": 0.025,
+    "label": "marge correcte"
+  },
+  {
+    "maxRpe": 9.25,
+    "pct": 0,
+    "label": "proche de la limite"
+  },
+  {
+    "maxRpe": 10,
+    "pct": -0.05,
+    "label": "à l'échec"
+  }
+];
+
+/** Champs saisissables pour un exercice cardio. */
+export const CARDIO_FIELD_DEFS = {
+  "durationMin": {
+    "label": "Min",
+    "ph": "min"
+  },
+  "speedKmh": {
+    "label": "km/h",
+    "ph": "km/h"
+  },
+  "inclinePct": {
+    "label": "Incl. %",
+    "ph": "%"
+  },
+  "level": {
+    "label": "Niveau",
+    "ph": "niv."
+  },
+  "distanceM": {
+    "label": "Dist. m",
+    "ph": "m"
+  }
+};
+
+/** Champs cardio affiches par defaut. */
+export const DEFAULT_CARDIO_FIELDS = [
+  "durationMin",
+  "speedKmh",
+  "inclinePct",
+  "level"
+];
+
+/** Bibliotheque d'exercices, par groupe. */
+export const EXERCISE_LIBRARY = [
+  {
+    "group": "Machines guidées — haut du corps",
+    "note": "Bibliothèque Coach Neiram — exercices courants en salle.",
+    "items": [
+      {
+        "name": "Développé poitrine machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé incliné machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Pec deck / écarté machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Tirage vertical poitrine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage horizontal assis",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Rowing machine convergente",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage vertical prise neutre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Pullover machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Développé épaules machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Élévations latérales machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Oiseau machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Curl biceps machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Extension triceps machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Tirage vertical unilatéral prise neutre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage haut (Technogym)",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage vertical supination",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage vertical unilatéral",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Machines guidées — bas du corps",
+    "note": "Amplitude confortable et exécution contrôlée.",
+    "items": [
+      {
+        "name": "Presse à cuisses",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Hack squat machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Leg extension",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Leg curl assis",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Leg curl allongé",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Hip thrust machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Abducteurs machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Adducteurs machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Mollets à la presse",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Mollets debout machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Leg extension unilatéral",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Mollets assis",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Pendulum",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "V Squat",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Presse à cuisses inclinée",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Belt squat",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Haltères / barre",
+    "note": "Charge à adapter au niveau du client et à la qualité d'exécution.",
+    "items": [
+      {
+        "name": "Développé couché haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé incliné haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé couché barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Développé incliné barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Développé militaire haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé militaire barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Élévations latérales haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Oiseau haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Rowing haltère un bras",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Rowing barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Soulevé de terre roumain",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Soulevé de terre trap bar",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 6
+        }
+      },
+      {
+        "name": "Squat goblet",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Squat barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Fentes marchées haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Fentes arrière haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Bulgarian split squat",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Hip thrust barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Curl biceps haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Curl marteau haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Extension triceps au-dessus de la tête",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Skull crushers barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Fentes unilatérales",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé épaules debout",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Rowing barre supination",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Rowing barre pronation",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Poulies / câbles",
+    "note": "Réglage selon la morphologie et l'objectif.",
+    "items": [
+      {
+        "name": "Chest press à la poulie",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Écarté poulie vis-à-vis",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Tirage vertical poulie",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Rowing poulie basse",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Face pull",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Élévation latérale poulie",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Curl poulie basse",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Curl poulie corde",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Extension triceps corde",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Extension triceps barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Pull-over à la poulie haute",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Woodchop à la poulie",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Pallof press",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Kickback fessier à la poulie",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Abduction hanche à la poulie",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Poulie vis-à-vis (position haute)",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Poulie vis-à-vis (position basse)",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Poulie vis-à-vis (position milieu)",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Curl marteau corde",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage horizontal unilatéral (poulie)",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage menton (poulie basse)",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage dos au sol",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      }
+    ]
+  },
+  {
+    "group": "Poids du corps / fonctionnel",
+    "note": "Réglage des répétitions ou du temps selon le niveau.",
+    "items": [
+      {
+        "name": "Burpees",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Pompes",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Pompes inclinées",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Pompes genoux",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Squats au poids du corps",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Squats tempo",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Fentes alternées",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Fentes arrière",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Step-up",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Squat jump",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Jumping jacks",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 30
+        }
+      },
+      {
+        "name": "Mountain climbers",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 30
+        }
+      },
+      {
+        "name": "Skater jumps",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Box jumps",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Dips sur banc",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Tractions",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 6
+        }
+      },
+      {
+        "name": "Tractions assistées",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Gainage planche",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 45,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Gainage latéral",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 30,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Dead bug",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Bird dog",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Glute bridge",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Hip thrust au poids du corps",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Crunchs",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Reverse crunch",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Russian twists",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 20
+        }
+      },
+      {
+        "name": "Superman",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Chaise contre le mur",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 45,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Dips assistées",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Pompes prise large",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Pompes prise serrée",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Traineau",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Montée sur pointe",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      }
+    ]
+  },
+  {
+    "group": "Cardio / Ergomètres",
+    "note": "Réglages indicatifs — à adapter au niveau et à l'objectif.",
+    "items": [
+      {
+        "name": "Marche inclinée (tapis)",
+        "mode": "cardio",
+        "fields": [
+          "durationMin",
+          "speedKmh",
+          "inclinePct"
+        ],
+        "defaults": {
+          "durationMin": 20,
+          "speedKmh": 5.5,
+          "inclinePct": 10
+        }
+      },
+      {
+        "name": "Course sur tapis",
+        "mode": "cardio",
+        "fields": [
+          "durationMin",
+          "speedKmh",
+          "inclinePct"
+        ],
+        "defaults": {
+          "durationMin": 20,
+          "speedKmh": 9,
+          "inclinePct": 1
+        }
+      },
+      {
+        "name": "Vélo droit / assis",
+        "mode": "cardio",
+        "fields": [
+          "durationMin",
+          "level"
+        ],
+        "defaults": {
+          "durationMin": 20,
+          "level": 8
+        }
+      },
+      {
+        "name": "Vélo RPM / spinning",
+        "mode": "cardio",
+        "fields": [
+          "durationMin",
+          "level"
+        ],
+        "defaults": {
+          "durationMin": 30,
+          "level": 10
+        }
+      },
+      {
+        "name": "Elliptique",
+        "mode": "cardio",
+        "fields": [
+          "durationMin",
+          "level"
+        ],
+        "defaults": {
+          "durationMin": 20,
+          "level": 8
+        }
+      },
+      {
+        "name": "Rameur (Skillrow)",
+        "mode": "cardio",
+        "fields": [
+          "durationMin",
+          "level",
+          "distanceM"
+        ],
+        "defaults": {
+          "durationMin": 15,
+          "level": 5
+        }
+      },
+      {
+        "name": "Rameur — distance",
+        "mode": "cardio",
+        "fields": [
+          "distanceM",
+          "durationMin"
+        ],
+        "defaults": {
+          "distanceM": 1000,
+          "durationMin": 5
+        }
+      },
+      {
+        "name": "Escalier (Climb)",
+        "mode": "cardio",
+        "fields": [
+          "durationMin",
+          "level"
+        ],
+        "defaults": {
+          "durationMin": 15,
+          "level": 7
+        }
+      },
+      {
+        "name": "Skillmill (tapis non motorisé)",
+        "mode": "cardio",
+        "fields": [
+          "durationMin",
+          "level"
+        ],
+        "defaults": {
+          "durationMin": 10,
+          "level": 5
+        }
+      },
+      {
+        "name": "Assault bike / Air bike",
+        "mode": "cardio",
+        "fields": [
+          "durationMin",
+          "level"
+        ],
+        "defaults": {
+          "durationMin": 10,
+          "level": 8
+        }
+      },
+      {
+        "name": "Corde à sauter",
+        "mode": "cardio",
+        "fields": [
+          "durationMin"
+        ],
+        "defaults": {
+          "durationMin": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Mobilité / activation",
+    "note": "Échauffement, récupération ou travail de mobilité selon le besoin.",
+    "items": [
+      {
+        "name": "Mobilité cheville contre mur",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 10
+        }
+      },
+      {
+        "name": "90/90 hanches",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Rotation thoracique quadrupédie",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Cat-cow",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Pont fessier activation",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Clamshell",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Monster walk",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Bird dog contrôlé",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Planche latérale courte",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 20,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Respiration diaphragmatique",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 60,
+          "repUnit": "sec"
+        }
+      }
+    ]
+  },
+  {
+    "group": "Échauffement / Warm-up",
+    "note": "À placer en début de séance. Général ou spécifique golf avant le travail principal.",
+    "items": [
+      {
+        "name": "Respiration diaphragmatique",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 60,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Marche dynamique",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 120,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Montées de genoux contrôlées",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 30
+        }
+      },
+      {
+        "name": "Talons-fesses contrôlés",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 30
+        }
+      },
+      {
+        "name": "Cercles de bras",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Cat-cow dynamique",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Rotation thoracique debout",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Squat poids du corps",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Fente arrière dynamique",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 6
+        }
+      },
+      {
+        "name": "World's Greatest Stretch dynamique",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 5
+        }
+      },
+      {
+        "name": "90/90 dynamique",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 6
+        }
+      },
+      {
+        "name": "Mobilité cheville dynamique",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Monster walk élastique",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Pallof press léger",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Rotations des épaules, bras tendus",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 30,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Cercles de bassin",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 30,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Chat / vache au sol",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Fentes marchées sur place",
+        "mode": "warmup",
+        "defaults": {
+          "sets": 1,
+          "reps": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Sans matériel — Bas du corps & gainage",
+    "note": "Coaching en ligne : aucun équipement nécessaire, à faire à la maison.",
+    "items": [
+      {
+        "name": "Pont fessier au sol",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 4,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Montées de genoux",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 1,
+          "reps": 30,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Élévations sur pointes de pieds",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Step-ups sur une marche",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Planche dynamique (coudes puis mains)",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 30,
+          "repUnit": "sec"
+        }
+      }
+    ]
+  },
+  {
+    "group": "Sans matériel — Haut du corps",
+    "note": "Coaching en ligne : aucun équipement nécessaire, à faire à la maison.",
+    "items": [
+      {
+        "name": "Rowing sous une table",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 4,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Dips sur chaise",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Élévations latérales (bouteilles pleines)",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Gainage bras tendus (touches d'épaule)",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 3,
+          "reps": 20
+        }
+      },
+      {
+        "name": "Extension thoracique au mur",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Sans matériel — Mobilité & récupération",
+    "note": "Coaching en ligne : à utiliser en séance de maintien ou après une mauvaise nuit.",
+    "items": [
+      {
+        "name": "Étirement fessier allongé",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 45,
+          "repUnit": "sec"
+        }
+      },
+      {
+        "name": "Ouverture thoracique au sol",
+        "mode": "pdc",
+        "defaults": {
+          "sets": 2,
+          "reps": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Force athlétique / powerlifting",
+    "plOnly": true,
+    "note": "Mouvements de compétition et variantes. Renseigne tes maxis pour calculer la charge à partir du %1RM.",
+    "items": [
+      {
+        "name": "Squat barre (compétition)",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 1,
+          "reps": 3,
+          "setType": "top",
+          "pct1rm": 87
+        }
+      },
+      {
+        "name": "Squat pause",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 3,
+          "setType": "travail",
+          "pct1rm": 70
+        }
+      },
+      {
+        "name": "Squat barre haute",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 5,
+          "setType": "travail",
+          "pct1rm": 70
+        }
+      },
+      {
+        "name": "Squat tempo",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 4,
+          "setType": "travail",
+          "pct1rm": 65
+        }
+      },
+      {
+        "name": "Box squat",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 3,
+          "setType": "travail",
+          "pct1rm": 72
+        }
+      },
+      {
+        "name": "Front squat",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 5,
+          "setType": "accessoire"
+        }
+      },
+      {
+        "name": "Développé couché (compétition)",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 1,
+          "reps": 3,
+          "setType": "top",
+          "pct1rm": 87
+        }
+      },
+      {
+        "name": "Développé couché pause",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 3,
+          "setType": "travail",
+          "pct1rm": 75
+        }
+      },
+      {
+        "name": "Spoto press",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 5,
+          "setType": "travail",
+          "pct1rm": 68
+        }
+      },
+      {
+        "name": "Développé couché prise serrée",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 6,
+          "setType": "accessoire"
+        }
+      },
+      {
+        "name": "Développé couché planche (board press)",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 4,
+          "setType": "accessoire"
+        }
+      },
+      {
+        "name": "Soulevé de terre (compétition)",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 1,
+          "reps": 2,
+          "setType": "top",
+          "pct1rm": 87
+        }
+      },
+      {
+        "name": "Soulevé de terre sumo",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 3,
+          "setType": "travail",
+          "pct1rm": 75
+        }
+      },
+      {
+        "name": "Deficit deadlift",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 3,
+          "setType": "travail",
+          "pct1rm": 68
+        }
+      },
+      {
+        "name": "Rack pull",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 3,
+          "setType": "accessoire",
+          "pct1rm": 90
+        }
+      },
+      {
+        "name": "Block pull",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 3,
+          "setType": "accessoire",
+          "pct1rm": 85
+        }
+      },
+      {
+        "name": "Soulevé de terre pause sous genou",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 3,
+          "setType": "travail",
+          "pct1rm": 65
+        }
+      },
+      {
+        "name": "Good morning",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 8,
+          "setType": "accessoire"
+        }
+      },
+      {
+        "name": "Rowing barre (point faible dos)",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 4,
+          "reps": 8,
+          "setType": "accessoire"
+        }
+      },
+      {
+        "name": "Dips lestés (point faible triceps)",
+        "mode": "powerlifting",
+        "defaults": {
+          "sets": 3,
+          "reps": 8,
+          "setType": "accessoire"
+        }
+      }
+    ]
+  },
+  {
+    "group": "Machines à charge libre (Hammer / plate-loaded)",
+    "note": "Machines à disques : trajectoire guidée mais résistance libre. Charge par côté, attention à l'équilibrage droite/gauche.",
+    "items": [
+      {
+        "name": "Développé couché convergent",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé incliné convergent",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé décliné convergent",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé épaules convergent",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage vertical convergent",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage horizontal convergent",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Rowing unilatéral appui poitrine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage bûcheron machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Pull-over plate-loaded",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Shrug machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Curl biceps plate-loaded",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Extension triceps plate-loaded",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Soulevé de terre machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Chest press convergent",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Chest press debout",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "T bar",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Chest press allongé",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Smith machine / barre guidée",
+    "note": "Barre sur rails : utile pour charger lourd en sécurité ou fixer une trajectoire.",
+    "items": [
+      {
+        "name": "Développé couché à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé incliné à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé militaire à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Squat à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Squat bulgare à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Fentes à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Hip thrust à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Rowing à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Soulevé de terre roumain à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Mollets debout à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 4,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Shrug à la Smith",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      }
+    ]
+  },
+  {
+    "group": "Machines guidées — complément",
+    "note": "Postes à charge sélectionnable moins courants dans la bibliothèque de base.",
+    "items": [
+      {
+        "name": "Crunch machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Rotation du buste machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Extension lombaires machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Leg curl debout",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Kickback fessier machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Chest press unilatéral",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Butterfly inversé machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Tirage vertical prise large",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Tirage vertical prise serrée",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Dips machine",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Poulies — complément",
+    "note": "Variantes de prise et d'angle sur la zone poulies.",
+    "items": [
+      {
+        "name": "Tirage nuque poulie haute",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Crossover poulie haute",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Crossover poulie basse",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Kickback triceps poulie",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Curl unilatéral poulie",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Extension triceps unilatérale poulie",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Crunch à la poulie haute",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Rowing poulie basse prise large",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      }
+    ]
+  },
+  {
+    "group": "Haltères & barre — complément",
+    "note": "Zone charges libres : barres olympiques, haltères, EZ, landmine.",
+    "items": [
+      {
+        "name": "Développé décliné haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Développé Arnold",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Rowing Yates",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Curl incliné haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Curl concentration",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Curl barre EZ",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Élévations frontales haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Shrugs haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Shrugs barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Pull-over haltère",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Good morning barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Front squat barre",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 8
+        }
+      },
+      {
+        "name": "Soulevé de terre classique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 6
+        }
+      },
+      {
+        "name": "Soulevé de terre sumo",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 6
+        }
+      },
+      {
+        "name": "Fentes latérales haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Step-up haltères",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Landmine press",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Landmine row",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Kettlebell swing",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 4,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Curl biceps rotation",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      }
+    ]
+  },
+  {
+    "group": "Élastiques / bandes de résistance",
+    "note": "Tension de la bande à adapter au niveau du client ; utile en salle, à domicile ou en déplacement.",
+    "items": [
+      {
+        "name": "Tirage menton élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Curl biceps élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Curl biceps unilatéral élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Développé épaules élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "RDL élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "RDL unilatéral élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Facepull élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 15
+        }
+      },
+      {
+        "name": "Rowing pronation élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Rowing supination élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      },
+      {
+        "name": "Rowing unilatéral élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 10
+        }
+      },
+      {
+        "name": "Triceps unilatéral élastique",
+        "mode": "muscu",
+        "defaults": {
+          "sets": 3,
+          "reps": 12
+        }
+      }
+    ]
+  }
+];
+
+/** Types de series en force athletique. */
+export const PL_SET_TYPES = [
+  {
+    "id": "rampe",
+    "label": "Montée"
+  },
+  {
+    "id": "top",
+    "label": "Top set"
+  },
+  {
+    "id": "backoff",
+    "label": "Back-off"
+  },
+  {
+    "id": "travail",
+    "label": "Travail"
+  },
+  {
+    "id": "accessoire",
+    "label": "Accessoire"
+  }
+];
+
+/** Video de demonstration par exercice, indexee par cle d'exercice. */
+export const EXERCISE_VIDEOS = {
+  "abducteurs machine": "https://youtube.com/shorts/EqeOEtjAT1Y",
+  "adducteurs machine": "https://youtube.com/shorts/IARHerJ1_Ww",
+  "pec deck ecarte machine": "https://youtube.com/shorts/Z1AohjrZAQg",
+  "chest press convergent": "https://youtube.com/shorts/PESSmrxQSAw",
+  "chest press debout": "https://youtube.com/shorts/l-Vk6_V3J6Y",
+  "curl marteau corde": "https://youtube.com/shorts/PYvRjPDa-GE",
+  "curl marteau halteres": "https://youtube.com/shorts/VysBBkBHNnQ",
+  "curl biceps machine": "https://youtube.com/shorts/vmoEP-ME2Hg",
+  "developpe epaules machine": "https://youtube.com/shorts/gv4uJjNcEc0",
+  "dips assistees": "https://youtube.com/shorts/VkFtPkBOUOg",
+  "dips machine": "https://youtube.com/shorts/j4LMR8rdwOg",
+  "elevations frontales halteres": "https://youtube.com/shorts/HKBWKsRzcgM",
+  "elevations laterales halteres": "https://youtube.com/shorts/wGLidlVqI9s",
+  "extension triceps corde": "https://youtube.com/shorts/vkqd9_iTJ3k",
+  "face pull": "https://youtube.com/shorts/5Rr1Meo0dLQ",
+  "bulgarian split squat": "https://youtube.com/shorts/BYJ3X_rGQkE",
+  "fentes unilaterales": "https://youtube.com/shorts/r3aZfPPVmQg",
+  "gainage planche": "https://youtube.com/shorts/XLDAZHTMdyE",
+  "hip thrust machine": "https://youtube.com/shorts/rA6QacIDBPE",
+  "leg curl allonge": "https://youtube.com/shorts/p6geLJ-JRIM",
+  "leg curl debout": "https://youtube.com/shorts/4ww4zAN8VaQ",
+  "leg extension": "https://youtube.com/shorts/meOJ_9YLPcw",
+  "leg extension unilateral": "https://youtube.com/shorts/51TgSnzAxUw",
+  "mollets assis": "https://youtube.com/shorts/JVDPgb5hy6k",
+  "mountain climbers": "https://youtube.com/shorts/E6kOnrApXfY",
+  "pendulum": "https://youtube.com/shorts/vHzfMG3BxB0",
+  "pompes": "https://youtube.com/shorts/BZ2QZfLgfsI",
+  "pompes prise large": "https://youtube.com/shorts/ue0NiIiID2Y",
+  "presse a cuisses": "https://youtube.com/shorts/YuLA9MY2sXg",
+  "souleve de terre roumain": "https://youtube.com/shorts/OVYq-Gi0A28",
+  "squat barre": "https://youtube.com/shorts/NCDdI_ZzxXY",
+  "t bar": "https://youtube.com/shorts/H4j-mSeLa24",
+  "tirage horizontal unilateral poulie": "https://youtube.com/shorts/rYSq3nioAYc",
+  "tirage haut technogym": "https://youtube.com/shorts/AvPSy_BlzjM",
+  "tirage horizontal assis": "https://youtube.com/shorts/IGUfxUfuNBs",
+  "tirage menton poulie basse": "https://youtube.com/shorts/Bi32YLvMf1M",
+  "tirage vertical poitrine": "https://youtube.com/shorts/JdN64Ad98W8",
+  "tirage vertical supination": "https://youtube.com/shorts/rtd3XPQG9EA",
+  "tirage vertical unilateral": "https://youtube.com/shorts/uUItT-_l_DA",
+  "tractions assistees": "https://youtube.com/shorts/I2jy0artTIQ",
+  "developpe epaules convergent": "https://youtube.com/shorts/wwuzkOtrMgw",
+  "v squat": "https://youtube.com/shorts/LOfNG1eWSZ8",
+  "pompes prise serree": "https://youtube.com/shorts/9NVkVWuCHMw",
+  "curl biceps rotation": "https://youtube.com/shorts/K6iGNC1tid0",
+  "traineau": "https://youtube.com/shorts/8AgKPiZgNSI",
+  "tirage dos au sol": "https://youtube.com/shorts/_LMPOeR_DdA",
+  "chaise contre le mur": "https://youtube.com/shorts/ptQeP4hokPc",
+  "montee sur pointe": "https://youtube.com/shorts/cf2usMSBeMc",
+  "extension lombaires machine": "https://youtube.com/shorts/P8_GzApYDf0",
+  "leg curl assis": "https://youtube.com/shorts/8oqpMStSWz0",
+  "developpe couche barre": "https://youtube.com/shorts/C3L_5cza3Q0",
+  "presse a cuisses inclinee": "https://youtube.com/shorts/fRxbecOYJ3Y",
+  "belt squat": "https://youtube.com/shorts/Rg41r2i_ZBU",
+  "developpe epaules debout": "https://youtube.com/shorts/CgHTZnOcxVo",
+  "elevations laterales machine": "https://youtube.com/shorts/JdFKx_QvXuE",
+  "developpe incline convergent": "https://youtube.com/shorts/BxkT0eKWPxw",
+  "chest press allonge": "https://youtube.com/shorts/oz6HnDyW8VU",
+  "developpe incline halteres": "https://youtube.com/shorts/ImbzBExlwZQ",
+  "tirage vertical poulie": "https://youtube.com/shorts/N2DIh8ETS0Q",
+  "rowing poulie basse": "https://youtube.com/shorts/brSP-yszxCk",
+  "tractions": "https://youtube.com/shorts/6JsOgiFnnfA",
+  "rowing barre supination": "https://youtube.com/shorts/ERODBSgTdBQ",
+  "rowing barre pronation": "https://youtube.com/shorts/vrvrgu-THt8",
+  "dips sur banc": "https://youtube.com/shorts/RpL4sCl1V-M",
+  "rowing haltere un bras": "https://youtube.com/shorts/97bGsPyUikA",
+  "developpe militaire halteres": "https://youtube.com/shorts/gqJT6D1DbeQ",
+  "developpe couche halteres": "https://youtube.com/shorts/nXM5LBIkwCY",
+  "curl poulie basse": "https://youtube.com/shorts/FqvatjRUhB4",
+  "squat goblet": "https://youtube.com/shorts/Q_5o2CrwiTQ",
+  "tirage vertical prise neutre": "https://youtube.com/shorts/cV5pPnnJgBk",
+  "chest press unilateral": "https://youtube.com/shorts/bPoAVdjO5gM",
+  "pullover machine": "https://youtube.com/shorts/8_aYibIfh4k",
+  "curl incline halteres": "https://youtube.com/shorts/b8qHT1FlEpA",
+  "tirage vertical unilateral prise neutre": "https://youtube.com/shorts/z_PEkHFay5M",
+  "poulie vis a vis position haute": "https://youtube.com/shorts/EIYF4k1Ahs8",
+  "poulie vis a vis position basse": "https://youtube.com/shorts/lNaKSmXWEL8",
+  "poulie vis a vis position milieu": "https://youtube.com/shorts/YFLe-Ao4paw",
+  "tirage menton elastique": "https://youtube.com/shorts/ufmqzF4EHM8",
+  "curl biceps elastique": "https://youtube.com/shorts/-6t38BfyypU",
+  "curl biceps unilateral elastique": "https://youtube.com/shorts/J-cDY2B36Qw",
+  "developpe epaules elastique": "https://youtube.com/shorts/CduPWM2WG4Q",
+  "rdl elastique": "https://youtube.com/shorts/6Wdndysosro",
+  "rdl unilateral elastique": "https://youtube.com/shorts/2FurGml0pls",
+  "facepull elastique": "https://youtube.com/shorts/GlyY0gwgT3Q",
+  "rowing pronation elastique": "https://youtube.com/shorts/0b5YZ495Dps",
+  "rowing supination elastique": "https://youtube.com/shorts/QkdIIh8TCT8",
+  "rowing unilateral elastique": "https://youtube.com/shorts/OElmXDpBXp8",
+  "triceps unilateral elastique": "https://youtube.com/shorts/-AnzncmbBt0"
+};

@@ -12,18 +12,17 @@
  *    ajoute les creneaux, la semaine difficile et la bibliotheque de
  *    seances sans materiel.
  *
- * Le constructeur de seances du mode « app » n'est pas encore porte : il
- * represente a lui seul plus de code que tous les autres ecrans reunis.
- * L'aiguillage le signale plutot que d'afficher une page vide.
+ * Le mode « powerlifting » (plOn) s'active sur l'objectif « performance ».
+ * Il n'ajoute pas d'ecran : il ouvre des champs supplementaires dans le
+ * constructeur de seances (type de serie, %1RM, semaine de deload).
  */
 
-import { COLORS } from "../tokens.js";
 import { enLigne } from "../lib/semaine.js";
 import { SEANCE_TEMPLATES } from "../lib/catalogues.js";
+import { ConstructeurSeances } from "./ConstructeurSeances.jsx";
 import { Seances } from "./Seances.jsx";
 import { SeancesCoach } from "./SeancesCoach.jsx";
 import { Records } from "./Records.jsx";
-import { Card, SectionTitle } from "../ui/primitives.jsx";
 
 export function Entrainements({ routinesApi, sessionsApi, profile }) {
   const enTete = enLigne(profile) ? (
@@ -47,14 +46,11 @@ export function Entrainements({ routinesApi, sessionsApi, profile }) {
     <>
       {enTete}
       <Records sessions={sessionsApi.items} />
-      {/* MIGRATION-EN-COURS */}
-      <Card>
-        <SectionTitle>Mes séances</SectionTitle>
-        <p style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.55, margin: "10px 0 0" }}>
-          Le constructeur de séances n'est pas encore migré. Il reste servi normalement par l'application actuelle.
-        </p>
-      </Card>
-      {/* FIN-MIGRATION-EN-COURS */}
+      <ConstructeurSeances
+        routinesApi={routinesApi}
+        sessionsApi={sessionsApi}
+        plOn={profile?.goal === "performance"}
+      />
     </>
   );
 }

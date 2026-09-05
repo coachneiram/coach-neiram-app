@@ -85,6 +85,11 @@ function phrasesAffichees(source) {
     // un appel de fonction. En francais, une parenthese ouvrante est toujours
     // precedee d'une espace, donc aucune phrase affichee ne ressemble a cela.
     !/\w\(/.test(t) &&
+    // Une parenthese fermante en tete, ou ouvrante en fin, est une bordure
+    // d'expression JSX (« ) : video ? ( »). Aucune phrase affichee ne
+    // commence par une parenthese fermante.
+    !/^\)/.test(t) &&
+    !/\($/.test(t) &&
     // Au moins trois lettres : sans cela, une queue d'expression comme
     // « 0 ? ( » passait pour du texte affiche.
     (t.match(/[A-Za-zÀ-ÿ]/g) || []).length >= 3;
