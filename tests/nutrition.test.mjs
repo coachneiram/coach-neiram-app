@@ -340,3 +340,127 @@ describe("plancher de lipides", () => {
     assert.equal(t.fat, 80);
   });
 });
+
+/**
+ * Force athletique : direction sur l'objectif performance.
+ *
+ * Un pratiquant de force n'est pas seulement « en performance » : il est en
+ * performance ET en train de prendre ou de perdre du poids. Jusqu'ici il
+ * n'avait pas le choix — rester a +5 %, ou basculer en « perte » et se
+ * retrouver a -20 %, un deficit qui coute la force qu'il essaie de garder.
+ *
+ * Le test le plus important de ce groupe est le premier : un client DEJA en
+ * performance ne doit voir aucun de ses chiffres bouger.
+ */
+describe("force athletique — direction sur l'objectif performance", () => {
+  const LIFTER = {
+    sex: "homme",
+    age: 30,
+    heightCm: 178,
+    startWeightKg: 90,
+    activityLevel: "actif",
+    goal: "performance",
+    jobType: "sedentaire"
+  };
+
+  const cible = (direction) =>
+    nutrition.computeTargets({ ...LIFTER, performanceDirection: direction }, 90);
+
+  test("un client deja en performance ne voit rien changer", () => {
+    // Sans direction enregistree, le comportement doit etre celui d'avant.
+    assert.deepEqual(cible(undefined), cible("maintien"));
+    assert.deepEqual(cible(null), cible("maintien"));
+    assert.deepEqual(cible("valeur-inconnue"), cible("maintien"));
+  });
+
+  test("la direction ne s'applique qu'a l'objectif performance", () => {
+    for (const goal of ["perte", "prise", "maintien"]) {
+      assert.equal(nutrition.directionPerformance({ ...LIFTER, goal }), null, "objectif " + goal);
+      assert.deepEqual(
+        nutrition.computeTargets({ ...LIFTER, goal, performanceDirection: "prise" }, 90),
+        nutrition.computeTargets({ ...LIFTER, goal }, 90),
+        "la direction a fuite sur l'objectif " + goal
+      );
+    }
+  });
+
+  test("prise et seche encadrent le maintien", () => {
+    assert.ok(cible("prise").calories > cible("maintien").calories);
+    assert.ok(cible("perte").calories < cible("maintien").calories);
+  });
+
+  test("la seche de force est plus douce que l'objectif perte general", () => {
+    // C'est tout l'interet : -12 % au lieu de -20 %. Un deficit agressif
+    // fait perdre la force qu'on essaie de conserver.
+    const general = nutrition.computeTargets({ ...LIFTER, goal: "perte" }, 90);
+    assert.ok(
+      cible("perte").calories > general.calories,
+      `seche de force ${cible("perte").calories} kcal vs perte generale ${general.calories} kcal`
+    );
+  });
+
+  test("la prise de force reste mesuree", () => {
+    // Au-dela d'environ 15 %, le surplus part en gras : mauvais rapport
+    // force/poids, et seche suivante plus longue.
+    const surplus = cible("prise").calories / cible("maintien").calories - 1;
+    assert.ok(surplus > 0.03 && surplus < 0.15, "surplus de " + Math.round(surplus * 100) + " %");
+  });
+
+  test("les proteines montent en seche, pour proteger la masse maigre", () => {
+    assert.ok(cible("perte").protein > cible("maintien").protein);
+    assert.equal(cible("perte").protein, Math.round(90 * 2.2));
+    assert.equal(cible("maintien").protein, Math.round(90 * 2));
+  });
+
+  test("les lipides de seche restent au-dessus de la regle generale", () => {
+    // 0,8 g/kg et non 0,6 : ecraser les lipides jusqu'au plancher pour
+    // gagner quelques grammes de glucides n'a pas de sens ici.
+    assert.equal(cible("perte").fat, Math.round(90 * 0.8));
+    assert.ok(cible("perte").fat > nutrition.computeTargets({ ...LIFTER, goal: "perte" }, 90).fat);
+  });
+
+  test("les glucides restent suffisants pour s'entrainer, meme en seche", () => {
+    // Sous 3 g/kg, l'entrainement de force en volume devient difficile.
+    const gParKg = cible("perte").carbs / 90;
+    assert.ok(gParKg >= 3, gParKg.toFixed(1) + " g/kg de glucides en seche");
+  });
+
+  test("le plancher de lipides tient aussi sur les trois directions", () => {
+    let verifies = 0;
+    for (const direction of ["maintien", "prise", "perte"]) {
+      for (let poids = 45; poids <= 160; poids += 5) {
+        for (const act of ["leger", "modere", "actif", "tresactif"]) {
+          const t = nutrition.computeTargets(
+            { ...LIFTER, startWeightKg: poids, activityLevel: act, performanceDirection: direction },
+            poids
+          );
+          verifies++;
+          assert.ok(
+            t.fat * 9 >= t.calories * 0.2,
+            `${direction} ${poids} kg ${act} : ${t.fat} g pour ${t.calories} kcal`
+          );
+          assert.ok(t.carbs > 0, "glucides nuls");
+        }
+      }
+    }
+    assert.ok(verifies > 200, "trop peu de profils : " + verifies);
+  });
+
+  test("la seche de force se combine au poids de reference", () => {
+    // Un pratiquant tres au-dessus de son objectif de categorie garde les
+    // deux regles : 2,2 g/kg, mais du poids de reference.
+    const t = nutrition.computeTargets(
+      { ...LIFTER, targetWeightKg: 83, performanceDirection: "perte" },
+      100
+    );
+    assert.equal(t.protein, Math.round(Math.min(100, 83 * 1.1) * 2.2));
+  });
+
+  test("les trois directions sont proposees, et « maintien » est la premiere", () => {
+    assert.deepEqual(
+      nutrition.PERFORMANCE_DIRECTIONS.map((d) => d.id),
+      ["maintien", "prise", "perte"]
+    );
+    for (const d of nutrition.PERFORMANCE_DIRECTIONS) assert.ok(d.label, "direction sans libelle");
+  });
+});

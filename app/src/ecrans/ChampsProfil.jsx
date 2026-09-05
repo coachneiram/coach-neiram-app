@@ -12,7 +12,7 @@
 import { COLORS } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
 import { JOURS_SEMAINE, uid } from "../lib/semaine.js";
-import { ACTIVITY_LEVELS, GOALS } from "../lib/nutrition.js";
+import { ACTIVITY_LEVELS, GOALS, PERFORMANCE_DIRECTIONS } from "../lib/nutrition.js";
 import { ALLERGENS, COACHING_MODES, DIET_TYPES, TRAINING_MODES } from "../lib/catalogues.js";
 import { Btn, Field, IconBtn, NumberInput, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { Plus, Trash2 } from "../ui/icones.jsx";
@@ -195,6 +195,27 @@ export function ChampsProfil({ value, onChange }) {
       <Field label="Objectif">
         <SelectInput options={GOALS} value={value.goal || "maintien"} onChange={(e) => set({ goal: e.target.value })} />
       </Field>
+
+      {/* TEXTE-NOUVEAU
+          Ajoute apres la bascule, donc absent de index.html : la direction
+          de l'objectif « performance ». Un pratiquant de force est en
+          performance ET en prise ou en seche ; jusqu'ici il devait choisir
+          entre les deux. Ce bloc ne s'affiche que sur cet objectif.
+      */}
+      {value.goal === "performance" && (
+        <Field label="Direction">
+          <SelectInput
+            options={PERFORMANCE_DIRECTIONS}
+            value={value.performanceDirection || "maintien"}
+            onChange={(e) => set({ performanceDirection: e.target.value })}
+          />
+          <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 }}>
+            En sèche, le déficit reste volontairement doux et les protéines montent : l'objectif est de
+            perdre du poids sans perdre de force.
+          </p>
+        </Field>
+      )}
+      {/* FIN-TEXTE-NOUVEAU */}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label="Poids objectif (kg, optionnel)">

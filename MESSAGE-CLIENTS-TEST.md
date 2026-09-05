@@ -92,6 +92,26 @@ Marien
 
 ---
 
+## Paragraphe à ajouter SI tu fusionnes aussi le changement de macros
+
+À insérer juste avant « Ce que j'aimerais que tu regardes ». Sans lui, un
+client verra ses macros bouger et te le signalera comme un bug.
+
+> **Une précision : j'ai aussi ajusté la répartition de tes macros.** Tes
+> calories ne changent pas d'un gramme — c'est la répartition entre
+> protéines, glucides et lipides qui bouge, et seulement chez certains
+> d'entre vous. Deux corrections : un minimum de lipides pour ne pas
+> descendre trop bas (ça concerne surtout les profils légers en perte de
+> poids), et des protéines calculées plus justement pour ceux qui sont
+> encore loin de leur objectif de poids. Si tes macros ont changé, c'est
+> voulu — et si tu as une question là-dessus, demande-moi.
+
+Avec ce paragraphe, un changement de macros devient une information, pas une
+alerte. **Le nombre de calories, lui, ne bouge pour personne** : c'est le
+chiffre le plus regardé, et il reste identique.
+
+---
+
 ## Ce qu'il faut surveiller dans les retours
 
 Ces trois retours-là méritent une réaction immédiate :
@@ -101,7 +121,9 @@ Ces trois retours-là méritent une réaction immédiate :
   n'a pas changé de téléphone ou de navigateur.
 - **« Le chiffre X a changé »** → demander une capture. Les calculs ont été
   comparés un par un à l'ancienne version, donc un écart réel serait un
-  vrai bug.
+  vrai bug. Exception : si tu as fusionné le changement de macros, protéines
+  / glucides / lipides peuvent avoir bougé — mais **jamais les calories**.
+  Un total calorique différent reste donc un signal à prendre au sérieux.
 - **« Page blanche »** → faire fermer et rouvrir l'application. Si ça
   persiste, me le dire : c'est le seul symptôme qui justifierait un retour
   en arrière, et celui-ci prend une minute.

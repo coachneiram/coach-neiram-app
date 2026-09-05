@@ -39,6 +39,76 @@ export const GOAL_CAL_ADJUST = { perte: -0.2, prise: 0.1, maintien: 0, performan
 const PART_LIPIDES_MIN = 0.2;
 
 /**
+ * Directions possibles sur l'objectif « performance ».
+ *
+ * Un pratiquant de force athletique n'est pas seulement en performance : il
+ * est en performance ET en train de prendre du poids, ou d'en perdre — pour
+ * passer dans une categorie, ou parce qu'il a fini une prise de masse. Ce
+ * sont deux besoins caloriques opposes sous un meme objectif.
+ *
+ * Jusqu'ici il n'avait pas le choix : rester en « performance » (+5 %), ou
+ * basculer en « perte » et se retrouver a -20 %, un deficit qui coute de la
+ * force a quelqu'un qui essaie precisement d'en garder.
+ */
+export const PERFORMANCE_DIRECTIONS = [
+  { id: "maintien", label: "Maintenir mon poids" },
+  { id: "prise", label: "Prendre du poids / du muscle" },
+  { id: "perte", label: "Perdre du poids (sèche)" }
+];
+
+/**
+ * Ajustement calorique par direction, sur l'objectif performance.
+ *
+ * Les ecarts sont volontairement plus SERRES que sur les objectifs
+ * generaux :
+ *
+ * - EN SECHE, -12 % au lieu de -20 %. Un deficit agressif fait perdre de la
+ *   force et de la masse maigre. La reference pour un athlete est une perte
+ *   lente, de l'ordre de 0,5 a 0,7 % du poids par semaine — ce qui, pour un
+ *   pratiquant de 90 kg, correspond a peu pres a ce deficit.
+ * - EN PRISE, +12 %. Au-dela, le surplus part en gras : cela degrade le
+ *   rapport force/poids, fait changer de categorie pour de mauvaises
+ *   raisons, et rallonge la seche suivante.
+ *
+ * L'absence de direction vaut « maintien » et conserve exactement le +5 %
+ * d'aujourd'hui : aucun client deja en performance ne voit ses chiffres
+ * bouger.
+ */
+const PERFORMANCE_CAL_ADJUST = { maintien: 0.05, prise: 0.12, perte: -0.12 };
+
+/** Proteines, en g/kg du poids de reference. */
+const PROTEINES_PAR_KG = 2;
+
+/**
+ * En seche de force, on monte a 2,2 g/kg.
+ *
+ * Plus de proteines en deficit protege la masse maigre, et c'est encore plus
+ * vrai chez quelqu'un qui doit garder sa force pendant la seche.
+ */
+const PROTEINES_PAR_KG_SECHE_FORCE = 2.2;
+
+/** Lipides, en g/kg du poids de reference. */
+const LIPIDES_PAR_KG = 1;
+const LIPIDES_PAR_KG_PERTE = 0.6;
+
+/**
+ * En seche de force, 0,8 g/kg plutot que 0,6.
+ *
+ * Descendre les lipides est la variable d'ajustement habituelle en seche,
+ * mais un pratiquant de force a besoin de ses glucides pour s'entrainer :
+ * autant ne pas ecraser les lipides jusqu'au plancher hormonal pour
+ * gagner quelques grammes de glucides.
+ */
+const LIPIDES_PAR_KG_SECHE_FORCE = 0.8;
+
+/** Direction retenue sur l'objectif performance. */
+export function directionPerformance(profile) {
+  if (!profile || profile.goal !== "performance") return null;
+  const choisie = profile.performanceDirection;
+  return PERFORMANCE_DIRECTIONS.some((d) => d.id === choisie) ? choisie : "maintien";
+}
+
+/**
  * Marge au-dessus du poids cible servant de reference aux proteines.
  *
  * Les besoins en proteines suivent la masse maigre, pas la masse totale.
@@ -108,11 +178,18 @@ export function computeTargets(profile, currentWeightKg) {
     tdee = bmr ? bmr * pal : null;
   }
 
-  const adjust = GOAL_CAL_ADJUST[profile.goal] ?? 0;
+  const direction = directionPerformance(profile);
+  const adjust = direction ? PERFORMANCE_CAL_ADJUST[direction] : (GOAL_CAL_ADJUST[profile.goal] ?? 0);
   const calories = tdee ? (Math.round((tdee * (1 + adjust)) / 10) * 10) : null;
 
-  const proteinPerKg = 2;
-  const fatPerKg = profile.goal === "perte" ? 0.6 : 1;
+  const secheDeForce = direction === "perte";
+
+  const proteinPerKg = secheDeForce ? PROTEINES_PAR_KG_SECHE_FORCE : PROTEINES_PAR_KG;
+  const fatPerKg = secheDeForce
+    ? LIPIDES_PAR_KG_SECHE_FORCE
+    : profile.goal === "perte"
+      ? LIPIDES_PAR_KG_PERTE
+      : LIPIDES_PAR_KG;
 
   // Proteines et lipides suivent la masse maigre ; les calories suivent le
   // corps reel. D'ou deux poids differents dans le meme calcul.
