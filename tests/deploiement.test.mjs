@@ -1,13 +1,20 @@
 /**
  * Coherence du deploiement.
  *
- * Le workflow de publication copie une liste de fichiers. Si l'application
- * se met a charger une ressource absente de cette liste, la page tombera en
- * production alors que tout fonctionne en local — panne classique et
- * particulierement desagreable a diagnostiquer.
+ * Depuis la bascule, ce qui est mis en ligne n'est plus la racine du depot
+ * mais la CONSTRUCTION (app/dist). Le risque a change de nature :
  *
- * Ces tests comparent ce que l'application demande a ce que le workflow
- * publie reellement.
+ * - avant, une ressource oubliee dans la liste de copie donnait une page
+ *   cassee en production alors que tout marchait en local ;
+ * - maintenant, c'est une etape de construction absente, ou un fichier que
+ *   la construction ne produit pas, qui donne le meme resultat.
+ *
+ * Ces tests verifient donc trois choses : que le workflow construit avant de
+ * publier, qu'il publie bien la construction, et que la construction contient
+ * tout ce que l'application et le service worker demandent.
+ *
+ * Le dernier groupe est ignore si app/dist n'existe pas : lancer
+ * `npm run build` dans app/ le reactive.
  */
 
 import { test, describe } from "node:test";
@@ -18,85 +25,140 @@ import { dirname, join } from "node:path";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE = join(ICI, "..");
+const DIST = join(RACINE, "app", "dist");
 
-const CHEMIN_DEPLOY = join(RACINE, ".github", "workflows", "deploy.yml.a-activer");
-const CHEMIN_DEPLOY_ACTIF = join(RACINE, ".github", "workflows", "deploy.yml");
+const CHEMIN_DEPLOY = join(RACINE, ".github", "workflows", "deploy.yml");
+const workflowPresent = existsSync(CHEMIN_DEPLOY);
+const workflow = workflowPresent ? readFileSync(CHEMIN_DEPLOY, "utf8") : "";
 
-// Le workflow peut etre en attente d'activation ou deja actif.
-const chemin = existsSync(CHEMIN_DEPLOY_ACTIF) ? CHEMIN_DEPLOY_ACTIF : CHEMIN_DEPLOY;
-const workflowPresent = existsSync(chemin);
-
-/** Ressources locales reellement chargees par l'application. */
-function ressourcesDemandees() {
-  const html = readFileSync(join(RACINE, "index.html"), "utf8");
+/** Ressources locales chargees par un document HTML. */
+function ressourcesDe(html) {
   return [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
     .map((m) => m[1])
     .filter((r) => !r.startsWith("http") && !r.startsWith("data:") && !r.includes("${"))
     .map((r) => r.replace(/^\.\//, ""));
 }
 
-describe("le workflow publie tout ce que l'application demande", { skip: workflowPresent ? false : "workflow de deploiement absent" }, () => {
-  const workflow = workflowPresent ? readFileSync(chemin, "utf8") : "";
+describe("le workflow construit avant de publier", { skip: workflowPresent ? false : "workflow absent" }, () => {
+  test("la construction est lancee", () => {
+    assert.match(workflow, /npm ci/, "les dependances ne sont pas installees");
+    assert.match(workflow, /npm run build/, "l'application n'est pas construite");
+  });
 
-  test("chaque ressource chargee par index.html est bien publiee", () => {
-    for (const ressource of ressourcesDemandees()) {
-      const couverte =
-        workflow.includes(ressource) ||
-        // Les copies groupees couvrent des familles entieres de fichiers.
-        (ressource.endsWith(".png") && workflow.includes("*.png")) ||
-        (ressource.startsWith("food-") && workflow.includes("food-*.js"));
+  test("c'est la construction qui est publiee, pas la racine", () => {
+    assert.match(workflow, /app\/dist/, "app/dist n'est pas publie");
+    // L'ancienne application reste dans le depot pour un retour en arriere,
+    // mais elle ne doit plus etre celle qui part en ligne.
+    assert.ok(
+      !/cp index\.html/.test(workflow),
+      "l'ancienne application est encore publiee : la bascule serait sans effet"
+    );
+  });
+
+  test("la version de Node est figee", () => {
+    // Sans cela, la construction utiliserait la version par defaut du
+    // runner, qui peut changer sans prevenir.
+    assert.match(workflow, /setup-node/);
+    assert.match(workflow, /node-version: "22"/);
+  });
+
+  test("la construction est verifiee avant publication", () => {
+    for (const attendu of ["assets-manifest.json", "sw.js", "manifest.json"]) {
       assert.ok(
-        couverte,
-        "ressource chargee par l'application mais absente de la publication : " + ressource
+        workflow.includes(attendu),
+        "la verification de construction ne controle pas : " + attendu
       );
     }
   });
 
-  test("le service worker est publie : sans lui, le mode hors ligne disparait", () => {
-    assert.ok(workflow.includes("sw.js"), "sw.js absent de la liste publiee");
-  });
-
-  test("les fichiers publies existent tous dans le depot", () => {
-    for (const ressource of ressourcesDemandees()) {
-      assert.ok(existsSync(join(RACINE, ressource)), "fichier reference mais absent : " + ressource);
-    }
+  test("les tests conditionnent la mise en ligne", () => {
+    assert.match(
+      workflow,
+      /needs: tests/,
+      "le deploiement doit dependre des tests, sinon une regression part en production"
+    );
   });
 
   test("les dossiers de developpement ne sont pas mis en ligne", () => {
-    // Ils ne contiennent aucun secret, mais n'ont rien a faire sur le site.
-    for (const dossier of ["tests/", "app/src", ".planning/", "scripts/"]) {
+    for (const dossier of ["tests/", "app/src", ".planning/"]) {
       assert.ok(
         !workflow.includes("cp -r " + dossier) && !workflow.includes("cp " + dossier),
         "dossier de developpement publie : " + dossier
       );
     }
   });
-
-  test("les tests conditionnent la mise en ligne", () => {
-    assert.ok(
-      workflow.includes("needs: tests"),
-      "le deploiement doit dependre des tests, sinon une regression part en production"
-    );
-  });
 });
 
-describe("le service worker et le workflow restent alignes", { skip: workflowPresent ? false : "workflow absent" }, () => {
-  const workflow = workflowPresent ? readFileSync(chemin, "utf8") : "";
+describe(
+  "la construction contient tout ce qui est demande",
+  { skip: existsSync(DIST) ? false : "app/dist absent — lancer `npm run build` dans app/" },
+  () => {
+    const html = readFileSync(join(DIST, "index.html"), "utf8");
 
-  test("tout ce que le service worker precache est publie", () => {
-    const sw = readFileSync(join(RACINE, "sw.js"), "utf8");
-    const precache = [...sw.matchAll(/"\.\/([^"]*)"/g)].map((m) => m[1]).filter(Boolean);
+    test("chaque ressource chargee par la page existe dans la construction", () => {
+      const ressources = ressourcesDe(html);
+      assert.ok(ressources.length > 4, "trop peu de ressources : le test ne verifie rien");
+      for (const ressource of ressources) {
+        assert.ok(existsSync(join(DIST, ressource)), "chargee mais absente de la construction : " + ressource);
+      }
+    });
 
-    for (const ressource of precache) {
-      if (ressource === "index.html") continue; // couvert explicitement
-      const couverte =
-        workflow.includes(ressource) ||
-        (ressource.endsWith(".png") && workflow.includes("*.png")) ||
-        (ressource.startsWith("food-") && workflow.includes("food-*.js"));
-      assert.ok(
-        couverte,
-        "ressource precachee par le service worker mais non publiee : " + ressource
-      );
-    }
-  });
-});
+    test("le service worker est construit : sans lui, le mode hors ligne disparait", () => {
+      assert.ok(existsSync(join(DIST, "sw.js")), "sw.js absent de la construction");
+      assert.match(html, /serviceWorker/, "la page n'enregistre pas le service worker");
+    });
+
+    test("les ressources PWA sont la : sans elles, l'application n'est plus installable", () => {
+      for (const f of ["manifest.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"]) {
+        assert.ok(existsSync(join(DIST, f)), "absent de la construction : " + f);
+      }
+      assert.match(html, /rel="manifest"/, "la page ne declare pas de manifeste");
+    });
+
+    test("tout ce que le service worker precache existe dans la construction", () => {
+      const sw = readFileSync(join(DIST, "sw.js"), "utf8");
+      // La liste ecrite a la main : « ./ » designe la page elle-meme.
+      const precache = [...sw.matchAll(/"\.\/([^"]+)"/g)].map((m) => m[1]);
+      for (const ressource of precache) {
+        if (ressource === "assets-manifest.json") continue; // verifie ci-dessous
+        assert.ok(
+          existsSync(join(DIST, ressource)),
+          "precachee par le service worker mais absente : " + ressource
+        );
+      }
+    });
+
+    /**
+     * Le point qui a failli faire echouer la bascule.
+     *
+     * Le code de l'application porte une empreinte qui change a chaque
+     * construction : il ne peut pas figurer dans une liste ecrite a la main.
+     * Sans ce manifeste, le precache ne contiendrait pas le code de
+     * l'application, et le premier lancement hors ligne afficherait une page
+     * blanche — sans erreur, sans message.
+     */
+    test("le manifeste liste exactement les fichiers construits", () => {
+      const manifeste = JSON.parse(readFileSync(join(DIST, "assets-manifest.json"), "utf8"));
+      assert.ok(manifeste.length >= 2, "manifeste anormalement court : " + JSON.stringify(manifeste));
+
+      for (const f of manifeste) {
+        assert.ok(existsSync(join(DIST, f.replace(/^\.\//, ""))), "annonce mais absent : " + f);
+      }
+
+      // Et l'inverse : le code charge par la page doit etre dans le manifeste.
+      for (const ressource of ressourcesDe(html)) {
+        if (!/\.(js|css)$/.test(ressource) || ressource.startsWith("food-")) continue;
+        assert.ok(
+          manifeste.includes("./" + ressource),
+          "charge par la page mais absent du manifeste, donc non precache : " + ressource
+        );
+      }
+    });
+
+    test("aucun chemin absolu : l'application vit dans un sous-dossier", () => {
+      for (const ressource of [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1])) {
+        assert.ok(!ressource.startsWith("/"), "chemin absolu, page blanche en production : " + ressource);
+      }
+    });
+  }
+);

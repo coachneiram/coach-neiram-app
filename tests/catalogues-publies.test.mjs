@@ -22,7 +22,16 @@ import { dirname, join } from "node:path";
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE = join(ICI, "..");
 
-/** L'ordre compte : le dernier installe le moteur de recherche. */
+/**
+ * Ressources servies aux deux versions, par lien symbolique.
+ *
+ * Les quatre catalogues d'abord — l'ordre compte, le dernier installe le
+ * moteur de recherche — puis les fichiers PWA, pour qu'un client qui a
+ * l'application sur son ecran d'accueil la retrouve a l'identique apres la
+ * bascule, sans reinstaller.
+ */
+const PWA = ["manifest.json", "favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "sw.js"];
+
 const CATALOGUES = [
   "food-extended-catalog.js",
   "food-staples-catalog.js",
@@ -33,6 +42,15 @@ const CATALOGUES = [
 const lire = (...morceaux) => readFileSync(join(RACINE, ...morceaux), "utf8");
 
 describe("catalogues servis aux deux versions", () => {
+  test("les ressources PWA et le service worker sont servis par la construction", () => {
+    for (const nom of PWA) {
+      assert.ok(existsSync(join(RACINE, nom)), `${nom} absent de la racine`);
+      const chemin = join(RACINE, "app", "public", nom);
+      assert.ok(existsSync(chemin), `${nom} absent de app/public : la PWA ne serait plus installable`);
+      assert.ok(lstatSync(chemin).isSymbolicLink(), `${nom} est une copie : il divergera de la racine`);
+    }
+  });
+
   test("chaque catalogue est disponible pour l'application Vite", () => {
     for (const nom of CATALOGUES) {
       assert.ok(existsSync(join(RACINE, nom)), `${nom} absent de la racine`);

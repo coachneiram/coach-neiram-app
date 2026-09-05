@@ -26,10 +26,22 @@
  * anciens caches sont supprimes automatiquement a l'activation.
  */
 
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = "coach-neiram-" + VERSION;
 
-/** Ressources indispensables au demarrage, mises en cache a l'installation. */
+/**
+ * Ressources indispensables au demarrage, mises en cache a l'installation.
+ *
+ * Cette liste ne contient QUE les fichiers dont le nom est stable. Le code
+ * de l'application, lui, porte une empreinte qui change a chaque
+ * construction (assets/index-CnbfxMEa.js) : il est impossible de l'ecrire
+ * ici, et c'est justement le piege — une liste figee laisserait le code de
+ * l'application hors du cache, et le premier lancement hors ligne
+ * afficherait une page blanche, sans erreur.
+ *
+ * Ces fichiers-la sont donc lus dans MANIFESTE_ASSETS, produit par la
+ * construction.
+ */
 const RESSOURCES_LOCALES = [
   "./",
   "./index.html",
@@ -44,34 +56,39 @@ const RESSOURCES_LOCALES = [
   "./icon-512.png"
 ];
 
-/**
- * React, precache explicitement.
- *
- * Sans lui, rien ne s'affiche : l'application entiere en depend. Le precache
- * est indispensable ici, et pas seulement souhaitable. Une balise <script src>
- * emet une requete « no-cors » dont la reponse est opaque ; le service worker
- * ne peut ni la valider ni la conserver sereinement. En passant par cache.add
- * a l'installation, la requete part en mode « cors » — cdnjs l'autorise — et
- * la reponse obtenue est une vraie reponse, verifiable et rejouable hors ligne.
- *
- * Ces urls contiennent le numero de version : leur contenu ne change jamais.
- * Elles doivent rester alignees avec les balises <script> de index.html.
- */
-const RESSOURCES_REACT = [
-  "https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"
-];
+/** Liste des fichiers empreintes, ecrite par la construction. */
+const MANIFESTE_ASSETS = "./assets-manifest.json";
 
 /**
- * Origines externes necessaires au fonctionnement : React et les polices.
- * Leurs urls contiennent un numero de version, donc leur contenu ne change
- * jamais : un cache d'abord est sur.
+ * Fichiers de l'application a mettre en cache, lus dans le manifeste.
+ *
+ * Un manifeste absent ou illisible ne doit pas faire echouer l'installation :
+ * l'application reste utilisable en ligne, et la strategie de revalidation
+ * remplira le cache au premier passage. Mieux vaut un mode hors ligne
+ * degrade qu'un service worker qui refuse de s'installer.
  */
-const ORIGINES_CACHABLES = [
-  "https://cdnjs.cloudflare.com",
-  "https://fonts.googleapis.com",
-  "https://fonts.gstatic.com"
-];
+async function assetsDuManifeste() {
+  try {
+    const reponse = await fetch(MANIFESTE_ASSETS, { cache: "no-cache" });
+    if (!reponse.ok) return [];
+    const liste = await reponse.json();
+    return Array.isArray(liste) ? liste.filter((x) => typeof x === "string") : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Origines externes figees : les polices.
+ *
+ * React n'y figure plus. L'application le chargeait depuis cdnjs par une
+ * balise <script> ; il est desormais inclus dans le fichier construit, donc
+ * couvert par le manifeste et disponible hors ligne sans dependre d'un CDN.
+ *
+ * Les urls de polices contiennent une empreinte : leur contenu ne change
+ * jamais, un cache d'abord est sur.
+ */
+const ORIGINES_CACHABLES = ["https://fonts.googleapis.com", "https://fonts.gstatic.com"];
 
 /**
  * Decide quoi faire d'une requete.
@@ -116,11 +133,11 @@ function strategiePour({ method, url, mode, origineApp }) {
 
 self.addEventListener("install", (evenement) => {
   evenement.waitUntil(
-    caches.open(CACHE).then((cache) =>
+    Promise.all([caches.open(CACHE), assetsDuManifeste()]).then(([cache, assets]) =>
       // addAll echoue en bloc si une seule ressource manque : on ajoute donc
       // une par une, pour qu'une icone absente n'empeche pas l'installation.
       Promise.all(
-        RESSOURCES_LOCALES.concat(RESSOURCES_REACT).map((ressource) =>
+        RESSOURCES_LOCALES.concat(assets).map((ressource) =>
           cache.add(ressource).catch(() => {
             /* ressource indisponible : on continue sans elle */
           })
@@ -231,5 +248,5 @@ self.addEventListener("fetch", (evenement) => {
 
 // Expose la logique de routage pour les tests. Sans effet en production.
 if (typeof self !== "undefined") {
-  self.__SW_TEST__ = { strategiePour, VERSION, CACHE, RESSOURCES_LOCALES, RESSOURCES_REACT, ORIGINES_CACHABLES };
+  self.__SW_TEST__ = { strategiePour, assetsDuManifeste, VERSION, CACHE, RESSOURCES_LOCALES, MANIFESTE_ASSETS, ORIGINES_CACHABLES };
 }
