@@ -19,6 +19,11 @@ import { composantesDuScore, fmtL, libelleDuScore, scoreDuJour, totauxDuJour } f
 import { choisirSuggestions } from "../lib/suggestions.js";
 import { construireMotivation, serieDeJours } from "../lib/motivation.js";
 import { dureeDeSommeil } from "../lib/sommeil.js";
+import { scaleMacros } from "../lib/portions.js";
+import { enregistrerRepasType, lireRepasTypes, supprimerRepasType, totauxRepasType } from "../lib/repas-types.js";
+import { repasSelonHeure } from "../lib/suggestions.js";
+import { AjoutAliment } from "./AjoutAliment.jsx";
+
 import {
   Card,
   DateNav,
@@ -55,8 +60,47 @@ const styleSousTitre = {
   marginBottom: 8
 };
 
-export function Journal({ logEntriesApi, bodyApi, formApi, sessionsApi, targets, profile, onToast, onOuvrirAjout, onEnregistrerRepas }) {
+export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsApi, targets, profile, onToast }) {
   const [date, setDate] = useState(todayISO());
+  const [ajoutPour, setAjoutPour] = useState(null);
+  const [repasTypes, setRepasTypes] = useState(() => lireRepasTypes());
+
+  /** Ajoute une entree au repas ouvert, puis referme la fenetre. */
+  const ajouterAuRepas = async (entree) => {
+    await logEntriesApi.add({ date, mealType: ajoutPour.mealType, dishId: null, ...entree });
+    setAjoutPour(null);
+  };
+
+  const ajouterRepasType = async (repas, facteur) => {
+    const totaux = scaleMacros(totauxRepasType(repas), facteur / (repas.portions || 1));
+    await ajouterAuRepas({
+      name: repas.name + (facteur === 1 ? "" : ` (×${facteur})`),
+      calories: totaux.kcal,
+      protein: totaux.p,
+      carbs: totaux.c,
+      fat: totaux.f
+    });
+  };
+
+  const ajouterPlat = async (plat, facteur) => {
+    const t = scaleMacros({ kcal: plat.calories, p: plat.protein, c: plat.carbs, f: plat.fat }, facteur);
+    await logEntriesApi.add({
+      date,
+      mealType: ajoutPour.mealType,
+      dishId: plat.id,
+      name: plat.name + (facteur === 1 ? "" : ` (×${facteur})`),
+      calories: t.kcal,
+      protein: t.p,
+      carbs: t.c,
+      fat: t.f
+    });
+    setAjoutPour(null);
+  };
+
+  const memoriserRepas = (mealType, nom) => {
+    const entrees = logEntriesApi.items.filter((e) => e.date === date && e.mealType === mealType);
+    setRepasTypes(enregistrerRepasType(repasTypes, { nom, mealType, entrees, portions: 1 }));
+  };
 
   const entreesDuJour = logEntriesApi.items.filter((e) => e.date === date);
   const totaux = totauxDuJour(entreesDuJour);
@@ -255,7 +299,18 @@ export function Journal({ logEntriesApi, bodyApi, formApi, sessionsApi, targets,
                     </div>
                   </div>
                   <button
-                    onClick={() => onOuvrirAjout?.({ suggestion: it, date })}
+                    onClick={() =>
+                      logEntriesApi.add({
+                        date,
+                        mealType: repasSelonHeure(new Date().getHours()),
+                        dishId: null,
+                        name: it.name,
+                        calories: it.kcal,
+                        protein: it.p,
+                        carbs: it.c,
+                        fat: it.f
+                      })
+                    }
                     style={{
                       flexShrink: 0,
                       display: "flex",
@@ -300,7 +355,7 @@ export function Journal({ logEntriesApi, bodyApi, formApi, sessionsApi, targets,
                     {section.icon} {section.label}
                   </span>
                   <button
-                    onClick={() => onOuvrirAjout?.({ mealType: section.id, date })}
+                    onClick={() => setAjoutPour({ mealType: section.id, label: section.label })}
                     style={{
                       background: "none",
                       border: `1px solid ${COLORS.border}`,
@@ -321,7 +376,7 @@ export function Journal({ logEntriesApi, bodyApi, formApi, sessionsApi, targets,
                 ) : (
                   <>
                     <button
-                      onClick={() => onEnregistrerRepas?.({ mealType: section.id, name: section.label, portions: "1" })}
+                      onClick={() => memoriserRepas(section.id, section.label)}
                       style={{
                         background: "none",
                         border: "none",
@@ -555,6 +610,17 @@ export function Journal({ logEntriesApi, bodyApi, formApi, sessionsApi, targets,
           />
         </Field>
       </Card>
+      <AjoutAliment
+        open={!!ajoutPour}
+        onClose={() => setAjoutPour(null)}
+        titreRepas={ajoutPour?.label}
+        repasTypes={repasTypes}
+        plats={dishesApi?.items || []}
+        onAjouterRepasType={ajouterRepasType}
+        onSupprimerRepasType={(id) => setRepasTypes(supprimerRepasType(repasTypes, id))}
+        onAjouterPlat={ajouterPlat}
+        onAjouterLibre={ajouterAuRepas}
+      />
     </div>
   );
 }

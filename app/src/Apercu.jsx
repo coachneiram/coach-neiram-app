@@ -178,6 +178,7 @@ export default function Apercu() {
     ),
     journal: (
       <Journal
+        dishesApi={apiFactice([{ id: "p1", name: "Poulet riz brocoli", calories: 520, protein: 45, carbs: 60, fat: 8 }])}
         logEntriesApi={apiFactice(CALORIES_EXEMPLE.slice(0, 3).map((e) => ({ ...e, date: todayISO(), mealType: "dejeuner", name: "Exemple" })))}
         bodyApi={CORPS_FACTICE}
         formApi={{ ...apiFactice(JOURNAL_EXEMPLE), getForDate: () => JOURNAL_EXEMPLE[0], upsert: async () => {} }}

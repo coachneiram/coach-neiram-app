@@ -137,7 +137,9 @@ const A_EXPOSER = [
   "shoppingDietOk",
   "buildRecords",
   "isFreshPR",
-  "SEANCE_TEMPLATES"
+  "SEANCE_TEMPLATES",
+  "presetTotals",
+  "PORTION_STEPS"
 ];
 
 function extraireScriptApplicatif(html) {
