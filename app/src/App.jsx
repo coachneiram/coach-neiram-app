@@ -31,6 +31,7 @@ import { Mensurations } from "./ecrans/Mensurations.jsx";
 import { Entrainements } from "./ecrans/Entrainements.jsx";
 import { Tendances } from "./ecrans/Tendances.jsx";
 import { Reglages } from "./ecrans/Reglages.jsx";
+import { Bienvenue } from "./ecrans/Bienvenue.jsx";
 
 /** Duree d'affichage d'une notification passagere, en millisecondes. */
 const DUREE_TOAST = 5200;
@@ -137,7 +138,14 @@ export default function App() {
     );
   }
 
-  const profil = profile || {};
+  /**
+   * Sans profil, rien ne peut etre calcule ni affiche : ni objectifs
+   * caloriques, ni bilan, ni score du jour. Un nouveau client passe donc
+   * par l'accueil avant de voir l'application.
+   */
+  if (!profile) return <Bienvenue onSave={enregistrerProfil} />;
+
+  const profil = profile;
 
   const ecrans = {
     journal: (
