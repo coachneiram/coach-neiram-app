@@ -32,11 +32,13 @@ import { repasSelonHeure } from "../lib/suggestions.js";
 import { AjoutAliment } from "./AjoutAliment.jsx";
 
 import {
+  Btn,
   Card,
   DateNav,
   Field,
   IconBtn,
   MiniBar,
+  Modal,
   MotivationCard,
   NumberInput,
   ProgressRing,
@@ -130,9 +132,27 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
     setAjoutPour(null);
   };
 
-  const memoriserRepas = (mealType, nom) => {
-    const entrees = logEntriesApi.items.filter((e) => e.date === date && e.mealType === mealType);
-    setRepasTypes(enregistrerRepasType(repasTypes, { nom, mealType, entrees, portions: 1 }));
+  // Enregistrer un repas type passe par une modale : le client le nomme
+  // lui-meme et dit combien de portions donne la recette. Sans elle, tous
+  // les petits-dejeuners s'appellent « Petit-dejeuner » et deviennent
+  // impossibles a distinguer dans la liste.
+  const [inviteEnregistrement, setInviteEnregistrement] = useState(null);
+
+  const entreesDuRepas = (mealType) =>
+    logEntriesApi.items.filter((e) => e.date === date && e.mealType === mealType);
+
+  const confirmerEnregistrementRepas = () => {
+    if (!inviteEnregistrement) return;
+    const entrees = entreesDuRepas(inviteEnregistrement.mealType);
+    setRepasTypes(
+      enregistrerRepasType(repasTypes, {
+        nom: inviteEnregistrement.nom,
+        mealType: inviteEnregistrement.mealType,
+        entrees,
+        portions: inviteEnregistrement.portions
+      })
+    );
+    setInviteEnregistrement(null);
   };
 
   const entreesDuJour = logEntriesApi.items.filter((e) => e.date === date);
@@ -409,7 +429,9 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
                 ) : (
                   <>
                     <button
-                      onClick={() => memoriserRepas(section.id, section.label)}
+                      onClick={() =>
+                        setInviteEnregistrement({ mealType: section.id, nom: section.label, portions: "1" })
+                      }
                       style={{
                         background: "none",
                         border: "none",
@@ -643,6 +665,56 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
           />
         </Field>
       </Card>
+      <Modal
+        open={!!inviteEnregistrement}
+        onClose={() => setInviteEnregistrement(null)}
+        title="Enregistrer ce repas"
+      >
+        {inviteEnregistrement && (
+          <div>
+            <p style={{ fontSize: 12, color: COLORS.textMuted, margin: "0 0 12px", lineHeight: 1.5 }}>
+              {entreesDuRepas(inviteEnregistrement.mealType).length} aliment
+              {entreesDuRepas(inviteEnregistrement.mealType).length > 1 ? "s" : ""} seront enregistrés avec
+              leurs quantités et leurs macros. Tu pourras réinjecter ce repas en un clic.
+            </p>
+
+            <Field label="Nom du repas">
+              <TextInput
+                placeholder="Ex : Petit-déj protéiné"
+                value={inviteEnregistrement.nom}
+                onChange={(e) => setInviteEnregistrement({ ...inviteEnregistrement, nom: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmerEnregistrementRepas();
+                }}
+              />
+            </Field>
+
+            <Field label="Cette recette fait combien de portions ?">
+              <NumberInput
+                min="1"
+                step="1"
+                value={inviteEnregistrement.portions}
+                onChange={(e) =>
+                  setInviteEnregistrement({ ...inviteEnregistrement, portions: e.target.value })
+                }
+              />
+              <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 }}>
+                Laisse 1 si tu as saisi une seule assiette. Mets 8 si tu as saisi toute la pâte à pancakes
+                et qu'elle donne 8 pancakes : l'appli divisera pour toi.
+              </p>
+            </Field>
+
+            <Btn
+              onClick={confirmerEnregistrementRepas}
+              disabled={!inviteEnregistrement.nom.trim()}
+              style={{ width: "100%" }}
+            >
+              Enregistrer
+            </Btn>
+          </div>
+        )}
+      </Modal>
+
       <AjoutAliment
         open={!!ajoutPour}
         onClose={() => setAjoutPour(null)}
