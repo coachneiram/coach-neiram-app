@@ -104,7 +104,9 @@ const A_EXPOSER = [
   // Lecture des bilans rediges par l'IA.
   "parseBilan",
   // Series temporelles des tendances.
-  "buildWeeklySeries"
+  "buildWeeklySeries",
+  // Coque de navigation.
+  "TABS"
 ];
 
 function extraireScriptApplicatif(html) {
