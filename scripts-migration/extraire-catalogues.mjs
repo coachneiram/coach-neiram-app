@@ -37,7 +37,8 @@ const TABLES = {
   DIET_TYPES: "Regimes alimentaires proposes dans le profil",
   ALLERGENS: "Allergenes et intolerances proposes dans le profil",
   TRAINING_MODES: "Ou le client fait ses seances",
-  COACHING_MODES: "Presentiel ou coaching a distance"
+  COACHING_MODES: "Presentiel ou coaching a distance",
+  SHOPPING_LIST: "Liste de courses par rayon"
 };
 
 const corps = Object.entries(TABLES)

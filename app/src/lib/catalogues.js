@@ -1122,3 +1122,1169 @@ export const COACHING_MODES = [
     "label": "En ligne (coaching a distance)"
   }
 ];
+
+/** Liste de courses par rayon. */
+export const SHOPPING_LIST = [
+  {
+    "id": "fruits",
+    "label": "🍎 Fruits",
+    "role": "fruit",
+    "items": [
+      {
+        "n": "Bananes",
+        "kcal": 89,
+        "p": 1,
+        "c": 23,
+        "f": 0
+      },
+      {
+        "n": "Pommes",
+        "kcal": 52,
+        "p": 0,
+        "c": 14,
+        "f": 0
+      },
+      {
+        "n": "Citrons",
+        "kcal": 29,
+        "p": 1,
+        "c": 9,
+        "f": 0
+      },
+      {
+        "n": "Baies fraîches ou congelées",
+        "kcal": 45,
+        "p": 1,
+        "c": 10,
+        "f": 0
+      },
+      {
+        "n": "Kiwis",
+        "kcal": 61,
+        "p": 1,
+        "c": 15,
+        "f": 0
+      },
+      {
+        "n": "Oranges",
+        "kcal": 47,
+        "p": 1,
+        "c": 12,
+        "f": 0
+      },
+      {
+        "n": "Myrtilles",
+        "kcal": 57,
+        "p": 1,
+        "c": 14,
+        "f": 0
+      },
+      {
+        "n": "Fraises",
+        "kcal": 32,
+        "p": 1,
+        "c": 8,
+        "f": 0
+      },
+      {
+        "n": "Framboises",
+        "kcal": 52,
+        "p": 1,
+        "c": 12,
+        "f": 1
+      },
+      {
+        "n": "Poires",
+        "kcal": 57,
+        "p": 0,
+        "c": 15,
+        "f": 0
+      },
+      {
+        "n": "Raisin",
+        "kcal": 69,
+        "p": 1,
+        "c": 18,
+        "f": 0
+      },
+      {
+        "n": "Pêches / Nectarines",
+        "kcal": 39,
+        "p": 1,
+        "c": 10,
+        "f": 0
+      },
+      {
+        "n": "Ananas",
+        "kcal": 50,
+        "p": 1,
+        "c": 13,
+        "f": 0
+      },
+      {
+        "n": "Mangue",
+        "kcal": 60,
+        "p": 1,
+        "c": 15,
+        "f": 0
+      },
+      {
+        "n": "Clémentines",
+        "kcal": 47,
+        "p": 1,
+        "c": 12,
+        "f": 0
+      },
+      {
+        "n": "Melon",
+        "kcal": 34,
+        "p": 1,
+        "c": 8,
+        "f": 0
+      },
+      {
+        "n": "Abricots",
+        "kcal": 48,
+        "p": 1,
+        "c": 11,
+        "f": 0
+      },
+      {
+        "n": "Cerises",
+        "kcal": 63,
+        "p": 1,
+        "c": 16,
+        "f": 0
+      }
+    ]
+  },
+  {
+    "id": "legumes",
+    "label": "🥦 Légumes",
+    "role": "legume",
+    "items": [
+      {
+        "n": "Oignons",
+        "kcal": 40,
+        "p": 1,
+        "c": 9,
+        "f": 0
+      },
+      {
+        "n": "Ail",
+        "kcal": 149,
+        "p": 6,
+        "c": 33,
+        "f": 1
+      },
+      {
+        "n": "Courgettes",
+        "kcal": 17,
+        "p": 1,
+        "c": 3,
+        "f": 0
+      },
+      {
+        "n": "Poivrons",
+        "kcal": 31,
+        "p": 1,
+        "c": 6,
+        "f": 0
+      },
+      {
+        "n": "Concombres",
+        "kcal": 15,
+        "p": 1,
+        "c": 4,
+        "f": 0
+      },
+      {
+        "n": "Carottes",
+        "kcal": 41,
+        "p": 1,
+        "c": 10,
+        "f": 0
+      },
+      {
+        "n": "Champignons",
+        "kcal": 22,
+        "p": 3,
+        "c": 3,
+        "f": 0
+      },
+      {
+        "n": "Brocolis",
+        "kcal": 34,
+        "p": 3,
+        "c": 7,
+        "f": 0
+      },
+      {
+        "n": "Haricots verts",
+        "kcal": 31,
+        "p": 2,
+        "c": 7,
+        "f": 0
+      },
+      {
+        "n": "Tomates",
+        "kcal": 18,
+        "p": 1,
+        "c": 4,
+        "f": 0
+      },
+      {
+        "n": "Laitue / Roquette",
+        "kcal": 17,
+        "p": 1,
+        "c": 3,
+        "f": 0
+      },
+      {
+        "n": "Épinards",
+        "kcal": 23,
+        "p": 3,
+        "c": 4,
+        "f": 0
+      },
+      {
+        "n": "Aubergines",
+        "kcal": 25,
+        "p": 1,
+        "c": 6,
+        "f": 0
+      },
+      {
+        "n": "Chou-fleur",
+        "kcal": 25,
+        "p": 2,
+        "c": 5,
+        "f": 0
+      },
+      {
+        "n": "Poireaux",
+        "kcal": 61,
+        "p": 1,
+        "c": 14,
+        "f": 0
+      },
+      {
+        "n": "Céleri",
+        "kcal": 16,
+        "p": 1,
+        "c": 3,
+        "f": 0
+      },
+      {
+        "n": "Betteraves",
+        "kcal": 43,
+        "p": 2,
+        "c": 10,
+        "f": 0
+      },
+      {
+        "n": "Endives",
+        "kcal": 17,
+        "p": 1,
+        "c": 3,
+        "f": 0
+      },
+      {
+        "n": "Asperges",
+        "kcal": 20,
+        "p": 2,
+        "c": 4,
+        "f": 0
+      },
+      {
+        "n": "Chou kale",
+        "kcal": 49,
+        "p": 4,
+        "c": 9,
+        "f": 1
+      },
+      {
+        "n": "Butternut / Potiron",
+        "kcal": 45,
+        "p": 1,
+        "c": 12,
+        "f": 0
+      },
+      {
+        "n": "Petits pois (frais ou surgelés)",
+        "kcal": 81,
+        "p": 5,
+        "c": 14,
+        "f": 0
+      }
+    ]
+  },
+  {
+    "id": "proteines",
+    "label": "🥩 Protéines",
+    "role": "proteine",
+    "items": [
+      {
+        "n": "Œufs (bio de préférence)",
+        "kcal": 137,
+        "p": 13,
+        "c": 1,
+        "f": 9,
+        "contains": [
+          "oeufs"
+        ]
+      },
+      {
+        "n": "Viande hachée 5%",
+        "kcal": 125,
+        "p": 21,
+        "c": 0,
+        "f": 5,
+        "contains": [
+          "viande"
+        ]
+      },
+      {
+        "n": "Blanc de poulet",
+        "kcal": 114,
+        "p": 24,
+        "c": 0,
+        "f": 2,
+        "contains": [
+          "volaille"
+        ]
+      },
+      {
+        "n": "Blanc de dinde",
+        "kcal": 109,
+        "p": 25,
+        "c": 0,
+        "f": 1,
+        "contains": [
+          "volaille"
+        ]
+      },
+      {
+        "n": "Poisson frais (régional)",
+        "kcal": 100,
+        "p": 20,
+        "c": 0,
+        "f": 2,
+        "contains": [
+          "poisson"
+        ]
+      },
+      {
+        "n": "Filet de cabillaud / colin",
+        "kcal": 82,
+        "p": 18,
+        "c": 0,
+        "f": 1,
+        "contains": [
+          "poisson"
+        ]
+      },
+      {
+        "n": "Thon en boîte (eau)",
+        "kcal": 116,
+        "p": 26,
+        "c": 0,
+        "f": 1,
+        "contains": [
+          "poisson"
+        ]
+      },
+      {
+        "n": "Sardines en boîte",
+        "kcal": 174,
+        "p": 21,
+        "c": 0,
+        "f": 10,
+        "contains": [
+          "poisson"
+        ]
+      },
+      {
+        "n": "Saumon",
+        "kcal": 174,
+        "p": 21,
+        "c": 0,
+        "f": 10,
+        "contains": [
+          "poisson"
+        ]
+      },
+      {
+        "n": "Saumon fumé",
+        "kcal": 180,
+        "p": 23,
+        "c": 0,
+        "f": 10,
+        "contains": [
+          "poisson"
+        ]
+      },
+      {
+        "n": "Crevettes",
+        "kcal": 101,
+        "p": 22,
+        "c": 1,
+        "f": 1,
+        "contains": [
+          "crustaces"
+        ]
+      },
+      {
+        "n": "Jambon blanc découenné",
+        "kcal": 110,
+        "p": 20,
+        "c": 1,
+        "f": 3,
+        "contains": [
+          "viande"
+        ]
+      },
+      {
+        "n": "Viande des Grisons",
+        "kcal": 175,
+        "p": 38,
+        "c": 1,
+        "f": 3,
+        "contains": [
+          "viande"
+        ]
+      },
+      {
+        "n": "Tofu ferme",
+        "kcal": 83,
+        "p": 12,
+        "c": 2,
+        "f": 3,
+        "contains": [
+          "soja"
+        ]
+      },
+      {
+        "n": "Tempeh",
+        "kcal": 184,
+        "p": 19,
+        "c": 9,
+        "f": 8,
+        "contains": [
+          "soja"
+        ]
+      },
+      {
+        "n": "Protéine en poudre (whey ou végétale)",
+        "kcal": 400,
+        "p": 80,
+        "c": 6,
+        "f": 5
+      },
+      {
+        "n": "Yaourt grec nature",
+        "kcal": 103,
+        "p": 16,
+        "c": 3,
+        "f": 3,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Fromage blanc 0%",
+        "kcal": 47,
+        "p": 8,
+        "c": 4,
+        "f": 0,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Fromage blanc entier",
+        "kcal": 98,
+        "p": 7,
+        "c": 4,
+        "f": 6,
+        "contains": [
+          "lactose"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "laitiers",
+    "label": "🥛 Produits laitiers / végétaux",
+    "role": "proteine",
+    "items": [
+      {
+        "n": "Lait (végétal si besoin)",
+        "kcal": 47,
+        "p": 3,
+        "c": 5,
+        "f": 2
+      },
+      {
+        "n": "Fromage blanc (cottage)",
+        "kcal": 98,
+        "p": 11,
+        "c": 3,
+        "f": 4,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Fromage frais",
+        "kcal": 250,
+        "p": 8,
+        "c": 3,
+        "f": 24,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Yaourt nature / lait de coco",
+        "kcal": 60,
+        "p": 4,
+        "c": 5,
+        "f": 3
+      },
+      {
+        "n": "Skyr nature",
+        "kcal": 57,
+        "p": 10,
+        "c": 4,
+        "f": 0,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Kéfir",
+        "kcal": 55,
+        "p": 3,
+        "c": 4,
+        "f": 3,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Feta",
+        "kcal": 264,
+        "p": 14,
+        "c": 4,
+        "f": 21,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Mozzarella",
+        "kcal": 253,
+        "p": 18,
+        "c": 3,
+        "f": 19,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Parmesan",
+        "kcal": 392,
+        "p": 36,
+        "c": 0,
+        "f": 28,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Fromage de chèvre frais",
+        "kcal": 210,
+        "p": 13,
+        "c": 3,
+        "f": 17,
+        "contains": [
+          "lactose"
+        ]
+      },
+      {
+        "n": "Boisson végétale (amande, avoine, soja)",
+        "kcal": 30,
+        "p": 1,
+        "c": 3,
+        "f": 1
+      }
+    ]
+  },
+  {
+    "id": "glucides",
+    "label": "🍚 Glucides / Féculents",
+    "role": "glucide",
+    "items": [
+      {
+        "n": "Flocons d'avoine",
+        "kcal": 355,
+        "p": 13,
+        "c": 60,
+        "f": 7,
+        "contains": [
+          "gluten"
+        ]
+      },
+      {
+        "n": "Riz basmati / complet",
+        "kcal": 349,
+        "p": 7,
+        "c": 78,
+        "f": 1
+      },
+      {
+        "n": "Pâtes complètes",
+        "kcal": 350,
+        "p": 13,
+        "c": 65,
+        "f": 3,
+        "contains": [
+          "gluten"
+        ]
+      },
+      {
+        "n": "Quinoa",
+        "kcal": 382,
+        "p": 14,
+        "c": 68,
+        "f": 6
+      },
+      {
+        "n": "Patates douces",
+        "kcal": 100,
+        "p": 2,
+        "c": 23,
+        "f": 0
+      },
+      {
+        "n": "Pommes de terre",
+        "kcal": 88,
+        "p": 2,
+        "c": 20,
+        "f": 0
+      },
+      {
+        "n": "Pain complet",
+        "kcal": 250,
+        "p": 9,
+        "c": 45,
+        "f": 3,
+        "contains": [
+          "gluten"
+        ]
+      },
+      {
+        "n": "Semoule",
+        "kcal": 349,
+        "p": 12,
+        "c": 73,
+        "f": 1,
+        "contains": [
+          "gluten"
+        ]
+      },
+      {
+        "n": "Boulgour",
+        "kcal": 370,
+        "p": 12,
+        "c": 76,
+        "f": 2,
+        "contains": [
+          "gluten"
+        ]
+      },
+      {
+        "n": "Farine complète",
+        "kcal": 340,
+        "p": 12,
+        "c": 70,
+        "f": 2,
+        "contains": [
+          "gluten"
+        ]
+      },
+      {
+        "n": "Lentilles sèches",
+        "kcal": 297,
+        "p": 22,
+        "c": 50,
+        "f": 1
+      },
+      {
+        "n": "Sarrasin",
+        "kcal": 335,
+        "p": 13,
+        "c": 64,
+        "f": 3
+      },
+      {
+        "n": "Galettes de riz",
+        "kcal": 387,
+        "p": 8,
+        "c": 82,
+        "f": 3
+      },
+      {
+        "n": "Tortillas / wraps complets",
+        "kcal": 300,
+        "p": 8,
+        "c": 50,
+        "f": 7,
+        "contains": [
+          "gluten"
+        ]
+      },
+      {
+        "n": "Muesli sans sucre ajouté",
+        "kcal": 360,
+        "p": 10,
+        "c": 60,
+        "f": 8,
+        "contains": [
+          "gluten",
+          "fruits-a-coque"
+        ]
+      },
+      {
+        "n": "Polenta",
+        "kcal": 358,
+        "p": 8,
+        "c": 77,
+        "f": 2
+      },
+      {
+        "n": "Vermicelles de riz",
+        "kcal": 360,
+        "p": 6,
+        "c": 82,
+        "f": 1
+      }
+    ]
+  },
+  {
+    "id": "lipides",
+    "label": "🥑 Lipides / Graisses",
+    "role": "lipide",
+    "items": [
+      {
+        "n": "Huile d'olive vierge extra",
+        "kcal": 810,
+        "p": 0,
+        "c": 0,
+        "f": 90
+      },
+      {
+        "n": "Huile de lin (frigo)",
+        "kcal": 900,
+        "p": 0,
+        "c": 0,
+        "f": 100
+      },
+      {
+        "n": "Huile de coco",
+        "kcal": 900,
+        "p": 0,
+        "c": 0,
+        "f": 100
+      },
+      {
+        "n": "Huile de colza",
+        "kcal": 900,
+        "p": 0,
+        "c": 0,
+        "f": 100
+      },
+      {
+        "n": "Avocats",
+        "kcal": 179,
+        "p": 2,
+        "c": 9,
+        "f": 15
+      },
+      {
+        "n": "Amandes non salées",
+        "kcal": 614,
+        "p": 21,
+        "c": 20,
+        "f": 50,
+        "contains": [
+          "fruits-a-coque"
+        ]
+      },
+      {
+        "n": "Noix",
+        "kcal": 656,
+        "p": 15,
+        "c": 14,
+        "f": 60,
+        "contains": [
+          "fruits-a-coque"
+        ]
+      },
+      {
+        "n": "Noisettes",
+        "kcal": 646,
+        "p": 15,
+        "c": 10,
+        "f": 61,
+        "contains": [
+          "fruits-a-coque"
+        ]
+      },
+      {
+        "n": "Noix de cajou",
+        "kcal": 570,
+        "p": 18,
+        "c": 30,
+        "f": 42,
+        "contains": [
+          "fruits-a-coque"
+        ]
+      },
+      {
+        "n": "Graines de chia",
+        "kcal": 533,
+        "p": 17,
+        "c": 42,
+        "f": 33
+      },
+      {
+        "n": "Graines de lin moulues",
+        "kcal": 566,
+        "p": 18,
+        "c": 29,
+        "f": 42
+      },
+      {
+        "n": "Graines de courge",
+        "kcal": 560,
+        "p": 30,
+        "c": 11,
+        "f": 46
+      },
+      {
+        "n": "Tahini (purée de sésame)",
+        "kcal": 600,
+        "p": 20,
+        "c": 12,
+        "f": 54
+      },
+      {
+        "n": "Purée d'amandes",
+        "kcal": 620,
+        "p": 21,
+        "c": 12,
+        "f": 55,
+        "contains": [
+          "fruits-a-coque"
+        ]
+      },
+      {
+        "n": "Beurre de cacahuète naturel",
+        "kcal": 600,
+        "p": 25,
+        "c": 15,
+        "f": 50,
+        "contains": [
+          "arachides"
+        ]
+      },
+      {
+        "n": "Olives",
+        "kcal": 145,
+        "p": 1,
+        "c": 3,
+        "f": 14
+      },
+      {
+        "n": "Beurre doux",
+        "kcal": 746,
+        "p": 1,
+        "c": 1,
+        "f": 82,
+        "contains": [
+          "lactose"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "conserves",
+    "label": "🥫 En boîte / Conserves",
+    "role": null,
+    "items": [
+      {
+        "n": "Haricots rouges",
+        "kcal": 95,
+        "p": 8,
+        "c": 15,
+        "f": 1,
+        "role": "proteine"
+      },
+      {
+        "n": "Pois chiches",
+        "kcal": 120,
+        "p": 7,
+        "c": 18,
+        "f": 2,
+        "role": "proteine"
+      },
+      {
+        "n": "Lentilles cuites (bocal)",
+        "kcal": 116,
+        "p": 9,
+        "c": 17,
+        "f": 0,
+        "role": "proteine"
+      },
+      {
+        "n": "Maïs (sans sel ajouté)",
+        "kcal": 80,
+        "p": 3,
+        "c": 16,
+        "f": 1,
+        "role": "glucide"
+      },
+      {
+        "n": "Thon au naturel",
+        "kcal": 116,
+        "p": 26,
+        "c": 0,
+        "f": 1,
+        "contains": [
+          "poisson"
+        ],
+        "role": "proteine"
+      },
+      {
+        "n": "Sardines à l'huile d'olive",
+        "kcal": 210,
+        "p": 23,
+        "c": 0,
+        "f": 13,
+        "contains": [
+          "poisson"
+        ],
+        "role": "proteine"
+      },
+      {
+        "n": "Maquereau en boîte",
+        "kcal": 220,
+        "p": 20,
+        "c": 0,
+        "f": 15,
+        "contains": [
+          "poisson"
+        ],
+        "role": "proteine"
+      },
+      {
+        "n": "Tomates pelées",
+        "kcal": 20,
+        "p": 1,
+        "c": 4,
+        "f": 0,
+        "role": "legume"
+      },
+      {
+        "n": "Passata / sauce tomate nature",
+        "kcal": 35,
+        "p": 2,
+        "c": 6,
+        "f": 0,
+        "role": "legume"
+      },
+      {
+        "n": "Ratatouille",
+        "kcal": 45,
+        "p": 1,
+        "c": 6,
+        "f": 2,
+        "role": "legume"
+      },
+      {
+        "n": "Soupe de légumes",
+        "kcal": 35,
+        "p": 1,
+        "c": 6,
+        "f": 1,
+        "role": "legume"
+      },
+      {
+        "n": "Lait de coco",
+        "kcal": 180,
+        "p": 2,
+        "c": 3,
+        "f": 18,
+        "role": "lipide"
+      },
+      {
+        "n": "Compote sans sucre ajouté",
+        "kcal": 55,
+        "p": 0,
+        "c": 13,
+        "f": 0,
+        "role": "fruit"
+      }
+    ]
+  },
+  {
+    "id": "epices",
+    "label": "🌿 Herbes & épices",
+    "role": null,
+    "items": [
+      {
+        "n": "Basilic"
+      },
+      {
+        "n": "Coriandre"
+      },
+      {
+        "n": "Persil"
+      },
+      {
+        "n": "Romarin"
+      },
+      {
+        "n": "Thym"
+      },
+      {
+        "n": "Origan"
+      },
+      {
+        "n": "Paprika"
+      },
+      {
+        "n": "Cannelle"
+      },
+      {
+        "n": "Curry"
+      },
+      {
+        "n": "Cumin"
+      },
+      {
+        "n": "Curcuma"
+      },
+      {
+        "n": "Gingembre"
+      },
+      {
+        "n": "Poivre noir"
+      },
+      {
+        "n": "Herbes de Provence"
+      },
+      {
+        "n": "Ail en poudre"
+      }
+    ]
+  },
+  {
+    "id": "divers",
+    "label": "🍫 Réserve / Divers",
+    "role": null,
+    "items": [
+      {
+        "n": "Chocolat noir (>70%)",
+        "kcal": 560,
+        "p": 8,
+        "c": 30,
+        "f": 42
+      },
+      {
+        "n": "Miel ou sirop d'érable",
+        "kcal": 320,
+        "p": 0,
+        "c": 80,
+        "f": 0
+      },
+      {
+        "n": "Dattes séchées",
+        "kcal": 297,
+        "p": 2,
+        "c": 70,
+        "f": 1
+      },
+      {
+        "n": "Raisins secs",
+        "kcal": 341,
+        "p": 3,
+        "c": 80,
+        "f": 1
+      },
+      {
+        "n": "Abricots secs",
+        "kcal": 237,
+        "p": 4,
+        "c": 53,
+        "f": 1
+      },
+      {
+        "n": "Cacao en poudre non sucré",
+        "kcal": 340,
+        "p": 22,
+        "c": 14,
+        "f": 21
+      },
+      {
+        "n": "Levure nutritionnelle",
+        "kcal": 350,
+        "p": 50,
+        "c": 25,
+        "f": 5
+      },
+      {
+        "n": "Vinaigre balsamique",
+        "kcal": 90,
+        "p": 0,
+        "c": 17,
+        "f": 0
+      },
+      {
+        "n": "Sauce soja (sans gluten)",
+        "kcal": 55,
+        "p": 8,
+        "c": 5,
+        "f": 0,
+        "contains": [
+          "soja"
+        ]
+      },
+      {
+        "n": "Moutarde",
+        "kcal": 100,
+        "p": 6,
+        "c": 6,
+        "f": 6
+      },
+      {
+        "n": "Cornichons",
+        "kcal": 15,
+        "p": 1,
+        "c": 2,
+        "f": 0
+      },
+      {
+        "n": "Thé / Tisanes"
+      },
+      {
+        "n": "Café"
+      },
+      {
+        "n": "Eau gazeuse"
+      }
+    ]
+  }
+];

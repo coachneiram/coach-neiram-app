@@ -12,6 +12,7 @@ import { useState } from "react";
 import { COLORS, POLICES } from "../tokens.js";
 import { Aliments } from "./Aliments.jsx";
 import { Plats } from "./Plats.jsx";
+import { Courses } from "./Courses.jsx";
 import { CoachIA } from "./CoachIA.jsx";
 
 /** Sous-onglets, dans l'ordre de l'application actuelle. */
@@ -53,6 +54,7 @@ export function Repas({ api, profile, targets, logEntries, iaDisponible = true, 
       </div>
 
       {sousOnglet === "plats" && <Plats api={api} />}
+      {sousOnglet === "courses" && <Courses profile={profile} />}
       {sousOnglet === "aliments" && (
         <Aliments profile={profile} targets={targets} logEntries={logEntries} />
       )}

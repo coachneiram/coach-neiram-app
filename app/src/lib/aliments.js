@@ -105,3 +105,14 @@ export function trierPourObjectif(aliments, idCategorie, objectif) {
   }
   return arr;
 }
+
+/**
+ * Un article de la liste de courses convient-il au client ?
+ *
+ * Repris de shoppingDietOk (index.html, ligne 1756). Un article sans
+ * valeur de glucides est traite comme s'il en avait zero : sans cela, le
+ * filtre keto ecarterait tout ce dont on ignore la composition, y compris
+ * l'huile d'olive ou le sel.
+ */
+export const articleCoursesOk = (article, profil) =>
+  regimeOk({ contains: article.contains || [], c: article.c != null ? article.c : 0 }, profil);

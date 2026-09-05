@@ -132,7 +132,9 @@ const A_EXPOSER = [
   "DIET_TYPES",
   "ALLERGENS",
   "TRAINING_MODES",
-  "COACHING_MODES"
+  "COACHING_MODES",
+  "SHOPPING_LIST",
+  "shoppingDietOk"
 ];
 
 function extraireScriptApplicatif(html) {
