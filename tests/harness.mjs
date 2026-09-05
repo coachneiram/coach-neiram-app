@@ -112,7 +112,9 @@ const A_EXPOSER = [
   "EQUIV_GLUCIDES",
   "EQUIV_FRUITS",
   "EQUIV_PROTEINES",
-  "EQUIV_LIPIDES"
+  "EQUIV_LIPIDES",
+  "SUGGESTIONS",
+  "pickSuggestions"
 ];
 
 function extraireScriptApplicatif(html) {

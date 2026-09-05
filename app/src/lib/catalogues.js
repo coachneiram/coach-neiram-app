@@ -776,3 +776,269 @@ export const GOAL_FOOD_NOTES = {
   "maintien": "Maintien : équilibre les trois familles à chaque repas, varie les sources dans chaque tableau.",
   "performance": "Performance : glucides autour des entraînements (banane, riz, avoine), protéines réparties sur la journée, oméga-3 réguliers."
 };
+
+/** Collations et petits repas proposes pour combler la journee. */
+export const SUGGESTIONS = [
+  {
+    "name": "Skyr nature (150 g)",
+    "kcal": 90,
+    "p": 16,
+    "c": 6,
+    "f": 0,
+    "contains": [
+      "lactose"
+    ]
+  },
+  {
+    "name": "Fromage blanc 0% + miel (200 g)",
+    "kcal": 140,
+    "p": 16,
+    "c": 17,
+    "f": 0,
+    "contains": [
+      "lactose"
+    ]
+  },
+  {
+    "name": "Yaourt grec + myrtilles",
+    "kcal": 160,
+    "p": 12,
+    "c": 14,
+    "f": 6,
+    "contains": [
+      "lactose"
+    ]
+  },
+  {
+    "name": "2 œufs durs",
+    "kcal": 140,
+    "p": 12,
+    "c": 1,
+    "f": 10,
+    "contains": [
+      "oeufs"
+    ]
+  },
+  {
+    "name": "Omelette 3 œufs",
+    "kcal": 210,
+    "p": 18,
+    "c": 2,
+    "f": 15,
+    "contains": [
+      "oeufs"
+    ]
+  },
+  {
+    "name": "Avocat ½ + œuf mollet",
+    "kcal": 200,
+    "p": 8,
+    "c": 6,
+    "f": 16,
+    "contains": [
+      "oeufs"
+    ]
+  },
+  {
+    "name": "Blanc de poulet (120 g)",
+    "kcal": 130,
+    "p": 26,
+    "c": 0,
+    "f": 2,
+    "contains": [
+      "volaille"
+    ]
+  },
+  {
+    "name": "Thon au naturel (1 boîte)",
+    "kcal": 110,
+    "p": 25,
+    "c": 0,
+    "f": 1,
+    "contains": [
+      "poisson"
+    ]
+  },
+  {
+    "name": "Sardines à l'huile (1 boîte)",
+    "kcal": 200,
+    "p": 22,
+    "c": 0,
+    "f": 13,
+    "contains": [
+      "poisson"
+    ]
+  },
+  {
+    "name": "Tofu ferme sauté (150 g)",
+    "kcal": 180,
+    "p": 18,
+    "c": 4,
+    "f": 11,
+    "contains": [
+      "soja"
+    ]
+  },
+  {
+    "name": "Shaker whey + eau",
+    "kcal": 120,
+    "p": 24,
+    "c": 3,
+    "f": 2,
+    "contains": [
+      "lactose"
+    ]
+  },
+  {
+    "name": "Shaker protéine végétale (pois)",
+    "kcal": 120,
+    "p": 22,
+    "c": 4,
+    "f": 2,
+    "contains": []
+  },
+  {
+    "name": "Banane",
+    "kcal": 90,
+    "p": 1,
+    "c": 23,
+    "f": 0,
+    "contains": []
+  },
+  {
+    "name": "Pomme + amandes (20 g)",
+    "kcal": 200,
+    "p": 5,
+    "c": 22,
+    "f": 11,
+    "contains": [
+      "fruits-a-coque"
+    ]
+  },
+  {
+    "name": "Pain complet + beurre de cacahuète (30 g)",
+    "kcal": 260,
+    "p": 10,
+    "c": 24,
+    "f": 14,
+    "contains": [
+      "arachides",
+      "gluten"
+    ]
+  },
+  {
+    "name": "Bol flocons d'avoine + lait (60 g)",
+    "kcal": 330,
+    "p": 13,
+    "c": 48,
+    "f": 7,
+    "contains": [
+      "gluten",
+      "lactose"
+    ]
+  },
+  {
+    "name": "Riz basmati cuit (150 g)",
+    "kcal": 195,
+    "p": 4,
+    "c": 42,
+    "f": 0,
+    "contains": []
+  },
+  {
+    "name": "Patate douce rôtie (200 g)",
+    "kcal": 180,
+    "p": 3,
+    "c": 40,
+    "f": 0,
+    "contains": []
+  },
+  {
+    "name": "Pain complet + blanc de dinde",
+    "kcal": 220,
+    "p": 16,
+    "c": 30,
+    "f": 3,
+    "contains": [
+      "gluten",
+      "volaille"
+    ]
+  },
+  {
+    "name": "Poignée de noix (30 g)",
+    "kcal": 200,
+    "p": 5,
+    "c": 4,
+    "f": 19,
+    "contains": [
+      "fruits-a-coque"
+    ]
+  },
+  {
+    "name": "Chocolat noir 85% (20 g)",
+    "kcal": 120,
+    "p": 2,
+    "c": 6,
+    "f": 9,
+    "contains": []
+  },
+  {
+    "name": "Assiette poulet, riz & brocoli",
+    "kcal": 520,
+    "p": 42,
+    "c": 55,
+    "f": 12,
+    "contains": [
+      "volaille"
+    ]
+  },
+  {
+    "name": "Saumon, patate douce & haricots verts",
+    "kcal": 550,
+    "p": 35,
+    "c": 45,
+    "f": 22,
+    "contains": [
+      "poisson"
+    ]
+  },
+  {
+    "name": "Steak haché 5% + pâtes complètes",
+    "kcal": 560,
+    "p": 40,
+    "c": 60,
+    "f": 13,
+    "contains": [
+      "viande",
+      "gluten"
+    ]
+  },
+  {
+    "name": "Tofu sauté, riz & légumes",
+    "kcal": 480,
+    "p": 25,
+    "c": 62,
+    "f": 13,
+    "contains": [
+      "soja"
+    ]
+  },
+  {
+    "name": "Salade quinoa, pois chiches & feta",
+    "kcal": 430,
+    "p": 17,
+    "c": 52,
+    "f": 16,
+    "contains": [
+      "lactose"
+    ]
+  },
+  {
+    "name": "Dahl de lentilles corail + riz",
+    "kcal": 450,
+    "p": 20,
+    "c": 70,
+    "f": 7,
+    "contains": []
+  }
+];
