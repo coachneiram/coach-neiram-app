@@ -1,7 +1,28 @@
+import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+
+/**
+ * Empreinte de la version construite, affichee dans les Reglages.
+ *
+ * Sans elle, impossible de savoir ce qu'un telephone execute reellement :
+ * un client signale un bug deja corrige, on cherche dans le code, et le
+ * probleme etait un ancien paquet en cache. C'est arrive deux fois.
+ *
+ * En cas d'echec (dossier sans git, archive telechargee), on n'invente
+ * rien : la date suffit a distinguer deux versions.
+ */
+function versionConstruite() {
+  const date = new Date().toISOString().slice(0, 10);
+  try {
+    const court = execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+    return `${date} · ${court}`;
+  } catch (e) {
+    return date;
+  }
+}
 
 /**
  * Ecrit assets-manifest.json : la liste des fichiers construits, avec leur
@@ -33,6 +54,9 @@ function manifesteDesAssets() {
 // le site depuis /coach-neiram-app/.
 export default defineConfig({
   base: "./",
+  define: {
+    __VERSION_APP__: JSON.stringify(versionConstruite())
+  },
   plugins: [react(), manifesteDesAssets()],
   build: {
     outDir: "dist",

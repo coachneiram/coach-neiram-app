@@ -180,6 +180,14 @@ function mesurerOccupation() {
   };
 }
 
+/**
+ * Version construite, injectee par Vite (voir app/vite.config.js).
+ *
+ * Le repli « développement » couvre les tests Node, qui importent ce
+ * fichier sans passer par la construction.
+ */
+const VERSION_APP = typeof __VERSION_APP__ === "string" ? __VERSION_APP__ : "développement";
+
 export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
   const [occupation, setOccupation] = useState(mesurerOccupation);
   const [messageStockage, setMessageStockage] = useState(null);
@@ -388,6 +396,26 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
           >
             Enregistrer
           </Btn>
+
+          {/* TEXTE-NOUVEAU
+              Version de l'application, absente de l'application d'origine.
+              Sans elle, impossible de savoir ce qu'un telephone execute
+              vraiment : un client signale un bug deja corrige, on cherche
+              dans le code, et c'etait un ancien paquet garde en cache.
+              C'est arrive deux fois pendant la migration, et a chaque fois
+              il a fallu un aller-retour pour s'en apercevoir. */}
+          <p
+            style={{
+              fontSize: 10.5,
+              color: COLORS.textFaint,
+              textAlign: "center",
+              fontFamily: "IBM Plex Mono",
+              margin: "14px 0 0"
+            }}
+          >
+            Version {VERSION_APP}
+          </p>
+          {/* FIN-TEXTE-NOUVEAU */}
         </>
       )}
     </Modal>
