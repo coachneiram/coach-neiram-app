@@ -50,7 +50,8 @@ const TABLES = {
   DEFAULT_CARDIO_FIELDS: "Champs cardio affiches par defaut",
   EXERCISE_LIBRARY: "Bibliotheque d'exercices, par groupe",
   PL_SET_TYPES: "Types de series en force athletique",
-  EXERCISE_VIDEOS: "Video de demonstration par exercice, indexee par cle d'exercice"
+  EXERCISE_VIDEOS: "Video de demonstration par exercice, indexee par cle d'exercice",
+  MISSED_REASONS: "Motifs proposes pour justifier un creneau manque"
 };
 
 const corps = Object.entries(TABLES)

@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import { COLORS } from "./tokens.js";
 import { todayISO } from "./lib/dates.js";
 import { getMonthKey, getWeekKey } from "./lib/semaine.js";
-import { STORAGE_KEYS, charger, enregistrer } from "./lib/stockage.js";
+import { CLES_ANNEXES, STORAGE_KEYS, charger, enregistrer } from "./lib/stockage.js";
 import { collectionApi, journalDuJourApi } from "./lib/collections.js";
 import { computeTargets } from "./lib/nutrition.js";
 import { bilanHebdomadaire } from "./lib/bilan.js";
@@ -63,6 +63,12 @@ export default function App() {
   const [measurements, setMeasurements] = useState([]);
   const [routines, setRoutines] = useState([]);
 
+  /**
+   * Justifications de creneaux manques, indexees par « creneau|date ».
+   * Elles vivent hors du prefixe coach_, comme dans l'application actuelle.
+   */
+  const [raisonsCreneaux, setRaisonsCreneaux] = useState({});
+
   useEffect(() => {
     setProfile(charger(STORAGE_KEYS.profile, null));
     setDishes(listeStockee(STORAGE_KEYS.dishes));
@@ -72,6 +78,7 @@ export default function App() {
     setSessions(listeStockee(STORAGE_KEYS.sessions));
     setMeasurements(listeStockee(STORAGE_KEYS.measurements));
     setRoutines(listeStockee(STORAGE_KEYS.routines));
+    setRaisonsCreneaux(charger(CLES_ANNEXES.raisonsCreneaux, {}) || {});
     setPret(true);
   }, []);
 
@@ -116,6 +123,12 @@ export default function App() {
     () => (profile && targets ? bilanMensuel(getMonthKey(todayISO()), donneesCompletes, profile, targets) : null),
     [profile, targets, sessions, dailyForm, bodyLogs, logEntries, measurements]
   );
+
+  const definirRaisonCreneau = (cle, entree) => {
+    const suivant = { ...raisonsCreneaux, [cle]: entree };
+    setRaisonsCreneaux(suivant);
+    enregistrer(CLES_ANNEXES.raisonsCreneaux, suivant);
+  };
 
   const enregistrerProfil = (suivant) => {
     setProfile(suivant);
@@ -175,7 +188,15 @@ export default function App() {
     ),
     sommeil: <Sommeil formApi={formApi} profile={profil} />,
     mensurations: <Mensurations api={measurementsApi} bodyApi={bodyApi} />,
-    entrainements: <Entrainements routinesApi={routinesApi} sessionsApi={sessionsApi} profile={profil} />,
+    entrainements: (
+      <Entrainements
+        routinesApi={routinesApi}
+        sessionsApi={sessionsApi}
+        profile={profil}
+        raisonsCreneaux={raisonsCreneaux}
+        onDefinirRaisonCreneau={definirRaisonCreneau}
+      />
+    ),
     tendances: weekStats ? (
       <Tendances
         allData={donneesCompletes}

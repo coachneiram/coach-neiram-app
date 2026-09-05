@@ -35,6 +35,8 @@ export const CLES_ANNEXES = {
   outboxCoach: "cn_coach_outbox",
   alerteCoach: "cn_coach_alert_state",
   alerteCreneaux: "cn_coach_shift_alert_state",
+  raisonsCreneaux: "cn_slot_reasons",
+  semainesDifficiles: "cn_hard_weeks",
   bilanHebdo: "cn_coach_weekly_state"
 };
 

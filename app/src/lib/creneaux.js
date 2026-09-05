@@ -240,3 +240,35 @@ export function decalagesRecents(creneaux, seances, aujourdhui) {
   });
   return sortie.sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/** A partir de combien de manques sur 14 jours l'alerte coach s'affiche. */
+export const SEUIL_ALERTE_MANQUES = 2;
+
+/**
+ * Message de motivation du bloc « coaching en ligne ».
+ *
+ * Volontairement limite au positif et au neutre. Un creneau manque a deja
+ * sa propre carte « a justifier » plus bas : y ajouter une relance ici
+ * reviendrait a taper deux fois sur quelqu'un qui a deja rate sa seance.
+ */
+export function motivationCreneaux(semaine, bilan) {
+  const aujourdhui = (semaine.lignes || []).find((r) => r.status === "aujourdhui");
+  if (aujourdhui) {
+    return (
+      "Ton créneau du jour" +
+      (aujourdhui.slot.time ? " (" + aujourdhui.slot.time + ")" : "") +
+      " t'attend. Le pointer prend 5 secondes."
+    );
+  }
+  if (bilan.prevus > 0 && bilan.manques === 0 && bilan.honores === bilan.prevus) {
+    return bilan.honores + "/" + bilan.prevus + " créneaux honorés cette semaine. Rien de plus à faire.";
+  }
+  return null;
+}
+
+/** Identifiant d'une justification : un creneau a une date donnee. */
+export const cleJustification = (ligne) => ligne.slot.id + "|" + ligne.date;
+
+/** Heure courante au format HH:MM. */
+export const heureCourante = (maintenant = new Date()) =>
+  String(maintenant.getHours()).padStart(2, "0") + ":" + String(maintenant.getMinutes()).padStart(2, "0");

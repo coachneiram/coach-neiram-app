@@ -21,12 +21,25 @@ import { enLigne } from "../lib/semaine.js";
 import { SEANCE_TEMPLATES } from "../lib/catalogues.js";
 import { ConstructeurSeances } from "./ConstructeurSeances.jsx";
 import { Seances } from "./Seances.jsx";
+import { Creneaux } from "./Creneaux.jsx";
 import { SeancesCoach } from "./SeancesCoach.jsx";
 import { Records } from "./Records.jsx";
 
-export function Entrainements({ routinesApi, sessionsApi, profile }) {
+export function Entrainements({
+  routinesApi,
+  sessionsApi,
+  profile,
+  raisonsCreneaux,
+  onDefinirRaisonCreneau
+}) {
   const enTete = enLigne(profile) ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 20 }}>
+      <Creneaux
+        profile={profile}
+        sessionsApi={sessionsApi}
+        raisons={raisonsCreneaux}
+        onDefinirRaison={onDefinirRaisonCreneau}
+      />
       <SeancesCoach routinesApi={routinesApi} modeles={SEANCE_TEMPLATES} />
     </div>
   ) : null;

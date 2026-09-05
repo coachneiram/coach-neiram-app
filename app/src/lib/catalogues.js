@@ -5506,3 +5506,35 @@ export const EXERCISE_VIDEOS = {
   "rowing unilateral elastique": "https://youtube.com/shorts/OElmXDpBXp8",
   "triceps unilateral elastique": "https://youtube.com/shorts/-AnzncmbBt0"
 };
+
+/** Motifs proposes pour justifier un creneau manque. */
+export const MISSED_REASONS = [
+  {
+    "id": "imprévu_pro",
+    "label": "Imprévu professionnel"
+  },
+  {
+    "id": "famille",
+    "label": "Enfants / famille"
+  },
+  {
+    "id": "fatigue",
+    "label": "Fatigue / nuit courte"
+  },
+  {
+    "id": "sante",
+    "label": "Maladie / douleur"
+  },
+  {
+    "id": "deplacement",
+    "label": "Déplacement / voyage"
+  },
+  {
+    "id": "oubli",
+    "label": "Oubli"
+  },
+  {
+    "id": "autre",
+    "label": "Autre"
+  }
+];

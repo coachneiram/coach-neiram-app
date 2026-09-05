@@ -19,3 +19,16 @@ export const GEMINI_MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-flash-latest"
 ];
+
+/**
+ * Numero WhatsApp du coach, au format international sans le « + ».
+ *
+ * Il sert au bouton « Prevenir mon coach » quand la synchronisation
+ * automatique n'est pas configuree : le client garde un moyen de joindre
+ * son coach meme si la remontee technique ne marche pas.
+ */
+export const COACH_WHATSAPP = "33675359069";
+
+/** Lien WhatsApp pre-rempli vers le coach. */
+export const lienWhatsappCoach = (message) =>
+  "https://wa.me/" + COACH_WHATSAPP + "?text=" + encodeURIComponent(message);

@@ -201,3 +201,10 @@ export const Barcode = mkIcon(
     <path d="M11 17v2" />
   </>
 );
+
+export const Send = mkIcon(
+  <>
+    <path d="m22 2-7 20-4-9-9-4Z" />
+    <path d="M22 2 11 13" />
+  </>
+);

@@ -106,7 +106,13 @@ function phrasesAffichees(source) {
    * « Points forts » sont des libelles que le client lit tous les jours.
    * Un seuil de longueur les laissait passer.
    */
-  for (const m of source.matchAll(/>([^<>{}]{4,})</g)) {
+  /*
+   * L'ouverture est « > » OU « } » : dans « ...{n} phrases restantes</p> »,
+   * la phrase suit une expression JSX et non une balise. Ne reconnaitre que
+   * « > » laissait passer sans controle toute phrase precedee d'une valeur
+   * calculee — un cas frequent, et jamais signale.
+   */
+  for (const m of source.matchAll(/[>}]([^<>{}]{4,})</g)) {
     const t = aplatir(m[1]);
     if (t && estDuTexte(t)) phrases.add(t);
   }
