@@ -15,13 +15,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { COLORS } from "./tokens.js";
 import { todayISO } from "./lib/dates.js";
-import { getMonthKey, getWeekKey } from "./lib/semaine.js";
+import { cleMoisPrecedent, getMonthKey, getWeekKey, uid } from "./lib/semaine.js";
+import { addDays } from "./lib/dates.js";
 import { CLES_ANNEXES, STORAGE_KEYS, charger, enregistrer, surEchecEcriture } from "./lib/stockage.js";
 import { collectionApi, journalDuJourApi } from "./lib/collections.js";
 import { computeTargets } from "./lib/nutrition.js";
 import { bilanHebdomadaire } from "./lib/bilan.js";
 import { bilanMensuel } from "./lib/bilan-mensuel.js";
 import { partagerBilan } from "./lib/bilan-html.js";
+import { actionsPrecedentes, genererBilanHebdo, genererBilanMensuel } from "./lib/bilan-ia.js";
+import { lireBilan } from "./lib/rapport.js";
+import { messageErreur } from "./lib/ia.js";
 import { redimensionnerPhoto } from "./lib/images.js";
 import {
   PERIODE_VERIFICATION_MS,
@@ -180,7 +184,7 @@ export default function App() {
     const resultat = await partagerBilan({
       profile,
       weekStats,
-      report: null,
+      report: bilanCourant,
       photos,
       targets
     });
@@ -189,6 +193,103 @@ export default function App() {
     }
     if (resultat === "downloaded") {
       afficherToast("Rapport téléchargé — envoie le fichier à ton coach (WhatsApp, mail...).");
+    }
+  };
+
+  /**
+   * Bilans rediges par l'IA, hebdomadaires et mensuels.
+   *
+   * REGRESSION DE LA BASCULE : la generation n'avait jamais ete portee, et
+   * l'affichage non plus. Les deux boutons « Bilan IA » et « Generer le
+   * bilan mensuel » etaient donc inertes — le client appuyait, rien ne se
+   * passait, sans le moindre message.
+   */
+  const [reports, setReports] = useState(() => listeStockee(STORAGE_KEYS.reports));
+  const [monthlyReports, setMonthlyReports] = useState(() => listeStockee(STORAGE_KEYS.monthlyReports));
+  const [enGeneration, setEnGeneration] = useState(false);
+  const [enGenerationMensuelle, setEnGenerationMensuelle] = useState(false);
+  const [erreurGeneration, setErreurGeneration] = useState(null);
+  const [erreurGenerationMensuelle, setErreurGenerationMensuelle] = useState(null);
+
+  const cleMoisCourant = getMonthKey(todayISO());
+  const bilanCourant = reports.find((r) => r.weekKey === cleSemaineCourante) || null;
+  const bilanMensuelCourant = monthlyReports.find((r) => r.monthKey === cleMoisCourant) || null;
+
+  const genererBilan = async () => {
+    if (!weekStats || !profile || enGeneration) return;
+    setEnGeneration(true);
+    setErreurGeneration(null);
+    try {
+      // La semaine precedente sert de point de comparaison : sans elle, la
+      // section EVOLUTION du bilan n'a rien a comparer et le modele invente.
+      const cleSemainePrecedente = addDays(cleSemaineCourante, -7);
+      const texte = await genererBilanHebdo({
+        weekStats,
+        lastWeekStats: bilanHebdomadaire(cleSemainePrecedente, donneesCompletes, profile, targets),
+        profile,
+        lastActionsText: actionsPrecedentes(reports.find((r) => r.weekKey === cleSemainePrecedente)),
+        thisPhotos: photos,
+        lastPhotos: charger("coach_photos_" + cleSemainePrecedente, null)
+      });
+      const suivant = [
+        {
+          id: uid(),
+          weekKey: cleSemaineCourante,
+          start: weekStats.start,
+          end: weekStats.end,
+          stats: weekStats,
+          sections: lireBilan(texte),
+          generatedAt: new Date().toISOString()
+        },
+        ...reports.filter((r) => r.weekKey !== cleSemaineCourante)
+      ];
+      setReports(suivant);
+      if (!enregistrer(STORAGE_KEYS.reports, suivant)) {
+        setErreurGeneration("Bilan généré mais non enregistré : la mémoire de l'application est pleine.");
+      }
+    } catch (e) {
+      setErreurGeneration(
+        messageErreur(e, "Le bilan IA n'a pas pu être généré. Vérifie ta connexion, puis réessaie.")
+      );
+    } finally {
+      setEnGeneration(false);
+    }
+  };
+
+  const genererBilanDuMois = async () => {
+    if (!monthStats || !profile || enGenerationMensuelle) return;
+    setEnGenerationMensuelle(true);
+    setErreurGenerationMensuelle(null);
+    try {
+      const clePrecedente = cleMoisPrecedent(cleMoisCourant);
+      const texte = await genererBilanMensuel({
+        monthStats,
+        prevMonthStats: bilanMensuel(clePrecedente, donneesCompletes, profile, targets),
+        profile,
+        lastActionsText: actionsPrecedentes(monthlyReports.find((r) => r.monthKey === clePrecedente))
+      });
+      const suivant = [
+        {
+          id: uid(),
+          monthKey: cleMoisCourant,
+          stats: monthStats,
+          sections: lireBilan(texte),
+          generatedAt: new Date().toISOString()
+        },
+        ...monthlyReports.filter((r) => r.monthKey !== cleMoisCourant)
+      ];
+      setMonthlyReports(suivant);
+      if (!enregistrer(STORAGE_KEYS.monthlyReports, suivant)) {
+        setErreurGenerationMensuelle(
+          "Bilan généré mais non enregistré : la mémoire de l'application est pleine."
+        );
+      }
+    } catch (e) {
+      setErreurGenerationMensuelle(
+        messageErreur(e, "Le bilan mensuel n'a pas pu être généré. Vérifie ta connexion, puis réessaie.")
+      );
+    } finally {
+      setEnGenerationMensuelle(false);
     }
   };
 
@@ -408,7 +509,14 @@ export default function App() {
         photos={photos}
         onUploadPhoto={choisirPhoto}
         onPartager={envoyerBilan}
-        iaDisponible={false}
+        onGenerate={genererBilan}
+        onGenerateMonthly={genererBilanDuMois}
+        bilanCourant={bilanCourant}
+        bilanMensuelCourant={bilanMensuelCourant}
+        enGeneration={enGeneration}
+        enGenerationMensuelle={enGenerationMensuelle}
+        erreurGeneration={erreurGeneration}
+        erreurGenerationMensuelle={erreurGenerationMensuelle}
       />
     ) : null
   };

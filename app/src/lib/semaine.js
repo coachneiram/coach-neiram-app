@@ -40,6 +40,12 @@ export const getWeekRange = (weekKey) => ({ start: weekKey, end: addDays(weekKey
 
 export const getMonthKey = (dateStr) => dateStr.slice(0, 7);
 
+/** Le mois qui precede, en gerant le passage a l'annee precedente. */
+export const cleMoisPrecedent = (cleMois) => {
+  const [y, m] = cleMois.split("-").map(Number);
+  return m === 1 ? y - 1 + "-12" : y + "-" + String(m - 1).padStart(2, "0");
+};
+
 /** Identifiant de jour de semaine d'une date. */
 export const dayIdOf = (dateStr) => JOURS_SEMAINE[(parseISO(dateStr).getDay() + 6) % 7].id;
 
