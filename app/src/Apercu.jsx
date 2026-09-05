@@ -20,6 +20,9 @@ import { Nutrition } from "./ecrans/Nutrition.jsx";
 import { Seances } from "./ecrans/Seances.jsx";
 import { Repas } from "./ecrans/Repas.jsx";
 import { Journal } from "./ecrans/Journal.jsx";
+import { Tendances } from "./ecrans/Tendances.jsx";
+import { bilanHebdomadaire } from "./lib/bilan.js";
+import { getWeekKey } from "./lib/semaine.js";
 
 const jour = (n) => addDays(todayISO(), -n);
 
@@ -73,6 +76,14 @@ const PROFIL_SEANCES = {
   slots: [{ id: "cr1", day: "wed", time: "18:30", place: "Salle Neiram" }]
 };
 
+const PROFIL_TENDANCES = {
+  targetSleepHours: 8,
+  targetWaterL: 2,
+  targetSteps: 8000,
+  weeklyWorkoutTarget: 3,
+  slots: []
+};
+
 const OBJECTIFS_EXEMPLE = { calories: 2200, protein: 155, carbs: 220, fat: 70 };
 
 const ONGLETS = [
@@ -106,6 +117,37 @@ export default function Apercu() {
         profile={{ goal: "perte", dietType: "aucun", allergies: [] }}
         targets={OBJECTIFS_EXEMPLE}
         logEntries={CALORIES_EXEMPLE.slice(0, 2)}
+      />
+    ),
+    tendances: (
+      <Tendances
+        allData={{
+          sessions: SEANCES_EXEMPLE,
+          dailyForm: JOURNAL_EXEMPLE,
+          bodyLogs: CORPS_EXEMPLE,
+          logEntries: CALORIES_EXEMPLE,
+          weekPlan: null,
+          routines: [],
+          hardWeeks: null
+        }}
+        profile={PROFIL_TENDANCES}
+        targets={OBJECTIFS_EXEMPLE}
+        weekStats={bilanHebdomadaire(
+          getWeekKey(todayISO()),
+          {
+            sessions: SEANCES_EXEMPLE,
+            dailyForm: JOURNAL_EXEMPLE,
+            bodyLogs: CORPS_EXEMPLE,
+            logEntries: CALORIES_EXEMPLE,
+            weekPlan: null,
+            routines: [],
+            hardWeeks: null
+          },
+          PROFIL_TENDANCES,
+          OBJECTIFS_EXEMPLE
+        )}
+        monthStats={{ monthKey: "septembre 2026", workoutsCount: 2 }}
+        photos={{}}
       />
     ),
     journal: (

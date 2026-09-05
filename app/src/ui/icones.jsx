@@ -144,3 +144,26 @@ export const Sparkles = mkIcon(
 );
 
 export const Loader2 = mkIcon(<path d="M21 12a9 9 0 1 1-6.2-8.56" />);
+
+export const Scale = mkIcon(
+  <>
+    <rect x="3" y="3" width="18" height="18" rx="4" />
+    <path d="M12 12l2.6-3.4" />
+    <path d="M8.2 9.7a5.2 5.2 0 0 1 7.6 0" />
+  </>
+);
+
+export const Camera = mkIcon(
+  <>
+    <path d="M20 19H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h6l2 3h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2Z" />
+    <circle cx="12" cy="13" r="4" />
+  </>
+);
+
+export const Share = mkIcon(
+  <>
+    <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+    <polyline points="16 6 12 2 8 6" />
+    <line x1="12" y1="2" x2="12" y2="15" />
+  </>
+);
