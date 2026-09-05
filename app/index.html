@@ -21,6 +21,27 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!--
+      Catalogues d'aliments, dans le MEME ORDRE que index.html : le dernier
+      charge (food-basic-catalog.js) installe le moteur de recherche commun
+      et l'interception de fetch vers Open Food Facts. Inverser l'ordre
+      priverait l'application de la moitie de ses aliments.
+
+      Ce sont des scripts classiques, et non des modules : ils doivent avoir
+      pose window.__CN_FOOD_SEARCH__ AVANT que le module de l'application ne
+      s'execute. Un <script type="module"> est differe, un script classique
+      ne l'est pas — c'est ce qui garantit l'ordre.
+
+      Les fichiers sont des liens vers ceux de la racine du depot, pour
+      qu'une correction du catalogue profite aux deux versions.
+      tests/catalogues-publies.test.mjs verifie qu'ils ne divergent pas.
+    -->
+    <script src="./food-extended-catalog.js"></script>
+    <script src="./food-staples-catalog.js"></script>
+    <script src="./food-bruts-catalog.js"></script>
+    <script src="./food-basic-catalog.js"></script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
