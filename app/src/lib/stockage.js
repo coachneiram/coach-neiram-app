@@ -42,8 +42,29 @@ export const CLES_ANNEXES = {
   bilanHebdo: "cn_coach_weekly_state"
 };
 
-/** Prefixe commun aux donnees de l'application, utilise pour l'export. */
+/** Prefixe historique des donnees de suivi. */
 export const PREFIXE = "coach_";
+
+/**
+ * Second prefixe des donnees du client.
+ *
+ * Les fonctionnalites ajoutees apres coup ont utilise « cn_ » : repas
+ * types, favoris code-barres, exercices personnels, plan de la semaine,
+ * maxis de force, semaines maintien, justifications de creneaux.
+ *
+ * ELLES N'ETAIENT PAS SAUVEGARDEES. L'export ne prenait que « coach_ »,
+ * alors que l'ecran annonce « le fichier contient tout ton suivi ». Une
+ * cliente a passe du temps a scanner ses codes-barres et a exporter, en
+ * croyant son travail a l'abri.
+ *
+ * Ce sont des donnees que le client a saisies lui-meme et qu'il ne peut
+ * pas reconstituer : elles doivent partir dans la sauvegarde.
+ */
+export const PREFIXE_RECENT = "cn_";
+
+/** Une cle appartient-elle aux donnees du client ? */
+export const estCleClient = (cle) =>
+  typeof cle === "string" && (cle.startsWith(PREFIXE) || cle.startsWith(PREFIXE_RECENT));
 
 function lireBrut(cle) {
   try {
@@ -55,13 +76,92 @@ function lireBrut(cle) {
   }
 }
 
+/**
+ * Abonnes prevenus quand une ecriture echoue.
+ *
+ * Le stockage du navigateur est la SEULE copie des donnees du client : il
+ * n'existe aucune sauvegarde serveur. Une ecriture qui echoue en silence
+ * est donc la pire panne possible — le client continue de saisir ses repas
+ * pendant des jours, tout semble normal, et rien n'est conserve.
+ *
+ * C'est arrive : une cliente a signale « on ne peut meme plus enregistrer
+ * de repas, ca ne fonctionne plus », sans qu'aucun message ne le lui ait
+ * jamais dit.
+ */
+const abonnesEchec = new Set();
+
+/** S'abonner aux echecs d'ecriture. Rend la fonction de desabonnement. */
+export function surEchecEcriture(fn) {
+  abonnesEchec.add(fn);
+  return () => abonnesEchec.delete(fn);
+}
+
+/** Un quota depasse ne se presente pas pareil selon les navigateurs. */
+function estQuotaDepasse(e) {
+  if (!e) return false;
+  return (
+    e.name === "QuotaExceededError" ||
+    e.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    e.code === 22 ||
+    e.code === 1014
+  );
+}
+
 function ecrireBrut(cle, valeur) {
   try {
     localStorage.setItem(cle, valeur);
     return true;
   } catch (e) {
+    // Prevenir, toujours. Un echec silencieux ferait perdre au client des
+    // jours de saisie sans qu'il s'en apercoive.
+    for (const fn of abonnesEchec) {
+      try {
+        fn({ cle, quota: estQuotaDepasse(e), erreur: e });
+      } catch (interne) {
+        // Un abonne fautif ne doit pas empecher les autres d'etre prevenus.
+      }
+    }
     return false;
   }
+}
+
+/** Octets occupes par cle, du plus lourd au plus leger. */
+export function occupationStockage() {
+  try {
+    const entrees = Object.keys(localStorage).map((cle) => {
+      const valeur = localStorage.getItem(cle) || "";
+      // Deux octets par caractere : le stockage du navigateur est en UTF-16.
+      return { cle, octets: (cle.length + valeur.length) * 2 };
+    });
+    entrees.sort((a, b) => b.octets - a.octets);
+    return { entrees, total: entrees.reduce((a, e) => a + e.octets, 0) };
+  } catch (e) {
+    return { entrees: [], total: 0 };
+  }
+}
+
+/**
+ * Cles de photos de progression.
+ *
+ * Ce sont, de tres loin, les plus lourdes : une photo redimensionnee pese
+ * environ 180 Ko une fois encodee, et le navigateur plafonne l'ensemble du
+ * stockage vers 5 Mo. Une trentaine de photos suffit a tout bloquer.
+ */
+export const estCleDePhoto = (cle) => /^coach_photos_/.test(cle);
+
+/** Supprime toutes les photos de progression. Rend les octets liberes. */
+export function supprimerPhotos() {
+  let liberes = 0;
+  for (const { cle, octets } of occupationStockage().entrees) {
+    if (!estCleDePhoto(cle)) continue;
+    try {
+      localStorage.removeItem(cle);
+      liberes += octets;
+    } catch (e) {
+      // Une cle recalcitrante ne doit pas interrompre le nettoyage.
+    }
+  }
+  return liberes;
 }
 
 /** Lit une valeur JSON. Renvoie `repli` si absente ou illisible. */
@@ -84,7 +184,7 @@ export function enregistrer(cle, valeur) {
 /** Liste les cles de l'application presentes sur l'appareil. */
 export function listerCles() {
   try {
-    return Object.keys(localStorage).filter((k) => k.startsWith(PREFIXE));
+    return Object.keys(localStorage).filter(estCleClient);
   } catch (e) {
     return [];
   }
@@ -129,9 +229,12 @@ export function restaurerSauvegarde(sauvegarde) {
    * d'une autre application portant le meme nom — pourrait ecrire
    * n'importe quelle cle dans le stockage du navigateur. Le filtre etait
    * present dans l'application d'origine et manquait ici.
+   *
+   * Il couvre les deux prefixes de l'application, et RIEN d'autre : elargir
+   * a « toute cle du fichier » rouvrirait la faille.
    */
   const entrees = Object.entries(sauvegarde.data).filter(
-    ([cle, valeur]) => cle.startsWith(PREFIXE) && typeof valeur === "string"
+    ([cle, valeur]) => estCleClient(cle) && typeof valeur === "string"
   );
 
   // Un fichier sans aucune donnee reconnue n'est pas une sauvegarde vide :
