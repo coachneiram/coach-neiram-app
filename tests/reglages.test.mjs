@@ -62,6 +62,28 @@ describe("sauvegarde et restauration", () => {
     assert.match(REGLAGES, /Exporter mes données/);
     assert.match(REGLAGES, /Restaurer/);
   });
+
+  test("l'export est reellement branche, pas laisse en bouchon", () => {
+    /*
+     * L'ecran a d'abord delegue l'export a une fonction fournie de
+     * l'exterieur, restee vide dans l'apercu : le bouton ne faisait rien.
+     * L'export appelle desormais directement la fonction portee.
+     */
+    assert.match(REGLAGES, /exporterSauvegarde\(construireSauvegarde\(\)/);
+  });
+
+  test("l'echec d'export reste silencieux, comme dans l'original", () => {
+    /*
+     * Un message d'erreur avait ete ajoute ici. Le test de fidelite l'a
+     * signale : il n'existe pas dans l'application actuelle. Il a donc ete
+     * retire — melanger migration et amelioration rendrait impossible de
+     * dire, devant un comportement inattendu, si c'est un bug de portage
+     * ou un changement voulu.
+     *
+     * La faiblesse est reelle et notee dans AMELIORATIONS.md.
+     */
+    assert.ok(!/Export impossible/.test(REGLAGES), "un message absent de l'original a été réintroduit");
+  });
 });
 
 describe("listes d'options identiques a l'application actuelle", () => {

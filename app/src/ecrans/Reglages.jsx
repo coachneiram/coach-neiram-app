@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { PROXY_BASE_URL } from "../lib/config.js";
 import { construireSauvegarde, restaurerSauvegarde } from "../lib/stockage.js";
+import { exporterSauvegarde } from "../lib/sauvegarde.js";
 import { enLigne } from "../lib/semaine.js";
 import { ChampsProfil } from "./ChampsProfil.jsx";
 import { Btn, Field, Modal, SelectInput } from "../ui/primitives.jsx";
@@ -160,7 +161,7 @@ function CaseRappel({ actif, onChange, titre, aide }) {
   );
 }
 
-export function Reglages({ open, onClose, profile, onSave, onExporter, onRestaurer }) {
+export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
   const [value, setValue] = useState(profile);
   const [message, setMessage] = useState(null);
   const fichierRef = useRef(null);
@@ -170,15 +171,28 @@ export function Reglages({ open, onClose, profile, onSave, onExporter, onRestaur
   const set = (modif) => setValue((v) => ({ ...v, ...modif }));
 
   const exporter = async () => {
-    const sauvegarde = construireSauvegarde();
-    const resultat = await onExporter?.(sauvegarde, value.name);
-    setMessage(
-      resultat === "downloaded"
-        ? "Sauvegarde téléchargée — garde ce fichier en lieu sûr (Drive, mail...)."
-        : resultat === "shared"
-          ? "Sauvegarde partagée."
-          : null
-    );
+    try {
+      const resultat = await exporterSauvegarde(construireSauvegarde(), value.name);
+      setMessage(
+        resultat === "downloaded"
+          ? "Sauvegarde téléchargée — garde ce fichier en lieu sûr (Drive, mail...)."
+          : resultat === "shared"
+            ? "Sauvegarde partagée."
+            : null
+      );
+    } catch (e) {
+      /*
+       * L'application d'origine n'affiche rien ici : l'echec est
+       * silencieux, et le client peut croire qu'il a une sauvegarde alors
+       * qu'il n'en a aucune. C'est une faiblesse reelle, mais la corriger
+       * maintenant melangerait migration et amelioration — et devant un
+       * comportement inattendu, plus personne ne saurait si c'est un bug de
+       * portage ou un changement voulu.
+       *
+       * A traiter apres la bascule. Voir AMELIORATIONS.md.
+       */
+      setMessage(null);
+    }
   };
 
   const restaurer = (evenement) => {

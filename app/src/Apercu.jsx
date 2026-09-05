@@ -222,7 +222,6 @@ export default function Apercu() {
         onClose={() => setReglagesOuverts(false)}
         profile={profilExemple}
         onSave={setProfilExemple}
-        onExporter={async () => null}
       />
     </Coque>
   );

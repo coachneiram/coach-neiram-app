@@ -114,12 +114,29 @@ export function construireSauvegarde() {
  * d'ecraser les donnees du client avec n'importe quel fichier.
  */
 export function restaurerSauvegarde(sauvegarde) {
-  if (!sauvegarde || sauvegarde.app !== "coach-neiram" || !sauvegarde.data) {
+  if (!sauvegarde || sauvegarde.app !== "coach-neiram" || typeof sauvegarde.data !== "object" || !sauvegarde.data) {
     throw new Error("fichier-non-reconnu");
   }
+
+  /*
+   * Seules les cles de l'application sont restaurees.
+   *
+   * Sans ce filtre, un fichier trafique — ou simplement une sauvegarde
+   * d'une autre application portant le meme nom — pourrait ecrire
+   * n'importe quelle cle dans le stockage du navigateur. Le filtre etait
+   * present dans l'application d'origine et manquait ici.
+   */
+  const entrees = Object.entries(sauvegarde.data).filter(
+    ([cle, valeur]) => cle.startsWith(PREFIXE) && typeof valeur === "string"
+  );
+
+  // Un fichier sans aucune donnee reconnue n'est pas une sauvegarde vide :
+  // c'est le mauvais fichier. Le dire plutot que d'annoncer « 0 element
+  // restaure » et laisser le client croire que ca a marche.
+  if (!entrees.length) throw new Error("sauvegarde-vide");
+
   let ecrites = 0;
-  for (const [cle, valeur] of Object.entries(sauvegarde.data)) {
-    if (typeof valeur !== "string") continue;
+  for (const [cle, valeur] of entrees) {
     if (ecrireBrut(cle, valeur)) ecrites++;
   }
   return ecrites;
