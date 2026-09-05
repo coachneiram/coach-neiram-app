@@ -134,7 +134,10 @@ const A_EXPOSER = [
   "TRAINING_MODES",
   "COACHING_MODES",
   "SHOPPING_LIST",
-  "shoppingDietOk"
+  "shoppingDietOk",
+  "buildRecords",
+  "isFreshPR",
+  "SEANCE_TEMPLATES"
 ];
 
 function extraireScriptApplicatif(html) {

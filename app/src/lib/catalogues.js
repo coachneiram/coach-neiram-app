@@ -2288,3 +2288,599 @@ export const SHOPPING_LIST = [
     ]
   }
 ];
+
+/** Seances sans materiel preparees par le coach. */
+export const SEANCE_TEMPLATES = [
+  {
+    "id": "45a",
+    "name": "45-A — Bas du corps et gainage",
+    "durationMin": 45,
+    "color": "#2DD4BF",
+    "description": "45 min · Bas du corps & gainage",
+    "note": "Repos 45-60 s selon exercice. RPE 7 maximum les 4 premières semaines.",
+    "exercises": [
+      {
+        "name": "Rotations des épaules, bras tendus",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Cercles de bassin",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Chat / vache au sol",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Fentes marchées sur place",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Squat poids du corps",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Montées de genoux contrôlées",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30
+      },
+      {
+        "name": "Squat au poids du corps",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 12
+      },
+      {
+        "name": "Fentes alternées",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 10
+      },
+      {
+        "name": "Pont fessier au sol",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 15
+      },
+      {
+        "name": "Gainage planche",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Gainage latéral",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 20,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Superman",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 12
+      }
+    ]
+  },
+  {
+    "id": "45b",
+    "name": "45-B — Haut du corps et tirage",
+    "durationMin": 45,
+    "color": "#9F8FEF",
+    "description": "45 min · Haut du corps & tirage",
+    "note": "Repos 45-60 s selon exercice. RPE 7 maximum les 4 premières semaines.",
+    "exercises": [
+      {
+        "name": "Rotations des épaules, bras tendus",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Cercles de bassin",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Chat / vache au sol",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Fentes marchées sur place",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Squat poids du corps",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Montées de genoux contrôlées",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30
+      },
+      {
+        "name": "Pompes",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 8
+      },
+      {
+        "name": "Rowing sous une table",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 10
+      },
+      {
+        "name": "Dips sur chaise",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 10
+      },
+      {
+        "name": "Élévations latérales (bouteilles pleines)",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 15
+      },
+      {
+        "name": "Gainage bras tendus (touches d'épaule)",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 20
+      },
+      {
+        "name": "Extension thoracique au mur",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 10
+      }
+    ]
+  },
+  {
+    "id": "45c",
+    "name": "45-C — Circuit cardio, intensité contrôlée",
+    "durationMin": 45,
+    "color": "#4ADE80",
+    "description": "45 min · Circuit cardio",
+    "note": "4 tours, 40 s de travail / 20 s de récupération entre exercices, 90 s entre les tours. RPE 7 maximum.",
+    "exercises": [
+      {
+        "name": "Rotations des épaules, bras tendus",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Cercles de bassin",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Chat / vache au sol",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Fentes marchées sur place",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Squat poids du corps",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Montées de genoux contrôlées",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30
+      },
+      {
+        "name": "Montées de genoux",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Squat au poids du corps",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Pompes",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Fentes alternées",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Planche dynamique (coudes puis mains)",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Step-ups sur une marche",
+        "mode": "pdc",
+        "sets": 4,
+        "reps": 40,
+        "repUnit": "sec"
+      }
+    ]
+  },
+  {
+    "id": "30a",
+    "name": "30-A — Corps entier",
+    "durationMin": 30,
+    "color": "#F0A155",
+    "description": "30 min · Corps entier",
+    "note": "Repos 45 s. RPE 7 maximum.",
+    "exercises": [
+      {
+        "name": "Rotations des épaules, bras tendus",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Cercles de bassin",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Chat / vache au sol",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Fentes marchées sur place",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Squat poids du corps",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Montées de genoux contrôlées",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30
+      },
+      {
+        "name": "Squat au poids du corps",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 15
+      },
+      {
+        "name": "Pompes",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 8
+      },
+      {
+        "name": "Pont fessier au sol",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 15
+      },
+      {
+        "name": "Rowing sous une table",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 10
+      },
+      {
+        "name": "Gainage planche",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 30,
+        "repUnit": "sec"
+      }
+    ]
+  },
+  {
+    "id": "30b",
+    "name": "30-B — Cardio et dos",
+    "durationMin": 30,
+    "color": "#5B9FEF",
+    "description": "30 min · Cardio & dos",
+    "note": "3 tours, 40 s de travail / 20 s de récupération.",
+    "exercises": [
+      {
+        "name": "Rotations des épaules, bras tendus",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Cercles de bassin",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Chat / vache au sol",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Fentes marchées sur place",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Squat poids du corps",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Montées de genoux contrôlées",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30
+      },
+      {
+        "name": "Montées de genoux",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Fentes alternées",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Superman",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Squat au poids du corps",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Gainage latéral",
+        "mode": "pdc",
+        "sets": 3,
+        "reps": 40,
+        "repUnit": "sec"
+      }
+    ]
+  },
+  {
+    "id": "15a",
+    "name": "15-A — Debout, sans se mettre au sol",
+    "durationMin": 15,
+    "color": "#F0645A",
+    "description": "15 min · Maintien, debout",
+    "note": "Séance de maintien pour les semaines difficiles. 2 tours, 40 s de travail / 20 s de récupération. RPE 6 maximum, aucune progression.",
+    "exercises": [
+      {
+        "name": "Rotations des épaules, bras tendus",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Cercles de bassin",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Chat / vache au sol",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Fentes marchées sur place",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Squat poids du corps",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Montées de genoux contrôlées",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30
+      },
+      {
+        "name": "Squat au poids du corps",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Fentes alternées",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Pompes (contre un mur ou un plan de travail)",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Montées de genoux",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Chaise contre le mur",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 40,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Élévations sur pointes de pieds",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 40,
+        "repUnit": "sec"
+      }
+    ]
+  },
+  {
+    "id": "15b",
+    "name": "15-B — Dos et mobilité (mauvais sommeil)",
+    "durationMin": 15,
+    "color": "#2DD4BF",
+    "description": "15 min · Maintien, sommeil",
+    "note": "Séance de maintien pour les semaines de mauvais sommeil. Aucune progression, juste tenir le fil.",
+    "exercises": [
+      {
+        "name": "Rotations des épaules, bras tendus",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Cercles de bassin",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Chat / vache au sol",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Fentes marchées sur place",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Squat poids du corps",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 10
+      },
+      {
+        "name": "Montées de genoux contrôlées",
+        "mode": "warmup",
+        "sets": 1,
+        "reps": 30
+      },
+      {
+        "name": "Pont fessier au sol",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 15
+      },
+      {
+        "name": "Superman",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 12
+      },
+      {
+        "name": "Gainage planche",
+        "mode": "pdc",
+        "sets": 2,
+        "reps": 30,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Étirement fessier allongé",
+        "mode": "pdc",
+        "sets": 1,
+        "reps": 45,
+        "repUnit": "sec"
+      },
+      {
+        "name": "Ouverture thoracique au sol",
+        "mode": "pdc",
+        "sets": 1,
+        "reps": 10
+      }
+    ]
+  }
+];

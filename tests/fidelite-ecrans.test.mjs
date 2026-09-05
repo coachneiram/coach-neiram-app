@@ -61,6 +61,16 @@ const LEGACY = readFileSync(join(RACINE, "index.html"), "utf8")
 function phrasesAffichees(source) {
   const phrases = new Set();
 
+  /*
+   * Les blocs marques « MIGRATION-EN-COURS » sont exclus.
+   *
+   * Ils annoncent au client qu'une partie n'est pas encore portee et
+   * reste servie par l'application actuelle. Leur texte n'existe donc pas
+   * dans index.html, et c'est normal. Le marquage doit rester explicite :
+   * un test compte ces blocs pour qu'ils ne se multiplient pas en silence.
+   */
+  source = source.replace(/\/\* MIGRATION-EN-COURS \*\/[\s\S]*?\/\* FIN-MIGRATION-EN-COURS \*\//g, "");
+
   /**
    * Un fragment n'est du texte que s'il ne contient aucune trace de code.
    * Sans ce filtre, le `>` d'une fleche ou d'une comparaison ouvrirait un
@@ -70,7 +80,10 @@ function phrasesAffichees(source) {
     !/[={}`;\\|]|\/\/|\/>|:\/\/|&&|\|\|/.test(t) &&
     // Un acces a une propriete (« seance.rpe ») trahit du code, pas du texte :
     // en francais, un point est toujours suivi d'une espace.
-    !/\w\.\w/.test(t);
+    !/\w\.\w/.test(t) &&
+    // Au moins trois lettres : sans cela, une queue d'expression comme
+    // « 0 ? ( » passait pour du texte affiche.
+    (t.match(/[A-Za-zÀ-ÿ]/g) || []).length >= 3;
 
   /**
    * Prettier repartit un paragraphe JSX sur plusieurs lignes ; index.html
@@ -115,6 +128,22 @@ const fichiers = DOSSIERS_SURVEILLES.flatMap((dossier) =>
     .filter((f) => f.endsWith(".jsx"))
     .map((f) => ({ nom: f, chemin: join(dossier, f) }))
 );
+
+describe("les blocs non encore migres restent rares et marques", () => {
+  test("chaque bloc en attente est explicitement delimite", () => {
+    let blocs = 0;
+    for (const { nom, chemin } of fichiers) {
+      const source = readFileSync(chemin, "utf8");
+      const ouverts = (source.match(/\/\* MIGRATION-EN-COURS \*\//g) || []).length;
+      const fermes = (source.match(/\/\* FIN-MIGRATION-EN-COURS \*\//g) || []).length;
+      assert.equal(ouverts, fermes, "bloc non refermé dans " + nom);
+      blocs += ouverts;
+    }
+    // Le seuil n'est pas arbitraire : il force a constater la derive si
+    // les zones non migrees se multiplient au lieu de se resorber.
+    assert.ok(blocs <= 3, "trop de blocs en attente de migration : " + blocs);
+  });
+});
 
 describe("chaque ecran migre reprend les textes de l'application actuelle", () => {
   test("au moins un ecran est migre", () => {

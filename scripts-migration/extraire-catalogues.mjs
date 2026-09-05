@@ -38,7 +38,8 @@ const TABLES = {
   ALLERGENS: "Allergenes et intolerances proposes dans le profil",
   TRAINING_MODES: "Ou le client fait ses seances",
   COACHING_MODES: "Presentiel ou coaching a distance",
-  SHOPPING_LIST: "Liste de courses par rayon"
+  SHOPPING_LIST: "Liste de courses par rayon",
+  SEANCE_TEMPLATES: "Seances sans materiel preparees par le coach"
 };
 
 const corps = Object.entries(TABLES)

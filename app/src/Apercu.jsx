@@ -22,6 +22,7 @@ import { Repas } from "./ecrans/Repas.jsx";
 import { Journal } from "./ecrans/Journal.jsx";
 import { Tendances } from "./ecrans/Tendances.jsx";
 import { Reglages } from "./ecrans/Reglages.jsx";
+import { Entrainements } from "./ecrans/Entrainements.jsx";
 import { bilanHebdomadaire } from "./lib/bilan.js";
 import { getWeekKey } from "./lib/semaine.js";
 
@@ -129,7 +130,13 @@ export default function Apercu() {
         onApplyCalibration={() => {}}
       />
     ),
-    entrainements: <Seances sessionsApi={apiFactice(SEANCES_EXEMPLE)} profile={PROFIL_SEANCES} />,
+    entrainements: (
+      <Entrainements
+        routinesApi={apiFactice([])}
+        sessionsApi={apiFactice(SEANCES_EXEMPLE)}
+        profile={PROFIL_SEANCES}
+      />
+    ),
     repas: (
       <Repas
         api={apiFactice([])}
