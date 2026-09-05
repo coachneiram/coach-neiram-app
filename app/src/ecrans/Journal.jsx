@@ -620,6 +620,7 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
         onSupprimerRepasType={(id) => setRepasTypes(supprimerRepasType(repasTypes, id))}
         onAjouterPlat={ajouterPlat}
         onAjouterLibre={ajouterAuRepas}
+        habitudePesee={profile?.weighsStaples}
       />
     </div>
   );

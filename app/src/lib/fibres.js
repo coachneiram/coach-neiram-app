@@ -106,3 +106,49 @@ export function mentionEtat(etat) {
   if (etat === "cuit") return "pesé cuit";
   return null;
 }
+
+/**
+ * Habitude de pesee du client : « cru » ou « cuit ».
+ *
+ * Ajoute apres un constat sur l'application en production : sur « pates »,
+ * « riz » et « lentilles », la fiche CUITE sortait en premier, alors que la
+ * fiche CRUE sortait en premier sur « quinoa » et « boulgour ». L'ordre
+ * etait celui du catalogue, donc arbitraire — et un client ne pouvait
+ * prendre AUCUNE habitude fiable.
+ *
+ * Une cliente qui pese cru et prend le premier resultat loguait ainsi
+ * 126 kcal pour 288 reels sur ses pates. Sur trois feculents, 450 kcal par
+ * jour non comptes.
+ *
+ * La correction n'est pas de choisir un ordre a sa place : les deux facons
+ * de peser sont legitimes. C'est de lui demander comment IL pese, une fois,
+ * et de faire remonter les fiches correspondantes.
+ */
+export const HABITUDES_PESEE = [
+  { id: "", label: "Sans préférence" },
+  { id: "cru", label: "Je pèse mes féculents crus" },
+  { id: "cuit", label: "Je pèse mes féculents cuits" }
+];
+
+/**
+ * Reordonne des resultats selon l'habitude de pesee.
+ *
+ * Les aliments dans l'etat habituel du client remontent, les autres
+ * restent accessibles juste en dessous. L'ordre relatif est preserve a
+ * l'interieur de chaque groupe : on ne bouscule pas la pertinence de la
+ * recherche, on departage seulement les egalites.
+ *
+ * Sans preference, l'ordre d'origine est rendu intact.
+ */
+export function trierSelonPesee(resultats, habitude) {
+  if (habitude !== "cru" && habitude !== "cuit") return resultats;
+
+  const correspond = [];
+  const reste = [];
+  for (const r of resultats || []) {
+    // Un aliment sans etat, ou « tel quel », ne fait pas partie du
+    // depart : il n'y a pas de piege a eviter dessus.
+    (r.etat === habitude ? correspond : reste).push(r);
+  }
+  return [...correspond, ...reste];
+}

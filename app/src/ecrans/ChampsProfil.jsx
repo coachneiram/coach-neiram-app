@@ -13,6 +13,7 @@ import { COLORS } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
 import { JOURS_SEMAINE, uid } from "../lib/semaine.js";
 import { ACTIVITY_LEVELS, GOALS, PERFORMANCE_DIRECTIONS } from "../lib/nutrition.js";
+import { HABITUDES_PESEE } from "../lib/fibres.js";
 import { ALLERGENS, COACHING_MODES, DIET_TYPES, TRAINING_MODES } from "../lib/catalogues.js";
 import { Btn, Field, IconBtn, NumberInput, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { Plus, Trash2 } from "../ui/icones.jsx";
@@ -215,6 +216,27 @@ export function ChampsProfil({ value, onChange }) {
           </p>
         </Field>
       )}
+      {/* FIN-TEXTE-NOUVEAU */}
+
+      {/* TEXTE-NOUVEAU
+          Habitude de pesee, ajoutee apres un constat en production : sur
+          « pates », « riz » et « lentilles », la fiche cuite sortait en
+          premier, mais la fiche crue sortait en premier sur « quinoa ». Un
+          client ne pouvait prendre aucune habitude fiable, et celui qui
+          prenait le premier resultat pouvait loguer moins de la moitie de
+          ce qu'il mangeait.
+      */}
+      <Field label="Comment tu pèses tes féculents">
+        <SelectInput
+          options={HABITUDES_PESEE}
+          value={value.weighsStaples || ""}
+          onChange={(e) => set({ weighsStaples: e.target.value })}
+        />
+        <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 }}>
+          Riz, pâtes, lentilles : 100 g crus valent trois fois 100 g cuits. Dis-le une fois, et les bonnes
+          fiches remonteront en premier dans la recherche.
+        </p>
+      </Field>
       {/* FIN-TEXTE-NOUVEAU */}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>

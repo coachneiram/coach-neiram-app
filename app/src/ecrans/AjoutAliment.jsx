@@ -144,7 +144,8 @@ export function AjoutAliment({
   onAjouterRepasType,
   onSupprimerRepasType,
   onAjouterPlat,
-  onAjouterLibre
+  onAjouterLibre,
+  habitudePesee
 }) {
   // Le premier onglet depend de ce que le client possede : lui ouvrir
   // « Repas » sur une liste vide lui ferait croire que la fenetre est vide.
@@ -344,7 +345,9 @@ export function AjoutAliment({
           </div>
         )}
 
-        {onglet === "finder" && <RechercheAliment onChoisir={onAjouterLibre} />}
+        {onglet === "finder" && (
+          <RechercheAliment onChoisir={onAjouterLibre} habitudePesee={habitudePesee} />
+        )}
 
         {onglet === "freehand" && (
           <div>

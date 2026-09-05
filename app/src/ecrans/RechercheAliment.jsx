@@ -222,7 +222,7 @@ function QuantiteProduit({ produit, onChoisir }) {
   );
 }
 
-export function RechercheAliment({ onChoisir }) {
+export function RechercheAliment({ onChoisir, habitudePesee }) {
   const [mode, setMode] = useState("search");
   const [q, setQ] = useState("");
   const [resultats, setResultats] = useState(null);
@@ -251,7 +251,7 @@ export function RechercheAliment({ onChoisir }) {
     setErreur(null);
     setChoisi(null);
     try {
-      const r = await chercherAliments(q.trim());
+      const r = await chercherAliments(q.trim(), undefined, habitudePesee);
       setResultats(r);
       if (!r.length) setErreur("Aucun produit trouvé. Essaie un autre libellé ou la saisie libre.");
     } catch (e) {
