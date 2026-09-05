@@ -135,3 +135,12 @@ export const Footprints = mkIcon(
     <path d="M15 20h4v1a2 2 0 0 1-4 0Z" />
   </>
 );
+
+export const Sparkles = mkIcon(
+  <>
+    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z" />
+    <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z" />
+  </>
+);
+
+export const Loader2 = mkIcon(<path d="M21 12a9 9 0 1 1-6.2-8.56" />);

@@ -18,7 +18,8 @@ import { Sommeil } from "./ecrans/Sommeil.jsx";
 import { Mensurations } from "./ecrans/Mensurations.jsx";
 import { Nutrition } from "./ecrans/Nutrition.jsx";
 import { Seances } from "./ecrans/Seances.jsx";
-import { Aliments } from "./ecrans/Aliments.jsx";
+import { Repas } from "./ecrans/Repas.jsx";
+import { Journal } from "./ecrans/Journal.jsx";
 
 const jour = (n) => addDays(todayISO(), -n);
 
@@ -100,10 +101,21 @@ export default function Apercu() {
     ),
     entrainements: <Seances sessionsApi={apiFactice(SEANCES_EXEMPLE)} profile={PROFIL_SEANCES} />,
     repas: (
-      <Aliments
+      <Repas
+        api={apiFactice([])}
         profile={{ goal: "perte", dietType: "aucun", allergies: [] }}
         targets={OBJECTIFS_EXEMPLE}
         logEntries={CALORIES_EXEMPLE.slice(0, 2)}
+      />
+    ),
+    journal: (
+      <Journal
+        logEntriesApi={apiFactice(CALORIES_EXEMPLE.slice(0, 3).map((e) => ({ ...e, date: todayISO(), mealType: "dejeuner", name: "Exemple" })))}
+        bodyApi={CORPS_FACTICE}
+        formApi={{ ...apiFactice(JOURNAL_EXEMPLE), getForDate: () => JOURNAL_EXEMPLE[0], upsert: async () => {} }}
+        sessionsApi={apiFactice(SEANCES_EXEMPLE)}
+        targets={OBJECTIFS_EXEMPLE}
+        profile={{ targetSleepHours: 8, targetWaterL: 2, targetSteps: 8000, weeklyWorkoutTarget: 3 }}
       />
     )
   };
