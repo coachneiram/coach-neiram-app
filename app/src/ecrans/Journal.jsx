@@ -17,10 +17,17 @@ import { getMonday } from "../lib/semaine.js";
 import { SECTIONS_REPAS } from "../lib/onglets.js";
 import { composantesDuScore, fmtL, libelleDuScore, scoreDuJour, totauxDuJour } from "../lib/score-jour.js";
 import { choisirSuggestions } from "../lib/suggestions.js";
+import { basisMacros, fmtPortion } from "../lib/portions.js";
 import { construireMotivation, serieDeJours } from "../lib/motivation.js";
 import { dureeDeSommeil } from "../lib/sommeil.js";
 import { scaleMacros } from "../lib/portions.js";
-import { enregistrerRepasType, lireRepasTypes, supprimerRepasType, totauxRepasType } from "../lib/repas-types.js";
+import {
+  definirPoidsAliment,
+  enregistrerRepasType,
+  lireRepasTypes,
+  supprimerRepasType,
+  totauxRepasType
+} from "../lib/repas-types.js";
 import { repasSelonHeure } from "../lib/suggestions.js";
 import { AjoutAliment } from "./AjoutAliment.jsx";
 
@@ -71,16 +78,42 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
     setAjoutPour(null);
   };
 
-  const ajouterRepasType = async (repas, facteur) => {
-    const totaux = scaleMacros(totauxRepasType(repas), facteur / (repas.portions || 1));
-    await ajouterAuRepas({
-      name: repas.name + (facteur === 1 ? "" : ` (×${facteur})`),
-      calories: totaux.kcal,
-      protein: totaux.p,
-      carbs: totaux.c,
-      fat: totaux.f
-    });
+  /**
+   * Ajoute un repas type au journal, UNE ENTREE PAR ALIMENT.
+   *
+   * Mon portage n'ajoutait qu'une seule ligne pour tout le repas. Le client
+   * perdait le detail : impossible de voir ce qui composait son dejeuner,
+   * ni d'en retirer un seul element. L'application d'origine ajoute bien
+   * une entree par aliment, et le guide client le decrit ainsi.
+   */
+  const ajouterRepasType = async (repas, lignes) => {
+    const entrees = [];
+    for (const { basis, qty } of lignes || []) {
+      if (!(qty > 0)) continue;
+      const macros = basisMacros(basis, qty);
+      const libelle =
+        basis.unit === "g"
+          ? `${basis.label} (${fmtPortion(qty)} g)`
+          : basis.label + (qty === 1 ? "" : ` (×${fmtPortion(qty)})`);
+      entrees.push({
+        date,
+        mealType: ajoutPour.mealType,
+        dishId: null,
+        name: libelle,
+        calories: macros.kcal,
+        protein: macros.p,
+        carbs: macros.c,
+        fat: macros.f,
+        ...(basis.unit === "g" ? { grams: qty, baseName: basis.label } : {})
+      });
+    }
+    if (entrees.length) await logEntriesApi.addMany(entrees);
+    setAjoutPour(null);
   };
+
+  /** Retient le poids d'une portion, pour ne plus avoir a le ressaisir. */
+  const memoriserPoidsRepasType = (idRepas, index, grammes) =>
+    setRepasTypes(definirPoidsAliment(repasTypes, idRepas, index, grammes));
 
   const ajouterPlat = async (plat, facteur) => {
     const t = scaleMacros({ kcal: plat.calories, p: plat.protein, c: plat.carbs, f: plat.fat }, facteur);
@@ -620,6 +653,7 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
         onSupprimerRepasType={(id) => setRepasTypes(supprimerRepasType(repasTypes, id))}
         onAjouterPlat={ajouterPlat}
         onAjouterLibre={ajouterAuRepas}
+        onMemoriserPoidsRepasType={memoriserPoidsRepasType}
         habitudePesee={profile?.weighsStaples}
       />
     </div>

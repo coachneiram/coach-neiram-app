@@ -1,0 +1,2 @@
+# Playwright, installe a la main a la racine pour les scripts de fumee.
+node_modules/

@@ -112,3 +112,30 @@ export function multiplicateur(saisie) {
   // le plafond a 20 evite qu'une faute de frappe ajoute 20 000 kcal.
   return isNaN(v) || v <= 0 ? 0 : Math.min(20, v);
 }
+
+/**
+ * Retient le poids d'une portion d'un aliment d'un repas type.
+ *
+ * Portage de setItemGrams (index.html 1049). Quand le client indique une
+ * fois que sa portion de poulet pese 150 g, la ligne bascule en grammes et
+ * l'application ne le redemande plus.
+ *
+ * `baseName` conserve le nom d'origine : le libelle affiche devient
+ * « Blanc de poulet (150 g) », mais la ligne doit rester rattachable a
+ * l'aliment de depart.
+ */
+export function definirPoidsAliment(repasTypes, idRepas, index, grammes) {
+  const g = num(grammes);
+  if (!(g > 0)) return repasTypes;
+
+  const suivant = (repasTypes || []).map((r) => {
+    if (r.id !== idRepas) return r;
+    const items = (r.items || []).map((it, k) =>
+      k === index ? { ...it, grams: g, baseName: it.baseName || it.name } : it
+    );
+    return { ...r, items };
+  });
+
+  enregistrer(CLE_REPAS_TYPES, suivant);
+  return suivant;
+}

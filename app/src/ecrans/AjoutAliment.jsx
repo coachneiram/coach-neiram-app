@@ -10,10 +10,10 @@
  * dans lequel un client pressé essaie.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { COLORS } from "../tokens.js";
-import { num } from "../lib/dates.js";
-import { fmtPortion, scaleMacros } from "../lib/portions.js";
+import { num, round } from "../lib/dates.js";
+import { basisMacros, fmtPortion, itemBasis, scaleMacros, sumMacros, toGramBasis } from "../lib/portions.js";
 import { PALIERS_PORTION, multiplicateur, totauxRepasType } from "../lib/repas-types.js";
 import { Btn, Field, Modal, NumberInput, TextInput } from "../ui/primitives.jsx";
 import { Trash2, X } from "../ui/icones.jsx";
@@ -30,6 +30,360 @@ const ONGLETS = [
 const MAX_PLATS = 30;
 
 const SAISIE_VIDE = { name: "", calories: "", protein: "", carbs: "", fat: "", grams: "" };
+
+/** Champ numerique compact des lignes d'aliment. */
+const champCompact = {
+  width: "100%",
+  background: COLORS.bgAlt,
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: 10,
+  padding: "8px 8px",
+  color: COLORS.text,
+  fontFamily: "Inter",
+  fontSize: 13,
+  outline: "none"
+};
+
+/**
+ * Editeur de quantites d'un repas type.
+ *
+ * Portage de MealPortionEditor (index.html 819-869). MANQUAIT AU PORTAGE :
+ * la bascule avait remplace cet ecran par un simple multiplicateur pour
+ * tout le repas, alors que le guide client — et l'application d'avant —
+ * promettent un champ PAR aliment.
+ *
+ * La difference compte : un client qui reprend son « déjeuner type » veut
+ * passer le poulet de 150 a 200 g sans toucher au riz. Avec un
+ * multiplicateur global, il ne peut pas — tout bouge ensemble.
+ *
+ * Trois details qui viennent de bugs deja corriges dans l'ancienne version,
+ * et qu'il ne faut pas reintroduire :
+ *
+ * 1. TOUS les aliments du repas sont ajoutes, pas seulement le premier.
+ * 2. Un aliment enregistre « en portions » peut passer en grammes, et
+ *    l'application s'en souvient pour la fois suivante.
+ * 3. Un seul champ numerique par ligne. Deux champs cote a cote sur la
+ *    meme ligne ont deja produit une saisie a 27 000 kcal.
+ */
+function EditeurQuantitesRepas({ titre, items, portions, onAjouter, onAnnuler, onMemoriserPoids }) {
+  const bruts = useMemo(() => (items || []).map(itemBasis), [items]);
+
+  const [quantites, setQuantites] = useState(() => bruts.map((b) => String(b.qty)));
+  const [poidsReference, setPoidsReference] = useState(() => bruts.map(() => ""));
+  const [enConversion, setEnConversion] = useState(() => bruts.map(() => false));
+
+  const bases = bruts.map((b, i) => toGramBasis(b, poidsReference[i]));
+  const parLigne = bases.map((b, i) => basisMacros(b, String(quantites[i]).replace(",", ".")));
+  const total = sumMacros(parLigne);
+
+  const definirQuantite = (i, v) => setQuantites((prev) => prev.map((x, k) => (k === i ? v : x)));
+  const multiplierTout = (facteur) =>
+    setQuantites(bases.map((b) => String(round(b.qty * facteur, 2))));
+
+  // Recette en plusieurs parts : on divise toutes les lignes par le nombre
+  // de portions produites, puis on multiplie par ce qui est reellement mange.
+  const parts = Math.max(1, Math.round(num(portions) || 1));
+  const [mangees, setMangees] = useState("1");
+  const appliquerPortions = (v) => {
+    setMangees(v);
+    const n = num(String(v).replace(",", "."));
+    if (n > 0) multiplierTout(n / parts);
+  };
+
+  const ouvrirConversion = (i) => setEnConversion((prev) => prev.map((x, k) => (k === i ? true : x)));
+  const fermerConversion = (i) => {
+    setEnConversion((prev) => prev.map((x, k) => (k === i ? false : x)));
+    setPoidsReference((prev) => prev.map((x, k) => (k === i ? "" : x)));
+    definirQuantite(i, "1");
+  };
+
+  // Saisir le poids d'une portion bascule la ligne en grammes et pre-remplit
+  // la quantite avec ce meme poids : le repas reste identique tant qu'on n'y
+  // touche pas.
+  const definirPoidsReference = (i, v) => {
+    setPoidsReference((prev) => prev.map((x, k) => (k === i ? v : x)));
+    const g = num(String(v).replace(",", "."));
+    if (g > 0) {
+      definirQuantite(i, String(g));
+      if (onMemoriserPoids) onMemoriserPoids(i, g);
+    } else {
+      definirQuantite(i, "1");
+    }
+  };
+
+  const etiquette = (t) => (
+    <div
+      style={{
+        fontSize: 9,
+        color: COLORS.textFaint,
+        marginBottom: 3,
+        textTransform: "uppercase",
+        letterSpacing: 0.4
+      }}
+    >
+      {t}
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        background: COLORS.bgAlt,
+        border: `1px solid ${COLORS.gold}66`,
+        borderRadius: 10,
+        padding: 12,
+        marginTop: 10
+      }}
+    >
+      <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>{titre}</div>
+      <p style={{ fontSize: 10.5, color: COLORS.textFaint, margin: "0 0 10px" }}>
+        Ajuste la quantité de chaque aliment : les macros suivent.
+      </p>
+
+      {parts > 1 && (
+        <div
+          style={{
+            background: `${COLORS.gold}14`,
+            border: `1px solid ${COLORS.gold}44`,
+            borderRadius: 8,
+            padding: 10,
+            marginBottom: 10
+          }}
+        >
+          <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 7 }}>
+            Recette pour {parts} portions — tu en manges combien ?
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 82 }}>
+              <NumberInput
+                step="0.5"
+                min="0"
+                value={mangees}
+                onChange={(e) => appliquerPortions(e.target.value)}
+                style={{ padding: "8px 10px" }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {[1, 2, parts]
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => appliquerPortions(String(v))}
+                    style={{
+                      padding: "7px 11px",
+                      borderRadius: 8,
+                      border: `1px solid ${COLORS.border}`,
+                      background: "none",
+                      color: COLORS.textMuted,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "IBM Plex Mono"
+                    }}
+                  >
+                    {v}
+                    {v > 1 ? " parts" : " part"}
+                  </button>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        {PALIERS_PORTION.map((s) => (
+          <button
+            key={s}
+            onClick={() => multiplierTout(s)}
+            style={{
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: `1px solid ${COLORS.border}`,
+              background: "none",
+              color: COLORS.textMuted,
+              fontSize: 11.5,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "IBM Plex Mono"
+            }}
+          >
+            tout × {fmtPortion(s)}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {bases.map((b, i) => (
+          <div
+            key={i}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 82px",
+              gap: 8,
+              alignItems: "center",
+              paddingBottom: 8,
+              borderBottom: i < bases.length - 1 ? `1px solid ${COLORS.border}` : "none"
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, color: COLORS.text }}>{b.label}</div>
+              <div
+                style={{
+                  fontSize: 10.5,
+                  color: COLORS.textFaint,
+                  fontFamily: "IBM Plex Mono",
+                  marginTop: 2
+                }}
+              >
+                {parLigne[i].kcal} kcal · P{parLigne[i].p} G{parLigne[i].c} L{parLigne[i].f}
+              </div>
+            </div>
+
+            {/* UN SEUL champ numerique par ligne. Deux champs cote a cote
+                ont deja produit une saisie a 27 000 kcal : le client
+                remplissait celui qu'il ne fallait pas. */}
+            <div>
+              {enConversion[i] ? (
+                <>
+                  {etiquette("Poids d'1 portion")}
+                  <input
+                    type="number"
+                    step="10"
+                    min="0"
+                    placeholder="g"
+                    autoFocus
+                    value={poidsReference[i]}
+                    onChange={(e) => definirPoidsReference(i, e.target.value)}
+                    style={{ ...champCompact, textAlign: "center", borderColor: COLORS.gold }}
+                  />
+                </>
+              ) : (
+                <>
+                  {etiquette(b.unit === "g" ? "Grammes" : "Portions")}
+                  <input
+                    type="number"
+                    step={b.unit === "g" ? "10" : "0.25"}
+                    min="0"
+                    value={quantites[i]}
+                    onChange={(e) => definirQuantite(i, e.target.value)}
+                    style={{ ...champCompact, textAlign: "center" }}
+                  />
+                </>
+              )}
+            </div>
+
+            {bruts[i].unit === "x" && b.unit !== "g" && (
+              <div style={{ gridColumn: "1 / -1", marginTop: 4 }}>
+                {enConversion[i] ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 10, color: COLORS.textFaint, flex: 1, lineHeight: 1.4 }}>
+                      Indique combien pèse la portion enregistrée. La ligne passera en grammes et l'app s'en
+                      souviendra.
+                    </span>
+                    <button
+                      onClick={() => fermerConversion(i)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: COLORS.textFaint,
+                        fontSize: 11,
+                        cursor: "pointer",
+                        padding: 2,
+                        flexShrink: 0
+                      }}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => ouvrirConversion(i)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      color: COLORS.gold,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      borderBottom: `1px dotted ${COLORS.gold}66`
+                    }}
+                  >
+                    Compter en grammes
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Garde-fou contre la confusion portions / grammes : au-dela de
+                20 portions, c'est presque toujours des grammes qui ont ete
+                saisis dans le mauvais champ. */}
+            {bruts[i].unit === "x" && b.unit !== "g" && num(quantites[i]) > 20 && (
+              <p
+                style={{
+                  gridColumn: "1 / -1",
+                  fontSize: 10.5,
+                  color: COLORS.warn,
+                  margin: "6px 0 0",
+                  lineHeight: 1.4
+                }}
+              >
+                {fmtPortion(num(quantites[i]))} portions, soit {parLigne[i].kcal} kcal. Tu voulais peut-être
+                saisir des grammes : utilise « Compter en grammes ».
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: 12,
+          paddingTop: 10,
+          borderTop: `1px solid ${COLORS.borderLight}`
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            color: COLORS.textMuted,
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
+            fontWeight: 600
+          }}
+        >
+          Total
+        </span>
+        <span
+          style={{ fontSize: 12.5, color: COLORS.gold, fontFamily: "IBM Plex Mono", fontWeight: 700 }}
+        >
+          {total.kcal} kcal · P{total.p} G{total.c} L{total.f}
+        </span>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <Btn variant="ghost" onClick={onAnnuler} style={{ flex: 1, padding: "9px 12px", fontSize: 12.5 }}>
+          Annuler
+        </Btn>
+        <Btn
+          onClick={() =>
+            onAjouter(
+              bases.map((b, i) => ({ basis: b, qty: num(String(quantites[i]).replace(",", ".")) }))
+            )
+          }
+          disabled={total.kcal <= 0}
+          style={{ flex: 1, padding: "9px 12px", fontSize: 12.5 }}
+        >
+          Ajouter
+        </Btn>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Choix de la portion consommee.
@@ -145,6 +499,7 @@ export function AjoutAliment({
   onSupprimerRepasType,
   onAjouterPlat,
   onAjouterLibre,
+  onMemoriserPoidsRepasType,
   habitudePesee
 }) {
   // Le premier onglet depend de ce que le client possede : lui ouvrir
@@ -275,13 +630,17 @@ export function AjoutAliment({
             )}
 
             {portionPour?.genre === "repas" && (
-              <ChoixPortion
+              <EditeurQuantitesRepas
                 titre={portionPour.item.name}
-                base={totauxRepasType(portionPour.item)}
-                onAjouter={(facteur) => {
-                  onAjouterRepasType(portionPour.item, facteur);
+                items={portionPour.item.items || []}
+                portions={portionPour.item.portions}
+                onAjouter={(lignes) => {
+                  onAjouterRepasType(portionPour.item, lignes);
                   setPortionPour(null);
                 }}
+                onMemoriserPoids={(index, grammes) =>
+                  onMemoriserPoidsRepasType?.(portionPour.item.id, index, grammes)
+                }
                 onAnnuler={() => setPortionPour(null)}
               />
             )}
