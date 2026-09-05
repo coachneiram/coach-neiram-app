@@ -8,9 +8,13 @@
  * suivi alimentaire tient dans la duree : personne ne retape les macros de
  * son petit-dejeuner tous les matins.
  *
- * L'import par recherche, photo ou code-barres n'est pas encore porte : le
- * bouton est present et signale ce qui manque, plutot que d'ouvrir une
- * fenetre vide.
+ * L'import ouvre le meme selecteur d'aliments que le Journal : recherche
+ * par nom, photo de l'assiette, ou code-barres. C'est ce qui evite de
+ * retaper les macros d'une etiquette a la main.
+ *
+ * REGRESSION DE LA BASCULE : ce bouton avait ete laisse en attente, sans
+ * rien derriere. Il annoncait « recherche, photo IA ou code-barres » et
+ * n'ouvrait rien du tout.
  */
 
 import { useState } from "react";
@@ -27,11 +31,27 @@ import {
   TextInput
 } from "../ui/primitives.jsx";
 import { Camera, Pencil, Plus, Trash2, UtensilsCrossed, X } from "../ui/icones.jsx";
+import { RechercheAliment } from "./RechercheAliment.jsx";
 
-export function Plats({ api, onImporter }) {
+export function Plats({ api, habitudePesee }) {
   const [modalOuverte, setModalOuverte] = useState(false);
+  const [importOuvert, setImportOuvert] = useState(false);
   const [edition, setEdition] = useState(null);
   const [recherche, setRecherche] = useState("");
+
+  /**
+   * Un aliment choisi devient un plat.
+   *
+   * L'aliment est repris TEL QUEL, comme dans l'application d'origine :
+   * le nom porte deja la quantite (« Riz basmati (100 g) ») et le champ
+   * grams va avec. J'avais d'abord retire grams en pensant bien faire —
+   * ca laissait un plat dont le nom annonce 100 g sans que l'app le
+   * sache, donc impossible a re-echelonner ensuite.
+   */
+  const importer = async (aliment) => {
+    await api.add(aliment);
+    setImportOuvert(false);
+  };
 
   const nouveau = () => {
     setEdition({ id: null, name: "", calories: "", protein: "", carbs: "", fat: "" });
@@ -77,7 +97,12 @@ export function Plats({ api, onImporter }) {
         </Btn>
       </div>
 
-      <Btn variant="ghost" icon={Camera} onClick={onImporter} style={{ width: "100%", marginBottom: 16 }}>
+      <Btn
+        variant="ghost"
+        icon={Camera}
+        onClick={() => setImportOuvert(true)}
+        style={{ width: "100%", marginBottom: 16 }}
+      >
         Importer un aliment — recherche, photo IA ou code-barres
       </Btn>
 
@@ -114,6 +139,15 @@ export function Plats({ api, onImporter }) {
           ))}
         </div>
       )}
+
+      <Modal
+        open={importOuvert}
+        onClose={() => setImportOuvert(false)}
+        title="Importer un aliment"
+        iconeFermer={X}
+      >
+        <RechercheAliment onChoisir={importer} habitudePesee={habitudePesee} />
+      </Modal>
 
       <Modal
         open={modalOuverte}
