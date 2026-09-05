@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import { COLORS } from "./tokens.js";
 import { todayISO } from "./lib/dates.js";
 import { getMonthKey, getWeekKey } from "./lib/semaine.js";
-import { CLES_ANNEXES, STORAGE_KEYS, charger, enregistrer } from "./lib/stockage.js";
+import { CLES_ANNEXES, STORAGE_KEYS, charger, enregistrer, surEchecEcriture } from "./lib/stockage.js";
 import { collectionApi, journalDuJourApi } from "./lib/collections.js";
 import { computeTargets } from "./lib/nutrition.js";
 import { bilanHebdomadaire } from "./lib/bilan.js";
@@ -54,6 +54,17 @@ export default function App() {
   const [ongletActif, setOngletActif] = useState("journal");
   const [reglagesOuverts, setReglagesOuverts] = useState(false);
   const [toast, setToast] = useState(null);
+
+  /**
+   * Panne d'ecriture du stockage.
+   *
+   * Elle ne s'efface pas toute seule, contrairement a une notification
+   * passagere : tant qu'elle dure, RIEN n'est enregistre. Le client doit la
+   * voir a chaque ecran, jusqu'a ce qu'il ait fait de la place.
+   */
+  const [pannePersistance, setPannePersistance] = useState(null);
+
+  useEffect(() => surEchecEcriture((info) => setPannePersistance(info)), []);
 
   const [dishes, setDishes] = useState([]);
   const [logEntries, setLogEntries] = useState([]);
@@ -259,6 +270,35 @@ export default function App() {
 
   return (
     <>
+      {/* TEXTE-NOUVEAU
+          Bandeau de panne de stockage. Ajoute apres un signalement client :
+          « on ne peut meme plus enregistrer de repas, ca ne fonctionne
+          plus ». Le stockage du navigateur etait plein, chaque ecriture
+          echouait, et RIEN ne le disait — ni message, ni erreur.
+      */}
+      {pannePersistance && (
+        <div
+          role="alert"
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 60,
+            background: COLORS.bad,
+            color: "#fff",
+            padding: "10px 14px",
+            fontSize: 13,
+            lineHeight: 1.45,
+            textAlign: "center"
+          }}
+        >
+          <strong>Rien ne s'enregistre.</strong>{" "}
+          {pannePersistance.quota
+            ? "La mémoire de l'application est pleine. Ouvre « Mon profil & réglages » pour faire de la place — tes saisies récentes ne sont pas conservées tant que ce message est là."
+            : "Le navigateur refuse d'écrire. Vérifie que la navigation privée est désactivée, puis rouvre l'application."}
+        </div>
+      )}
+      {/* FIN-TEXTE-NOUVEAU */}
+
       <Coque
         ongletActif={ongletActif}
         onChangerOnglet={setOngletActif}

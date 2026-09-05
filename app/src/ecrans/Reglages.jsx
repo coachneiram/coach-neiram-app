@@ -19,7 +19,13 @@
 import { useEffect, useRef, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { PROXY_BASE_URL } from "../lib/config.js";
-import { construireSauvegarde, restaurerSauvegarde } from "../lib/stockage.js";
+import {
+  construireSauvegarde,
+  estCleDePhoto,
+  occupationStockage,
+  restaurerSauvegarde,
+  supprimerPhotos
+} from "../lib/stockage.js";
 import { exporterSauvegarde } from "../lib/sauvegarde.js";
 import { enLigne } from "../lib/semaine.js";
 import { ChampsProfil } from "./ChampsProfil.jsx";
@@ -161,7 +167,26 @@ function CaseRappel({ actif, onChange, titre, aide }) {
   );
 }
 
+/** Occupation du stockage, en unites lisibles. */
+function mesurerOccupation() {
+  const { entrees, total } = occupationStockage();
+  const photos = entrees.filter((e) => estCleDePhoto(e.cle)).reduce((a, e) => a + e.octets, 0);
+  // Le plafond des navigateurs tourne autour de 5 Mo par site.
+  const PLAFOND = 5 * 1024 * 1024;
+  return {
+    mo: Math.round((total / 1048576) * 10) / 10,
+    photosMo: Math.round((photos / 1048576) * 10) / 10,
+    pct: Math.min(100, Math.round((total / PLAFOND) * 100))
+  };
+}
+
 export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
+  const [occupation, setOccupation] = useState(mesurerOccupation);
+  const [messageStockage, setMessageStockage] = useState(null);
+
+  useEffect(() => {
+    if (open) setOccupation(mesurerOccupation());
+  }, [open]);
   const [value, setValue] = useState(profile);
   const [message, setMessage] = useState(null);
   const fichierRef = useRef(null);
@@ -268,6 +293,59 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
               Le fichier contient tout ton suivi, photos comprises. Exporte régulièrement, et avant de changer de
               téléphone : Restaurer sur le nouvel appareil remet tout en place.
             </p>
+
+            {/* TEXTE-NOUVEAU
+                Occupation du stockage et suppression des photos. Ajoute apres
+                un signalement client : « on ne peut meme plus enregistrer de
+                repas ». La memoire du navigateur etait pleine — les photos de
+                progression pesent ~180 Ko chacune pour un plafond de 5 Mo —
+                et rien ne le disait ni ne permettait de faire de la place.
+            */}
+            <div
+              style={{
+                background: COLORS.bgAlt,
+                border: `1px solid ${occupation.pct >= 80 ? COLORS.warn : COLORS.border}`,
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                <span style={{ color: COLORS.textMuted }}>Mémoire utilisée</span>
+                <span
+                  style={{
+                    fontFamily: "IBM Plex Mono",
+                    color: occupation.pct >= 80 ? COLORS.warn : COLORS.textMuted
+                  }}
+                >
+                  {occupation.mo} Mo{occupation.photosMo > 0 ? ` · dont ${occupation.photosMo} Mo de photos` : ""}
+                </span>
+              </div>
+              {occupation.pct >= 80 && (
+                <p style={{ fontSize: 11.5, color: COLORS.warn, margin: "0 0 8px", lineHeight: 1.45 }}>
+                  La mémoire est presque pleine. Au-delà, plus rien ne s'enregistre. Exporte tes données, puis
+                  libère de la place.
+                </p>
+              )}
+              {occupation.photosMo > 0 && (
+                <Btn
+                  variant="ghost"
+                  onClick={() => {
+                    if (!window.confirm("Supprimer les photos de progression de cet appareil ? Exporte tes données avant : elles ne seront plus récupérables ici.")) return;
+                    const liberes = supprimerPhotos();
+                    setOccupation(mesurerOccupation());
+                    setMessageStockage(`${Math.round(liberes / 1048576 * 10) / 10} Mo libérés.`);
+                  }}
+                  style={{ width: "100%", padding: "8px 12px", fontSize: 12.5 }}
+                >
+                  Supprimer les photos de cet appareil
+                </Btn>
+              )}
+              {messageStockage && (
+                <p style={{ fontSize: 11.5, color: COLORS.good, margin: "8px 0 0" }}>{messageStockage}</p>
+              )}
+            </div>
+            {/* FIN-TEXTE-NOUVEAU */}
             <div style={{ display: "flex", gap: 8 }}>
               <Btn variant="ghost" icon={Download} onClick={exporter} style={{ flex: 1 }}>
                 Exporter mes données
