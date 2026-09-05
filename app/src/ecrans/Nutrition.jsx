@@ -14,13 +14,14 @@
 import { useMemo } from "react";
 import { COLORS } from "../tokens.js";
 import { fmtDateShort } from "../lib/dates.js";
-import { computeCalibration } from "../lib/nutrition.js";
+import { computeCalibration, etatCalibrage } from "../lib/nutrition.js";
 import { Btn, Card, MacroTarget, SectionTitle } from "../ui/primitives.jsx";
 
 /** Fenetre d'observation du calibrage, en jours. Valeur d'origine. */
 const FENETRE_CALIBRAGE = 28;
 
 export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntries, onApplyCalibration }) {
+  const etatCal = etatCalibrage(profile, currentWeight);
   const calibration = useMemo(
     () => computeCalibration(bodyLogs, logEntries, FENETRE_CALIBRAGE),
     [bodyLogs, logEntries]
@@ -57,15 +58,50 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
             Sur tes {calibration.days} derniers jours, ta maintenance réelle est estimée à ~
             {calibration.estimate} kcal, à partir de tes calories loguées et de l'évolution de ton poids.
           </p>
-          <Btn onClick={() => onApplyCalibration(calibration.estimate)} style={{ marginTop: 10 }}>
-            Appliquer cette estimation
-          </Btn>
-          {profile.calibratedMaintenanceKcal && (
-            <p style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 10 }}>
-              Calibrage actif : {profile.calibratedMaintenanceKcal} kcal, appliqué le{" "}
-              {fmtDateShort((profile.calibratedAt || "").slice(0, 10))}.
+
+          {/* TEXTE-NOUVEAU
+              Avertissement de couverture, et bouton de retrait. Ajoutes apres
+              un incident reel : une pratiquante de force a six seances par
+              semaine s'est retrouvee a 1320 kcal par jour, parce que le
+              calibrage moyennait un journal incomplet — et rien ne permettait
+              de revenir en arriere une fois l'estimation appliquee.
+          */}
+          {etatCal && etatCal.statut !== "appliquee" && (
+            <p style={{ fontSize: 12, color: COLORS.warn, marginTop: 8, lineHeight: 1.5 }}>
+              {etatCal.statut === "ignore"
+                ? `Ton calibrage de ${etatCal.declaree} kcal n'est pas appliqué : il s'écarte trop de ce que ton profil laisse attendre (~${etatCal.formule} kcal). L'objectif repart de la formule.`
+                : `Ton calibrage de ${etatCal.declaree} kcal est ramené à ${etatCal.retenue} kcal : l'écart avec ton profil (~${etatCal.formule} kcal) est trop grand pour venir du seul métabolisme. Le plus souvent, il manque des calories au journal — vérifie que tu pèses bien tes aliments dans l'état indiqué, cru ou cuit.`}
             </p>
           )}
+
+          {calibration.fiable === false && (
+            <p style={{ fontSize: 12, color: COLORS.warn, marginTop: 8, lineHeight: 1.5 }}>
+              Journal rempli {Math.round(calibration.couverture * 100)} % des jours seulement. Cette
+              estimation part de ce qui a été noté, pas de tout ce qui a été mangé : elle est donc
+              trop basse. Complète ton journal avant de l'appliquer.
+            </p>
+          )}
+
+          <Btn
+            onClick={() => onApplyCalibration(calibration.estimate, calibration.couverture)}
+            variant={calibration.fiable === false ? "ghost" : "primary"}
+            style={{ marginTop: 10 }}
+          >
+            Appliquer cette estimation
+          </Btn>
+
+          {profile.calibratedMaintenanceKcal && (
+            <>
+              <p style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 10 }}>
+                Calibrage actif : {profile.calibratedMaintenanceKcal} kcal, appliqué le{" "}
+                {fmtDateShort((profile.calibratedAt || "").slice(0, 10))}.
+              </p>
+              <Btn variant="ghost" onClick={() => onApplyCalibration(null)} style={{ marginTop: 8 }}>
+                Revenir au calcul par formule
+              </Btn>
+            </>
+          )}
+          {/* FIN-TEXTE-NOUVEAU */}
         </Card>
       )}
     </div>
