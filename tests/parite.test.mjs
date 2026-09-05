@@ -51,22 +51,122 @@ function profilAleatoire(hasard) {
   };
 }
 
-describe("computeTargets : ancien et nouveau donnent le meme resultat", () => {
-  test("sur 400 profils generes", () => {
+/**
+ * computeTargets : DIVERGENCE VOLONTAIRE, decidee apres la bascule.
+ *
+ * Ce groupe ne verifie plus une egalite, mais l'inverse : que les seules
+ * differences avec l'ancienne version sont celles qui ont ete decidees, et
+ * qu'aucune autre ne s'est glissee au passage.
+ *
+ * Deux changements, et deux seulement :
+ *
+ * 1. UN PLANCHER DE LIPIDES a 20 % des calories. En dessous, la production
+ *    hormonale est affectee. L'ancienne regle (0,6 g/kg en deficit) faisait
+ *    descendre une cliente de 50 kg a 18 % de ses calories.
+ * 2. LES PROTEINES ET LIPIDES SE CALCULENT SUR UN POIDS DE REFERENCE
+ *    plafonne pres du poids cible, au lieu du poids actuel. Les besoins
+ *    suivent la masse maigre : 2 g/kg d'un client de 110 kg dont l'objectif
+ *    est 80 kg donnait 220 g de proteines par jour, que personne ne mange.
+ *
+ * LES CALORIES NE CHANGENT PAS. C'est le point le plus important de ce
+ * fichier : le total energetique de chaque client reste identique au
+ * gramme pres. Seule sa repartition bouge.
+ */
+describe("computeTargets : divergences volontaires et rien d'autre", () => {
+  const PART_LIPIDES_MIN = 0.2;
+
+  test("les calories restent identiques a l'ancienne version", () => {
     const hasard = generateur(20260905);
     for (let i = 0; i < 400; i++) {
       const profil = profilAleatoire(hasard);
       const poids = hasard() < 0.3 ? null : Math.round(45 + hasard() * 80);
+      assert.equal(
+        neuf.computeTargets(profil, poids).calories,
+        plat(ancien.computeTargets(profil, poids)).calories,
+        "les calories ont bouge sur " + JSON.stringify({ ...profil, poids })
+      );
+    }
+  });
+
+  test("sans poids cible, seul le plancher de lipides peut differer", () => {
+    const hasard = generateur(20260905);
+    let planchers = 0;
+    for (let i = 0; i < 400; i++) {
+      const profil = profilAleatoire(hasard);
+      const poids = hasard() < 0.3 ? null : Math.round(45 + hasard() * 80);
+      const contexte = JSON.stringify({ ...profil, poids });
 
       const a = plat(ancien.computeTargets(profil, poids));
       const n = neuf.computeTargets(profil, poids);
 
-      assert.deepEqual(
-        n,
-        a,
-        "divergence sur le profil " + JSON.stringify({ ...profil, poids })
-      );
+      // Sans poids cible, la reference reste le poids actuel : les
+      // proteines ne peuvent pas bouger.
+      assert.equal(n.protein, a.protein, "proteines modifiees sans poids cible : " + contexte);
+
+      if (n.fat !== a.fat) {
+        planchers++;
+        assert.ok(n.fat > a.fat, "les lipides ont BAISSE : " + contexte);
+        assert.ok(
+          a.fat * 9 < a.calories * PART_LIPIDES_MIN,
+          "lipides modifies alors que l'ancienne valeur respectait deja le plancher : " + contexte
+        );
+      }
     }
+    assert.ok(planchers > 0, "aucun plancher declenche : le test ne verifie rien");
+  });
+
+  test("le poids cible ne fait jamais monter les proteines", () => {
+    // Le plafond ne peut que reduire la reference, jamais l'augmenter : un
+    // client sous son objectif garde exactement ses anciens chiffres.
+    const hasard = generateur(20260906);
+    for (let i = 0; i < 300; i++) {
+      const profil = profilAleatoire(hasard);
+      const poids = Math.round(45 + hasard() * 80);
+      const cible = Math.round(45 + hasard() * 80);
+
+      const sansCible = neuf.computeTargets(profil, poids);
+      const avecCible = neuf.computeTargets({ ...profil, targetWeightKg: cible }, poids);
+
+      assert.ok(
+        avecCible.protein <= sansCible.protein,
+        `proteines en hausse : ${poids} kg, cible ${cible} kg`
+      );
+      if (poids <= cible) {
+        assert.equal(avecCible.protein, sansCible.protein, "client sous son objectif : rien ne doit bouger");
+      }
+    }
+  });
+
+  test("aucun client ne passe sous le plancher de lipides", () => {
+    // La propriete que le changement promet, verifiee exhaustivement.
+    let verifies = 0;
+    for (const sex of ["homme", "femme"]) {
+      for (const goal of ["perte", "prise", "maintien", "performance"]) {
+        for (let poids = 35; poids <= 200; poids += 5) {
+          for (const cible of [null, 50, 70, 90, 120]) {
+            const profil = {
+              sex,
+              age: 35,
+              heightCm: 172,
+              startWeightKg: poids,
+              targetWeightKg: cible,
+              activityLevel: "modere",
+              goal,
+              jobType: "sedentaire"
+            };
+            const t = neuf.computeTargets(profil, poids);
+            verifies++;
+            assert.ok(
+              t.fat * 9 >= t.calories * PART_LIPIDES_MIN,
+              `sous le plancher : ${sex} ${goal} ${poids} kg cible ${cible} — ` +
+                `${t.fat} g de lipides pour ${t.calories} kcal`
+            );
+            assert.ok(t.carbs >= 0 && t.protein >= 0, "macro negative");
+          }
+        }
+      }
+    }
+    assert.ok(verifies > 1000, "trop peu de profils : " + verifies);
   });
 
   test("sur les profils incomplets, ou l'ancien renvoie null", () => {

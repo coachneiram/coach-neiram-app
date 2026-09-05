@@ -27,6 +27,116 @@ export const ACTIVITY_LEVELS = [
 
 export const GOAL_CAL_ADJUST = { perte: -0.2, prise: 0.1, maintien: 0, performance: 0.05 };
 
+/**
+ * Part minimale des calories venant des lipides.
+ *
+ * En dessous d'environ 20 %, la production hormonale est affectee — c'est
+ * documente, et cela touche d'abord les clientes legeres en deficit, chez
+ * qui 0,6 g/kg ne represente que 18 % des calories. Ce plancher ne change
+ * rien pour les autres : il ne s'applique que quand la regle au poids
+ * descend en dessous.
+ */
+const PART_LIPIDES_MIN = 0.2;
+
+/**
+ * Directions possibles sur l'objectif « performance ».
+ *
+ * Un pratiquant de force athletique n'est pas seulement en performance : il
+ * est en performance ET en train de prendre du poids, ou d'en perdre — pour
+ * passer dans une categorie, ou parce qu'il a fini une prise de masse. Ce
+ * sont deux besoins caloriques opposes sous un meme objectif.
+ *
+ * Jusqu'ici il n'avait pas le choix : rester en « performance » (+5 %), ou
+ * basculer en « perte » et se retrouver a -20 %, un deficit qui coute de la
+ * force a quelqu'un qui essaie precisement d'en garder.
+ */
+export const PERFORMANCE_DIRECTIONS = [
+  { id: "maintien", label: "Maintenir mon poids" },
+  { id: "prise", label: "Prendre du poids / du muscle" },
+  { id: "perte", label: "Perdre du poids (sèche)" }
+];
+
+/**
+ * Ajustement calorique par direction, sur l'objectif performance.
+ *
+ * Les ecarts sont volontairement plus SERRES que sur les objectifs
+ * generaux :
+ *
+ * - EN SECHE, -12 % au lieu de -20 %. Un deficit agressif fait perdre de la
+ *   force et de la masse maigre. La reference pour un athlete est une perte
+ *   lente, de l'ordre de 0,5 a 0,7 % du poids par semaine — ce qui, pour un
+ *   pratiquant de 90 kg, correspond a peu pres a ce deficit.
+ * - EN PRISE, +12 %. Au-dela, le surplus part en gras : cela degrade le
+ *   rapport force/poids, fait changer de categorie pour de mauvaises
+ *   raisons, et rallonge la seche suivante.
+ *
+ * L'absence de direction vaut « maintien » et conserve exactement le +5 %
+ * d'aujourd'hui : aucun client deja en performance ne voit ses chiffres
+ * bouger.
+ */
+const PERFORMANCE_CAL_ADJUST = { maintien: 0.05, prise: 0.12, perte: -0.12 };
+
+/** Proteines, en g/kg du poids de reference. */
+const PROTEINES_PAR_KG = 2;
+
+/**
+ * En seche de force, on monte a 2,2 g/kg.
+ *
+ * Plus de proteines en deficit protege la masse maigre, et c'est encore plus
+ * vrai chez quelqu'un qui doit garder sa force pendant la seche.
+ */
+const PROTEINES_PAR_KG_SECHE_FORCE = 2.2;
+
+/** Lipides, en g/kg du poids de reference. */
+const LIPIDES_PAR_KG = 1;
+const LIPIDES_PAR_KG_PERTE = 0.6;
+
+/**
+ * En seche de force, 0,8 g/kg plutot que 0,6.
+ *
+ * Descendre les lipides est la variable d'ajustement habituelle en seche,
+ * mais un pratiquant de force a besoin de ses glucides pour s'entrainer :
+ * autant ne pas ecraser les lipides jusqu'au plancher hormonal pour
+ * gagner quelques grammes de glucides.
+ */
+const LIPIDES_PAR_KG_SECHE_FORCE = 0.8;
+
+/** Direction retenue sur l'objectif performance. */
+export function directionPerformance(profile) {
+  if (!profile || profile.goal !== "performance") return null;
+  const choisie = profile.performanceDirection;
+  return PERFORMANCE_DIRECTIONS.some((d) => d.id === choisie) ? choisie : "maintien";
+}
+
+/**
+ * Marge au-dessus du poids cible servant de reference aux proteines.
+ *
+ * Les besoins en proteines suivent la masse maigre, pas la masse totale.
+ * Chez un client tres au-dessus de son objectif, 2 g/kg du poids ACTUEL
+ * donne des quantites que personne ne mange (220 g par jour pour quelqu'un
+ * dont l'objectif est 80 kg), et qui prennent la place du reste de
+ * l'assiette. On plafonne donc la reference un peu au-dessus du poids cible.
+ */
+const MARGE_POIDS_CIBLE = 1.1;
+
+/**
+ * Poids servant de base aux proteines et aux lipides.
+ *
+ * C'est le poids actuel, sauf pour un client sensiblement au-dessus de son
+ * objectif : la reference est alors plafonnee pres du poids cible. Les
+ * CALORIES, elles, restent calculees sur le poids reel — c'est bien le corps
+ * d'aujourd'hui qui depense.
+ */
+export function poidsDeReference(profile, poidsActuel) {
+  const cible = num(profile.targetWeightKg);
+  if (!poidsActuel) return poidsActuel;
+  // La condition « poidsActuel <= cible » est redondante avec le Math.min
+  // ci-dessous — verifie par mutation. Elle est gardee parce qu'elle dit la
+  // regle : un client a son objectif, ou en dessous, garde son poids reel.
+  if (!cible || cible <= 0 || poidsActuel <= cible) return poidsActuel;
+  return Math.min(poidsActuel, cible * MARGE_POIDS_CIBLE);
+}
+
 /** Majoration liee au metier, cumulee au niveau d'activite sportive. */
 const MAJORATION_METIER = { sedentaire: 0, actif: 0.05, "tres-actif": 0.12 };
 
@@ -68,13 +178,39 @@ export function computeTargets(profile, currentWeightKg) {
     tdee = bmr ? bmr * pal : null;
   }
 
-  const adjust = GOAL_CAL_ADJUST[profile.goal] ?? 0;
+  const direction = directionPerformance(profile);
+  const adjust = direction ? PERFORMANCE_CAL_ADJUST[direction] : (GOAL_CAL_ADJUST[profile.goal] ?? 0);
   const calories = tdee ? (Math.round((tdee * (1 + adjust)) / 10) * 10) : null;
 
-  const proteinPerKg = 2;
-  const fatPerKg = profile.goal === "perte" ? 0.6 : 1;
-  const protein = weight ? Math.round(weight * proteinPerKg) : null;
-  const fat = weight ? Math.round(weight * fatPerKg) : null;
+  const secheDeForce = direction === "perte";
+
+  const proteinPerKg = secheDeForce ? PROTEINES_PAR_KG_SECHE_FORCE : PROTEINES_PAR_KG;
+  const fatPerKg = secheDeForce
+    ? LIPIDES_PAR_KG_SECHE_FORCE
+    : profile.goal === "perte"
+      ? LIPIDES_PAR_KG_PERTE
+      : LIPIDES_PAR_KG;
+
+  // Proteines et lipides suivent la masse maigre ; les calories suivent le
+  // corps reel. D'ou deux poids differents dans le meme calcul.
+  const reference = poidsDeReference(profile, weight);
+
+  const protein = reference ? Math.round(reference * proteinPerKg) : null;
+
+  const lipidesAuPoids = reference ? reference * fatPerKg : null;
+  const lipidesPlancher = calories != null ? (calories * PART_LIPIDES_MIN) / 9 : null;
+
+  // Le plancher est arrondi vers le HAUT, la regle au poids vers le plus
+  // proche. Arrondir le plancher vers le bas le ferait repasser sous les
+  // 20 %, et il ne tiendrait pas ce qu'il promet — y compris dans le cas
+  // limite ou les deux valeurs sont a un dixieme de gramme l'une de l'autre.
+  const fat =
+    lipidesAuPoids != null
+      ? Math.max(
+          Math.round(lipidesAuPoids),
+          lipidesPlancher != null ? Math.ceil(lipidesPlancher) : 0
+        )
+      : null;
 
   // Les glucides absorbent ce qui reste une fois proteines et lipides poses.
   const remainingKcal =

@@ -200,7 +200,6 @@
     F('cn-b-water','Eau',0,0,0,0,['eau plate']),
     F('cn-b-sparkling-water','Eau gazeuse',0,0,0,0,['eau petillante']),
     F('cn-b-coffee','Café noir',2,0.2,0,0,['cafe','espresso','expresso','cafe filtre','cafe soluble']),
-    F('cn-b-coffee-milk','Café au lait',35,1.8,2.5,1.5,['cafe au lait','latte','cafe latte']),
     F('cn-b-cappuccino','Cappuccino',45,2.4,3.4,2),
     F('cn-b-americano','Café americano',2,0.2,0,0,['americano']),
     F('cn-b-decaf','Café décaféiné',2,0.2,0,0,['decafeine']),

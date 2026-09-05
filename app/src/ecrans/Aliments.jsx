@@ -51,14 +51,21 @@ function TableEquivalences({ titre, lignes, profil }) {
                 padding: "8px 10px"
               }}
             >
-              <span style={{ fontSize: 12.5, color: COLORS.text }}>{aliment}</span>
+              {/*
+                Les deux colonnes peuvent retrecir et revenir a la ligne.
+                Sans cela, une equivalence longue — « 10 g huile = 12 g
+                beurre = 30 g creme fraiche » — depassait la carte sur un
+                telephone : la fin de la ligne sortait de l'ecran, et c'est
+                justement la partie qui porte l'information.
+              */}
+              <span style={{ fontSize: 12.5, color: COLORS.text, minWidth: 0 }}>{aliment}</span>
               <span
                 style={{
                   fontSize: 12,
                   color: COLORS.gold,
                   fontFamily: "IBM Plex Mono",
                   textAlign: "right",
-                  flexShrink: 0
+                  minWidth: 0
                 }}
               >
                 {quantite}

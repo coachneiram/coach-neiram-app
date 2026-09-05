@@ -71,6 +71,21 @@ function phrasesAffichees(source) {
    */
   source = source.replace(/\/\* MIGRATION-EN-COURS \*\/[\s\S]*?\/\* FIN-MIGRATION-EN-COURS \*\//g, "");
 
+  /*
+   * Les blocs marques « TEXTE-NOUVEAU » sont exclus eux aussi.
+   *
+   * La migration est finie : l'application evolue maintenant, et un
+   * texte ajoute apres la bascule n'a par definition aucune chance
+   * d'exister dans index.html. Sans cette echappatoire, ce test
+   * interdirait toute nouvelle fonctionnalite — il passerait de garde-fou
+   * a frein.
+   *
+   * Le marquage reste explicite et inventorie par un test dedie : ce qui
+   * doit rester impossible, c'est de reformuler un texte PORTE sans s'en
+   * apercevoir. Ajouter du texte assume, non.
+   */
+  source = source.replace(/\/\* TEXTE-NOUVEAU[\s\S]*?\/\* FIN-TEXTE-NOUVEAU \*\//g, "");
+
   /**
    * Un fragment n'est du texte que s'il ne contient aucune trace de code.
    * Sans ce filtre, le `>` d'une fleche ou d'une comparaison ouvrirait un
@@ -143,6 +158,33 @@ const fichiers = DOSSIERS_SURVEILLES.flatMap((dossier) =>
     .filter((f) => f.endsWith(".jsx"))
     .map((f) => ({ nom: f, chemin: join(dossier, f) }))
 );
+
+describe("les ajouts posterieurs a la bascule restent visibles", () => {
+  test("chaque bloc de texte nouveau est delimite et justifie", () => {
+    let blocs = 0;
+    for (const { nom, chemin } of fichiers) {
+      const source = readFileSync(chemin, "utf8");
+      const ouverts = (source.match(/\/\* TEXTE-NOUVEAU/g) || []).length;
+      const fermes = (source.match(/\/\* FIN-TEXTE-NOUVEAU \*\//g) || []).length;
+      assert.equal(ouverts, fermes, `bloc de texte nouveau non ferme dans ${nom}`);
+
+      for (const bloc of source.matchAll(/\/\* TEXTE-NOUVEAU([\s\S]*?)\*\//g)) {
+        blocs++;
+        // Une justification, pas seulement un marqueur : sans elle,
+        // « TEXTE-NOUVEAU » deviendrait un moyen commode de contourner le
+        // controle de fidelite.
+        const justification = bloc[1].trim();
+        assert.ok(
+          justification.length > 60,
+          `bloc de texte nouveau sans justification suffisante dans ${nom}`
+        );
+      }
+    }
+    // Le compte est volontairement affiche : il doit rester lisible d'un
+    // coup d'oeil combien de textes ne sont plus couverts par le controle.
+    assert.ok(blocs < 25, `${blocs} blocs de texte nouveau : la couverture se dilue`);
+  });
+});
 
 describe("les blocs non encore migres restent rares et marques", () => {
   test("chaque bloc en attente est explicitement delimite", () => {

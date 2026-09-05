@@ -10,6 +10,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { chargerApp } from "./harness.mjs";
+import * as nutrition from "../app/src/lib/nutrition.js";
 
 const app = chargerApp();
 
@@ -246,5 +247,220 @@ describe("computeRemainingToday — ce qu'il reste a manger", () => {
   test("sans objectifs definis : renvoie null", () => {
     assert.equal(app.computeRemainingToday([], null), null);
     assert.equal(app.computeRemainingToday([], { calories: null }), null);
+  });
+});
+
+/**
+ * Poids de reference des proteines et des lipides.
+ *
+ * Ces tests pinglent des VALEURS, pas seulement des inegalites. Une premiere
+ * version ne verifiait que « les proteines ne montent jamais » : quatre
+ * mutations differentes du plafond passaient au travers, dont une qui le
+ * desactivait completement. Une inegalite ne suffit pas a decrire une regle.
+ */
+describe("poids de reference — proteines et lipides suivent la masse maigre", () => {
+  const CLIENT = {
+    sex: "homme",
+    age: 40,
+    heightCm: 175,
+    startWeightKg: 110,
+    targetWeightKg: 80,
+    activityLevel: "leger",
+    goal: "perte",
+    jobType: "sedentaire"
+  };
+
+  test("la reference est plafonnee a 10 % au-dessus du poids cible", () => {
+    // 80 kg de cible -> reference 88 kg, et non 110.
+    assert.equal(nutrition.poidsDeReference(CLIENT, 110), 88);
+    assert.equal(nutrition.poidsDeReference({ ...CLIENT, targetWeightKg: 60 }, 110), 66);
+  });
+
+  test("un client sous ou a son objectif garde son poids reel", () => {
+    assert.equal(nutrition.poidsDeReference(CLIENT, 75), 75);
+    assert.equal(nutrition.poidsDeReference(CLIENT, 80), 80);
+  });
+
+  test("sans poids cible, la reference est le poids reel", () => {
+    assert.equal(nutrition.poidsDeReference({ ...CLIENT, targetWeightKg: null }, 110), 110);
+    assert.equal(nutrition.poidsDeReference({ ...CLIENT, targetWeightKg: 0 }, 110), 110);
+    assert.equal(nutrition.poidsDeReference({ ...CLIENT, targetWeightKg: undefined }, 110), 110);
+  });
+
+  test("les proteines sont calculees sur la reference, pas sur le poids actuel", () => {
+    // 2 g/kg de 88 kg = 176 g. Sur le poids actuel, ce serait 220 g — soit
+    // 2,8 g/kg du poids cible, une quantite que personne ne mange.
+    assert.equal(nutrition.computeTargets(CLIENT, 110).protein, 176);
+    assert.equal(nutrition.computeTargets({ ...CLIENT, targetWeightKg: null }, 110).protein, 220);
+  });
+
+  test("les lipides suivent la meme reference", () => {
+    // 0,6 g/kg de 88 kg = 52,8 -> 53 g, si le plancher ne prime pas.
+    const t = nutrition.computeTargets(CLIENT, 110);
+    const plancher = Math.ceil((t.calories * 0.2) / 9);
+    assert.equal(t.fat, Math.max(53, plancher));
+  });
+
+  test("les calories, elles, restent calculees sur le poids reel", () => {
+    // C'est le corps d'aujourd'hui qui depense, pas celui qu'on vise.
+    const avec = nutrition.computeTargets(CLIENT, 110).calories;
+    const sans = nutrition.computeTargets({ ...CLIENT, targetWeightKg: null }, 110).calories;
+    assert.equal(avec, sans);
+  });
+
+  test("les glucides recuperent ce que les proteines liberent", () => {
+    const avec = nutrition.computeTargets(CLIENT, 110);
+    const sans = nutrition.computeTargets({ ...CLIENT, targetWeightKg: null }, 110);
+    assert.equal(avec.calories, sans.calories);
+    assert.ok(avec.carbs > sans.carbs, "les calories liberees doivent aller quelque part");
+  });
+});
+
+describe("plancher de lipides", () => {
+  const CLIENTE = {
+    sex: "femme",
+    age: 35,
+    heightCm: 165,
+    startWeightKg: 50,
+    activityLevel: "modere",
+    goal: "perte",
+    jobType: "sedentaire"
+  };
+
+  test("une cliente legere en deficit atteint bien 20 % des calories", () => {
+    const t = nutrition.computeTargets(CLIENTE, 50);
+    assert.ok(t.fat * 9 >= t.calories * 0.2, `${t.fat} g pour ${t.calories} kcal`);
+    // 0,6 g/kg donnait 30 g, soit 18 % : le plancher doit avoir joue.
+    assert.ok(t.fat > 30, "le plancher n'a pas joue");
+  });
+
+  test("le plancher ne change rien quand la regle au poids suffit deja", () => {
+    // En prise de masse, 1 g/kg depasse largement les 20 %.
+    const t = nutrition.computeTargets({ ...CLIENTE, goal: "prise" }, 80);
+    assert.equal(t.fat, 80);
+  });
+});
+
+/**
+ * Force athletique : direction sur l'objectif performance.
+ *
+ * Un pratiquant de force n'est pas seulement « en performance » : il est en
+ * performance ET en train de prendre ou de perdre du poids. Jusqu'ici il
+ * n'avait pas le choix — rester a +5 %, ou basculer en « perte » et se
+ * retrouver a -20 %, un deficit qui coute la force qu'il essaie de garder.
+ *
+ * Le test le plus important de ce groupe est le premier : un client DEJA en
+ * performance ne doit voir aucun de ses chiffres bouger.
+ */
+describe("force athletique — direction sur l'objectif performance", () => {
+  const LIFTER = {
+    sex: "homme",
+    age: 30,
+    heightCm: 178,
+    startWeightKg: 90,
+    activityLevel: "actif",
+    goal: "performance",
+    jobType: "sedentaire"
+  };
+
+  const cible = (direction) =>
+    nutrition.computeTargets({ ...LIFTER, performanceDirection: direction }, 90);
+
+  test("un client deja en performance ne voit rien changer", () => {
+    // Sans direction enregistree, le comportement doit etre celui d'avant.
+    assert.deepEqual(cible(undefined), cible("maintien"));
+    assert.deepEqual(cible(null), cible("maintien"));
+    assert.deepEqual(cible("valeur-inconnue"), cible("maintien"));
+  });
+
+  test("la direction ne s'applique qu'a l'objectif performance", () => {
+    for (const goal of ["perte", "prise", "maintien"]) {
+      assert.equal(nutrition.directionPerformance({ ...LIFTER, goal }), null, "objectif " + goal);
+      assert.deepEqual(
+        nutrition.computeTargets({ ...LIFTER, goal, performanceDirection: "prise" }, 90),
+        nutrition.computeTargets({ ...LIFTER, goal }, 90),
+        "la direction a fuite sur l'objectif " + goal
+      );
+    }
+  });
+
+  test("prise et seche encadrent le maintien", () => {
+    assert.ok(cible("prise").calories > cible("maintien").calories);
+    assert.ok(cible("perte").calories < cible("maintien").calories);
+  });
+
+  test("la seche de force est plus douce que l'objectif perte general", () => {
+    // C'est tout l'interet : -12 % au lieu de -20 %. Un deficit agressif
+    // fait perdre la force qu'on essaie de conserver.
+    const general = nutrition.computeTargets({ ...LIFTER, goal: "perte" }, 90);
+    assert.ok(
+      cible("perte").calories > general.calories,
+      `seche de force ${cible("perte").calories} kcal vs perte generale ${general.calories} kcal`
+    );
+  });
+
+  test("la prise de force reste mesuree", () => {
+    // Au-dela d'environ 15 %, le surplus part en gras : mauvais rapport
+    // force/poids, et seche suivante plus longue.
+    const surplus = cible("prise").calories / cible("maintien").calories - 1;
+    assert.ok(surplus > 0.03 && surplus < 0.15, "surplus de " + Math.round(surplus * 100) + " %");
+  });
+
+  test("les proteines montent en seche, pour proteger la masse maigre", () => {
+    assert.ok(cible("perte").protein > cible("maintien").protein);
+    assert.equal(cible("perte").protein, Math.round(90 * 2.2));
+    assert.equal(cible("maintien").protein, Math.round(90 * 2));
+  });
+
+  test("les lipides de seche restent au-dessus de la regle generale", () => {
+    // 0,8 g/kg et non 0,6 : ecraser les lipides jusqu'au plancher pour
+    // gagner quelques grammes de glucides n'a pas de sens ici.
+    assert.equal(cible("perte").fat, Math.round(90 * 0.8));
+    assert.ok(cible("perte").fat > nutrition.computeTargets({ ...LIFTER, goal: "perte" }, 90).fat);
+  });
+
+  test("les glucides restent suffisants pour s'entrainer, meme en seche", () => {
+    // Sous 3 g/kg, l'entrainement de force en volume devient difficile.
+    const gParKg = cible("perte").carbs / 90;
+    assert.ok(gParKg >= 3, gParKg.toFixed(1) + " g/kg de glucides en seche");
+  });
+
+  test("le plancher de lipides tient aussi sur les trois directions", () => {
+    let verifies = 0;
+    for (const direction of ["maintien", "prise", "perte"]) {
+      for (let poids = 45; poids <= 160; poids += 5) {
+        for (const act of ["leger", "modere", "actif", "tresactif"]) {
+          const t = nutrition.computeTargets(
+            { ...LIFTER, startWeightKg: poids, activityLevel: act, performanceDirection: direction },
+            poids
+          );
+          verifies++;
+          assert.ok(
+            t.fat * 9 >= t.calories * 0.2,
+            `${direction} ${poids} kg ${act} : ${t.fat} g pour ${t.calories} kcal`
+          );
+          assert.ok(t.carbs > 0, "glucides nuls");
+        }
+      }
+    }
+    assert.ok(verifies > 200, "trop peu de profils : " + verifies);
+  });
+
+  test("la seche de force se combine au poids de reference", () => {
+    // Un pratiquant tres au-dessus de son objectif de categorie garde les
+    // deux regles : 2,2 g/kg, mais du poids de reference.
+    const t = nutrition.computeTargets(
+      { ...LIFTER, targetWeightKg: 83, performanceDirection: "perte" },
+      100
+    );
+    assert.equal(t.protein, Math.round(Math.min(100, 83 * 1.1) * 2.2));
+  });
+
+  test("les trois directions sont proposees, et « maintien » est la premiere", () => {
+    assert.deepEqual(
+      nutrition.PERFORMANCE_DIRECTIONS.map((d) => d.id),
+      ["maintien", "prise", "perte"]
+    );
+    for (const d of nutrition.PERFORMANCE_DIRECTIONS) assert.ok(d.label, "direction sans libelle");
   });
 });
