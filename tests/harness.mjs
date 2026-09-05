@@ -102,7 +102,9 @@ const A_EXPOSER = [
   "chargeFrom1RM",
   "RPE_CHART",
   // Lecture des bilans rediges par l'IA.
-  "parseBilan"
+  "parseBilan",
+  // Series temporelles des tendances.
+  "buildWeeklySeries"
 ];
 
 function extraireScriptApplicatif(html) {
