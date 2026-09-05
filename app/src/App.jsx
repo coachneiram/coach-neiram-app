@@ -28,6 +28,13 @@ import {
   marquerBilanEnvoye,
   verifierRappelDimanche
 } from "./lib/rappel-dimanche.js";
+import {
+  verifierRappelCreneau,
+  verifierRappelHydratation,
+  verifierRappelNutrition
+} from "./lib/moteur-rappels.js";
+import { verifierAlertesCoach } from "./lib/moteur-alertes.js";
+import { totauxDuJour } from "./lib/score-jour.js";
 import { Coque } from "./ui/Coque.jsx";
 import { Droplet, Loader2 } from "./ui/icones.jsx";
 import { Journal } from "./ecrans/Journal.jsx";
@@ -185,30 +192,6 @@ export default function App() {
     }
   };
 
-  /**
-   * Le rappel du dimanche.
-   *
-   * Une verification au montage puis une par minute, comme dans
-   * l'application d'origine : le client peut ouvrir l'app a 9 h 58 un
-   * dimanche, il faut que le rappel parte a 10 h sans qu'il ait a la
-   * relancer. La decision elle-meme est dans lib/rappel-dimanche.js,
-   * pour etre testable sans navigateur.
-   */
-  useEffect(() => {
-    if (!pret || !profile) return;
-    let arrete = false;
-    const verifier = () => {
-      if (arrete) return;
-      verifierRappelDimanche({ profile, afficherToast });
-    };
-    verifier();
-    const minuteur = window.setInterval(verifier, PERIODE_VERIFICATION_MS);
-    return () => {
-      arrete = true;
-      window.clearInterval(minuteur);
-    };
-  }, [pret, profile]);
-
   const dishesApi = collectionApi(STORAGE_KEYS.dishes, dishes, setDishes);
   const logEntriesApi = collectionApi(STORAGE_KEYS.logEntries, logEntries, setLogEntries);
   const sessionsApi = collectionApi(STORAGE_KEYS.sessions, sessions, setSessions);
@@ -235,6 +218,66 @@ export default function App() {
   );
 
   const donneesCompletes = { sessions, dailyForm, bodyLogs, logEntries, measurements, weekPlan: planSemaine, routines, hardWeeks: semainesDifficiles };
+
+  /**
+   * Le rappel du dimanche.
+   *
+   * Une verification au montage puis une par minute, comme dans
+   * l'application d'origine : le client peut ouvrir l'app a 9 h 58 un
+   * dimanche, il faut que le rappel parte a 10 h sans qu'il ait a la
+   * relancer. La decision elle-meme est dans lib/rappel-dimanche.js,
+   * pour etre testable sans navigateur.
+   */
+  useEffect(() => {
+    if (!pret || !profile) return;
+    let arrete = false;
+    const verifier = () => {
+      if (arrete) return;
+      verifierRappelDimanche({ profile, afficherToast });
+      verifierRappelHydratation({
+        profile,
+        journalDuJour: dailyForm.find((f) => f.date === todayISO()),
+        afficherToast
+      });
+      verifierRappelNutrition({
+        profile,
+        targets,
+        totaux: totauxDuJour(logEntries.filter((e) => e.date === todayISO())),
+        afficherToast
+      });
+      verifierRappelCreneau({ profile, seances: sessions, afficherToast });
+    };
+    verifier();
+    const minuteur = window.setInterval(verifier, PERIODE_VERIFICATION_MS);
+    return () => {
+      arrete = true;
+      window.clearInterval(minuteur);
+    };
+  }, [pret, profile, targets, dailyForm, logEntries, sessions]);
+
+  /**
+   * Les alertes envoyees au coach.
+   *
+   * Elles ne tournent pas sur minuteur : un changement de seances suffit
+   * a les reevaluer. Les envoyer en boucle chaque minute reviendrait a
+   * relire la meme situation sans rien de neuf.
+   */
+  useEffect(() => {
+    if (!pret || !profile) return;
+    let arrete = false;
+    verifierAlertesCoach({
+      profile,
+      seances: sessions,
+      justifications: raisonsCreneaux,
+      afficherToast: (m) => {
+        if (!arrete) afficherToast(m);
+      }
+    });
+    return () => {
+      arrete = true;
+    };
+  }, [pret, profile, sessions, raisonsCreneaux]);
+
 
   const weekStats = useMemo(
     () => (profile && targets ? bilanHebdomadaire(getWeekKey(todayISO()), donneesCompletes, profile, targets) : null),

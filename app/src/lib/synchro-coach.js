@@ -22,7 +22,9 @@ export const TYPES_EVENEMENTS = [
   "justification",
   "semaine_difficile",
   "alerte_semaines_difficiles",
-  "alerte_seances_manquees"
+  "alerte_seances_manquees",
+  "alerte_decalages",
+  "resume_hebdo"
 ];
 
 /** La synchro est-elle active pour ce client ? */
