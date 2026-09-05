@@ -76,7 +76,13 @@ const A_EXPOSER = [
   "minutesOf",
   "slotDayIndex",
   "slotDayLabel",
-  "normalizeSlots"
+  "normalizeSlots",
+  // Aliments : le filtrage des allergies et l'ordre des recommandations.
+  "dietOk",
+  "foodRecoOrder",
+  "sortFoodsForGoal",
+  "FOOD_DB",
+  "FOOD_CATS"
 ];
 
 function extraireScriptApplicatif(html) {
