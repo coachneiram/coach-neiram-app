@@ -207,16 +207,31 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
       );
     } catch (e) {
       /*
-       * L'application d'origine n'affiche rien ici : l'echec est
-       * silencieux, et le client peut croire qu'il a une sauvegarde alors
-       * qu'il n'en a aucune. C'est une faiblesse reelle, mais la corriger
-       * maintenant melangerait migration et amelioration — et devant un
-       * comportement inattendu, plus personne ne saurait si c'est un bug de
-       * portage ou un changement voulu.
+       * DIVERGENCE ASSUMEE avec l'application d'origine, qui n'affichait
+       * rien ici.
        *
-       * A traiter apres la bascule. Voir AMELIORATIONS.md.
+       * L'echec etait silencieux : le client appuyait sur « Exporter »,
+       * ne voyait aucun fichier arriver, et pouvait croire qu'il avait
+       * une sauvegarde alors qu'il n'en avait aucune. Or c'est son SEUL
+       * filet — il n'existe aucune copie serveur de ses donnees.
+       *
+       * Ce silence a ete conserve pendant toute la migration pour ne pas
+       * melanger portage et amelioration. La migration est terminee : la
+       * raison de le garder a disparu, celle de le corriger reste.
        */
-      setMessage(null);
+      /* TEXTE-NOUVEAU
+         Ce message n'existe pas dans l'application d'origine, qui restait
+         muette quand l'export echouait. Le client pouvait donc croire
+         qu'il avait une sauvegarde alors qu'il n'en avait aucune — et
+         c'est son seul filet, il n'existe aucune copie serveur de ses
+         donnees. Le silence a ete conserve pendant toute la migration
+         pour ne pas melanger portage et amelioration ; la migration est
+         terminee, la raison de le garder a disparu. */
+      setMessage(
+        "L'export a échoué : aucune sauvegarde n'a été créée. Réessaie, " +
+          "et si ça recommence, libère de la place puis reprends."
+      );
+      /* FIN-TEXTE-NOUVEAU */
     }
   };
 

@@ -44,20 +44,24 @@ libellé.
 
 ---
 
-## 3. Échec d'export silencieux
+## 3. Échec d'export silencieux — ✅ CORRIGÉ le 05/09/2026
 
-**Constat.** Dans Réglages, si l'export de sauvegarde échoue, rien ne
-s'affiche. Le client peut croire qu'il a une sauvegarde alors qu'il n'en a
-aucune.
+**Constat.** Dans Réglages, si l'export de sauvegarde échouait, rien ne
+s'affichait. Le client pouvait croire qu'il avait une sauvegarde alors
+qu'il n'en avait aucune.
 
-**Gravité.** Réelle. C'est le seul filet du client : il n'existe aucune
+**Gravité.** Réelle. C'était le seul filet du client : il n'existe aucune
 copie serveur de ses données.
 
-**Piste.** Afficher un message d'échec explicite. Le portage a
-délibérément conservé le comportement d'origine, et un test verrouille ce
-choix pour qu'il reste conscient.
+**Corrigé.** Un message explicite s'affiche désormais, avec l'action à
+faire : « L'export a échoué : aucune sauvegarde n'a été créée. Réessaie,
+et si ça recommence, libère de la place puis reprends. »
 
----
+C'est une **divergence assumée** avec l'application d'origine, qui restait
+muette. Le silence avait été conservé pendant toute la migration pour ne
+pas mélanger portage et amélioration ; la migration étant terminée, la
+raison de le garder a disparu. Le test qui verrouillait le silence
+verrouille maintenant la divergence.
 
 ## 4. Champ « fibres » absent du catalogue
 

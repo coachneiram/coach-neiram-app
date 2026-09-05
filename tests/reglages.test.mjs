@@ -72,17 +72,35 @@ describe("sauvegarde et restauration", () => {
     assert.match(REGLAGES, /exporterSauvegarde\(construireSauvegarde\(\)/);
   });
 
-  test("l'echec d'export reste silencieux, comme dans l'original", () => {
+  test("un echec d'export est desormais signale — divergence assumee", () => {
     /*
-     * Un message d'erreur avait ete ajoute ici. Le test de fidelite l'a
-     * signale : il n'existe pas dans l'application actuelle. Il a donc ete
-     * retire — melanger migration et amelioration rendrait impossible de
-     * dire, devant un comportement inattendu, si c'est un bug de portage
-     * ou un changement voulu.
+     * L'application d'origine n'affiche RIEN quand l'export echoue. Ce
+     * silence a ete conserve pendant toute la migration, pour ne pas
+     * melanger portage et amelioration, et ce test verrouillait ce choix.
      *
-     * La faiblesse est reelle et notee dans AMELIORATIONS.md.
+     * La migration est terminee. Le silence, lui, reste dangereux : le
+     * client peut croire qu'il a une sauvegarde alors qu'il n'en a
+     * aucune, et c'est son seul filet — il n'existe pas de copie serveur.
+     *
+     * Le test ne verrouille donc plus le silence, mais la DIVERGENCE
+     * VOULUE : le message doit exister, et dire quoi faire.
      */
-    assert.ok(!/Export impossible/.test(REGLAGES), "un message absent de l'original a été réintroduit");
+    // L'assertion vise l'appel COMPLET, pas la simple presence du texte :
+    // un « setMessage(null && "...") » laisserait le message dans le
+    // source tout en retablissant le silence a l'ecran.
+    assert.match(
+      REGLAGES,
+      /setMessage\(\s*"L'export a échoué : aucune sauvegarde n'a été créée\./,
+      "le message doit etre passe tel quel a setMessage"
+    );
+    // Viser le message lui-meme : « libère de la place » apparait aussi
+    // ailleurs dans l'ecran, et une assertion trop large laissait passer
+    // un message vide de toute action a faire.
+    assert.match(
+      REGLAGES,
+      /aucune sauvegarde n'a été créée\. Réessaie, " \+\s*"et si ça recommence, libère de la place puis reprends\./,
+      "le message doit dire quoi faire, pas seulement que ça a échoué"
+    );
   });
 });
 
