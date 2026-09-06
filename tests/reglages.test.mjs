@@ -54,8 +54,17 @@ describe("sauvegarde et restauration", () => {
   });
 
   test("un fichier illisible ne casse pas l'ecran", () => {
-    assert.match(REGLAGES, /Fichier de sauvegarde invalide/);
+    // Le message lui-meme a demenage dans lib/sauvegarde-fichier.js, que
+    // l'ecran de bienvenue partage desormais. Ce qui compte ici reste que
+    // l'ecran RATTRAPE l'erreur et AFFICHE la phrase traduite, au lieu de
+    // laisser passer une exception. La phrase exacte est verrouillee dans
+    // tests/restaurer-au-demarrage.test.mjs.
     assert.match(REGLAGES, /catch/);
+    assert.match(REGLAGES, /setMessage\(messageErreurRestauration\(/);
+    assert.match(
+      readFileSync(join(ICI, "..", "app", "src", "lib", "sauvegarde-fichier.js"), "utf8"),
+      /Fichier de sauvegarde invalide/
+    );
   });
 
   test("les deux actions sont proposees", () => {

@@ -23,11 +23,12 @@ import {
   construireSauvegarde,
   estCleDePhoto,
   occupationStockage,
-  restaurerSauvegarde,
+
   supprimerPhotos
 } from "../lib/stockage.js";
 import { exporterSauvegarde } from "../lib/sauvegarde.js";
 import { enLigne } from "../lib/semaine.js";
+import { messageErreurRestauration, restaurerDepuisFichier } from "../lib/sauvegarde-fichier.js";
 import { ChampsProfil } from "./ChampsProfil.jsx";
 import { Btn, Field, Modal, SelectInput } from "../ui/primitives.jsx";
 import { Download, Upload, X } from "../ui/icones.jsx";
@@ -243,28 +244,27 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
     }
   };
 
-  const restaurer = (evenement) => {
+  const restaurer = async (evenement) => {
     const fichier = evenement.target.files[0];
     evenement.target.value = "";
     if (!fichier) return;
 
-    const lecteur = new FileReader();
-    lecteur.onload = async () => {
-      try {
-        // Confirmation explicite : la restauration remplace tout, et il
-        // n'existe aucune copie serveur pour revenir en arriere.
-        if (!window.confirm("Restaurer cette sauvegarde ? Les données actuelles de cet appareil seront remplacées.")) {
-          return;
-        }
-        const nombre = restaurerSauvegarde(JSON.parse(String(lecteur.result)));
-        await onRestaurer?.(nombre);
-        setMessage(`Sauvegarde restaurée (${nombre} éléments). Rechargement...`);
-        setTimeout(() => window.location.reload(), 900);
-      } catch (e) {
-        setMessage("Fichier de sauvegarde invalide.");
-      }
-    };
-    lecteur.readAsText(fichier);
+    // Confirmation explicite : ici, il y a des donnees a perdre. La
+    // restauration remplace tout, et il n'existe aucune copie serveur pour
+    // revenir en arriere. (L'ecran de bienvenue, lui, ne demande rien :
+    // il n'y a encore rien a ecraser.)
+    if (!window.confirm("Restaurer cette sauvegarde ? Les données actuelles de cet appareil seront remplacées.")) {
+      return;
+    }
+
+    try {
+      const nombre = await restaurerDepuisFichier(fichier);
+      await onRestaurer?.(nombre);
+      setMessage(`Sauvegarde restaurée (${nombre} éléments). Rechargement...`);
+      setTimeout(() => window.location.reload(), 900);
+    } catch (e) {
+      setMessage(messageErreurRestauration(e.code));
+    }
   };
 
   return (
