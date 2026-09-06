@@ -15,6 +15,8 @@ import { useMemo } from "react";
 import { COLORS } from "../tokens.js";
 import { fmtDateShort } from "../lib/dates.js";
 import { computeCalibration, etatCalibrage } from "../lib/nutrition.js";
+import { objectifFibres, totalFibres } from "../lib/fibres.js";
+import { todayISO } from "../lib/dates.js";
 import { Btn, Card, MacroTarget, SectionTitle } from "../ui/primitives.jsx";
 
 /** Fenetre d'observation du calibrage, en jours. Valeur d'origine. */
@@ -28,6 +30,23 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
   );
   const base = profile.calibratedMaintenanceKcal ? "Calibré (données réelles)" : "Formule (Mifflin-St Jeor)";
 
+  /*
+   * Fibres du jour.
+   *
+   * L'objectif suit les calories plutot qu'un « 30 g par jour » fixe, qui
+   * serait trop haut pour une cliente a 1500 kcal et trop bas pour un
+   * pratiquant a 4000.
+   *
+   * Le total ne compte QUE les aliments dont la teneur est connue, et se
+   * declare partiel des qu'un aliment n'en a pas. Afficher « 12 g » sans
+   * dire que deux aliments sur trois ne sont pas comptes ferait croire a un
+   * deficit qui n'existe peut-etre pas.
+   */
+  const fibres = useMemo(() => {
+    const duJour = (logEntries || []).filter((e) => e.date === todayISO());
+    return { ...totalFibres(duJour), objectif: objectifFibres(targets?.calories) };
+  }, [logEntries, targets]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
@@ -40,6 +59,39 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
               <MacroTarget label="Glucides" value={targets.carbs} unit="g" />
               <MacroTarget label="Lipides" value={targets.fat} unit="g" />
             </div>
+            {/* TEXTE-NOUVEAU
+                Les fibres etaient absentes de l'application d'origine :
+                ni objectif, ni suivi, ni valeur au catalogue. Tout ce bloc
+                est donc nouveau par nature, et ne peut pas figurer dans
+                index.html. Le mot « partiel » est le point important : il
+                dit au client que le chiffre affiche est un plancher, pas
+                son apport reel. */}
+            {fibres.objectif ? (
+              <div
+                style={{
+                  marginTop: 12,
+                  paddingTop: 12,
+                  borderTop: `1px solid ${COLORS.borderLight}`,
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "space-between",
+                  gap: 10
+                }}
+              >
+                <span style={{ fontSize: 12, color: COLORS.textMuted }}>Fibres aujourd'hui</span>
+                <span style={{ fontFamily: "IBM Plex Mono", fontSize: 13, color: COLORS.text }}>
+                  {fibres.connus ? `${fibres.total} g` : "—"} / {fibres.objectif} g
+                </span>
+              </div>
+            ) : null}
+            {fibres.objectif && fibres.partiel ? (
+              <p style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 6 }}>
+                Total partiel : {fibres.inconnus}{" "}
+                {fibres.inconnus > 1 ? "aliments n'ont pas" : "aliment n'a pas"} de teneur connue. Ton apport
+                réel est plus élevé.
+              </p>
+            ) : null}
+            {/* FIN-TEXTE-NOUVEAU */}
             <p style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 12 }}>
               Base actuelle : {base}. Poids utilisé : {currentWeight ? `${currentWeight} kg` : "non renseigné"}.
             </p>

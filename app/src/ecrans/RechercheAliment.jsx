@@ -20,7 +20,7 @@ import { COLORS } from "../tokens.js";
 import { num, round } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
 import { chercherAliments, chercherParCodeBarres } from "../lib/recherche-aliments.js";
-import { mentionEtat } from "../lib/fibres.js";
+import { fibresPour, mentionEtat } from "../lib/fibres.js";
 import { ChoixPhoto } from "../ui/ChoixPhoto.jsx";
 import { redimensionnerPhoto } from "../lib/images.js";
 import { analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
@@ -210,6 +210,12 @@ function QuantiteProduit({ produit, onChoisir }) {
             protein: pr,
             carbs: ca,
             fat: fa,
+            // La teneur en fibres suit l'aliment jusque dans le journal.
+            // fibresPour() rend null quand la table ne connait pas cet
+            // aliment : un calcul direct rendrait 0, ce qui AFFIRMERAIT
+            // qu'il n'en contient pas et fausserait le total du jour vers
+            // le bas.
+            fiber: fibresPour(produit.fibres100, g),
             grams: g,
             baseName: produit.name
           })
