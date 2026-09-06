@@ -40,6 +40,8 @@ import {
 import { verifierAlertesCoach } from "./lib/moteur-alertes.js";
 import { totauxDuJour } from "./lib/score-jour.js";
 import { Coque } from "./ui/Coque.jsx";
+import { ChoixPhoto } from "./ui/ChoixPhoto.jsx";
+import { Modal } from "./ui/primitives.jsx";
 import { Droplet, Loader2 } from "./ui/icones.jsx";
 import { Journal } from "./ecrans/Journal.jsx";
 import { Repas } from "./ecrans/Repas.jsx";
@@ -147,30 +149,33 @@ export default function App() {
    * est cree a la volee. Meme resultat pour le client, un champ de moins
    * a maintenir dans l'ecran.
    */
-  const choisirPhoto = (pose) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = () => {
-      const fichier = input.files && input.files[0];
-      if (!fichier) return;
-      redimensionnerPhoto(fichier, 500, 0.72)
-        .then((dataUrl) => {
-          const suivant = { ...photos, [pose]: dataUrl };
-          setPhotos(suivant);
-          if (!enregistrer(clePhotos, suivant)) {
-            afficherToast("Stockage plein : la photo n'a pas pu être enregistrée.");
-          }
-        })
-        .catch((e) => {
-          afficherToast(
-            e && e.message === "image-format"
-              ? "Photo illisible dans ce format (souvent les HEIC d'iPhone ouvertes sur ordinateur). Essaie une photo JPEG/PNG."
-              : "Photo illisible, réessaie avec une autre."
-          );
-        });
-    };
-    input.click();
+  /**
+   * Pose dont on attend une photo.
+   *
+   * L'application d'origine ouvrait directement le selecteur de fichiers.
+   * Sur Android, ce selecteur seul n'expose pas toujours l'appareil photo
+   * — des clientes ne pouvaient photographier que depuis leur photothèque.
+   * Le choix de la source passe donc par une petite fenetre.
+   */
+  const [poseAPhotographier, setPoseAPhotographier] = useState(null);
+
+  const traiterPhoto = (pose, fichier) => {
+    if (!fichier) return;
+    redimensionnerPhoto(fichier, 500, 0.72)
+      .then((dataUrl) => {
+        const suivant = { ...photos, [pose]: dataUrl };
+        setPhotos(suivant);
+        if (!enregistrer(clePhotos, suivant)) {
+          afficherToast("Stockage plein : la photo n'a pas pu être enregistrée.");
+        }
+      })
+      .catch((e) => {
+        afficherToast(
+          e && e.message === "image-format"
+            ? "Photo illisible dans ce format (souvent les HEIC d'iPhone ouvertes sur ordinateur). Essaie une photo JPEG/PNG."
+            : "Photo illisible, réessaie avec une autre."
+        );
+      });
   };
 
   /**
@@ -507,7 +512,7 @@ export default function App() {
         weekStats={weekStats}
         monthStats={monthStats}
         photos={photos}
-        onUploadPhoto={choisirPhoto}
+        onUploadPhoto={setPoseAPhotographier}
         onPartager={envoyerBilan}
         onGenerate={genererBilan}
         onGenerateMonthly={genererBilanDuMois}
@@ -562,6 +567,36 @@ export default function App() {
       >
         {ecrans[ongletActif]}
       </Coque>
+
+      <Modal
+        open={!!poseAPhotographier}
+        onClose={() => setPoseAPhotographier(null)}
+        title="Photo de progression"
+      >
+        {poseAPhotographier && (
+          <div>
+            {/* TEXTE-NOUVEAU
+                Le choix explicite « appareil ou photothèque » n'existe pas
+                dans l'application d'origine, qui ouvrait directement le
+                selecteur de fichiers. Sur Android, celui-ci n'expose pas
+                toujours l'appareil photo : des clientes ne pouvaient
+                photographier que depuis leur photothèque. */}
+            <p style={{ fontSize: 12.5, color: COLORS.textMuted, margin: "0 0 14px", lineHeight: 1.5 }}>
+              Même lieu, même lumière, même tenue que la semaine précédente.
+            </p>
+            <ChoixPhoto
+              onFichier={(fichier) => {
+                const pose = poseAPhotographier;
+                setPoseAPhotographier(null);
+                traiterPhoto(pose, fichier);
+              }}
+              libelleAppareil="Prendre la photo"
+              libelleGalerie="Choisir une photo"
+            />
+            {/* FIN-TEXTE-NOUVEAU */}
+          </div>
+        )}
+      </Modal>
 
       <Reglages
         open={reglagesOuverts}

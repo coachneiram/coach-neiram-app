@@ -137,7 +137,11 @@ describe("branchement de l'envoi", () => {
     assert.match(app, /onPartager=\{envoyerBilan\}/);
     assert.ok(!/photos=\{\{\}\}/.test(app), "les photos etaient passees vides en dur");
     assert.match(app, /photos=\{photos\}/);
-    assert.match(app, /onUploadPhoto=\{choisirPhoto\}/);
+    // Le clic sur une pose n'ouvre plus directement le selecteur : il
+    // demande d'abord la source, appareil photo ou photothèque. Sur
+    // Android, le selecteur seul n'exposait pas la camera.
+    assert.match(app, /onUploadPhoto=\{setPoseAPhotographier\}/);
+    assert.match(app, /traiterPhoto\(pose, fichier\)/);
   });
 
   test("les photos du client partent bien avec le bilan", () => {
