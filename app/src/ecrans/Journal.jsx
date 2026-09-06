@@ -47,7 +47,15 @@ import {
   TextArea,
   TextInput
 } from "../ui/primitives.jsx";
-import { ChevronLeft, ChevronRight, Droplet, Flame, Footprints, Plus, Star, Trash2 } from "../ui/icones.jsx";
+import { ChevronLeft, ChevronRight, Droplet, Flame, Footprints, Pencil, Plus, Star, Trash2 } from "../ui/icones.jsx";
+import {
+  CHAMPS_MACROS,
+  ajusterQuantite,
+  entreeCorrigee,
+  porteUneQuantite,
+  saisieDepuis,
+  saisieValide
+} from "../lib/edition-aliment.js";
 
 /**
  * Volumes proposes en un geste, en millilitres.
@@ -72,6 +80,57 @@ const styleSousTitre = {
 export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsApi, targets, profile, onToast }) {
   const [date, setDate] = useState(todayISO());
   const [ajoutPour, setAjoutPour] = useState(null);
+  /*
+   * L'aliment en cours de correction, et la saisie du formulaire.
+   *
+   * Deux etats plutot qu'un : la saisie doit pouvoir etre incomplete
+   * pendant qu'on tape (« 12 » avant « 120 ») sans que l'entree du journal
+   * en soit affectee. Rien n'est ecrit tant que « Enregistrer » n'est pas
+   * touche.
+   */
+  const [aCorriger, setACorriger] = useState(null);
+  const [saisieCorrection, setSaisieCorrection] = useState(null);
+  const [erreurCorrection, setErreurCorrection] = useState(null);
+
+  const ouvrirCorrection = (entree) => {
+    setACorriger(entree);
+    setSaisieCorrection(saisieDepuis(entree));
+    setErreurCorrection(null);
+  };
+
+  const fermerCorrection = () => {
+    setACorriger(null);
+    setSaisieCorrection(null);
+    setErreurCorrection(null);
+  };
+
+  /**
+   * Changer la quantite remet les macros a l'echelle sous les doigts.
+   *
+   * C'est le geste le plus frequent — « 150 g et non 200 » — et le
+   * recalcul evite d'avoir a corriger quatre nombres a la main. Les
+   * valeurs restent ensuite modifiables une a une : la mise a l'echelle
+   * propose, elle n'impose pas.
+   */
+  const changerQuantite = (valeur) => {
+    const suivant = { ...saisieCorrection, grams: valeur };
+    const ajuste = ajusterQuantite(aCorriger, valeur);
+    if (ajuste) {
+      for (const champ of CHAMPS_MACROS) suivant[champ] = String(ajuste[champ]);
+    }
+    setSaisieCorrection(suivant);
+  };
+
+  const enregistrerCorrection = async () => {
+    const verdict = saisieValide(saisieCorrection);
+    if (!verdict.ok) {
+      setErreurCorrection(verdict.raison);
+      return;
+    }
+    await logEntriesApi.update(aCorriger.id, entreeCorrigee(aCorriger, saisieCorrection));
+    fermerCorrection();
+  };
+
   const [repasTypes, setRepasTypes] = useState(() => lireRepasTypes());
 
   /** Ajoute une entree au repas ouvert, puis referme la fenetre. */
@@ -469,9 +528,14 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
                               {num(it.fat)}
                             </div>
                           </div>
-                          <IconBtn danger onClick={() => logEntriesApi.remove(it.id)}>
-                            <Trash2 size={14} />
-                          </IconBtn>
+                          <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                            <IconBtn libelle="Corriger" onClick={() => ouvrirCorrection(it)}>
+                              <Pencil size={14} />
+                            </IconBtn>
+                            <IconBtn danger libelle="Supprimer" onClick={() => logEntriesApi.remove(it.id)}>
+                              <Trash2 size={14} />
+                            </IconBtn>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -728,6 +792,73 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
         onMemoriserPoidsRepasType={memoriserPoidsRepasType}
         habitudePesee={profile?.weighsStaples}
       />
+
+      {/* TEXTE-NOUVEAU
+          Cet écran n'existe pas dans l'application d'origine, qui ne
+          proposait qu'une croix pour supprimer une ligne (index.html,
+          ligne 2474). Corriger une valeur y demandait de tout ressaisir.
+          Les libellés ci-dessous sont donc nécessairement nouveaux. Le
+          titre dit « Corriger » et non « Modifier » : c'est le mot juste
+          pour rectifier une estimation, et il n'accuse personne. */}
+      <Modal open={!!aCorriger} onClose={fermerCorrection} title="Corriger l'aliment">
+        {saisieCorrection && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <p style={{ fontSize: 12, color: COLORS.textMuted, margin: 0, lineHeight: 1.5 }}>
+              Ajuste ce qui ne correspond pas. Une estimation par photo donne un ordre de grandeur — tu sais
+              souvent mieux qu'elle ce qu'il y avait dans l'assiette.
+            </p>
+
+            <Field label="Nom">
+              <TextInput
+                value={saisieCorrection.name}
+                onChange={(e) => setSaisieCorrection({ ...saisieCorrection, name: e.target.value })}
+              />
+            </Field>
+
+            {porteUneQuantite(aCorriger) && (
+              <Field label="Quantité en grammes">
+                <NumberInput value={saisieCorrection.grams} onChange={(e) => changerQuantite(e.target.value)} />
+              </Field>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+              <Field label="kcal">
+                <NumberInput
+                  value={saisieCorrection.calories}
+                  onChange={(e) => setSaisieCorrection({ ...saisieCorrection, calories: e.target.value })}
+                />
+              </Field>
+              <Field label="P (g)">
+                <NumberInput
+                  value={saisieCorrection.protein}
+                  onChange={(e) => setSaisieCorrection({ ...saisieCorrection, protein: e.target.value })}
+                />
+              </Field>
+              <Field label="G (g)">
+                <NumberInput
+                  value={saisieCorrection.carbs}
+                  onChange={(e) => setSaisieCorrection({ ...saisieCorrection, carbs: e.target.value })}
+                />
+              </Field>
+              <Field label="L (g)">
+                <NumberInput
+                  value={saisieCorrection.fat}
+                  onChange={(e) => setSaisieCorrection({ ...saisieCorrection, fat: e.target.value })}
+                />
+              </Field>
+            </div>
+
+            {erreurCorrection && (
+              <p style={{ fontSize: 12, color: COLORS.bad, margin: 0 }}>{erreurCorrection}</p>
+            )}
+
+            <Btn onClick={enregistrerCorrection} style={{ width: "100%" }}>
+              Enregistrer
+            </Btn>
+          </div>
+        )}
+      </Modal>
+      {/* FIN-TEXTE-NOUVEAU */}
     </div>
   );
 }
