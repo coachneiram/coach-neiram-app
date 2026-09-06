@@ -45,6 +45,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      # Meme dependance que dans la chaine Tests, et pour la meme raison :
+      # tests/appareil.test.mjs lit la TABLE des appareils de Playwright.
+      # Sans elle, le fichier ne se charge pas — seize tests disparaissent
+      # du compte, et le deploiement se bloque sur un echec obscur.
+      #
+      # Cette ligne a manque ici alors qu'elle avait ete ajoutee dans
+      # tests.yml : les deux chaines lancent la meme suite, et corriger
+      # l'une sans l'autre laisse la moitie du probleme.
+      - name: Installer la table des appareils (sans navigateur)
+        run: npm i --no-save playwright-core@1.63.0
+
       - name: Tests de l'application
         run: node --test tests/*.test.mjs
       - name: Tests du proxy
