@@ -20,7 +20,12 @@
  * l'attente.
  */
 
-import { devices } from "playwright";
+// « playwright-core » plutot que « playwright » : ce module ne lit que la
+// TABLE des appareils, de simples donnees. Le paquet complet telecharge des
+// navigateurs a l'installation, ce dont la chaine de tests unitaires n'a
+// aucun besoin — et playwright-core est de toute facon installe avec
+// playwright, donc les scripts de fumee ne changent pas.
+import { devices } from "playwright-core";
 
 /**
  * Rend le descripteur d'appareil a emuler.
