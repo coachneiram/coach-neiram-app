@@ -25,8 +25,19 @@ jobs:
         with:
           node-version: "22"
 
-      # Aucune dependance a installer : la suite repose sur le lanceur de
-      # tests integre a Node.
+      # Une seule dependance, et pour une seule raison : tests/appareil.test.mjs
+      # verifie le choix de l'appareil emule, et lit pour cela la TABLE des
+      # appareils de Playwright — de simples donnees. Aucun navigateur n'est
+      # telecharge ici : playwright-core ne contient que du code et des donnees.
+      # Les navigateurs restent l'affaire de la chaine
+      # Navigateur.
+      #
+      # Sans cette ligne, le fichier de test ne se charge pas du tout : ce
+      # n'est pas un test qui echoue, ce sont seize tests qui disparaissent
+      # du compte sans que rien ne le dise.
+      - name: Installer la table des appareils (sans navigateur)
+        run: npm i --no-save playwright-core@1.63.0
+
       - name: Tests de l'application
         run: node --test tests/*.test.mjs
 

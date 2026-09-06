@@ -30,6 +30,7 @@ import { readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { juger } from "./verdict.mjs";
+import { nomAppareil } from "./appareil.mjs";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 
@@ -65,7 +66,11 @@ function lancer(fichier) {
   });
 }
 
-console.log(`Vérification au navigateur — ${scripts.length} scripts\n`);
+// L'appareil est annonce en tete : sans lui, un journal vert ne dit pas
+// QUELLE passe a tourne, et une variable mal transmise passerait pour un
+// succes Android alors que l'iPhone a ete teste deux fois.
+const surAndroid = process.env.APPAREIL ? ` sur ${nomAppareil()}` : "";
+console.log(`Vérification au navigateur${surAndroid} — ${scripts.length} scripts\n`);
 
 const echecs = [];
 for (const fichier of scripts) {
@@ -92,4 +97,4 @@ if (echecs.length) {
   process.exit(1);
 }
 
-console.log(`\nLes ${scripts.length} scripts passent : l'application s'ouvre et répond.`);
+console.log(`\nLes ${scripts.length} scripts passent${surAndroid} : l'application s'ouvre et répond.`);

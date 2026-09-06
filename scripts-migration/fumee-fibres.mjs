@@ -13,7 +13,8 @@
  *   node scripts-migration/fumee-fibres.mjs
  */
 
-import { chromium, devices } from "playwright";
+import { chromium } from "playwright";
+import { appareil, nomAppareil } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -30,7 +31,7 @@ const serveur = createServer((req, res) => {
 await new Promise((r) => serveur.listen(4660, r));
 
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
-const page = await (await nav.newContext({ ...devices["iPhone 13"] })).newPage();
+const page = await (await nav.newContext(appareil())).newPage();
 const erreurs = [];
 page.on("pageerror", (e) => erreurs.push(e.message));
 

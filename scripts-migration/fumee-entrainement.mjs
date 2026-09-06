@@ -33,7 +33,8 @@
  *   node scripts-migration/fumee-entrainement.mjs
  */
 
-import { chromium, devices } from "playwright";
+import { chromium } from "playwright";
+import { appareil, nomAppareil } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -89,7 +90,7 @@ async function section(page, titre, lignes = 6) {
 
 /** Ouvre l'application avec un profil donne, sur l'onglet entrainement. */
 async function ouvrir(unProfil) {
-  const page = await (await nav.newContext({ ...devices["iPhone 13"] })).newPage();
+  const page = await (await nav.newContext(appareil())).newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
   await page.addInitScript((d) => {
     localStorage.clear();

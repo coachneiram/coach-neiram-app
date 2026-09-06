@@ -15,7 +15,8 @@
  *   node scripts-migration/fumee-photo-appareil.mjs
  */
 
-import { chromium, devices } from "playwright";
+import { chromium } from "playwright";
+import { appareil, nomAppareil } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -33,7 +34,7 @@ await new Promise((r) => serveur.listen(4622, r));
 
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 // Gabarit Android : c'est la plateforme ou le bug se manifeste.
-const page = await (await nav.newContext({ ...devices["Pixel 7"] })).newPage();
+const page = await (await nav.newContext(appareil("Pixel 7"))).newPage();
 const erreurs = [];
 page.on("pageerror", (e) => erreurs.push(e.message));
 
