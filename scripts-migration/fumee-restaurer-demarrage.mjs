@@ -13,7 +13,8 @@
  *   node scripts-migration/fumee-restaurer-demarrage.mjs
  */
 
-import { chromium, devices } from "playwright";
+import { chromium } from "playwright";
+import { appareil, nomAppareil } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -30,7 +31,7 @@ const serveur = createServer((req, res) => {
 await new Promise((r) => serveur.listen(4650, r));
 
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
-const ctx = await nav.newContext({ ...devices["iPhone 13"] });
+const ctx = await nav.newContext(appareil());
 const page = await ctx.newPage();
 const erreurs = [];
 page.on("pageerror", (e) => erreurs.push(e.message));

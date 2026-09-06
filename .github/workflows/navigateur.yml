@@ -16,6 +16,16 @@
 #
 # Aucune ne se voit sans ouvrir l'application. Celle-ci l'ouvre.
 #
+# DEUX APPAREILS, EN PARALLELE
+#
+# Le seul bug signale par une vraie cliente pendant la migration etait
+# specifique a Android : le selecteur de fichiers n'exposait pas l'appareil
+# photo. Sur iPhone tout allait bien — et c'est pour ca que personne ne l'a
+# vu avant qu'elle ne le signale.
+#
+# Les deux passes tournent en parallele : la verification couvre deux fois
+# plus de terrain sans faire attendre plus longtemps.
+#
 # Sans risque : ce workflow ne deploie rien et ne touche pas au site.
 
 name: Navigateur
@@ -34,9 +44,16 @@ concurrency:
 
 jobs:
   fumee:
-    name: L'application s'ouvre et répond
+    name: ${{ matrix.appareil }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    strategy:
+      # Une passe qui echoue ne doit pas annuler l'autre : savoir que le bug
+      # ne touche QU'Android est la moitie du diagnostic.
+      fail-fast: false
+      matrix:
+        appareil: ["iPhone 13", "Pixel 7"]
 
     steps:
       - name: Recuperer le code
@@ -69,4 +86,6 @@ jobs:
         run: npm run build
 
       - name: Ouvrir l'application et exercer chaque fonction
+        env:
+          APPAREIL: ${{ matrix.appareil }}
         run: node scripts-migration/verifier-navigateur.mjs
