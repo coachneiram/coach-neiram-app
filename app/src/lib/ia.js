@@ -15,7 +15,14 @@ import { GEMINI_MODELS, PROXY_BASE_URL } from "./config.js";
 export const MSG_ERREUR = {
   quota: "Quota IA gratuit du jour atteint — les fonctions IA reviennent après 9 h du matin (réinitialisation quotidienne).",
   "bad-key": "Clé IA invalide ou inactive — préviens ton coach.",
-  indisponible: "Service IA momentanément indisponible. Réessaie dans un instant."
+  indisponible: "Service IA momentanément indisponible. Réessaie dans un instant.",
+  /* TEXTE-NOUVEAU
+     L'application d'origine n'avait pas ce message : une coupure réseau y
+     tombait dans le repli générique, qui parle de reprendre la photo. La
+     cliente refaisait donc des photos d'une assiette parfaitement nette,
+     en cherchant un défaut qui n'existait pas. */
+  reseau: "Pas de connexion — l'analyse a besoin d'internet. Réessaie une fois le réseau revenu."
+  /* FIN-TEXTE-NOUVEAU */
 };
 
 /** Traduit une erreur technique en message affichable. */
@@ -39,7 +46,23 @@ async function appelerModele({ model, systemPrompt, messages, maxTokens }) {
   // Statuts conserves a l'identique : l'interface s'appuie dessus.
   if (reponse.status === 429) throw new Error("quota");
   if ([400, 401, 403].includes(reponse.status)) throw new Error("bad-key");
-  if (!reponse.ok) throw new Error("API error " + reponse.status);
+
+  /*
+   * Toute autre panne du service porte desormais un CODE, et non plus un
+   * « API error 503 » qu'aucune traduction ne reconnaissait.
+   *
+   * Sans code, messageErreur() retombait sur le repli fourni par l'ecran —
+   * lequel parle de reprendre une photo plus nette. Une panne serveur
+   * disait donc a la cliente que SA PHOTO etait mauvaise : elle en refaisait
+   * trois, changeait de lumiere, et finissait par croire que son telephone
+   * ne convenait pas. Pendant ce temps, personne ne regardait le serveur.
+   *
+   * Le statut reste dans la console pour le diagnostic.
+   */
+  if (!reponse.ok) {
+    console.error("[Coach Neiram] Service IA — statut " + reponse.status);
+    throw new Error("indisponible");
+  }
 
   const donnees = await reponse.json();
   const candidat = (donnees.candidates || [])[0];

@@ -9,6 +9,12 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { chargerApp, creerLocalStorage } from "./harness.mjs";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { MSG_ERREUR, messageErreur } from "../app/src/lib/ia.js";
+
+const ICI = dirname(fileURLToPath(import.meta.url));
 
 /** Doublure reseau : enregistre les appels, repond selon un scenario. */
 function reseauSimule(reponses) {
@@ -227,5 +233,45 @@ describe("aiGenerate — construction des requetes", () => {
       [...app.GEMINI_MODELS],
       "ordre des modeles non respecte"
     );
+  });
+});
+
+describe("chaque panne du service a son propre message", () => {
+  /*
+   * Un jour, l'analyse photo a cessé de fonctionner en production, et
+   * diagnostiquer a pris une heure. La question qui aurait tranché en deux
+   * minutes — « quel message exact s'affiche ? » — n'avait pas de réponse,
+   * parce que toute panne serveur retombait sur le repli générique de
+   * l'écran : « réessaie avec une photo plus nette ».
+   *
+   * La cliente refaisait donc des photos d'une assiette parfaitement nette,
+   * en cherchant un défaut qui n'existait pas. Pendant ce temps, personne
+   * ne regardait le serveur.
+   */
+  test("une panne serveur ne parle pas de la photo", () => {
+    const repli = "Réessaie avec une photo plus nette.";
+    assert.equal(messageErreur(new Error("indisponible"), repli), MSG_ERREUR.indisponible);
+    assert.doesNotMatch(messageErreur(new Error("indisponible"), repli), /photo/i);
+  });
+
+  test("une coupure réseau non plus", () => {
+    const repli = "Réessaie avec une photo plus nette.";
+    assert.equal(messageErreur(new Error("reseau"), repli), MSG_ERREUR.reseau);
+    assert.match(MSG_ERREUR.reseau, /connexion|internet/i);
+    assert.doesNotMatch(MSG_ERREUR.reseau, /photo/i);
+  });
+
+  test("les quatre causes ont quatre messages distincts", () => {
+    const messages = ["quota", "bad-key", "indisponible", "reseau"].map((c) => MSG_ERREUR[c]);
+    assert.equal(new Set(messages).size, 4, "deux causes partagent un message : " + JSON.stringify(messages));
+    for (const m of messages) assert.ok(m && m.length > 25, "message trop court : " + m);
+  });
+
+  test("le code est posé sur l'erreur, pas le statut brut", () => {
+    // « API error 503 » n'était la clé d'aucune traduction : le message
+    // juste existait mais restait inatteignable.
+    const source = readFileSync(join(ICI, "..", "app", "src", "lib", "ia.js"), "utf8");
+    assert.doesNotMatch(source, /throw new Error\("API error/, "un statut brut n'est traduisible par rien");
+    assert.match(source, /throw new Error\("indisponible"\)/);
   });
 });
