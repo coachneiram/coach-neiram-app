@@ -20,8 +20,15 @@ import { analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
 import { chercherParCodeBarres } from "../lib/recherche-aliments.js";
 import { messageErreur } from "../lib/ia.js";
 import { charger, enregistrer } from "../lib/stockage.js";
-import { Btn, Card, TextInput } from "../ui/primitives.jsx";
-import { Loader2, X } from "../ui/icones.jsx";
+import { Btn, Card, Field, IconBtn, Modal, NumberInput, TextInput } from "../ui/primitives.jsx";
+import { Loader2, Pencil, X } from "../ui/icones.jsx";
+import {
+  entreeCorrigee,
+  saisieDepuis,
+  saisieValide,
+  versFormeCourses,
+  versFormeJournal
+} from "../lib/edition-aliment.js";
 import { ChoixPhoto } from "../ui/ChoixPhoto.jsx";
 
 const CLE_COCHES = "coach_shopping_checked";
@@ -57,6 +64,19 @@ export function Courses({ profile }) {
   const [outilEnCours, setOutilEnCours] = useState(null);
   const [outilMsg, setOutilMsg] = useState(null);
   const [pret, setPret] = useState(false);
+
+  /*
+   * Correction d'un article ajoute par photo ou par code-barres.
+   *
+   * Ces trois etats sont ici, avec les autres, et NON plus bas pres des
+   * fonctions qui s'en servent : l'ecran retourne tot quand il n'est pas
+   * pret, et des hooks places apres ce retour ne s'executent pas au
+   * premier rendu. React s'en plaint alors par une erreur #310, et
+   * l'ecran ne s'affiche plus du tout.
+   */
+  const [aCorriger, setACorriger] = useState(null);
+  const [saisieCorrection, setSaisieCorrection] = useState(null);
+  const [erreurCorrection, setErreurCorrection] = useState(null);
 
   useEffect(() => {
     setCoches(charger(CLE_COCHES, {}) || {});
@@ -262,7 +282,44 @@ export function Courses({ profile }) {
     );
   }
 
-  const Ligne = ({ id, item, onRetirer, enAttente }) => (
+  /*
+   * Correction d'un article ajoute par photo ou par code-barres.
+   *
+   * L'estimation donne un ordre de grandeur ; la cliente lit l'etiquette
+   * et sait mieux. Jusqu'ici son seul recours etait de retirer l'article
+   * et de le retaper, en perdant les macros au passage.
+   *
+   * Les valeurs sont ici POUR 100 g, pas pour une portion : les libelles
+   * le disent, et aucun champ « quantite » n'est propose.
+   */
+  const ouvrirCorrection = (article) => {
+    setACorriger(article);
+    setSaisieCorrection(saisieDepuis(versFormeJournal(article)));
+    setErreurCorrection(null);
+  };
+
+  const fermerCorrection = () => {
+    setACorriger(null);
+    setSaisieCorrection(null);
+    setErreurCorrection(null);
+  };
+
+  const enregistrerCorrection = () => {
+    const verdict = saisieValide(saisieCorrection);
+    if (!verdict.ok) {
+      setErreurCorrection(verdict.raison);
+      return;
+    }
+    const corrige = entreeCorrigee(versFormeJournal(aCorriger), saisieCorrection);
+    setAjouts((courant) => {
+      const suivant = courant.map((c) => (c.id === aCorriger.id ? versFormeCourses(c, corrige) : c));
+      enregistrerAjouts(suivant);
+      return suivant;
+    });
+    fermerCorrection();
+  };
+
+  const Ligne = ({ id, item, onRetirer, onCorriger, enAttente }) => (
     <label
       style={{
         display: "flex",
@@ -299,6 +356,17 @@ export function Courses({ profile }) {
           <div style={{ fontSize: 9.5, color: COLORS.textFaint, marginTop: 1 }}>estimation des macros…</div>
         )}
       </div>
+      {onCorriger && (
+        <IconBtn
+          libelle="Corriger"
+          onClick={(e) => {
+            e.preventDefault();
+            onCorriger();
+          }}
+        >
+          <Pencil size={13} />
+        </IconBtn>
+      )}
       {onRetirer && (
         <button
           onClick={(e) => {
@@ -441,6 +509,7 @@ export function Courses({ profile }) {
               item={{ n: c.name, kcal: c.kcal, p: c.p, c: c.c, f: c.f }}
               enAttente={c.pending}
               onRetirer={() => retirer(c.id)}
+              onCorriger={c.pending ? null : () => ouvrirCorrection(c)}
             />
           ))}
         </div>
@@ -500,6 +569,68 @@ export function Courses({ profile }) {
         Macros pour 100 g. « Adapter à mon profil » masque les articles incompatibles avec ton régime et tes
         allergies.
       </p>
+
+      {/* TEXTE-NOUVEAU
+          Cet écran n'existe pas dans l'application d'origine : un article
+          ajouté par photo y était définitif, à retirer et retaper pour le
+          moindre ajustement. Les libellés portent tous « /100 g », parce
+          que c'est le sens des valeurs ICI — contrairement au journal, où
+          elles valent pour la portion mangée. Sans cette mention, on
+          saisirait les valeurs de son assiette dans un champ qui attend
+          celles de cent grammes. */}
+      <Modal open={!!aCorriger} onClose={fermerCorrection} title="Corriger l'article">
+        {saisieCorrection && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <p style={{ fontSize: 12, color: COLORS.textMuted, margin: 0, lineHeight: 1.5 }}>
+              Ces valeurs sont pour 100 g. Si tu as l'étiquette sous les yeux, elle est plus juste que
+              l'estimation.
+            </p>
+
+            <Field label="Nom">
+              <TextInput
+                value={saisieCorrection.name}
+                onChange={(e) => setSaisieCorrection({ ...saisieCorrection, name: e.target.value })}
+              />
+            </Field>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+              <Field label="kcal /100 g">
+                <NumberInput
+                  value={saisieCorrection.calories}
+                  onChange={(e) => setSaisieCorrection({ ...saisieCorrection, calories: e.target.value })}
+                />
+              </Field>
+              <Field label="P (g) /100 g">
+                <NumberInput
+                  value={saisieCorrection.protein}
+                  onChange={(e) => setSaisieCorrection({ ...saisieCorrection, protein: e.target.value })}
+                />
+              </Field>
+              <Field label="G (g) /100 g">
+                <NumberInput
+                  value={saisieCorrection.carbs}
+                  onChange={(e) => setSaisieCorrection({ ...saisieCorrection, carbs: e.target.value })}
+                />
+              </Field>
+              <Field label="L (g) /100 g">
+                <NumberInput
+                  value={saisieCorrection.fat}
+                  onChange={(e) => setSaisieCorrection({ ...saisieCorrection, fat: e.target.value })}
+                />
+              </Field>
+            </div>
+
+            {erreurCorrection && (
+              <p style={{ fontSize: 12, color: COLORS.bad, margin: 0 }}>{erreurCorrection}</p>
+            )}
+
+            <Btn onClick={enregistrerCorrection} style={{ width: "100%" }}>
+              Enregistrer
+            </Btn>
+          </div>
+        )}
+      </Modal>
+      {/* FIN-TEXTE-NOUVEAU */}
     </div>
   );
 }

@@ -11,7 +11,9 @@
  *
  *   - une estimation photo, sans poids fiable : on touche aux valeurs ;
  *   - un aliment du catalogue, qui porte ses grammes : changer la quantite
- *     remet les macros a l'echelle toutes seules.
+ *     remet les macros a l'echelle toutes seules ;
+ *   - un article de la liste de courses, dont les valeurs sont POUR 100 g
+ *     et non pour une portion — le meme geste, un autre sens.
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-corriger-aliment.mjs
@@ -123,6 +125,42 @@ try {
   await page.getByRole("button", { name: "Journal", exact: true }).first().click();
   await page.waitForTimeout(600);
   console.log("7. SUPPRIMER          :", (await page.getByRole("button", { name: "Supprimer" }).count()) ? "toujours proposé" : "*** DISPARU ***");
+  // ══ LISTE DE COURSES : meme geste, autre sens ═════════════════════
+  //
+  // Ici les valeurs sont POUR 100 g. Un ecran qui ne le dirait pas
+  // inviterait a saisir celles de son assiette.
+  await page.evaluate(() => {
+    localStorage.setItem("coach_shopping_custom", JSON.stringify([
+      { id: "art1", name: "Skyr", kcal: 63, p: 11, c: 4, f: 0.2, source: "photo", pending: false }
+    ]));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: "Repas", exact: true }).first().click();
+  await page.waitForTimeout(600);
+  // L'onglet s'appelle « Courses », pas « Liste de courses » : viser le
+  // libelle affiche, jamais celui qu'on croit se rappeler.
+  await page.getByRole("button", { name: "Courses", exact: true }).first().click();
+  await page.waitForTimeout(1000);
+
+  const crayonCourses = page.getByRole("button", { name: "Corriger" });
+  console.log("8. COURSES — CRAYON   :", (await crayonCourses.count()) ? "présent sur l'ajout perso" : "*** ABSENT ***");
+  if (await crayonCourses.count()) {
+    await crayonCourses.last().click();
+    await page.waitForTimeout(700);
+    const mc = page.locator(".modal-panel").last();
+    const tc = await mc.innerText();
+    // Les libelles de champ sont rendus en MAJUSCULES par la feuille de
+    // style : la comparaison doit ignorer la casse.
+    console.log("   libellés           :", /\/100 ?g/i.test(tc) ? "disent « /100 g »" : "*** NE DISENT PAS LA QUANTITÉ ***");
+    console.log("   pas de quantité    :", /quantité en grammes/i.test(tc) ? "*** PROPOSÉE À TORT ***" : "correct");
+    await mc.locator('input[type="number"]').first().fill("58");
+    await mc.getByRole("button", { name: "Enregistrer", exact: true }).click();
+    await page.waitForTimeout(800);
+    const art = await page.evaluate(() => JSON.parse(localStorage.getItem("coach_shopping_custom") || "[]")[0]);
+    console.log("9. ARTICLE CORRIGÉ    :", art ? `${art.kcal} kcal/100 g · P${art.p}` : "*** PERDU ***");
+    console.log("   provenance         :", art && art.source === "photo" ? "conservée" : "*** PERDUE ***");
+  }
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
 }

@@ -117,3 +117,50 @@ export function saisieDepuis(entree) {
   if (porteUneQuantite(entree)) s.grams = String(num(entree.grams));
   return s;
 }
+
+
+/**
+ * ─────────────────────────────────────────────────────────────────────
+ * LA LISTE DE COURSES PARLE UNE AUTRE LANGUE
+ * ─────────────────────────────────────────────────────────────────────
+ *
+ * Un article de courses porte ses macros sous d'autres noms — kcal, p, c,
+ * f — et surtout avec un autre SENS : elles valent POUR 100 g, alors que
+ * celles du journal valent pour la portion mangee.
+ *
+ * D'ou une traduction explicite plutot qu'un module configurable : deux
+ * jeux de noms qui se ressemblent sont exactement ce qui produit un
+ * « honored / honores » silencieux, et cette migration en a deja paye un.
+ *
+ * La consequence pour l'ecran : jamais de champ « quantite » ici, et des
+ * libelles qui disent « /100 g ». Sans cette mention, une cliente
+ * saisirait les valeurs de son assiette dans un champ qui attend celles
+ * de cent grammes.
+ */
+
+/** Correspondance des noms : forme journal -> forme courses. */
+export const NOMS_COURSES = { calories: "kcal", protein: "p", carbs: "c", fat: "f" };
+
+/** Traduit un article de courses vers la forme que le formulaire attend. */
+export function versFormeJournal(article) {
+  const sortie = { name: article?.name ?? "" };
+  for (const [journal, courses] of Object.entries(NOMS_COURSES)) {
+    sortie[journal] = article?.[courses] ?? null;
+  }
+  return sortie;
+}
+
+/**
+ * Reporte une correction sur l'article de courses d'origine.
+ *
+ * Tout ce que l'article portait par ailleurs — son identifiant, sa
+ * provenance — est conserve : une correction ne doit pas faire oublier
+ * d'ou venait l'estimation.
+ */
+export function versFormeCourses(article, corrige) {
+  const sortie = { ...article, name: corrige.name };
+  for (const [journal, courses] of Object.entries(NOMS_COURSES)) {
+    sortie[courses] = corrige[journal];
+  }
+  return sortie;
+}

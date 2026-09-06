@@ -12,7 +12,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
@@ -148,5 +148,79 @@ describe("le crayon est branché, pas seulement affiché", () => {
 
   test("la suppression reste possible", () => {
     assert.match(journal, /logEntriesApi\.remove\(/, "corriger ne doit pas remplacer supprimer");
+  });
+});
+
+describe("la liste de courses parle une autre langue", () => {
+  // Ses macros s'appellent kcal/p/c/f et valent POUR 100 g, pas pour la
+  // portion. Deux jeux de noms qui se ressemblent sont exactement ce qui a
+  // produit le « honored / honores » silencieux plus tôt dans la migration.
+  const ARTICLE = { id: "x", name: "Skyr", kcal: 63, p: 11, c: 4, f: 0.2, source: "photo", pending: false };
+
+  test("un article se traduit vers le formulaire", async () => {
+    const { versFormeJournal } = await import("../app/src/lib/edition-aliment.js");
+    assert.deepEqual(versFormeJournal(ARTICLE), { name: "Skyr", calories: 63, protein: 11, carbs: 4, fat: 0.2 });
+  });
+
+  test("la correction revient dans la bonne langue", async () => {
+    const { entreeCorrigee, versFormeCourses, versFormeJournal } = await import("../app/src/lib/edition-aliment.js");
+    const corrige = entreeCorrigee(versFormeJournal(ARTICLE), { name: "Skyr nature", calories: "58", protein: "", carbs: "", fat: "" });
+    const rendu = versFormeCourses(ARTICLE, corrige);
+    assert.equal(rendu.kcal, 58);
+    assert.equal(rendu.p, 11, "les protéines non touchées restent");
+    assert.equal(rendu.name, "Skyr nature");
+  });
+
+  test("ce que l'article portait par ailleurs survit", async () => {
+    const { entreeCorrigee, versFormeCourses, versFormeJournal } = await import("../app/src/lib/edition-aliment.js");
+    const rendu = versFormeCourses(ARTICLE, entreeCorrigee(versFormeJournal(ARTICLE), { name: "Skyr", calories: "58" }));
+    assert.equal(rendu.id, "x");
+    assert.equal(rendu.source, "photo", "la provenance de l'estimation ne doit pas être perdue");
+  });
+
+  test("l'écran des courses propose de corriger, et dit « /100 g »", () => {
+    const courses = sansCommentaires(source("app/src/ecrans/Courses.jsx"));
+    assert.match(courses, /<Pencil size=/, "l'icône crayon doit être rendue");
+    assert.match(courses, /libelle="Corriger"/);
+
+    // L'import seul ne prouve rien : c'est l'APPEL dans la mise à jour qui
+    // enregistre. /versFormeCourses/ était satisfait par la ligne d'import.
+    assert.match(courses, /\? versFormeCourses\(c, corrige\) : c/, "la correction doit être réellement appliquée");
+
+    // Les QUATRE libellés doivent porter la mention : en retirer un seul
+    // suffit à faire saisir les valeurs d'une assiette dans un champ qui
+    // attend celles de cent grammes.
+    const mentions = courses.match(/label="[^"]*\/100 g"/g) || [];
+    assert.equal(mentions.length, 4, "les quatre macros doivent dire « /100 g » : " + JSON.stringify(mentions));
+  });
+
+  test("aucun hook après un retour anticipé", () => {
+    /*
+     * React exécute les hooks dans le même ordre à chaque rendu. Un
+     * useState placé APRÈS un « if (...) return » ne s'exécute pas au
+     * premier passage, et l'écran meurt sur une erreur #310 — écran blanc,
+     * sans que la moindre erreur de compilation le signale.
+     *
+     * C'est exactement ce que je viens de faire dans Courses.jsx : les
+     * tests unitaires étaient verts, le build passait, et l'écran ne
+     * s'affichait plus. Seule la vérification au navigateur l'a vu.
+     */
+    const fautifs = [];
+    for (const f of readdirSync(join(ICI, "..", "app", "src", "ecrans")).filter((x) => x.endsWith(".jsx"))) {
+      const code = sansCommentaires(source(join("app", "src", "ecrans", f)));
+      // Un retour anticipé du composant : « if (...) { » puis un return,
+      // à l'indentation du corps de fonction.
+      const retour = code.search(/\n {2}if \([^\n]*\) \{\n(?:[^\n]*\n){0,4}? {4}return/);
+      if (retour === -1) continue;
+      if (/useState\(|useEffect\(|useMemo\(|useRef\(/.test(code.slice(retour))) fautifs.push(f);
+    }
+    assert.deepEqual(fautifs, [], "ces écrans déclarent un hook après un retour anticipé");
+  });
+
+  test("aucun champ « quantité » côté courses", () => {
+    // Les valeurs y sont déjà rapportées à 100 g : proposer une quantité
+    // n'aurait aucun sens et inviterait à les mettre à l'échelle deux fois.
+    const courses = sansCommentaires(source("app/src/ecrans/Courses.jsx"));
+    assert.doesNotMatch(courses, /porteUneQuantite/);
   });
 });
