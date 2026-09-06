@@ -81,11 +81,21 @@ export function Btn({ children, onClick, variant = "primary", icon: Icone, style
   );
 }
 
-export function IconBtn({ children, onClick, danger, title }) {
+/**
+ * Bouton reduit a une icone.
+ *
+ * `libelle` est son NOM : sans lui, un bouton icone n'en a aucun pour un
+ * lecteur d'ecran, qui annonce alors « bouton » sans plus de precision.
+ * Il sert aussi d'infobulle, et de point d'accroche aux verifications au
+ * navigateur — jusqu'ici elles ne pouvaient designer ces boutons que par
+ * leur position, ce qui casse au premier reordonnancement.
+ */
+export function IconBtn({ children, onClick, danger, title, libelle }) {
   return (
     <button
       onClick={onClick}
-      title={title}
+      title={title || libelle}
+      aria-label={libelle}
       style={{
         background: "none",
         border: "none",
