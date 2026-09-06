@@ -15,12 +15,13 @@
  * dans une sauvegarde de journal.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { num, round } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
 import { chercherAliments, chercherParCodeBarres } from "../lib/recherche-aliments.js";
 import { mentionEtat } from "../lib/fibres.js";
+import { ChoixPhoto } from "../ui/ChoixPhoto.jsx";
 import { redimensionnerPhoto } from "../lib/images.js";
 import { analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
 import { messageErreur } from "../lib/ia.js";
@@ -229,8 +230,6 @@ export function RechercheAliment({ onChoisir, habitudePesee }) {
   const [choisi, setChoisi] = useState(null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState(null);
-  const champPhoto = useRef(null);
-  const champScan = useRef(null);
   const [apercuPhoto, setApercuPhoto] = useState(null);
   const [resultatPhoto, setResultatPhoto] = useState(null);
   const [codeSaisi, setCodeSaisi] = useState("");
@@ -469,28 +468,22 @@ export function RechercheAliment({ onChoisir, habitudePesee }) {
 
       {mode === "photo" && (
         <div>
-          <input
-            type="file"
-            accept="image/*"
-            ref={champPhoto}
-            style={{ display: "none" }}
-            onChange={(e) => {
-              analyserPhoto(e.target.files[0]);
-              // Sans ce vidage, rechoisir la meme photo ne declenche rien.
-              e.target.value = "";
-            }}
-          />
+          {/* TEXTE-NOUVEAU
+              « Choisir une photo » accompagne le choix explicite entre
+              appareil photo et photothèque, absent de l'application
+              d'origine : sur Android, son champ unique n'exposait pas
+              toujours la camera aux clientes. */}
           {!resultatPhoto && (
-            <Btn
-              variant="ghost"
-              icon={enCours ? Loader2 : Camera}
-              onClick={() => champPhoto.current?.click()}
-              disabled={enCours}
-              style={{ width: "100%" }}
-            >
-              {enCours ? "Analyse de la photo en cours..." : "Prendre / choisir une photo du repas"}
-            </Btn>
+            <ChoixPhoto
+              onFichier={analyserPhoto}
+              enCours={enCours}
+              icone={Loader2}
+              libelleEnCours="Analyse de la photo en cours..."
+              libelleAppareil="Photographier"
+              libelleGalerie="Choisir une photo"
+            />
           )}
+          {/* FIN-TEXTE-NOUVEAU */}
           {apercuPhoto && (
             <img
               src={apercuPhoto}
@@ -548,9 +541,12 @@ export function RechercheAliment({ onChoisir, habitudePesee }) {
                 <Btn
                   variant="ghost"
                   onClick={() => {
+                    // Effacer le resultat fait reapparaitre le choix
+                    // « Photographier / Choisir » : le client garde les deux
+                    // voies pour sa seconde tentative, pas seulement celle
+                    // qu'il vient d'utiliser.
                     setResultatPhoto(null);
                     setApercuPhoto(null);
-                    champPhoto.current?.click();
                   }}
                   style={{ flex: 1 }}
                 >
@@ -578,25 +574,19 @@ export function RechercheAliment({ onChoisir, habitudePesee }) {
 
       {mode === "scan" && (
         <div>
-          <input
-            type="file"
-            accept="image/*"
-            ref={champScan}
-            style={{ display: "none" }}
-            onChange={(e) => {
-              scannerPhoto(e.target.files[0]);
-              e.target.value = "";
-            }}
+          {/* TEXTE-NOUVEAU
+              Meme raison : le code-barres se photographie, et sans ce
+              choix explicite l'appareil photo restait inaccessible sur
+              Android. */}
+          <ChoixPhoto
+            onFichier={scannerPhoto}
+            enCours={enCours}
+            icone={Loader2}
+            libelleEnCours="Lecture en cours..."
+            libelleAppareil="Photographier le code-barres"
+            libelleGalerie="Choisir une photo"
           />
-          <Btn
-            variant="ghost"
-            icon={enCours ? Loader2 : Camera}
-            onClick={() => champScan.current?.click()}
-            disabled={enCours}
-            style={{ width: "100%" }}
-          >
-            {enCours ? "Lecture en cours..." : "Photographier le code-barres"}
-          </Btn>
+          {/* FIN-TEXTE-NOUVEAU */}
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <TextInput
               placeholder="ou tape le numéro (ex : 3017620422003)"

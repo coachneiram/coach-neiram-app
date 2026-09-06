@@ -21,7 +21,8 @@ import { chercherParCodeBarres } from "../lib/recherche-aliments.js";
 import { messageErreur } from "../lib/ia.js";
 import { charger, enregistrer } from "../lib/stockage.js";
 import { Btn, Card, TextInput } from "../ui/primitives.jsx";
-import { Barcode, Camera, Loader2, X } from "../ui/icones.jsx";
+import { Loader2, X } from "../ui/icones.jsx";
+import { ChoixPhoto } from "../ui/ChoixPhoto.jsx";
 
 const CLE_COCHES = "coach_shopping_checked";
 const CLE_AJOUTS = "coach_shopping_custom";
@@ -56,8 +57,6 @@ export function Courses({ profile }) {
   const [outilEnCours, setOutilEnCours] = useState(null);
   const [outilMsg, setOutilMsg] = useState(null);
   const [pret, setPret] = useState(false);
-  const champPhoto = useRef(null);
-  const champScan = useRef(null);
 
   useEffect(() => {
     setCoches(charger(CLE_COCHES, {}) || {});
@@ -460,49 +459,35 @@ export function Courses({ profile }) {
           </Btn>
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          <input
-            type="file"
-            accept="image/*"
-            ref={champPhoto}
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const f = e.target.files && e.target.files[0];
-              // Vider avant de lancer : sinon rechoisir la meme photo est ignore.
-              e.target.value = "";
-              photoAliment(f);
-            }}
+        {/* TEXTE-NOUVEAU
+            « Depuis la galerie », « Scanner un code-barres » et les
+            messages d'attente accompagnent le choix explicite entre
+            appareil photo et photothèque, absent de l'application
+            d'origine : sur Android, son champ unique n'exposait pas
+            toujours la camera.
+
+            Deux lignes plutot qu'une : quatre boutons cote a cote sur un
+            telephone donnent des libelles tronques et des cibles trop
+            petites pour le pouce. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+          <ChoixPhoto
+            onFichier={photoAliment}
+            enCours={outilEnCours === "photo"}
+            icone={Loader2}
+            libelleEnCours="Analyse de la photo en cours..."
+            libelleAppareil="Photo aliment"
+            libelleGalerie="Depuis la galerie"
           />
-          <input
-            type="file"
-            accept="image/*"
-            ref={champScan}
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const f = e.target.files && e.target.files[0];
-              e.target.value = "";
-              scannerCode(f);
-            }}
+          <ChoixPhoto
+            onFichier={scannerCode}
+            enCours={outilEnCours === "scan"}
+            icone={Loader2}
+            libelleEnCours="Lecture du code en cours..."
+            libelleAppareil="Scanner un code-barres"
+            libelleGalerie="Depuis la galerie"
           />
-          <Btn
-            variant="ghost"
-            icon={outilEnCours === "photo" ? Loader2 : Camera}
-            disabled={!!outilEnCours}
-            onClick={() => champPhoto.current && champPhoto.current.click()}
-            style={{ flex: 1, fontSize: 12 }}
-          >
-            Photo aliment
-          </Btn>
-          <Btn
-            variant="ghost"
-            icon={outilEnCours === "scan" ? Loader2 : Barcode}
-            disabled={!!outilEnCours}
-            onClick={() => champScan.current && champScan.current.click()}
-            style={{ flex: 1, fontSize: 12 }}
-          >
-            Code-barres
-          </Btn>
         </div>
+        {/* FIN-TEXTE-NOUVEAU */}
 
         {outilMsg && (
           <p style={{ fontSize: 11, color: outilEnCours ? COLORS.textMuted : COLORS.gold, margin: "8px 0 0" }}>
