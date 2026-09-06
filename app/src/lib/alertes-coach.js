@@ -85,7 +85,11 @@ export const TOAST_ALERTE_DECALAGES =
 export function decisionResumeHebdo({ cleSemaine, tauxRespect, etat }) {
   const non = (raison) => ({ envoyer: false, raison });
   if (etat && etat.lastWeekKey === cleSemaine) return non("deja envoye cette semaine");
-  if (!tauxRespect || tauxRespect.resolved === 0) return non("aucun creneau tranche");
+  // « tranches » est le nom rendu par tauxRespect() ; l'original appelait ce
+  // meme compte « resolved ». Lire l'ancien nom ici donnait undefined, donc
+  // un garde qui ne se declenchait jamais : un resume partait meme sans
+  // aucun creneau tranche, ce que l'original n'aurait pas fait.
+  if (!tauxRespect || tauxRespect.tranches === 0) return non("aucun creneau tranche");
   return { envoyer: true, raison: "a envoyer" };
 }
 

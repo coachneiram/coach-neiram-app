@@ -35,7 +35,7 @@ import {
   decisionResumeHebdo,
   manquesAvecMotifs
 } from "../app/src/lib/alertes-coach.js";
-import { SEUIL_ALERTE_MANQUES } from "../app/src/lib/creneaux.js";
+import { SEUIL_ALERTE_MANQUES, tauxRespect } from "../app/src/lib/creneaux.js";
 import {
   CLE_ETAT_CRENEAU,
   CLE_ETAT_HYDRATATION,
@@ -243,18 +243,60 @@ describe("alerte coach : derive du creneau", () => {
 });
 
 describe("resume hebdomadaire au coach", () => {
+  // Les fixtures ci-dessous emploient les noms rendus par tauxRespect()
+  // — honores / tranches / manques / decales. La version precedente de ces
+  // tests s'inventait des noms anglais, si bien qu'ils restaient verts
+  // pendant que le vrai appelant lisait des champs inexistants.
+  const tauxReel = { honores: 3, tranches: 4, manques: 1, decales: 0, pct: 75 };
+
   test("une fois par semaine", () => {
-    const taux = { resolved: 4, honored: 3, missed: 1, shifted: 0, pct: 75 };
-    assert.equal(decisionResumeHebdo({ cleSemaine: "2026-09-07", tauxRespect: taux, etat: {} }).envoyer, true);
+    assert.equal(decisionResumeHebdo({ cleSemaine: "2026-09-07", tauxRespect: tauxReel, etat: {} }).envoyer, true);
     assert.equal(
-      decisionResumeHebdo({ cleSemaine: "2026-09-07", tauxRespect: taux, etat: { lastWeekKey: "2026-09-07" } }).envoyer,
+      decisionResumeHebdo({ cleSemaine: "2026-09-07", tauxRespect: tauxReel, etat: { lastWeekKey: "2026-09-07" } }).envoyer,
       false
     );
   });
 
   test("aucun creneau tranche, aucun resume", () => {
-    const d = decisionResumeHebdo({ cleSemaine: "2026-09-07", tauxRespect: { resolved: 0, pct: 0 }, etat: {} });
+    const d = decisionResumeHebdo({ cleSemaine: "2026-09-07", tauxRespect: { honores: 0, tranches: 0, pct: null }, etat: {} });
     assert.equal(d.envoyer, false);
+  });
+
+  test("branche a tauxRespect : le garde voit vraiment le compte", () => {
+    // Le seul test qui aurait attrape le bug : il part de la sortie REELLE
+    // de tauxRespect() au lieu d'une fixture ecrite a la main. Sans creneau,
+    // la fonction rend null, et aucun resume ne doit partir.
+    assert.equal(
+      decisionResumeHebdo({ cleSemaine: "2026-09-07", tauxRespect: tauxRespect([], [], 4, "2026-09-06"), etat: {} }).envoyer,
+      false
+    );
+
+    // Avec des creneaux mais aucune seance, tout est manque : des tranches
+    // existent, donc le resume part — et il part avec de vrais chiffres.
+    const creneaux = [{ id: "c1", day: 1, time: "18:00", place: "Salle" }];
+    const taux = tauxRespect(creneaux, [], 4, "2026-09-06");
+    assert.ok(taux.tranches > 0, "des creneaux tranches sont attendus");
+    assert.equal(decisionResumeHebdo({ cleSemaine: "2026-09-07", tauxRespect: taux, etat: {} }).envoyer, true);
+  });
+
+  test("le resume envoye au coach porte des nombres, pas des undefined", () => {
+    // Les cles partant vers le classeur du coach sont en anglais, alors que
+    // tauxRespect() rend des noms francais. Ce test verrouille la traduction :
+    // c'est elle qui manquait, et le coach recevait un resume vide.
+    const source = readFileSync(join(ICI, "..", "app", "src", "lib", "moteur-alertes.js"), "utf8");
+    const bloc = source.slice(source.indexOf('type: "resume_hebdo"'));
+    for (const [cleEnvoyee, champLu] of [
+      ["honored", "honores"],
+      ["resolved", "tranches"],
+      ["missed", "manques"],
+      ["shifted", "decales"]
+    ]) {
+      assert.match(
+        bloc,
+        new RegExp(cleEnvoyee + ":\\s*taux\\." + champLu + "\\b"),
+        cleEnvoyee + " doit lire taux." + champLu + ", le nom que tauxRespect rend vraiment"
+      );
+    }
   });
 });
 

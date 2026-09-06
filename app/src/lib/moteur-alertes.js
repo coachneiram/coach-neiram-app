@@ -115,10 +115,14 @@ export async function verifierAlertesCoach({
     const remis = await envoyer(profile, {
       type: "resume_hebdo",
       weekKey: cleSemaine,
-      honored: taux.honored,
-      resolved: taux.resolved,
-      missed: taux.missed,
-      shifted: taux.shifted,
+      // Les CLES restent en anglais : c'est ce que le classeur du coach
+      // attend depuis toujours. Ce sont les LECTURES qui etaient fausses —
+      // tauxRespect() rend des noms francais, et lire taux.honored donnait
+      // undefined. Le coach recevait donc un resume sans aucun chiffre.
+      honored: taux.honores,
+      resolved: taux.tranches,
+      missed: taux.manques,
+      shifted: taux.decales,
       pct: taux.pct,
       message: messageResumeHebdo(taux.pct)
     });

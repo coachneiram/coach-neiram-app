@@ -228,16 +228,32 @@ async function relaiCoachSync(request, env, cors, ip) {
     note: texteCourt(evenement.note),
     weekKey: texteCourt(evenement.weekKey),
     nbManquees: Number(evenement.nbManquees) || "",
+    // Champs des deux alertes ajoutees tardivement. Sans eux, le type
+    // passait la liste blanche mais arrivait vide de chiffres en aval : le
+    // proxy reconstruit l'evenement champ par champ, donc tout champ non
+    // nomme ici est silencieusement perdu.
+    nbDecalages: Number(evenement.nbDecalages) || "",
+    honored: Number(evenement.honored) || "",
+    resolved: Number(evenement.resolved) || "",
+    missed: Number(evenement.missed) || "",
+    shifted: Number(evenement.shifted) || "",
+    pct: Number.isFinite(Number(evenement.pct)) ? Number(evenement.pct) : "",
     envoyeLe: texteCourt(evenement.envoyeLe)
   };
 
-  if (Array.isArray(evenement.creneauxManques)) {
-    propre.creneauxManques = evenement.creneauxManques.slice(0, 20).map((m) => ({
+  const creneauxPlafonnes = (liste) =>
+    liste.slice(0, 20).map((m) => ({
       jour: texteCourt(m && m.jour),
       heure: texteCourt(m && m.heure),
       date: texteCourt(m && m.date),
       lieu: texteCourt(m && m.lieu)
     }));
+
+  if (Array.isArray(evenement.creneauxManques)) {
+    propre.creneauxManques = creneauxPlafonnes(evenement.creneauxManques);
+  }
+  if (Array.isArray(evenement.creneauxDecales)) {
+    propre.creneauxDecales = creneauxPlafonnes(evenement.creneauxDecales);
   }
 
   let amont;
