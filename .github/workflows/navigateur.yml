@@ -1,0 +1,72 @@
+# Ouvre reellement l'application dans un navigateur, a chaque envoi de code.
+#
+# ─────────────────────────────────────────────────────────────────────
+# POURQUOI UNE CHAINE DE PLUS
+# ─────────────────────────────────────────────────────────────────────
+#
+# La chaine « Tests » lance 955 tests unitaires. Trois pannes de cette
+# migration sont pourtant passees au travers, la suite etant verte au
+# moment des faits :
+#
+#   - un ecran blanc : une variable lue avant sa declaration. 870 tests
+#     verts, et l'application ne demarrait pas du tout ;
+#   - un import manquant : le build passait, 898 tests verts, l'ecran
+#     plantait a l'ouverture ;
+#   - un jeton de couleur inexistant : le texte s'affichait en transparent.
+#
+# Aucune ne se voit sans ouvrir l'application. Celle-ci l'ouvre.
+#
+# Sans risque : ce workflow ne deploie rien et ne touche pas au site.
+
+name: Navigateur
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+# Un nouvel envoi annule la verification en cours sur la meme branche :
+# inutile de faire tourner quinze navigateurs sur du code deja remplace.
+concurrency:
+  group: navigateur-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fumee:
+    name: L'application s'ouvre et répond
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Installer les dependances de l'application
+        working-directory: app
+        run: npm ci
+
+      # Playwright n'est pas une dependance de l'application : elle ne sert
+      # qu'ici. On l'installe sans l'inscrire au package.json, pour ne pas
+      # alourdir ce que les clientes telechargent.
+      - name: Installer Playwright
+        run: npm i --no-save playwright@1.63.0
+
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Les scripts lisent app/dist : sans construction, ils verifieraient
+      # un paquet perime, ou rien du tout.
+      - name: Construire l'application
+        working-directory: app
+        run: npm run build
+
+      - name: Ouvrir l'application et exercer chaque fonction
+        run: node scripts-migration/verifier-navigateur.mjs
