@@ -48,6 +48,62 @@ const PROFIL = { name: "Sabine", reportReminderEnabled: true };
 const DIMANCHE = (h, min = 0) => new Date(2026, 8, 6, h, min);
 const SAMEDI = (h) => new Date(2026, 8, 5, h);
 
+describe("la décision ne dépend que de l'horloge qu'on lui donne", () => {
+  /*
+   * LE DÉFAUT QUI A BLOQUÉ LA CHAÎNE D'INTÉGRATION.
+   *
+   * decisionRappelDimanche recevait une heure à évaluer, s'en servait pour
+   * décider le jour et l'heure — puis calculait la clé de semaine à partir
+   * de l'horloge RÉELLE. Une décision moitié simulée, moitié réelle, et
+   * c'est la moitié réelle qui était enregistrée : cette clé sert de marque
+   * « déjà rappelé cette semaine ».
+   *
+   * Les tests au-dessus épinglent un dimanche précis. Ils passaient donc
+   * pendant la semaine de ce dimanche, puis échouaient tous les jours
+   * suivants — sans que rien n'ait changé dans le code. C'est exactement ce
+   * qui est arrivé, et le déploiement rejoue cette suite avant de publier.
+   *
+   * Ce test-ci ne peut pas pourrir de la même façon : il ne compare pas à
+   * une date écrite en dur, il vérifie une PROPRIÉTÉ — la clé rendue est
+   * toujours celle du lundi précédant le dimanche simulé, quel que soit le
+   * jour où la suite est lancée.
+   */
+  const base = { profile: PROFIL, semaineDejaVue: null, semaineDejaEnvoyee: null };
+
+  test("la clé de semaine suit le dimanche simulé, sur toute une année", () => {
+    // Tous les dimanches de 2026, plus deux changements d'heure et un
+    // passage d'année : les endroits où une confusion UTC / local se voit.
+    let dimanches = 0;
+    for (let jour = new Date(2026, 0, 4); jour < new Date(2027, 0, 4); jour.setDate(jour.getDate() + 7)) {
+      const simule = new Date(jour.getFullYear(), jour.getMonth(), jour.getDate(), 10, 0);
+      assert.equal(simule.getDay(), 0, "le générateur ne produit plus des dimanches");
+
+      const lundiAttendu = new Date(simule);
+      lundiAttendu.setDate(lundiAttendu.getDate() - 6);
+      const attendu = [
+        lundiAttendu.getFullYear(),
+        String(lundiAttendu.getMonth() + 1).padStart(2, "0"),
+        String(lundiAttendu.getDate()).padStart(2, "0")
+      ].join("-");
+
+      const d = decisionRappelDimanche({ ...base, maintenant: simule });
+      assert.equal(d.rappeler, true, `pas de rappel le ${attendu}`);
+      assert.equal(d.cleSemaine, attendu, `clé du ${simule.toDateString()}`);
+      dimanches++;
+    }
+    assert.ok(dimanches > 50, "trop peu de dimanches vérifiés : " + dimanches);
+  });
+
+  test("deux dimanches différents ne partagent jamais la même clé", () => {
+    // Sans cela, le rappel d'une semaine consommerait celui d'une autre.
+    const cles = new Set();
+    for (const [mois, jour] of [[8, 6], [8, 13], [8, 20], [8, 27]]) {
+      cles.add(decisionRappelDimanche({ ...base, maintenant: new Date(2026, mois, jour, 10) }).cleSemaine);
+    }
+    assert.equal(cles.size, 4, "des dimanches distincts partagent une clé : " + [...cles].join(", "));
+  });
+});
+
 describe("quand rappeler", () => {
   const base = { profile: PROFIL, semaineDejaVue: null, semaineDejaEnvoyee: null };
 

@@ -15,7 +15,7 @@ import { notifier } from "./notifier.js";
 import { fmtL } from "./score-jour.js";
 import { choisirSuggestions } from "./suggestions.js";
 import { dayIdOf, minutesOf, normaliserCreneaux, slotDayLabel } from "./semaine.js";
-import { todayISO } from "./dates.js";
+import { toLocalISODate } from "./dates.js";
 import {
   RAPPEL_CRENEAU,
   RAPPEL_HYDRATATION,
@@ -96,7 +96,10 @@ export function verifierRappelCreneau({
   maintenant = new Date(),
   montrer = notifier
 }) {
-  const aujourdhui = todayISO();
+  // Meme correction que dans decisionRappelDimanche, et pour la meme
+  // raison : la fonction recoit une heure a evaluer, elle ne doit pas
+  // aller en chercher une autre. Identique en production, testable ici.
+  const aujourdhui = toLocalISODate(maintenant);
   const creneau = normaliserCreneaux(profile).find((s) => s.day === dayIdOf(aujourdhui));
   const seanceFaite =
     !!creneau &&
