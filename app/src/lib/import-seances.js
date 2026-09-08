@@ -77,9 +77,27 @@ const ROLES = [
   // borne 1-10 de valeurPlausible protege le cas ou la colonne
   // contiendrait en fait un pourcentage du 1RM : il serait ecarte.
   { role: "rpe", prefixes: ["rpe", "intensite", "difficulte"] },
+  /*
+   * LE TEMPS DE REPOS A SON PROPRE ROLE, et ce n'est pas un detail de
+   * rangement.
+   *
+   * « Récupération » et « Consignes » tombaient tous deux dans « notes ».
+   * Le plan de lecture garde la premiere colonne qui revendique un role :
+   * « Récupération » etant a gauche, elle raflait la mise, et les vraies
+   * consignes du coach — « Bloquer 2 sec en haut », « Enchainer les 2
+   * exercices » — etaient remplacees par « 1 min 30 ».
+   *
+   * C'est aussi ce qui empechait de reconnaitre un superset ecrit en
+   * consigne : la technique se cherche dans les notes, qui contenaient un
+   * temps de repos.
+   *
+   * L'application n'a pas encore de champ pour le repos ; ce role existe
+   * d'abord pour que cette colonne cesse d'en occuper un autre.
+   */
+  { role: "repos", prefixes: ["repos", "recuperation", "recup"] },
   {
     role: "notes",
-    prefixes: ["note", "notes", "consigne", "commentaire", "remarque", "repos", "recuperation", "recup", "tempo"]
+    prefixes: ["note", "notes", "consigne", "commentaire", "remarque", "tempo"]
   }
 ];
 
@@ -100,6 +118,28 @@ export function roleDeColonne(entete) {
       return role;
     }
   }
+
+  /*
+   * « S1 », « S2 », « W1 »... : LA CHARGE D'UNE SEMAINE DU BLOC.
+   *
+   * Les tableaux de Coach Neiram posent les charges en largeur, une
+   * colonne par semaine sous une banniere « Charge », chacune suivie du
+   * RPE reellement realise cette semaine-la. Aucune ne s'appelle
+   * « Charge » : elles ne tombaient donc sur rien, et le programme
+   * s'importait sans une seule charge.
+   *
+   * C'EST LA PREMIERE QUI EST RETENUE — S1, la semaine d'ouverture du
+   * bloc. C'est la charge que le coach PRESCRIT au depart ; les suivantes
+   * sont ce que le client fera plus tard, et l'application n'a qu'une
+   * charge par exercice. Le plan de lecture garde la premiere colonne qui
+   * revendique un role, donc S1 l'emporte sur S2 sans regle
+   * supplementaire.
+   *
+   * « RPE S1 » n'est pas capte ici : il tombe sur le role « rpe » a la
+   * boucle precedente, avant d'arriver jusqu'a ce test.
+   */
+  if (/^[sw]\d+$/.test(n)) return "charge";
+
   return null;
 }
 
@@ -231,7 +271,9 @@ export function techniqueDepuisTexte(cellule) {
   const n = normaliser(brut);
   if (!n) return null;
 
-  if (/\bsuper ?set\b|\bss\b|\bbi ?set\b/.test(n)) {
+  // « Enchaîner les 2 exercices » est la facon dont un coach francais
+  // ecrit un superset dans une consigne.
+  if (/\bsuper ?set\b|\bss\b|\bbi ?set\b|\benchain/.test(n)) {
     // « superset A » ou « SS B » : la lettre isolee en fin de mention est
     // le groupe. Une lettre collee a un mot n'en est pas une.
     const m = n.match(/(?:super ?set|ss|bi ?set)\s+([a-f])\b/);
@@ -496,9 +538,17 @@ export function seancesDepuisTableau(lignes) {
   });
 
   /** Contenu textuel d'un role : un nom d'exercice, une note, un libelle. */
+  /*
+   * Contenu textuel d'un role : un nom d'exercice, une note, un libelle.
+   *
+   * LES RETOURS A LA LIGNE SONT APLATIS. Une cellule de tableur en
+   * contient des qu'un coach fait tenir « V Squat + Chaise » sur trois
+   * lignes pour la lisibilite. Sans cet aplatissement, l'exercice
+   * s'appelait litteralement « V Squat\n+\nChaise » dans l'application.
+   */
   const colonne = (ligne, role) => {
     const ou = plan[role];
-    return ou ? (ligne[ou.index] || "").trim() : "";
+    return ou ? String(ligne[ou.index] || "").replace(/\s+/g, " ").trim() : "";
   };
 
   /**
@@ -624,8 +674,18 @@ export function seancesDepuisTableau(lignes) {
      * Repeter un effort, c'est en faire des series ; le tenir une fois,
      * c'est une duree.
      */
+    /*
+     * UNE DUREE PEUT ETRE POSEE DANS LA COLONNE DES SERIES.
+     *
+     * Sur une journee de cardio, le coach ecrit « Escaliers · 15 mins ·
+     * 1 » : la duree est dans la colonne « Séries » et le 1 dans celle des
+     * repetitions. Lu au pied de la lettre, cela donnait « 15×1 » — quinze
+     * series d'une repetition d'escalier.
+     */
+    const dureeDansSeries = uniteDeReps(colonne(ligne, "series")).unite === "minutes";
     const enMinutes = unite === "minutes";
-    const cardio = enMinutes && Number(series || 0) < 2;
+    const cardio = dureeDansSeries || (enMinutes && Number(series || 0) < 2);
+    const dureeMinutes = dureeDansSeries ? premierNombre(colonne(ligne, "series")) : reps;
     const mode = modeDepuisTexte(colonne(ligne, "mode")) || (cardio ? "cardio" : "muscu");
 
     // Les series chronometrees se comptent en secondes dans l'application :
@@ -634,7 +694,7 @@ export function seancesDepuisTableau(lignes) {
     const uniteFinale = enMinutes ? "sec" : unite;
 
     const exercice = cardio
-      ? { name: nomExercice, mode, durationMin: reps, fields: ["durationMin"] }
+      ? { name: nomExercice, mode, durationMin: dureeMinutes, fields: ["durationMin"] }
       : {
           name: nomExercice,
           mode,

@@ -133,7 +133,11 @@ describe("en-têtes tels que les coachs les écrivent vraiment", () => {
     ["Méthode", "technique"],
     ["Notes", "notes"],
     ["Consignes", "notes"],
-    ["Repos", "notes"]
+    // Le temps de repos a son propre rôle : sans cela, « Récupération »
+    // — souvent à gauche des consignes — raflait le rôle « notes » et les
+    // vraies consignes du coach étaient remplacées par « 1 min 30 ».
+    ["Repos", "repos"],
+    ["Récupération", "repos"]
   ];
 
   test("les vingt-deux écritures courantes tombent toutes sur le bon rôle", () => {
