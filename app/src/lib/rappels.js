@@ -13,7 +13,7 @@
  */
 
 import { getWeekKey } from "./semaine.js";
-import { todayISO } from "./dates.js";
+import { toLocalISODate } from "./dates.js";
 
 /**
  * Rappel du dimanche : envoyer son bilan hebdo au coach.
@@ -50,7 +50,27 @@ export function decisionRappelDimanche({ maintenant, profile, semaineDejaVue, se
   const h = maintenant.getHours();
   if (h < RAPPEL_DIMANCHE.heureDebut || h >= RAPPEL_DIMANCHE.heureFin) return non("hors plage horaire");
 
-  const cleSemaine = getWeekKey(todayISO());
+  /*
+   * LA CLE VIENT DE `maintenant`, PAS DE L'HORLOGE REELLE.
+   *
+   * Cette ligne lisait todayISO(). La fonction recevait donc une heure a
+   * evaluer, s'en servait pour decider le jour et l'heure — puis calculait
+   * la semaine a partir d'autre chose. Une decision moitie simulee, moitie
+   * reelle, et c'est la moitie reelle qui etait ENREGISTREE : la cle sert
+   * de marque « deja rappele cette semaine ».
+   *
+   * En production les deux valeurs coincidaient presque toujours, ce qui
+   * explique que personne ne l'ait vu. Presque : todayISO() rend la date
+   * UTC, et getMonday raisonne en local. Un client a l'est de Greenwich un
+   * dimanche en toute fin de soiree se voyait attribuer la semaine
+   * precedente — donc un rappel deja consomme, ou consomme pour rien.
+   *
+   * Et cote tests, cela rendait la fonction intestable : la suite passait
+   * pendant la semaine du dimanche simule, puis echouait pour toujours.
+   * C'est ce qui bloquait la chaine d'integration, et avec elle le
+   * deploiement.
+   */
+  const cleSemaine = getWeekKey(toLocalISODate(maintenant));
   if (semaineDejaVue === cleSemaine) return non("deja rappele cette semaine");
 
   // Le client qui a deja envoye son bilan n'a rien a faire d'un rappel :

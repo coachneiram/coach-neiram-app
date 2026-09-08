@@ -44,6 +44,41 @@ export function collectionApi(cle, items, setItems) {
       return ecrire([...nouvelles, ...items]);
     },
 
+    /**
+     * Ajoute des entrees en remplaçant celles qui portent la meme cle.
+     *
+     * Ajoute pour l'import du programme depuis le Google Sheets du coach.
+     * Un client reimporte son tableau a chaque nouveau bloc : sans
+     * remplacement, il se retrouverait avec « Haut du corps » en trois
+     * exemplaires et ne saurait plus laquelle demarrer.
+     *
+     * UNE SEULE ECRITURE, comme addMany, et pour la meme raison : enchainer
+     * update puis add repartirait a chaque fois du meme `items` fige au
+     * rendu, et seule la derniere operation survivrait.
+     *
+     * `cle` rend la valeur qui identifie une entree — le nom normalise,
+     * dans le cas des seances types. Les entrees existantes qui ne
+     * correspondent a aucune cle entrante sont conservees telles quelles :
+     * un import ne doit jamais effacer ce que le client a cree a la main.
+     */
+    replaceMany: async (entrees, cle) => {
+      const liste = entrees || [];
+      if (!liste.length) return items;
+
+      const remplacantes = new Map(liste.map((e) => [cle(e), e]));
+      const conservees = items.map((it) => {
+        const entrante = remplacantes.get(cle(it));
+        if (!entrante) return it;
+        remplacantes.delete(cle(it));
+        // L'identifiant est conserve : l'historique des seances y renvoie
+        // par routineId, et le changer orphelinerait tout le passe.
+        return { ...it, ...entrante, id: it.id };
+      });
+
+      const nouvelles = [...remplacantes.values()].map((e) => ({ ...e, id: uid() }));
+      return ecrire([...nouvelles, ...conservees]);
+    },
+
     update: async (id, modifications) =>
       ecrire(items.map((it) => (it.id === id ? { ...it, ...modifications } : it))),
 

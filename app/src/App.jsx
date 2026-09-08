@@ -502,6 +502,7 @@ export default function App() {
         onAssignerJour={assignerJour}
         maxisForce={maxisForce}
         onDefinirMaxiForce={definirMaxiForce}
+        onEnregistrerLienSheets={(url) => enregistrerProfil({ ...profil, sheetsUrl: url })}
       />
     ),
     tendances: weekStats ? (

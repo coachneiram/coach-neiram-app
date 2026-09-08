@@ -9,6 +9,7 @@
  */
 
 import { addDays, avg, num, parseISO, round, todayISO } from "./dates.js";
+import { calibrageRegime } from "./regimes.js";
 
 export const GOALS = [
   { id: "perte", label: "Perte de poids" },
@@ -86,6 +87,32 @@ const PROTEINES_PAR_KG = 2;
  * vrai chez quelqu'un qui doit garder sa force pendant la seche.
  */
 const PROTEINES_PAR_KG_SECHE_FORCE = 2.2;
+
+/**
+ * LES REGIMES CHANGENT LA REPARTITION, JAMAIS LE TOTAL.
+ *
+ * C'etait le defaut de calibrage le plus grave de l'application. Le regime
+ * du profil ne servait qu'a FILTRER les aliments proposes
+ * (lib/aliments.js) ; les objectifs du jour, eux, restaient ceux de tout
+ * le monde. Un client qui cochait « Kéto (faible en glucides) » se voyait
+ * demander 250 a 350 g de glucides par jour — dix fois ce qu'un regime
+ * cetogene autorise — avec un catalogue dont les sources principales
+ * venaient justement de lui etre retirees. Objectif intenable, et faux.
+ *
+ * DEUX FACONS DE DEPLACER LA REPARTITION, decrites regime par regime dans
+ * lib/regimes.js et appliquees ci-dessous :
+ *
+ *  - POSER LES GLUCIDES (keto, pauvre en glucides). L'ordre du calcul
+ *    s'inverse : les glucides deviennent une cible, et les LIPIDES
+ *    absorbent le reste des calories.
+ *  - RELEVER LES PROTEINES (hyperproteine). Le reste du calcul ne bouge
+ *    pas : les lipides suivent leur regle au poids, les glucides
+ *    absorbent ce qui reste.
+ *
+ * DANS LES DEUX CAS, LES CALORIES SONT IDENTIQUES A CELLES D'UN CLIENT
+ * SANS REGIME. La depense d'un corps ne depend pas de la facon dont on
+ * repartit ce qu'on y met.
+ */
 
 /** Lipides, en g/kg du poids de reference. */
 const LIPIDES_PAR_KG = 1;
@@ -287,7 +314,20 @@ export function computeTargets(profile, currentWeightKg) {
 
   const secheDeForce = direction === "perte";
 
-  const proteinPerKg = secheDeForce ? PROTEINES_PAR_KG_SECHE_FORCE : PROTEINES_PAR_KG;
+  // Un objectif « perte » et une seche de force disent la meme chose au
+  // corps : c'est ce que les regimes lisent pour se calibrer.
+  const enDeficit = profile.goal === "perte" || secheDeForce;
+  const calibrage = calibrageRegime(profile, { calories, enDeficit });
+
+  // Trois etages, dans cet ordre : la regle de base, la repartition
+  // choisie qui la remplace, la restriction alimentaire qui la majore. Le
+  // plafond ferme la marche — il n'existe que parce que les deux derniers
+  // etages peuvent se cumuler.
+  const proteinesDeBase = secheDeForce ? PROTEINES_PAR_KG_SECHE_FORCE : PROTEINES_PAR_KG;
+  const proteinPerKg = Math.min(
+    (calibrage?.proteinesParKg ?? proteinesDeBase) * (calibrage?.majorationProteines ?? 1),
+    calibrage?.proteinesParKgMax ?? Infinity
+  );
   const fatPerKg = secheDeForce
     ? LIPIDES_PAR_KG_SECHE_FORCE
     : profile.goal === "perte"
@@ -298,10 +338,47 @@ export function computeTargets(profile, currentWeightKg) {
   // corps reel. D'ou deux poids differents dans le meme calcul.
   const reference = poidsDeReference(profile, weight);
 
-  const protein = reference ? Math.round(reference * proteinPerKg) : null;
+  const proteinAuPoids = reference ? Math.round(reference * proteinPerKg) : null;
+
+  // Butee des proteines, posee par les seuls regimes qui les relevent.
+  // Elle ne mord que sur un client lourd au budget calorique tres serre,
+  // ou continuer a appliquer la regle au poids ne laisserait plus de place
+  // au reste de l'assiette.
+  const plafondProteines =
+    calibrage?.proteinesPartMax != null && calories != null
+      ? Math.floor((calories * calibrage.proteinesPartMax) / 4)
+      : null;
+  const protein =
+    proteinAuPoids != null && plafondProteines != null
+      ? Math.min(proteinAuPoids, plafondProteines)
+      : proteinAuPoids;
 
   const lipidesAuPoids = reference ? reference * fatPerKg : null;
   const lipidesPlancher = calories != null ? (calories * PART_LIPIDES_MIN) / 9 : null;
+
+  // REGIME QUI POSE LES GLUCIDES (keto, pauvre en glucides) : l'ordre du
+  // calcul s'inverse et les lipides absorbent le reste. C'est la seule
+  // difference — les calories, les proteines et le poids de reference sont
+  // ceux de n'importe quel autre client.
+  if (calibrage?.poseGlucides) {
+    const carbsPoses = calibrage.glucides;
+    const resteKcal =
+      calories != null && protein != null && carbsPoses != null
+        ? Math.max(0, calories - protein * 4 - carbsPoses * 4)
+        : null;
+    // Le plancher hormonal reste applique. Il ne mord jamais en keto — les
+    // lipides y sont deja au-dessus de 60 % des calories — mais le retirer
+    // ferait dependre une garantie de sante d'une hypothese sur les
+    // chiffres plutot que du code.
+    const fatPoses =
+      resteKcal != null
+        ? Math.max(
+            Math.round(resteKcal / 9),
+            lipidesPlancher != null ? Math.ceil(lipidesPlancher) : 0
+          )
+        : null;
+    return { calories, protein, carbs: carbsPoses, fat: fatPoses };
+  }
 
   // Le plancher est arrondi vers le HAUT, la regle au poids vers le plus
   // proche. Arrondir le plancher vers le bas le ferait repasser sous les

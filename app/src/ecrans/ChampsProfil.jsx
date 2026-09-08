@@ -13,8 +13,17 @@ import { COLORS } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
 import { JOURS_SEMAINE, uid } from "../lib/semaine.js";
 import { ACTIVITY_LEVELS, GOALS, PERFORMANCE_DIRECTIONS } from "../lib/nutrition.js";
+import {
+  alerteRegime,
+  descriptionRegime,
+  REPARTITIONS,
+  repartitionDuProfil,
+  RESTRICTIONS,
+  restrictionDuProfil
+} from "../lib/regimes.js";
+import { regimeOk } from "../lib/aliments.js";
 import { HABITUDES_PESEE } from "../lib/fibres.js";
-import { ALLERGENS, COACHING_MODES, DIET_TYPES, TRAINING_MODES } from "../lib/catalogues.js";
+import { ALLERGENS, COACHING_MODES, TRAINING_MODES } from "../lib/catalogues.js";
 import { Btn, Field, IconBtn, NumberInput, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { Plus, Trash2 } from "../ui/icones.jsx";
 
@@ -146,6 +155,21 @@ function ChampsCoaching({ value, set }) {
 
 export function ChampsProfil({ value, onChange }) {
   const set = (modif) => onChange({ ...value, ...modif });
+
+  /*
+   * Toute modification d'un des deux axes ecrit les DEUX champs.
+   *
+   * Sans cela, un client passe en keto AVANT la scission — dont le keto
+   * vit encore dans l'ancien champ `dietType` — perdrait sa repartition
+   * en choisissant simplement « végétarien » : le nouveau `dietType`
+   * ecraserait l'ancien. Normaliser a la premiere modification evite ce
+   * cas, et il n'est pas rattrapable apres coup.
+   */
+  const poserRegime = (modif) =>
+    set({
+      dietType: modif.dietType ?? restrictionDuProfil(value),
+      repartitionMacros: modif.repartitionMacros ?? repartitionDuProfil(value)
+    });
 
   /** Un champ vide redevient vide, pas zero : « 0 kg » serait un mensonge. */
   const nombre = (transforme) => (e) => (e.target.value ? transforme(e.target.value) : "");
@@ -313,13 +337,58 @@ export function ChampsProfil({ value, onChange }) {
         />
       </Field>
 
+      {/* TEXTE-NOUVEAU
+          Un seul menu mélangeait deux questions sans rapport : ce que le
+          client ne mange pas, et comment il répartit ses macros. La moitié
+          des combinaisons était donc inexprimable — un végétarien qui veut
+          monter ses protéines devait choisir entre les deux. Les deux menus
+          ci-dessous sont nouveaux, ainsi que les phrases qui expliquent au
+          client ce que ses réglages changent pour lui et l'avertissement
+          quand deux choix raisonnables se cumulent mal.
+      */}
       <Field label="Régime alimentaire">
         <SelectInput
-          options={DIET_TYPES}
-          value={value.dietType || "aucun"}
-          onChange={(e) => set({ dietType: e.target.value })}
+          options={RESTRICTIONS}
+          value={restrictionDuProfil(value)}
+          onChange={(e) => poserRegime({ dietType: e.target.value })}
         />
+        <p style={styleAide}>Ce que tu ne manges pas. Filtre les aliments proposés.</p>
       </Field>
+
+      <Field label="Répartition des macros">
+        <SelectInput
+          options={REPARTITIONS}
+          value={repartitionDuProfil(value)}
+          onChange={(e) => poserRegime({ repartitionMacros: e.target.value })}
+        />
+        <p style={styleAide}>
+          Comment tes calories se répartissent. Ton total calorique, lui, ne change jamais : il dépend de
+          ton corps et de ton objectif, pas de ta répartition.
+        </p>
+      </Field>
+
+      {descriptionRegime(value).map((phrase) => (
+        <p key={phrase} style={{ ...styleAide, margin: "0 0 10px" }}>
+          {phrase}
+        </p>
+      ))}
+
+      {alerteRegime(value, regimeOk) && (
+        <p
+          style={{
+            fontSize: 11.5,
+            color: COLORS.warn,
+            lineHeight: 1.5,
+            margin: "0 0 12px",
+            padding: "9px 11px",
+            border: `1px solid ${COLORS.warn}44`,
+            borderRadius: 9
+          }}
+        >
+          {alerteRegime(value, regimeOk)}
+        </p>
+      )}
+      {/* FIN-TEXTE-NOUVEAU */}
 
       <Field label="Allergies / intolérances">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
