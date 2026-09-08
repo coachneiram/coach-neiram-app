@@ -68,10 +68,12 @@ export function ImportSeancesSheets({ routinesApi, profile, onEnregistrerLien })
   const [apercu, setApercu] = useState(null);
   const [echec, setEchec] = useState(null);
   const [entetesLus, setEntetesLus] = useState(null);
+  const [colonnes, setColonnes] = useState([]);
   const [resultat, setResultat] = useState(null);
 
   const analyser = (texte) => {
-    const { seances, erreur, entetesLus: lues } = seancesDepuisTexte(texte);
+    const { seances, erreur, entetesLus: lues, colonnes: lecture } = seancesDepuisTexte(texte);
+    setColonnes(lecture || []);
     if (erreur) {
       setApercu(null);
       setEchec(erreur);
@@ -221,6 +223,31 @@ export function ImportSeancesSheets({ routinesApi, profile, onEnregistrerLien })
             {apercu.length} séance{apercu.length > 1 ? "s" : ""} lue{apercu.length > 1 ? "s" : ""}, {total}{" "}
             exercices. Vérifie avant d'enregistrer.
           </div>
+
+          {colonnes.length > 0 && (
+            <div
+              style={{
+                background: COLORS.bgAlt,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 10,
+                padding: "9px 11px",
+                marginBottom: 10,
+                fontSize: 11,
+                color: COLORS.textFaint,
+                lineHeight: 1.6
+              }}
+            >
+              Colonnes comprises —{" "}
+              {colonnes.map((c, i) => (
+                <span key={c.role + i}>
+                  {i > 0 ? " · " : ""}
+                  <strong style={{ color: COLORS.textMuted }}>{c.role}</strong> ← « {c.entete} »
+                </span>
+              ))}
+              . Si l'une d'elles est fausse, tes séances le seront aussi : renomme la colonne dans ton
+              Google Sheets, ou envoie cette ligne à ton coach.
+            </div>
+          )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {apercu.map((seance, iSeance) => (

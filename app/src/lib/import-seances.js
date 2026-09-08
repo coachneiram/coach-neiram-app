@@ -724,7 +724,54 @@ export function seancesDepuisTableau(lignes) {
   }
 
   const retenues = seances.filter((s) => s.exercises.length);
-  return { seances: retenues, erreur: retenues.length ? null : "aucun-exercice" };
+  return {
+    seances: retenues,
+    erreur: retenues.length ? null : "aucun-exercice",
+    // Rendu meme en cas de succes : c'est justement quand l'import
+    // « marche » que la mauvaise correspondance passe inapercue.
+    colonnes: colonnesLues(entete, lignes[entete.index]),
+    enteteLigne: entete.index
+  };
+}
+
+/** Nom lisible de chaque role, pour montrer au client ce qui a ete compris. */
+const LIBELLES_ROLES = {
+  exercice: "Exercice",
+  seance: "Séance",
+  series: "Séries",
+  reps: "Reps",
+  charge: "Charge",
+  rpe: "RPE",
+  technique: "Technique",
+  repos: "Repos",
+  notes: "Notes",
+  mode: "Type"
+};
+
+/**
+ * Comment chaque colonne du tableau a ete comprise.
+ *
+ * UN IMPORT QUI DEVINE DOIT MONTRER CE QU'IL A DEVINE. La lecture d'un
+ * tableau de coach repose sur des correspondances de mots : « Intensités »
+ * vaut RPE, « S1 » vaut une charge, « Récupération » n'est pas une
+ * consigne. Quand une correspondance se trompe, le resultat est un
+ * programme plausible et faux — des seances nommees « 1 », « 3 », « 4 »
+ * parce qu'une colonne de nombres a ete prise pour la colonne des seances.
+ *
+ * Le client ne peut pas diagnostiquer cela, et le coach non plus : rien a
+ * l'ecran ne dit d'ou vient chaque valeur. Cette liste le dit, en une
+ * ligne, avant d'enregistrer quoi que ce soit.
+ */
+export function colonnesLues(entete, ligne) {
+  if (!entete) return [];
+  const vues = [];
+  entete.colonnes.forEach((roles, i) => {
+    const titre = String((ligne && ligne[i]) || "").replace(/\s+/g, " ").trim();
+    for (const role of roles) {
+      if (role && LIBELLES_ROLES[role]) vues.push({ role: LIBELLES_ROLES[role], entete: titre });
+    }
+  });
+  return vues;
 }
 
 /** Chaine complete : d'un texte colle ou telecharge aux seances types. */
