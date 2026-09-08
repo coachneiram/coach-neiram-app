@@ -71,8 +71,16 @@ const ROLES = [
   { role: "charge", prefixes: ["charge", "poids", "kg"] },
   { role: "series", prefixes: ["serie", "series", "set", "sets", "nb serie"] },
   { role: "reps", prefixes: ["rep", "reps", "repetition", "repetitions"] },
-  { role: "rpe", prefixes: ["rpe"] },
-  { role: "notes", prefixes: ["note", "notes", "consigne", "commentaire", "remarque", "repos", "tempo"] }
+  // « Intensité » et « Difficulté » sont les mots que les coachs emploient
+  // pour le RPE — la legende d'un tableau reel dit mot pour mot
+  // « RPE = Difficulté », et la colonne s'appelle « Intensités ». Le
+  // borne 1-10 de valeurPlausible protege le cas ou la colonne
+  // contiendrait en fait un pourcentage du 1RM : il serait ecarte.
+  { role: "rpe", prefixes: ["rpe", "intensite", "difficulte"] },
+  {
+    role: "notes",
+    prefixes: ["note", "notes", "consigne", "commentaire", "remarque", "repos", "recuperation", "recup", "tempo"]
+  }
 ];
 
 /**
@@ -252,7 +260,14 @@ export function techniqueDepuisTexte(cellule) {
  * rendait son premier nombre, et LA CHARGE ETAIT PERDUE — c'est-a-dire
  * la donnee pour laquelle on importe le tableau.
  */
-const SEPARATEURS_DOUBLES = /\s*[/|+&]\s*|\s+et\s+/;
+const SEPARATEURS_DOUBLES = /\s*[/|&]\s*|\s+et\s+/;
+
+/*
+ * « + » EN EST VOLONTAIREMENT ABSENT. Dans une cellule il veut dire
+ * « plus », pas « ou » : « 7+0,5/sem » est une consigne de progression —
+ * RPE 7, plus 0,5 par semaine — et le decouper faisait entrer 0,5 dans la
+ * colonne des charges. Un squat a 0,5 kg n'a jamais existe.
+ */
 
 /**
  * Roles portes par un en-tete, dans l'ordre ou ils y sont ecrits.
@@ -389,6 +404,58 @@ function completerRoles(ligne, colonnes) {
 }
 
 /**
+ * Cette ligne est-elle une REPETITION DE L'EN-TETE ?
+ *
+ * Un tableau de coach ne contient pas un seul tableau : il en contient un
+ * par seance, chacun avec sa propre ligne d'en-tete. Sans ce test, chaque
+ * en-tete suivant devenait un exercice appele « Exercices » — et le
+ * client se retrouvait avec des lignes vides au milieu de son programme.
+ *
+ * DEUX ROLES RECONNUS AU MINIMUM. Un seul ne suffit pas : un exercice
+ * peut legitimement s'appeler « Repos actif », qui tombe sur le role
+ * « notes ». Deux noms de colonnes sur la meme ligne, en revanche, ne
+ * sont jamais un exercice.
+ */
+export function estEnteteRepete(ligne) {
+  return (ligne || []).filter((c) => roleDeColonne(c)).length >= 2;
+}
+
+/** Mots par lesquels un coach ouvre une seance dans son tableau. */
+const DEBUT_DE_TITRE = /^(jour|seance|session|semaine|bloc|entrainement|day)\b/;
+
+/**
+ * Ce libelle ouvre-t-il une nouvelle seance ?
+ *
+ * « JOUR 1 », « JOUR 2 - BENCH / DEADLIFT - MARDI », « Séance A ». Ces
+ * lignes n'ont ni series ni repetitions : c'est ce qui les distingue d'un
+ * exercice, et le mot d'ouverture confirme.
+ */
+export function estTitreDeSeance(texte) {
+  return DEBUT_DE_TITRE.test(normaliser(texte));
+}
+
+/**
+ * Unite et facteur d'une cellule de repetitions.
+ *
+ * « 30 sec » n'est pas 30 repetitions, et le confondre change la nature
+ * de l'exercice : un gainage de 30 secondes devenait « 3×30 » comme s'il
+ * s'agissait de trente flexions.
+ *
+ * L'UNITE DOIT SUIVRE IMMEDIATEMENT LE PREMIER NOMBRE, eventuellement
+ * apres une fourchette. C'est ce qui distingue « 30 sec » (une duree) de
+ * « 10 + 5 sec » (dix repetitions, puis cinq secondes de maintien) : dans
+ * le second, le premier nombre n'est pas suivi de son unite, donc ce sont
+ * bien des repetitions.
+ */
+const UNITE_REPS = /^\s*\d+(?:[.,]\d+)?(?:\s*[-–]\s*\d+(?:[.,]\d+)?)?\s*(secondes?|secs?|s|minutes?|mins?|min)\b/i;
+
+export function uniteDeReps(cellule) {
+  const m = String(cellule == null ? "" : cellule).match(UNITE_REPS);
+  if (!m) return { unite: "reps" };
+  return /^m/i.test(m[1]) ? { unite: "minutes" } : { unite: "sec" };
+}
+
+/**
  * Seances types deduites d'un tableau deja decoupe.
  *
  * Chaque ligne portant un nom d'exercice devient un exercice. La colonne
@@ -453,22 +520,83 @@ export function seancesDepuisTableau(lignes) {
   let precedentEnSuperset = false;
   let lettre = 0;
 
+  /** Ouvre une seance, ou reprend celle qui porte deja ce nom. */
+  const ouvrirSeance = (nom) => {
+    if (courante && normaliser(nom) === normaliser(courante.nom)) return;
+    if (seances.length >= MAX_SEANCES) return;
+    courante = { nom, exercises: [] };
+    seances.push(courante);
+    precedentEnSuperset = false;
+    lettre = 0;
+  };
+
+  /*
+   * LA BANNIERE DE LA PREMIERE SEANCE EST AU-DESSUS DE SON EN-TETE.
+   *
+   * Un tableau de coach s'ecrit « JOUR 1 » puis la ligne d'en-tete puis
+   * les exercices. Les seances suivantes se lisent toutes seules — leur
+   * banniere tombe dans le flux de donnees — mais la premiere serait
+   * perdue, et son bloc d'exercices atterrirait dans une seance sans nom
+   * pendant que les autres portent le leur. On remonte donc au-dessus de
+   * l'en-tete pour la retrouver.
+   */
+  for (let i = entete.index - 1; i >= 0; i--) {
+    const titre = (lignes[i] || []).find((c) => c && c.trim());
+    if (!titre) continue;
+    if (estTitreDeSeance(titre)) ouvrirSeance(titre.trim());
+    // On ne remonte pas plus haut qu'une ligne pleine : au-dessus, c'est
+    // la legende du tableau, pas son organisation.
+    break;
+  }
+
   for (const ligne of lignes.slice(entete.index + 1)) {
+    // UN TABLEAU DE COACH CONTIENT PLUSIEURS TABLEAUX, un par seance,
+    // chacun avec sa propre ligne d'en-tete. Sans ce test, chaque en-tete
+    // suivant devenait un exercice appele « Exercices ».
+    /*
+     * L'ORDRE DES DEUX TESTS COMPTE, et s'y tromper coute deux seances.
+     *
+     * Une banniere de seance porte souvent, sur la meme ligne, les
+     * sous-titres des colonnes de droite (« Charge estimée », « Charge
+     * utilisée »). Elle ressemble donc a un en-tete repete. Si on la
+     * traite comme tel, on l'ignore — et le bloc d'exercices qui suit
+     * s'entasse dans la seance precedente. C'est exactement ce qui
+     * arrivait : trois journees d'un programme de force se retrouvaient
+     * en une seule.
+     */
+    const premiereCellule = ligne.find((c) => c && c.trim());
+    if (premiereCellule && estTitreDeSeance(premiereCellule)) {
+      ouvrirSeance(premiereCellule.trim());
+      continue;
+    }
+
+    if (estEnteteRepete(ligne)) continue;
+
     const nomExercice = colonne(ligne, "exercice");
     const nomSeance = colonne(ligne, "seance");
 
     // Une ligne sans exercice mais avec un nom de seance ouvre la seance
     // suivante : beaucoup de tableaux mettent le titre sur sa propre ligne.
-    if (nomSeance && (!courante || normaliser(nomSeance) !== normaliser(courante.nom))) {
-      if (seances.length >= MAX_SEANCES) break;
-      courante = { nom: nomSeance, exercises: [] };
-      seances.push(courante);
-      precedentEnSuperset = false;
-      lettre = 0;
-    }
+    if (nomSeance) ouvrirSeance(nomSeance);
 
     if (!nomExercice) continue;
 
+    const series = nombre(ligne, "series", "sets");
+    const reps = nombre(ligne, "reps", "reps");
+    const charge = nombre(ligne, "charge", "weight");
+
+    /*
+     * ON NE JETTE PAS UNE LIGNE PARCE QU'ELLE N'A PAS DE CHIFFRES.
+     *
+     * Une premiere version ecartait tout exercice sans series, sans
+     * repetitions et sans charge, pour se debarrasser des bannieres de
+     * seance. Le remede etait pire : un tableau qui ne donne qu'un nom et
+     * une consigne — « Presse à cuisses · superset avec les fentes » — est
+     * parfaitement legitime, et il disparaissait en silence.
+     *
+     * Les bannieres sont deja reconnues plus haut, a leur mot d'ouverture.
+     * Le reste est un exercice, meme depouille.
+     */
     if (!courante) {
       courante = { nom: NOM_SEANCE_PAR_DEFAUT, exercises: [] };
       seances.push(courante);
@@ -476,17 +604,46 @@ export function seancesDepuisTableau(lignes) {
     if (courante.exercises.length >= MAX_EXERCICES_PAR_SEANCE) continue;
 
     const technique = techniqueDepuisTexte(colonne(ligne, "technique") || colonne(ligne, "notes"));
-    const mode = modeDepuisTexte(colonne(ligne, "mode")) || "muscu";
+    const { unite } = uniteDeReps(colonne(ligne, "reps"));
 
-    const exercice = {
-      name: nomExercice,
-      mode,
-      sets: nombre(ligne, "series", "sets"),
-      reps: nombre(ligne, "reps", "reps"),
-      weight: nombre(ligne, "charge", "weight"),
-      repUnit: "reps",
-      rpe: nombre(ligne, "rpe", "rpe")
-    };
+    /*
+     * UNE DUREE EN MINUTES DECRIT UN CARDIO, pas une serie. « Marche
+     * inclinée · 15-30 mins » est un exercice de duree : l'application
+     * sait deja le representer, avec son propre champ. Le noter « 1×15 »
+     * en aurait fait quinze repetitions de marche.
+     */
+    /*
+     * UNE DUREE EN MINUTES NE VEUT PAS TOUJOURS DIRE CARDIO, et c'est le
+     * NOMBRE DE SERIES qui tranche.
+     *
+     *  - « Gainage · 3 séries · 1 min » est une serie chronometree. La
+     *    noter en cardio lui ferait perdre ses trois series.
+     *  - « Marche inclinée · 1 série · 15-30 mins » est un cardio, et
+     *    l'application sait deja le representer avec sa duree.
+     *
+     * Repeter un effort, c'est en faire des series ; le tenir une fois,
+     * c'est une duree.
+     */
+    const enMinutes = unite === "minutes";
+    const cardio = enMinutes && Number(series || 0) < 2;
+    const mode = modeDepuisTexte(colonne(ligne, "mode")) || (cardio ? "cardio" : "muscu");
+
+    // Les series chronometrees se comptent en secondes dans l'application :
+    // une minute vaut soixante.
+    const repsFinales = enMinutes && !cardio ? String(Number(reps) * 60) : reps;
+    const uniteFinale = enMinutes ? "sec" : unite;
+
+    const exercice = cardio
+      ? { name: nomExercice, mode, durationMin: reps, fields: ["durationMin"] }
+      : {
+          name: nomExercice,
+          mode,
+          sets: series,
+          reps: repsFinales,
+          weight: charge,
+          repUnit: uniteFinale,
+          rpe: nombre(ligne, "rpe", "rpe")
+        };
 
     if (technique && technique.technique === "superset") {
       if (technique.supersetGroupe) {
