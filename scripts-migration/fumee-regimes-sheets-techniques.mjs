@@ -83,15 +83,16 @@ const PROFIL = {
  */
 const TABLEAU_COLLE = [
   "RPE = Difficulté",
-  "JOUR 1",
-  "Exercices\tSéries\tRépétitions\tRPE/Charge\tTechnique",
-  "Gainage\t3\t30 sec\t7\t",
-  "Développé couché\t4\t8\t7,5 / 60\t",
-  "Tirage horizontal\t4\t10\t8 / 50\tSuperset",
-  "Élévations latérales\t3\t15\t7 / 8\tsuperset",
-  "JOUR 2",
-  "Exercices\tSéries\tRépétitions\tRPE/Charge\tTechnique",
-  "Squat\t5\t5\t8 / 90\t"
+  "JOUR 1\t\t\t\t\t\tCharge",
+  "Exercices\tSéries\tRépétitions\tIntensités\tRécupération\tConsignes\tS1\tRPE S1",
+  "Gainage\t3\t30 sec\t7\t1 min 30\t\t/\t6",
+  "Développé couché\t4\t8\t7,5\t1 min 30\t\t60\t7",
+  "Tirage horizontal\t4\t10\t8\t1 min 30\tSuperset\t50\t8",
+  "Élévations latérales\t3\t15\t7\t1 min 30\tsuperset\t8\t7",
+  "JOUR 2\t\t\t\t\t\tCharge",
+  "Exercices\tSéries\tRépétitions\tIntensités\tRécupération\tConsignes\tS1\tRPE S1",
+  "Squat\t5\t5\t8\t2 min\t\t90\t8",
+  "Tapis marche incliné\t15 mins\t1\t6\t\tInclinaison = 10%\t\t"
 ].join("\n");
 
 async function ouvrir(profil, onglet) {
@@ -237,6 +238,8 @@ try {
   verifier("aperçu : les deux journées séparées", /JOUR 1/i.test(texte) && /JOUR 2/i.test(texte));
   verifier("aperçu : aucun en-tête répété importé", !/>\s*Exercices\s*</.test(texte) && !texte.includes("RPE = Difficulté"));
   verifier("aperçu : « 30 sec » est une durée, pas 30 reps", /30 s\b/.test(texte), (texte.match(/Gainage[\s\S]{0,40}/) || [""])[0].replace(/\n/g, " "));
+  verifier("aperçu : les charges viennent de la colonne S1", /60 kg/.test(texte) && /90 kg/.test(texte));
+  verifier("aperçu : « 15 mins » en colonne Séries est un cardio", /15 min/.test(texte), (texte.match(/Tapis[\s\S]{0,30}/) || [""])[0].replace(/\n/g, " "));
   verifier("aperçu : les charges du coach", /60 kg/.test(texte));
   verifier("aperçu : le superset reconnu", /superset A/i.test(texte));
 

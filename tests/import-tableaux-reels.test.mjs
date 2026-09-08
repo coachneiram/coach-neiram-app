@@ -72,6 +72,35 @@ const BLOC_2 = [
   "Bench 2CT,1,1,65,,,65,7"
 ].join("\n");
 
+/**
+ * Feuille « BLOC 1 » : programme en salle, charges posees EN LARGEUR.
+ *
+ * Particularites, toutes absentes des deux autres feuilles : les charges
+ * vivent dans des colonnes « S1 · S2 · S3 · S4 » — une par semaine du bloc,
+ * chacune suivie du RPE reellement realise — un nom d'exercice tient sur
+ * trois lignes dans une seule cellule, une journee de cardio pose sa duree
+ * dans la colonne des SERIES, et les deux dernieres journees n'ont qu'une
+ * banniere et un en-tete, sans aucun exercice.
+ */
+const BLOC_1 = [
+  "RPE = Difficulté,,,,,,,",
+  "JOUR 1,,,,,,Charge,",
+  "Exercices,Séries,Répétitions,Intensités,Récupération,Consignes,S1,RPE S1",
+  "Gainage,3,45 sec,8,1 min 30,,/,6",
+  '"V Squat\n+\nChaise",3,"3\n+\n30 sec",8,1 min 30,Enchainer les 2 exercices,0 - 5 - 10,6',
+  'Leg extension,3,10 + 2 sec,8,1 min 30,Bloquer 2 sec en haut,"52,5",8',
+  "Adducteurs,3,15,8,1 min 30,,10-15,6",
+  "Chest press,3,8-12,8,1 min 30,,70-90-110,7",
+  'Butterfly,3,12,8,1 min 30,,"2,5-5-5",6',
+  "JOUR 4,,,,,,Charge,",
+  "Exercices,Séries,Répétitions,Intensité,Récupération,Consignes,S1,RPE S1",
+  "Escaliers,15 mins,1,7,,,,",
+  "Tapis marche incliné,15 mins,1,7,,Inclinaison = 10%,,",
+  "Rameur,15 mins,1,700%,,,,",
+  "JOUR 5,,,,,,Charge,",
+  "Exercices,Séries,Répétitions,Intensité,Récupération,Consignes,S1,RPE S1"
+].join("\n");
+
 const lire = (tableau) => seancesDepuisTexte(tableau);
 const parNom = (seances, nom) => seances.find((s) => s.nom.startsWith(nom));
 const exercice = (seance, nom) => seance.exercises.find((e) => e.name === nom);
@@ -177,7 +206,76 @@ describe("feuille « BLOC 2 » — force athlétique", () => {
   });
 });
 
-describe("ce que les deux feuilles ont en commun", () => {
+describe("feuille « BLOC 1 » — charges posées en largeur", () => {
+  const { seances, erreur } = lire(BLOC_1);
+
+  test("les colonnes « S1 » à « S4 » sont les charges du bloc, semaine par semaine", () => {
+    // Aucune ne s'appelle « Charge » : elles ne tombaient sur rien, et le
+    // programme s'importait sans une seule charge.
+    assert.equal(erreur, null);
+    const jour1 = parNom(seances, "JOUR 1");
+    assert.equal(exercice(jour1, "Leg extension").weight, "52.5");
+    assert.equal(exercice(jour1, "Adducteurs").weight, "10");
+  });
+
+  test("c'est la PREMIÈRE semaine qui est retenue, pas une autre", () => {
+    // S1 est la charge que le coach prescrit au départ ; S2 à S4 sont ce
+    // que le client fera plus tard, et l'application n'a qu'une charge.
+    assert.equal(exercice(parNom(seances, "JOUR 1"), "Chest press").weight, "70");
+  });
+
+  test("« RPE S1 » ne devient pas une charge", () => {
+    // La colonne des charges et celle du RPE réalisé s'alternent : les
+    // confondre mettrait un 6 sur la barre.
+    assert.equal(exercice(parNom(seances, "JOUR 1"), "Gainage").rpe, "8");
+  });
+
+  test("une charge de progression garde sa valeur de départ", () => {
+    // « 70-90-110 » sont les trois séries. « 2,5-5-5 » de même.
+    assert.equal(exercice(parNom(seances, "JOUR 1"), "Butterfly").weight, "2.5");
+  });
+
+  test("une cellule sans charge n'en invente pas", () => {
+    // « / » et « 0 - 5 - 10 » : rien à mettre sur la barre.
+    assert.equal(exercice(parNom(seances, "JOUR 1"), "Gainage").weight, "");
+    assert.equal(exercice(parNom(seances, "JOUR 1"), "V Squat + Chaise").weight, "");
+  });
+
+  test("un nom d'exercice sur trois lignes reste un nom", () => {
+    // Une cellule de tableur contient des retours à la ligne dès qu'un
+    // coach fait tenir « V Squat + Chaise » sur trois lignes.
+    const noms = parNom(seances, "JOUR 1").exercises.map((e) => e.name);
+    assert.ok(noms.includes("V Squat + Chaise"), noms.join(" | "));
+    for (const nom of noms) assert.ok(!/[\n\r]/.test(nom), `retour à la ligne dans « ${nom} »`);
+  });
+
+  test("« enchaîner les 2 exercices » est un superset", () => {
+    assert.equal(exercice(parNom(seances, "JOUR 1"), "V Squat + Chaise").technique, "superset");
+  });
+
+  test("une durée posée dans la colonne des séries reste une durée", () => {
+    // « Escaliers · 15 mins · 1 » lu au pied de la lettre donnait
+    // « 15×1 » — quinze séries d'une répétition d'escalier.
+    const jour4 = parNom(seances, "JOUR 4");
+    for (const e of jour4.exercises) {
+      assert.equal(e.mode, "cardio", `${e.name} n'est pas un cardio`);
+      assert.equal(e.durationMin, "15");
+    }
+  });
+
+  test("une journée sans aucun exercice n'est pas importée", () => {
+    // JOUR 5 n'a qu'une bannière et un en-tête : une séance type vide ne
+    // sert à rien et encombre l'écran du client.
+    assert.ok(!parNom(seances, "JOUR 5"), "une séance vide a été créée");
+    assert.deepEqual(seances.map((s) => s.nom), ["JOUR 1", "JOUR 4"]);
+  });
+
+  test("« 700% » saisi dans la colonne d'intensité est écarté", () => {
+    assert.equal(exercice(parNom(seances, "JOUR 4"), "Rameur").rpe, undefined);
+  });
+});
+
+describe("ce que les trois feuilles ont en commun", () => {
   test("aucun exercice importé n'est vide de sens", () => {
     for (const tableau of [BLOC_3, BLOC_2]) {
       for (const seance of lire(tableau).seances) {
