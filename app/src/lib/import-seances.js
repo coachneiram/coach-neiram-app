@@ -75,12 +75,44 @@ const ROLES = [
   { role: "notes", prefixes: ["note", "notes", "consigne", "commentaire", "remarque", "repos", "tempo"] }
 ];
 
-/** Role d'un en-tete de colonne, ou null s'il n'en designe aucun. */
+/**
+ * Role d'un en-tete, en exigeant que le mot-cle OUVRE l'en-tete.
+ *
+ * LE PLURIEL EST ACCEPTE, et il a fallu un tableau reel pour s'en rendre
+ * compte : « Exercices » ne tombait sur rien, et l'import entier echouait
+ * sur un tableau parfaitement bien fait. Un coach ecrit ses colonnes au
+ * pluriel une fois sur deux — « Exercices », « Charges », « Séances » —
+ * et exiger le singulier revenait a exiger qu'il ecrive comme le code.
+ */
 export function roleDeColonne(entete) {
   const n = normaliser(entete);
   if (!n) return null;
   for (const { role, prefixes } of ROLES) {
-    if (prefixes.some((p) => n === p || n.startsWith(p + " "))) return role;
+    if (prefixes.some((p) => n === p || n === p + "s" || n.startsWith(p + " ") || n.startsWith(p + "s "))) {
+      return role;
+    }
+  }
+  return null;
+}
+
+/**
+ * Role d'un en-tete, en cherchant le mot-cle N'IMPORTE OU dedans.
+ *
+ * Deuxieme chance, jamais premiere : « Nom de l'exercice » et « Nombre de
+ * séries » sont des en-tetes parfaitement clairs pour un humain, et
+ * illisibles pour la regle stricte ci-dessus.
+ *
+ * Elle n'est pas utilisee seule parce qu'elle se trompe la ou la stricte ne
+ * se trompe pas : « Notes sur l'exercice » contient « exercice ». D'ou
+ * l'ordre — la passe stricte attribue d'abord, la large ne comble que ce
+ * qui reste, et jamais une colonne deja prise.
+ */
+export function roleDeColonneLarge(entete) {
+  const n = normaliser(entete);
+  if (!n) return null;
+  const mots = n.split(" ");
+  for (const { role, prefixes } of ROLES) {
+    if (prefixes.some((p) => mots.includes(p) || mots.includes(p + "s"))) return role;
   }
   return null;
 }
@@ -224,11 +256,41 @@ export function techniqueDepuisTexte(cellule) {
  * n'importe quoi en silence.
  */
 export function trouverEntete(lignes) {
+  // PASSE STRICTE D'ABORD, sur toutes les lignes. Une ligne dont une
+  // colonne s'appelle « Exercice » est un en-tete ; on ne va pas chercher
+  // plus loin, et surtout pas plus large.
   for (let i = 0; i < lignes.length; i++) {
     const roles = lignes[i].map(roleDeColonne);
+    if (roles.includes("exercice")) return { index: i, roles: completerRoles(lignes[i], roles) };
+  }
+
+  // PASSE LARGE ENSUITE, et seulement si la stricte n'a rien donne.
+  for (let i = 0; i < lignes.length; i++) {
+    const roles = lignes[i].map(roleDeColonneLarge);
     if (roles.includes("exercice")) return { index: i, roles };
   }
+
   return null;
+}
+
+/**
+ * Complete les colonnes restees sans role par la reconnaissance large.
+ *
+ * Une colonne deja attribuee n'est jamais reprise, et un role deja pourvu
+ * n'est jamais attribue deux fois : sinon « Notes sur l'exercice » volerait
+ * la colonne d'exercices a la vraie.
+ */
+function completerRoles(ligne, roles) {
+  const pris = new Set(roles.filter(Boolean));
+  return roles.map((role, i) => {
+    if (role) return role;
+    const large = roleDeColonneLarge(ligne[i]);
+    if (large && !pris.has(large)) {
+      pris.add(large);
+      return large;
+    }
+    return null;
+  });
 }
 
 /**
@@ -246,7 +308,19 @@ export function trouverEntete(lignes) {
  */
 export function seancesDepuisTableau(lignes) {
   const entete = trouverEntete(lignes);
-  if (!entete) return { seances: [], erreur: "entete-absent" };
+  if (!entete) {
+    /*
+     * ON REND CE QU'ON A LU, pas seulement le fait d'avoir echoue.
+     *
+     * « Aucune colonne Exercice trouvée » ne dit pas au client ce que
+     * l'application a devant les yeux. Or les deux causes reelles se
+     * distinguent d'un coup d'oeil des qu'on montre la premiere ligne :
+     * un en-tete ecrit autrement, ou le mauvais onglet du classeur —
+     * l'export sans numero d'onglet rend toujours le premier, qui est
+     * souvent une page de garde.
+     */
+    return { seances: [], erreur: "entete-absent", entetesLus: lignes[0] || [] };
+  }
 
   const colonne = (ligne, role) => {
     const i = entete.roles.indexOf(role);

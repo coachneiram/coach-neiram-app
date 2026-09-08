@@ -47,7 +47,7 @@ const MESSAGES_ECHEC = {
   reseau:
     "Impossible de joindre Google : soit tu es hors ligne, soit ton navigateur bloque la lecture du document. Le copier-coller ci-dessous fonctionne dans tous les cas.",
   "entete-absent":
-    "Aucune colonne « Exercice » trouvée. Ton tableau doit avoir une ligne d'en-tête avec au moins une colonne Exercice, et si possible Séance, Séries, Reps et Charge.",
+    "Aucune colonne « Exercice » trouvée. Ton tableau doit avoir une ligne d'en-tête avec au moins une colonne Exercice (ou Mouvement), et si possible Séance, Séries, Reps et Charge.",
   "aucun-exercice": "L'en-tête a été trouvé, mais aucune ligne d'exercice en dessous."
 };
 
@@ -67,19 +67,25 @@ export function ImportSeancesSheets({ routinesApi, profile, onEnregistrerLien })
   const [enCours, setEnCours] = useState(false);
   const [apercu, setApercu] = useState(null);
   const [echec, setEchec] = useState(null);
+  const [entetesLus, setEntetesLus] = useState(null);
   const [resultat, setResultat] = useState(null);
 
   const analyser = (texte) => {
-    const { seances, erreur } = seancesDepuisTexte(texte);
+    const { seances, erreur, entetesLus: lues } = seancesDepuisTexte(texte);
     if (erreur) {
       setApercu(null);
       setEchec(erreur);
+      // Ce que l'application a REELLEMENT lu. Sans cette ligne, le client
+      // voit « aucune colonne Exercice » sans pouvoir deviner si c'est son
+      // en-tete qui est écrit autrement ou le mauvais onglet qui a été lu.
+      setEntetesLus((lues || []).filter(Boolean));
       // Un tableau illisible est presque toujours un tableau sans en-tete :
       // le collage reste ouvert pour que le client corrige et recommence.
       setCollageOuvert(true);
       return;
     }
     setEchec(null);
+    setEntetesLus(null);
     setApercu(seances);
   };
 
@@ -92,6 +98,7 @@ export function ImportSeancesSheets({ routinesApi, profile, onEnregistrerLien })
     if (!reponse.ok) {
       setApercu(null);
       setEchec(reponse.raison);
+      setEntetesLus(null);
       setCollageOuvert(true);
       return;
     }
@@ -184,7 +191,20 @@ export function ImportSeancesSheets({ routinesApi, profile, onEnregistrerLien })
         </div>
       )}
 
-      {echec && <p style={styleMessage(COLORS.warn)}>{MESSAGES_ECHEC[echec] || "Lecture impossible."}</p>}
+      {echec && (
+        <p style={styleMessage(COLORS.warn)}>
+          {MESSAGES_ECHEC[echec] || "Lecture impossible."}
+          {entetesLus?.length ? (
+            <>
+              <br />
+              <br />
+              Première ligne lue : « {entetesLus.join(" · ")} ». Si ce n'est pas ton tableau d'exercices,
+              c'est le mauvais onglet du classeur : ouvre le bon onglet dans ton Google Sheets et recopie
+              le lien depuis là.
+            </>
+          ) : null}
+        </p>
+      )}
 
       {resultat != null && (
         <p style={styleMessage(COLORS.good)}>

@@ -59,9 +59,18 @@ const PROFIL = {
   dietType: "aucun", allergies: [], slots: []
 };
 
+/*
+ * EN-TETES AU PLURIEL, deliberement.
+ *
+ * C'est l'ecriture qui a fait echouer un import reel : la reconnaissance
+ * exigeait le singulier, « Exercices » ne tombait sur aucun role, et le
+ * message accusait le tableau du client. Le parcours de fumee porte donc
+ * desormais sur cette ecriture-la, qui est au moins aussi frequente que
+ * l'autre — et le singulier reste couvert par les tests unitaires.
+ */
 const TABLEAU_COLLE = [
   "Programme Marien — bloc 3",
-  "Séance\tExercice\tSéries\tReps\tCharge\tRPE\tTechnique",
+  "Séances\tExercices\tSéries\tReps\tCharges\tRPE\tTechnique",
   "Haut du corps\tDéveloppé couché\t4\t8\t60\t8\t",
   "\tTirage horizontal\t4\t10\t50\t8\tSuperset",
   "\tÉlévations latérales\t3\t15\t8\t\tsuperset",

@@ -20,6 +20,7 @@ import {
   modeDepuisTexte,
   premierNombre,
   roleDeColonne,
+  roleDeColonneLarge,
   seancesDepuisTexte,
   techniqueDepuisTexte,
   telechargerFeuille,
@@ -94,6 +95,107 @@ describe("reconnaissance des colonnes", () => {
     // une consigne, pas un chiffre. Le verifier evite qu'un futur ajout de
     // role ne la detourne vers un champ numerique.
     assert.equal(roleDeColonne("Tempo excentrique"), "notes");
+  });
+});
+
+describe("en-têtes tels que les coachs les écrivent vraiment", () => {
+  /*
+   * DÉFAUT TROUVÉ SUR UN TABLEAU RÉEL. La reconnaissance exigeait le
+   * singulier : « Exercices » ne tombait sur aucun rôle, et l'import
+   * échouait entièrement sur un tableau parfaitement bien fait, avec un
+   * message qui accusait le tableau.
+   *
+   * Un coach écrit ses colonnes au pluriel une fois sur deux. Exiger le
+   * singulier revenait à lui demander d'écrire comme le code.
+   */
+  const ATTENDUS = [
+    ["Exercice", "exercice"],
+    ["EXERCICES", "exercice"],
+    ["Exercices", "exercice"],
+    ["Mouvements", "exercice"],
+    ["Nom de l'exercice", "exercice"],
+    ["Exo", "exercice"],
+    ["Séance", "seance"],
+    ["SEANCES", "seance"],
+    ["Jours", "seance"],
+    ["Séries", "series"],
+    ["Nombre de séries", "series"],
+    ["Reps", "reps"],
+    ["Répétitions", "reps"],
+    ["Charge", "charge"],
+    ["Charges", "charge"],
+    ["Poids (kg)", "charge"],
+    ["RPE", "rpe"],
+    ["Technique", "technique"],
+    ["Méthode", "technique"],
+    ["Notes", "notes"],
+    ["Consignes", "notes"],
+    ["Repos", "notes"]
+  ];
+
+  test("les vingt-deux écritures courantes tombent toutes sur le bon rôle", () => {
+    for (const [entete, attendu] of ATTENDUS) {
+      const role = roleDeColonne(entete) || roleDeColonneLarge(entete);
+      assert.equal(role, attendu, `en-tête « ${entete} »`);
+    }
+  });
+
+  test("un tableau dont l'en-tête est au pluriel s'importe", () => {
+    // Le cas exact qui a échoué en production.
+    const tableau = [
+      "Séances,Exercices,Séries,Reps,Charges",
+      "Haut du corps,Développé couché,4,8,60",
+      ",Tirage,4,10,50"
+    ].join("\n");
+    const { seances, erreur } = seancesDepuisTexte(tableau);
+    assert.equal(erreur, null);
+    assert.equal(seances.length, 1);
+    assert.equal(seances[0].nom, "Haut du corps");
+    assert.equal(seances[0].exercises.length, 2);
+    assert.equal(seances[0].exercises[0].weight, "60");
+  });
+
+  test("la passe stricte garde la priorité sur la passe large", () => {
+    // « Notes sur l'exercice » contient « exercice » : la reconnaissance
+    // large seule lui donnerait la colonne des exercices, et le vrai nom
+    // d'exercice partirait dans les notes.
+    const tableau = [
+      "Exercice,Notes sur l'exercice",
+      "Squat,Contrôle la descente"
+    ].join("\n");
+    const { seances } = seancesDepuisTexte(tableau);
+    assert.equal(seances[0].exercises[0].name, "Squat");
+  });
+
+  test("un rôle déjà pourvu n'est pas attribué deux fois", () => {
+    const tableau = [
+      "Exercice,Détail de l'exercice,Séries",
+      "Squat,à la barre,5"
+    ].join("\n");
+    const { seances } = seancesDepuisTexte(tableau);
+    assert.equal(seances[0].exercises[0].name, "Squat");
+    assert.equal(seances[0].exercises[0].sets, "5");
+  });
+});
+
+describe("quand la lecture échoue, l'application dit ce qu'elle a lu", () => {
+  /*
+   * Un message qui annonce « aucune colonne Exercice » sans montrer la
+   * première ligne laisse le client sans moyen de savoir laquelle des deux
+   * causes réelles s'applique : un en-tête écrit autrement, ou le mauvais
+   * onglet du classeur — l'export sans numéro d'onglet rend toujours le
+   * premier, souvent une page de garde.
+   */
+  test("les en-têtes réellement lus sont rendus avec l'erreur", () => {
+    const { erreur, entetesLus } = seancesDepuisTexte("Client,Semaine,Objectif\nSabine,3,Sèche");
+    assert.equal(erreur, "entete-absent");
+    assert.deepEqual(entetesLus, ["Client", "Semaine", "Objectif"]);
+  });
+
+  test("un tableau vide ne fait pas tomber la restitution", () => {
+    const { erreur, entetesLus } = seancesDepuisTexte("");
+    assert.equal(erreur, "entete-absent");
+    assert.deepEqual(entetesLus, []);
   });
 });
 
