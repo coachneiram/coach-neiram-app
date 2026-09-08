@@ -21,6 +21,22 @@ import { resumeSeance, seancesDeLaSemaine } from "../lib/seances.js";
 import { Btn, Card, Field, IconBtn, NumberInput, SectionTitle, TextArea, TextInput } from "../ui/primitives.jsx";
 import { Dumbbell, Plus, Trash2 } from "../ui/icones.jsx";
 
+/**
+ * Hauteur imposee aux trois champs de la rangee heure / duree / RPE.
+ *
+ * A padding et police identiques, un `input[type="time"]` mesure 45 px la
+ * ou un `type="number"` en mesure 41 : le champ d'heure porte un editeur
+ * natif plus haut que du texte. Les trois cases se retrouvaient decalees
+ * de quatre pixels sur la seule rangee que le client remplit apres chaque
+ * seance.
+ *
+ * La valeur n'est pas arbitraire : 10 + 10 de padding, 1 + 1 de bordure,
+ * et la ligne de texte au milieu. Une mesure dans le script de fumee la
+ * verrouille — si le style commun des champs change, elle echouera plutot
+ * que de deriver en silence.
+ */
+const HAUTEUR_CHAMP = 42;
+
 /** Duree d'affichage du message de confirmation, en millisecondes. */
 const DUREE_CONFIRMATION = 2600;
 
@@ -124,15 +140,52 @@ export function Seances({ sessionsApi, profile }) {
           <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value || todayISO())} />
         </Field>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+        {/* TEXTE-NOUVEAU
+            Ce commentaire ne porte aucun texte affiché : il explique deux
+            corrections de mise en page signalées depuis un vrai téléphone,
+            et il est marqué pour rester lisible à côté du bloc qu'il décrit.
+
+            minmax(0, 1fr) — sans cela, la largeur intrinsèque du champ
+            d'heure fait éclater sa colonne : 150 px contre 77 pour les deux
+            autres, sur un écran où chaque pixel compte.
+
+            Le décalage de 14 px dû au libellé « Heure de début » qui passe
+            sur deux lignes est corrigé dans le composant Field lui-même :
+            il touchait aussi le journal et les réglages, et une rustine
+            locale l'aurait laissé sur les deux autres écrans.
+        */}
+        {/* FIN-TEXTE-NOUVEAU */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: 10
+          }}
+        >
           <Field label="Heure de début">
-            <TextInput type="time" value={heureDebut} onChange={(e) => setHeureDebut(e.target.value)} />
+            <TextInput
+              type="time"
+              style={{ height: HAUTEUR_CHAMP }}
+              value={heureDebut}
+              onChange={(e) => setHeureDebut(e.target.value)}
+            />
           </Field>
           <Field label="Durée (min)">
-            <NumberInput value={duree} placeholder="60" onChange={(e) => setDuree(e.target.value)} />
+            <NumberInput
+              style={{ height: HAUTEUR_CHAMP }}
+              value={duree}
+              placeholder="60"
+              onChange={(e) => setDuree(e.target.value)}
+            />
           </Field>
           <Field label="RPE (1-10)">
-            <NumberInput {...CHAMP_RPE} value={rpe} placeholder="7,5" onChange={(e) => setRpe(e.target.value)} />
+            <NumberInput
+              {...CHAMP_RPE}
+              style={{ height: HAUTEUR_CHAMP }}
+              value={rpe}
+              placeholder="7,5"
+              onChange={(e) => setRpe(e.target.value)}
+            />
           </Field>
         </div>
 
