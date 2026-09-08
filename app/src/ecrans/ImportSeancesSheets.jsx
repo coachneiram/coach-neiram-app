@@ -150,8 +150,10 @@ export function ImportSeancesSheets({ routinesApi, profile, onEnregistrerLien })
 
       <p style={styleAide}>
         Ton tableau doit avoir une ligne d'en-tête. Colonnes reconnues : Séance, Exercice, Séries, Reps,
-        Charge, RPE, Technique, Notes. Seule la colonne Exercice est obligatoire. Une fourchette de reps
-        (« 8-10 ») est ramenée à sa valeur basse, que tu peux ajuster ensuite.
+        Charge, RPE, Technique, Notes — au singulier comme au pluriel. Seule la colonne Exercice est
+        obligatoire. Deux colonnes réunies en une, comme « RPE/Charge » avec « 8 / 60 » en dessous, sont
+        lues dans l'ordre annoncé. Une fourchette de reps (« 8-10 ») est ramenée à sa valeur basse, que
+        tu peux ajuster ensuite.
       </p>
 
       <button

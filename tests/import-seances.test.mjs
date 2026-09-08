@@ -21,6 +21,9 @@ import {
   premierNombre,
   roleDeColonne,
   roleDeColonneLarge,
+  rolesDeColonne,
+  valeurDeRoleDouble,
+  valeurPlausible,
   seancesDepuisTexte,
   techniqueDepuisTexte,
   telechargerFeuille,
@@ -175,6 +178,110 @@ describe("en-têtes tels que les coachs les écrivent vraiment", () => {
     const { seances } = seancesDepuisTexte(tableau);
     assert.equal(seances[0].exercises[0].name, "Squat");
     assert.equal(seances[0].exercises[0].sets, "5");
+  });
+});
+
+describe("colonne double : « RPE/Charge »", () => {
+  /*
+   * DEUXIÈME DÉFAUT TROUVÉ SUR LE MÊME TABLEAU RÉEL. Un coach économise
+   * une colonne en écrivant « RPE/Charge » et, en dessous, « 8 / 60 ».
+   * L'en-tête tombait sur « rpe », la cellule rendait son premier nombre,
+   * et LA CHARGE ÉTAIT PERDUE — c'est-à-dire la donnée pour laquelle on
+   * importe le tableau.
+   */
+  test("l'en-tête déclare ses deux rôles, dans l'ordre", () => {
+    assert.deepEqual(rolesDeColonne("RPE/Charge"), ["rpe", "charge"]);
+    assert.deepEqual(rolesDeColonne("Charge / RPE"), ["charge", "rpe"]);
+    assert.deepEqual(rolesDeColonne("Séries x Reps".replace(" x ", " et ")), ["series", "reps"]);
+  });
+
+  test("deux fois le même rôle n'est pas une colonne double", () => {
+    // « Poids / Charge » nomme deux fois la même chose.
+    assert.deepEqual(rolesDeColonne("Poids / Charge"), ["charge"]);
+    assert.deepEqual(rolesDeColonne("Exercices"), ["exercice"]);
+  });
+
+  test("la cellule est découpée comme son en-tête", () => {
+    assert.equal(valeurDeRoleDouble("8 / 60", 0, 2), "8");
+    assert.equal(valeurDeRoleDouble("8 / 60", 1, 2), "60");
+  });
+
+  test("sans séparateur, les nombres sont pris dans l'ordre annoncé", () => {
+    assert.equal(valeurDeRoleDouble("RPE 8 — 60 kg", 0, 2), "8");
+    assert.equal(valeurDeRoleDouble("RPE 8 — 60 kg", 1, 2), "60");
+  });
+
+  test("une valeur solitaire n'est pas attribuée au hasard", () => {
+    // Attribuer un nombre seul au mauvais rôle est pire que ne rien
+    // attribuer : on ne sait pas si « 60 » est un RPE impossible ou une
+    // charge dont le RPE manque.
+    assert.equal(valeurDeRoleDouble("60", 0, 2), "60");
+    assert.equal(valeurDeRoleDouble("60", 1, 2), "");
+    assert.equal(valeurDeRoleDouble("", 0, 2), "");
+  });
+
+  test("le tableau réel se lit avec sa charge ET son RPE", () => {
+    const tableau = [
+      "Exercices\tSéries\tReps\tRPE/Charge\tRemarques",
+      "Développé couché\t4\t8-10\t8 / 60\tContrôle la descente",
+      "Tirage horizontal\t4\t10\t7 / 50\t",
+      "Gainage\t3\t45\t\tsur les coudes"
+    ].join("\n");
+
+    const { seances, erreur } = seancesDepuisTexte(tableau);
+    assert.equal(erreur, null);
+    const [dc, tirage, gainage] = seances[0].exercises;
+
+    assert.equal(dc.name, "Développé couché");
+    assert.equal(dc.sets, "4");
+    assert.equal(dc.reps, "8", "une fourchette est ramenée à sa valeur basse");
+    assert.equal(dc.weight, "60", "la charge était perdue avant cette correction");
+    assert.equal(dc.rpe, "8");
+
+    assert.equal(tirage.weight, "50");
+    assert.equal(tirage.rpe, "7");
+
+    // Cellule vide : ni charge ni RPE inventés.
+    assert.equal(gainage.weight, "");
+    assert.equal(gainage.rpe, "");
+  });
+});
+
+describe("bornes de bon sens sur ce qui sort du tableau", () => {
+  /*
+   * Le RPE alimente la progression de charge. Un « 60 » lu par erreur dans
+   * une colonne mal ordonnée ne produirait pas un affichage bizarre : il
+   * enverrait le client sur une barre calculée à partir d'un ressenti qui
+   * n'existe pas.
+   */
+  test("un RPE hors de 1-10 est écarté, pas ramené dans la plage", () => {
+    assert.equal(valeurPlausible("rpe", "60"), "");
+    assert.equal(valeurPlausible("rpe", "0"), "");
+    assert.equal(valeurPlausible("rpe", "8"), "8");
+    assert.equal(valeurPlausible("rpe", "9.5"), "9.5");
+  });
+
+  test("séries, reps et charges absurdes sont écartées de la même façon", () => {
+    assert.equal(valeurPlausible("sets", "0"), "");
+    assert.equal(valeurPlausible("sets", "40"), "");
+    assert.equal(valeurPlausible("weight", "-10"), "");
+    assert.equal(valeurPlausible("weight", "600"), "");
+    assert.equal(valeurPlausible("weight", "60"), "60");
+  });
+
+  test("une colonne inversée ne contamine pas la progression de charge", () => {
+    // « Charge/RPE » annoncé, mais le coach a écrit « 60 / 8 » : les deux
+    // valeurs tombent au bon endroit. Si l'ordre est vraiment faux, la
+    // borne écarte le RPE impossible plutôt que de le laisser passer.
+    const tableau = "Exercices,RPE/Charge\nSquat,\"60 / 8\"";
+    const ex = seancesDepuisTexte(tableau).seances[0].exercises[0];
+    assert.equal(ex.rpe, "", "un RPE de 60 ne doit jamais atteindre la progression de charge");
+    assert.equal(ex.weight, "8");
+  });
+
+  test("une valeur absente reste absente, elle ne devient pas zéro", () => {
+    assert.equal(valeurPlausible("weight", ""), "");
+    assert.equal(valeurPlausible("rpe", null), "");
   });
 });
 

@@ -70,11 +70,14 @@ const PROFIL = {
  */
 const TABLEAU_COLLE = [
   "Programme Marien — bloc 3",
-  "Séances\tExercices\tSéries\tReps\tCharges\tRPE\tTechnique",
-  "Haut du corps\tDéveloppé couché\t4\t8\t60\t8\t",
-  "\tTirage horizontal\t4\t10\t50\t8\tSuperset",
-  "\tÉlévations latérales\t3\t15\t8\t\tsuperset",
-  "Bas du corps\tSquat\t5\t5\t90\t8\t"
+  // Colonne DOUBLE « RPE/Charge », comme dans le tableau reel qui a fait
+  // echouer l'import : l'en-tete tombait sur le RPE seul et la charge
+  // etait perdue. Le parcours de fumee porte donc sur cette ecriture.
+  "Séances\tExercices\tSéries\tReps\tRPE/Charge\tTechnique",
+  "Haut du corps\tDéveloppé couché\t4\t8\t8 / 60\t",
+  "\tTirage horizontal\t4\t10\t8 / 50\tSuperset",
+  "\tÉlévations latérales\t3\t15\t7 / 8\tsuperset",
+  "Bas du corps\tSquat\t5\t5\t8 / 90\t"
 ].join("\n");
 
 async function ouvrir(profil, onglet) {
