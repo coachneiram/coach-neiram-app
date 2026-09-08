@@ -301,3 +301,50 @@ describe("ce que les trois feuilles ont en commun", () => {
     }
   });
 });
+
+describe("l'import montre comment il a lu chaque colonne", () => {
+  /*
+   * UN IMPORT QUI DEVINE DOIT MONTRER CE QU'IL A DEVINÉ.
+   *
+   * La lecture repose sur des correspondances de mots : « Intensités »
+   * vaut RPE, « S1 » vaut une charge, « Récupération » n'est pas une
+   * consigne. Quand une correspondance se trompe, le résultat n'est pas
+   * une erreur — c'est un programme plausible et faux. Un coach a ainsi
+   * vu quatorze séances nommées « 1 », « 3 », « 4 », sans aucun moyen de
+   * comprendre d'où venaient ces noms.
+   *
+   * Ni le client ni le coach ne peuvent diagnostiquer cela : rien à
+   * l'écran ne dit d'où vient chaque valeur. Ces tests garantissent que
+   * la lecture est rendue visible AVANT l'enregistrement.
+   */
+  test("chaque colonne reconnue est rendue avec son en-tête d'origine", () => {
+    const { colonnes } = lire(BLOC_1);
+    const par = (role) => colonnes.find((c) => c.role === role);
+
+    assert.equal(par("Exercice").entete, "Exercices");
+    assert.equal(par("Séries").entete, "Séries");
+    assert.equal(par("RPE").entete, "Intensités", "la colonne de RPE ne s'appelle pas « RPE »");
+    assert.equal(par("Charge").entete, "S1", "la colonne de charge ne s'appelle pas « Charge »");
+    assert.equal(par("Repos").entete, "Récupération");
+    assert.equal(par("Notes").entete, "Consignes");
+  });
+
+  test("une colonne double apparaît sous ses deux rôles", () => {
+    const colonnes = lire(BLOC_2).colonnes;
+    const doubles = colonnes.filter((c) => c.entete === "RPE/Charge").map((c) => c.role);
+    assert.deepEqual(doubles.sort(), ["Charge", "RPE"]);
+  });
+
+  test("la lecture est rendue même quand l'import réussit", () => {
+    // C'est justement quand l'import « marche » que la mauvaise
+    // correspondance passe inaperçue.
+    for (const tableau of [BLOC_1, BLOC_2, BLOC_3]) {
+      const { erreur, colonnes } = lire(tableau);
+      assert.equal(erreur, null);
+      assert.ok(colonnes.length >= 4, "trop peu de colonnes rendues : " + colonnes.length);
+      for (const c of colonnes) {
+        assert.ok(c.role && c.entete, JSON.stringify(c));
+      }
+    }
+  });
+});
