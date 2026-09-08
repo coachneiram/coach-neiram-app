@@ -75,12 +75,44 @@ const ROLES = [
   { role: "notes", prefixes: ["note", "notes", "consigne", "commentaire", "remarque", "repos", "tempo"] }
 ];
 
-/** Role d'un en-tete de colonne, ou null s'il n'en designe aucun. */
+/**
+ * Role d'un en-tete, en exigeant que le mot-cle OUVRE l'en-tete.
+ *
+ * LE PLURIEL EST ACCEPTE, et il a fallu un tableau reel pour s'en rendre
+ * compte : « Exercices » ne tombait sur rien, et l'import entier echouait
+ * sur un tableau parfaitement bien fait. Un coach ecrit ses colonnes au
+ * pluriel une fois sur deux — « Exercices », « Charges », « Séances » —
+ * et exiger le singulier revenait a exiger qu'il ecrive comme le code.
+ */
 export function roleDeColonne(entete) {
   const n = normaliser(entete);
   if (!n) return null;
   for (const { role, prefixes } of ROLES) {
-    if (prefixes.some((p) => n === p || n.startsWith(p + " "))) return role;
+    if (prefixes.some((p) => n === p || n === p + "s" || n.startsWith(p + " ") || n.startsWith(p + "s "))) {
+      return role;
+    }
+  }
+  return null;
+}
+
+/**
+ * Role d'un en-tete, en cherchant le mot-cle N'IMPORTE OU dedans.
+ *
+ * Deuxieme chance, jamais premiere : « Nom de l'exercice » et « Nombre de
+ * séries » sont des en-tetes parfaitement clairs pour un humain, et
+ * illisibles pour la regle stricte ci-dessus.
+ *
+ * Elle n'est pas utilisee seule parce qu'elle se trompe la ou la stricte ne
+ * se trompe pas : « Notes sur l'exercice » contient « exercice ». D'ou
+ * l'ordre — la passe stricte attribue d'abord, la large ne comble que ce
+ * qui reste, et jamais une colonne deja prise.
+ */
+export function roleDeColonneLarge(entete) {
+  const n = normaliser(entete);
+  if (!n) return null;
+  const mots = n.split(" ");
+  for (const { role, prefixes } of ROLES) {
+    if (prefixes.some((p) => mots.includes(p) || mots.includes(p + "s"))) return role;
   }
   return null;
 }
@@ -212,6 +244,99 @@ export function techniqueDepuisTexte(cellule) {
 }
 
 /**
+ * Separateurs d'une colonne DOUBLE, en-tete comme cellule.
+ *
+ * Un coach economise une colonne en ecrivant « RPE/Charge » et, en
+ * dessous, « 8 / 60 ». C'est parfaitement clair pour son client, et
+ * c'etait illisible ici : l'en-tete tombait sur « rpe », la cellule
+ * rendait son premier nombre, et LA CHARGE ETAIT PERDUE — c'est-a-dire
+ * la donnee pour laquelle on importe le tableau.
+ */
+const SEPARATEURS_DOUBLES = /\s*[/|+&]\s*|\s+et\s+/;
+
+/**
+ * Roles portes par un en-tete, dans l'ordre ou ils y sont ecrits.
+ *
+ * Rend presque toujours un seul role. Deux ou plus quand l'en-tete en
+ * nomme plusieurs — et l'ORDRE compte : c'est lui qui dit comment lire la
+ * cellule en dessous.
+ *
+ * Il faut DEUX ROLES DISTINCTS pour parler de colonne double : « Poids /
+ * Charge » nomme deux fois la meme chose, ce n'est qu'une colonne.
+ */
+export function rolesDeColonne(entete) {
+  const morceaux = String(entete == null ? "" : entete)
+    .split(SEPARATEURS_DOUBLES)
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  if (morceaux.length > 1) {
+    const roles = morceaux.map((x) => roleDeColonne(x) || roleDeColonneLarge(x));
+    if (new Set(roles.filter(Boolean)).size > 1) return roles;
+  }
+  return [roleDeColonne(entete)];
+}
+
+/** Tous les nombres d'une cellule, dans l'ordre. */
+export function nombresDeCellule(cellule) {
+  return String(cellule == null ? "" : cellule)
+    .replace(/,/g, ".")
+    .match(/-?\d+(?:\.\d+)?/g) || [];
+}
+
+/**
+ * Valeur d'un role dans une cellule qui en porte plusieurs.
+ *
+ * Deux lectures, dans cet ordre :
+ *
+ *  1. LA CELLULE EST DECOUPEE COMME SON EN-TETE. « 8 / 60 » sous
+ *     « RPE/Charge » donne deux morceaux, alignes sur les deux roles.
+ *     C'est le cas propre, et le plus frequent.
+ *  2. A DEFAUT, ON PREND LES NOMBRES DANS L'ORDRE. « RPE 8 — 60 kg »
+ *     n'a pas de separateur exploitable, mais ses deux nombres sont dans
+ *     l'ordre annonce par l'en-tete.
+ *
+ * Quand la cellule porte moins de valeurs que l'en-tete ne promet de
+ * roles, les derniers restent vides. On ne devine pas : attribuer un
+ * nombre solitaire au mauvais role est pire que ne rien attribuer.
+ */
+export function valeurDeRoleDouble(cellule, rang, nombreDeRoles) {
+  const brut = String(cellule == null ? "" : cellule).trim();
+  if (!brut) return "";
+
+  const morceaux = brut.split(SEPARATEURS_DOUBLES).map((x) => x.trim()).filter(Boolean);
+  if (morceaux.length === nombreDeRoles) return premierNombre(morceaux[rang]);
+
+  const nombres = nombresDeCellule(brut);
+  return nombres[rang] == null ? "" : nombres[rang];
+}
+
+/**
+ * Bornes de bon sens, appliquees a ce qui sort du tableau du coach.
+ *
+ * ELLES NE SONT PAS COSMETIQUES. Le RPE alimente la progression de charge
+ * : un « 60 » lu par erreur dans une colonne « RPE/Charge » mal ordonnee
+ * ne produirait pas un affichage bizarre, il enverrait le client sur une
+ * barre calculee a partir d'un ressenti qui n'existe pas. Une valeur hors
+ * bornes est donc ECARTEE, pas ramenee dans la plage : on ne sait pas ce
+ * qu'elle voulait dire.
+ */
+const BORNES = {
+  rpe: (v) => v >= 1 && v <= 10,
+  sets: (v) => v > 0 && v <= 30,
+  reps: (v) => v > 0 && v <= 500,
+  weight: (v) => v > 0 && v <= 500
+};
+
+export function valeurPlausible(champ, valeur) {
+  if (valeur === "" || valeur == null) return "";
+  const n = Number(valeur);
+  if (!Number.isFinite(n)) return "";
+  const borne = BORNES[champ];
+  return !borne || borne(n) ? valeur : "";
+}
+
+/**
  * Trouve la ligne d'en-tete et la correspondance colonne -> role.
  *
  * L'en-tete est la premiere ligne portant une colonne d'exercices : les
@@ -224,11 +349,43 @@ export function techniqueDepuisTexte(cellule) {
  * n'importe quoi en silence.
  */
 export function trouverEntete(lignes) {
+  // PASSE STRICTE D'ABORD, sur toutes les lignes. Une ligne dont une
+  // colonne s'appelle « Exercice » est un en-tete ; on ne va pas chercher
+  // plus loin, et surtout pas plus large.
   for (let i = 0; i < lignes.length; i++) {
-    const roles = lignes[i].map(roleDeColonne);
-    if (roles.includes("exercice")) return { index: i, roles };
+    const colonnes = lignes[i].map(rolesDeColonne);
+    if (colonnes.some((r) => r.includes("exercice"))) {
+      return { index: i, colonnes: completerRoles(lignes[i], colonnes) };
+    }
   }
+
+  // PASSE LARGE ENSUITE, et seulement si la stricte n'a rien donne.
+  for (let i = 0; i < lignes.length; i++) {
+    const colonnes = lignes[i].map((e) => [roleDeColonneLarge(e)]);
+    if (colonnes.some((r) => r.includes("exercice"))) return { index: i, colonnes };
+  }
+
   return null;
+}
+
+/**
+ * Complete les colonnes restees sans role par la reconnaissance large.
+ *
+ * Une colonne deja attribuee n'est jamais reprise, et un role deja pourvu
+ * n'est jamais attribue deux fois : sinon « Notes sur l'exercice » volerait
+ * la colonne d'exercices a la vraie.
+ */
+function completerRoles(ligne, colonnes) {
+  const pris = new Set(colonnes.flat().filter(Boolean));
+  return colonnes.map((roles, i) => {
+    if (roles.some(Boolean)) return roles;
+    const large = roleDeColonneLarge(ligne[i]);
+    if (large && !pris.has(large)) {
+      pris.add(large);
+      return [large];
+    }
+    return roles;
+  });
 }
 
 /**
@@ -246,11 +403,49 @@ export function trouverEntete(lignes) {
  */
 export function seancesDepuisTableau(lignes) {
   const entete = trouverEntete(lignes);
-  if (!entete) return { seances: [], erreur: "entete-absent" };
+  if (!entete) {
+    /*
+     * ON REND CE QU'ON A LU, pas seulement le fait d'avoir echoue.
+     *
+     * « Aucune colonne Exercice trouvée » ne dit pas au client ce que
+     * l'application a devant les yeux. Or les deux causes reelles se
+     * distinguent d'un coup d'oeil des qu'on montre la premiere ligne :
+     * un en-tete ecrit autrement, ou le mauvais onglet du classeur —
+     * l'export sans numero d'onglet rend toujours le premier, qui est
+     * souvent une page de garde.
+     */
+    return { seances: [], erreur: "entete-absent", entetesLus: lignes[0] || [] };
+  }
 
+  /**
+   * Ou lire chaque role : dans quelle colonne, et a quel rang si cette
+   * colonne en porte plusieurs. Calcule une fois pour tout le tableau.
+   */
+  const plan = {};
+  entete.colonnes.forEach((roles, index) => {
+    roles.forEach((role, rang) => {
+      if (role && !plan[role]) plan[role] = { index, rang, total: roles.length };
+    });
+  });
+
+  /** Contenu textuel d'un role : un nom d'exercice, une note, un libelle. */
   const colonne = (ligne, role) => {
-    const i = entete.roles.indexOf(role);
-    return i === -1 ? "" : (ligne[i] || "").trim();
+    const ou = plan[role];
+    return ou ? (ligne[ou.index] || "").trim() : "";
+  };
+
+  /**
+   * Valeur chiffree d'un role, bornee au bon sens.
+   *
+   * Une colonne simple rend son premier nombre, comme avant. Une colonne
+   * double rend celui qui correspond a sa position dans l'en-tete.
+   */
+  const nombre = (ligne, role, champ) => {
+    const ou = plan[role];
+    if (!ou) return "";
+    const cellule = ligne[ou.index] || "";
+    const brut = ou.total > 1 ? valeurDeRoleDouble(cellule, ou.rang, ou.total) : premierNombre(cellule);
+    return valeurPlausible(champ, brut);
   };
 
   const seances = [];
@@ -286,11 +481,11 @@ export function seancesDepuisTableau(lignes) {
     const exercice = {
       name: nomExercice,
       mode,
-      sets: premierNombre(colonne(ligne, "series")),
-      reps: premierNombre(colonne(ligne, "reps")),
-      weight: premierNombre(colonne(ligne, "charge")),
+      sets: nombre(ligne, "series", "sets"),
+      reps: nombre(ligne, "reps", "reps"),
+      weight: nombre(ligne, "charge", "weight"),
       repUnit: "reps",
-      rpe: premierNombre(colonne(ligne, "rpe"))
+      rpe: nombre(ligne, "rpe", "rpe")
     };
 
     if (technique && technique.technique === "superset") {
