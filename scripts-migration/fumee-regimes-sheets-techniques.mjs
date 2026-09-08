@@ -68,16 +68,30 @@ const PROFIL = {
  * desormais sur cette ecriture-la, qui est au moins aussi frequente que
  * l'autre — et le singulier reste couvert par les tests unitaires.
  */
+/*
+ * LA STRUCTURE REELLE D'UN TABLEAU DE COACH, et non une version idealisee.
+ *
+ * Ce n'est pas UN tableau : c'est une suite de blocs. Chaque journee a sa
+ * banniere, sa PROPRE ligne d'en-tete, et le tout commence par une
+ * legende. Le parcours porte donc sur tout ce qui a reellement echoue :
+ *
+ *  - une banniere « JOUR n » au-dessus du premier en-tete ;
+ *  - l'en-tete repete a chaque journee ;
+ *  - des en-tetes au pluriel, et « Intensités » pour le RPE ;
+ *  - une colonne double « RPE/Charge » ;
+ *  - une duree en secondes, qui n'est pas un nombre de repetitions.
+ */
 const TABLEAU_COLLE = [
-  "Programme Marien — bloc 3",
-  // Colonne DOUBLE « RPE/Charge », comme dans le tableau reel qui a fait
-  // echouer l'import : l'en-tete tombait sur le RPE seul et la charge
-  // etait perdue. Le parcours de fumee porte donc sur cette ecriture.
-  "Séances\tExercices\tSéries\tReps\tRPE/Charge\tTechnique",
-  "Haut du corps\tDéveloppé couché\t4\t8\t7,5 / 60\t",
-  "\tTirage horizontal\t4\t10\t8 / 50\tSuperset",
-  "\tÉlévations latérales\t3\t15\t7 / 8\tsuperset",
-  "Bas du corps\tSquat\t5\t5\t8 / 90\t"
+  "RPE = Difficulté",
+  "JOUR 1",
+  "Exercices\tSéries\tRépétitions\tRPE/Charge\tTechnique",
+  "Gainage\t3\t30 sec\t7\t",
+  "Développé couché\t4\t8\t7,5 / 60\t",
+  "Tirage horizontal\t4\t10\t8 / 50\tSuperset",
+  "Élévations latérales\t3\t15\t7 / 8\tsuperset",
+  "JOUR 2",
+  "Exercices\tSéries\tRépétitions\tRPE/Charge\tTechnique",
+  "Squat\t5\t5\t8 / 90\t"
 ].join("\n");
 
 async function ouvrir(profil, onglet) {
@@ -220,7 +234,9 @@ try {
   await page.waitForTimeout(500);
 
   texte = await corps(page);
-  verifier("aperçu : les deux séances lues", /HAUT DU CORPS/i.test(texte) && /BAS DU CORPS/i.test(texte));
+  verifier("aperçu : les deux journées séparées", /JOUR 1/i.test(texte) && /JOUR 2/i.test(texte));
+  verifier("aperçu : aucun en-tête répété importé", !/>\s*Exercices\s*</.test(texte) && !texte.includes("RPE = Difficulté"));
+  verifier("aperçu : « 30 sec » est une durée, pas 30 reps", /30 s\b/.test(texte), (texte.match(/Gainage[\s\S]{0,40}/) || [""])[0].replace(/\n/g, " "));
   verifier("aperçu : les charges du coach", /60 kg/.test(texte));
   verifier("aperçu : le superset reconnu", /superset A/i.test(texte));
 
@@ -230,8 +246,13 @@ try {
   const routines = await page.evaluate(() => JSON.parse(localStorage.getItem("coach_routines") || "[]"));
   verifier("2 séances types enregistrées", routines.length === 2, routines.map((r) => r.name).join(", "));
   verifier(
+    "les séances portent le nom des journées",
+    routines.every((r) => /^JOUR \d/.test(r.name)),
+    routines.map((r) => r.name).join(", ")
+  );
+  verifier(
     "les exercices sont dans la séance type",
-    routines.some((r) => r.exercises?.length === 3),
+    routines.some((r) => r.exercises?.length === 4),
     JSON.stringify(routines.map((r) => r.exercises?.length))
   );
 
@@ -241,7 +262,7 @@ try {
   // On demarre la seance importee : c'est le seul moyen de prouver que les
   // charges du coach arrivent bien dans le formulaire de saisie.
   // Le nom est mis en capitales par le style, pas dans le DOM.
-  await page.getByText("Haut du corps", { exact: true }).last().click();
+  await page.getByText("JOUR 1", { exact: true }).last().click();
   await page.waitForTimeout(600);
   const charges = await page.locator('input[type="number"]').evaluateAll((n) => n.map((x) => x.value));
   verifier("les charges du Sheets pré-remplissent la séance", charges.includes("60"), charges.join(","));
