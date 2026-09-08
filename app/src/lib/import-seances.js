@@ -1,0 +1,411 @@
+/**
+ * Import d'un programme depuis le Google Sheets du coach.
+ *
+ * POURQUOI CE FICHIER EXISTE. Un client en mode « Google Sheets » a son
+ * programme ailleurs : l'application ne lui servait qu'a POINTER ses
+ * seances. S'il voulait retrouver ses exercices dans l'application — pour
+ * la progression de charge, l'historique, les records — il devait les
+ * recopier un par un, seance par seance, semaine apres semaine. Personne ne
+ * le fait deux fois.
+ *
+ * Ce module lit le tableau du coach et en tire des seances types. Il ne
+ * remplace rien : le pointage continue de fonctionner exactement comme
+ * avant, meme si rien n'est jamais importe.
+ *
+ * DEUX CHEMINS D'ENTREE, et c'est volontaire :
+ *
+ *  1. LE LIEN. On telecharge la feuille en CSV. Cela ne marche que si le
+ *     document est partage « toute personne disposant du lien », ce qui
+ *     n'est pas le cas par defaut chez Google.
+ *  2. LE COLLAGE. Le client ouvre son Sheets, selectionne, copie, colle.
+ *     Cela marche toujours, y compris sur un document strictement prive,
+ *     et c'est la raison pour laquelle ce chemin n'est pas un repli
+ *     honteux mais un mode a part entiere.
+ *
+ * Tout ici est pur : aucune ecriture, aucun etat. L'ecran decide quoi
+ * faire du resultat.
+ */
+
+/** Nom donne a une seance quand le tableau n'en designe aucun. */
+export const NOM_SEANCE_PAR_DEFAUT = "Séance importée";
+
+/** Groupes de superset attribues automatiquement, dans cet ordre. */
+const LETTRES_SUPERSET = ["A", "B", "C", "D", "E", "F"];
+
+/** Au-dela, ce n'est plus un programme : c'est un export de tout un classeur. */
+const MAX_SEANCES = 40;
+const MAX_EXERCICES_PAR_SEANCE = 60;
+
+/**
+ * Reduit un libelle a sa forme comparable : sans accents, sans ponctuation.
+ *
+ * Meme principe que cleExercice dans constructeur-seances.js. Duplique
+ * plutot qu'importe : les deux fonctions repondent a deux besoins qui
+ * n'ont aucune raison d'evoluer ensemble.
+ */
+export const normaliser = (texte) =>
+  String(texte == null ? "" : texte)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/**
+ * Roles de colonnes reconnus, et les en-tetes qui les designent.
+ *
+ * La comparaison se fait sur la forme normalisee ET par debut de chaine :
+ * « Séries prévues », « Charge (kg) » ou « Reps / série » doivent tomber
+ * sur le bon role sans qu'il faille les enumerer.
+ *
+ * L'ORDRE COMPTE. « rpe » est teste avant « reps » — sinon rien, mais
+ * « charge » est teste avant « serie », et « exercice » avant tout le
+ * reste, parce qu'un en-tete « Exercice / Série » ne doit pas devenir une
+ * colonne de series.
+ */
+const ROLES = [
+  { role: "exercice", prefixes: ["exercice", "mouvement", "exo"] },
+  { role: "seance", prefixes: ["seance", "jour", "programme", "entrainement", "bloc", "session"] },
+  { role: "mode", prefixes: ["mode", "type"] },
+  { role: "technique", prefixes: ["technique", "methode", "intensification"] },
+  { role: "charge", prefixes: ["charge", "poids", "kg"] },
+  { role: "series", prefixes: ["serie", "series", "set", "sets", "nb serie"] },
+  { role: "reps", prefixes: ["rep", "reps", "repetition", "repetitions"] },
+  { role: "rpe", prefixes: ["rpe"] },
+  { role: "notes", prefixes: ["note", "notes", "consigne", "commentaire", "remarque", "repos", "tempo"] }
+];
+
+/** Role d'un en-tete de colonne, ou null s'il n'en designe aucun. */
+export function roleDeColonne(entete) {
+  const n = normaliser(entete);
+  if (!n) return null;
+  for (const { role, prefixes } of ROLES) {
+    if (prefixes.some((p) => n === p || n.startsWith(p + " "))) return role;
+  }
+  return null;
+}
+
+/**
+ * Decoupe un tableau colle ou telecharge en lignes et en cellules.
+ *
+ * Accepte le CSV (telechargement) et le TSV (copier-coller depuis Google
+ * Sheets, qui met des tabulations). Le separateur est celui qui domine sur
+ * TOUT le texte, pas sur la premiere ligne : un Sheets de coach commence
+ * souvent par un titre libre (« Programme Marien — bloc 3 »), qui ne
+ * contient ni tabulation ni virgule et ne dit donc rien du tableau.
+ * Compter sur l'ensemble evite aussi de couper un libelle contenant une
+ * virgule (« Développé couché, prise serrée ») dans un collage en
+ * tabulations.
+ *
+ * Les guillemets sont geres, doublement compris (« "" » vaut un
+ * guillemet), parce que Google les pose des qu'une cellule contient une
+ * virgule ou un retour a la ligne — et une cellule de note en contient
+ * souvent.
+ */
+export function analyserTableau(texte) {
+  const brut = String(texte == null ? "" : texte).replace(/\r\n?/g, "\n").trim();
+  if (!brut) return [];
+
+  const tabulations = (brut.match(/\t/g) || []).length;
+  const virgules = (brut.match(/,/g) || []).length;
+  const separateur = tabulations > 0 && tabulations >= virgules ? "\t" : ",";
+
+  const lignes = [];
+  let ligne = [];
+  let cellule = "";
+  let dansGuillemets = false;
+
+  for (let i = 0; i < brut.length; i++) {
+    const c = brut[i];
+
+    if (dansGuillemets) {
+      if (c === '"') {
+        if (brut[i + 1] === '"') {
+          cellule += '"';
+          i++;
+        } else {
+          dansGuillemets = false;
+        }
+      } else {
+        cellule += c;
+      }
+      continue;
+    }
+
+    if (c === '"') dansGuillemets = true;
+    else if (c === separateur) {
+      ligne.push(cellule.trim());
+      cellule = "";
+    } else if (c === "\n") {
+      ligne.push(cellule.trim());
+      lignes.push(ligne);
+      ligne = [];
+      cellule = "";
+    } else cellule += c;
+  }
+
+  ligne.push(cellule.trim());
+  lignes.push(ligne);
+
+  // Une ligne entierement vide est une separation visuelle dans le Sheets
+  // du coach, pas une donnee.
+  return lignes.filter((l) => l.some((c) => c !== ""));
+}
+
+/** Premier nombre d'une cellule (« 8-10 » donne 8, « 60 kg » donne 60). */
+export function premierNombre(cellule) {
+  const m = String(cellule == null ? "" : cellule).replace(",", ".").match(/-?\d+(?:\.\d+)?/);
+  return m ? m[0] : "";
+}
+
+/**
+ * Mode d'exercice designe par une cellule « type » ou « mode ».
+ *
+ * Rend null quand la cellule ne designe rien de connu : l'appelant garde
+ * alors « muscu », qui est le cas de tres loin le plus frequent.
+ */
+export function modeDepuisTexte(cellule) {
+  const n = normaliser(cellule);
+  if (!n) return null;
+  if (/cardio|course|velo|rameur|tapis|elliptique/.test(n)) return "cardio";
+  if (/pdc|poids de corps|poids du corps|bodyweight/.test(n)) return "pdc";
+  if (/force|powerlifting|pl/.test(n)) return "powerlifting";
+  if (/echauffement|warm/.test(n)) return "warmup";
+  if (/muscu|hypertrophie|renfo/.test(n)) return "muscu";
+  return null;
+}
+
+/**
+ * Technique d'intensification decrite par une cellule de texte libre.
+ *
+ * Le coach ecrit « superset avec le suivant », « SS A », « dégressive x2
+ * -20% », « drop set ». On ne cherche pas a tout comprendre : on cherche
+ * les deux techniques que l'application sait representer, et les chiffres
+ * qui vont avec.
+ *
+ * Rend null quand rien n'est reconnu — y compris sur une cellule remplie.
+ * Une note qui n'est pas une technique reste une note.
+ */
+export function techniqueDepuisTexte(cellule) {
+  const brut = String(cellule == null ? "" : cellule);
+  const n = normaliser(brut);
+  if (!n) return null;
+
+  if (/\bsuper ?set\b|\bss\b|\bbi ?set\b/.test(n)) {
+    // « superset A » ou « SS B » : la lettre isolee en fin de mention est
+    // le groupe. Une lettre collee a un mot n'en est pas une.
+    const m = n.match(/(?:super ?set|ss|bi ?set)\s+([a-f])\b/);
+    return { technique: "superset", supersetGroupe: m ? m[1].toUpperCase() : null };
+  }
+
+  if (/degress|drop ?set/.test(n)) {
+    const paliers = n.match(/x\s*(\d)|(\d)\s*(?:baisse|palier|drop)/);
+    const pct = brut.match(/(\d{1,2})\s*%/);
+    return {
+      technique: "degressive",
+      degressivePaliers: paliers ? Number(paliers[1] || paliers[2]) : 2,
+      degressiveBaissePct: pct ? Number(pct[1]) : 20
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Trouve la ligne d'en-tete et la correspondance colonne -> role.
+ *
+ * L'en-tete est la premiere ligne portant une colonne d'exercices : les
+ * Sheets de coach commencent souvent par un titre, un nom de client ou une
+ * ligne vide, et rien ne dit que le tableau demarre en A1.
+ *
+ * Rend null quand aucune ligne ne designe d'exercices. C'est le seul cas
+ * ou l'import refuse de deviner : sans colonne d'exercices, il n'y a pas de
+ * seance a construire, et inventer une convention conduirait a importer
+ * n'importe quoi en silence.
+ */
+export function trouverEntete(lignes) {
+  for (let i = 0; i < lignes.length; i++) {
+    const roles = lignes[i].map(roleDeColonne);
+    if (roles.includes("exercice")) return { index: i, roles };
+  }
+  return null;
+}
+
+/**
+ * Seances types deduites d'un tableau deja decoupe.
+ *
+ * Chaque ligne portant un nom d'exercice devient un exercice. La colonne
+ * de seance change de seance quand elle est remplie, et prolonge la
+ * precedente quand elle est vide — c'est ainsi qu'un tableau de coach est
+ * ecrit : le nom de la seance n'est repete qu'une fois.
+ *
+ * LES GROUPES DE SUPERSET SONT DEDUITS DE LA SUITE DES LIGNES quand le
+ * coach ne les nomme pas : deux exercices marques superset qui se suivent
+ * forment un groupe, un exercice normal entre les deux le referme. C'est
+ * exactement la convention d'ecriture d'un programme papier.
+ */
+export function seancesDepuisTableau(lignes) {
+  const entete = trouverEntete(lignes);
+  if (!entete) return { seances: [], erreur: "entete-absent" };
+
+  const colonne = (ligne, role) => {
+    const i = entete.roles.indexOf(role);
+    return i === -1 ? "" : (ligne[i] || "").trim();
+  };
+
+  const seances = [];
+  let courante = null;
+  let precedentEnSuperset = false;
+  let lettre = 0;
+
+  for (const ligne of lignes.slice(entete.index + 1)) {
+    const nomExercice = colonne(ligne, "exercice");
+    const nomSeance = colonne(ligne, "seance");
+
+    // Une ligne sans exercice mais avec un nom de seance ouvre la seance
+    // suivante : beaucoup de tableaux mettent le titre sur sa propre ligne.
+    if (nomSeance && (!courante || normaliser(nomSeance) !== normaliser(courante.nom))) {
+      if (seances.length >= MAX_SEANCES) break;
+      courante = { nom: nomSeance, exercises: [] };
+      seances.push(courante);
+      precedentEnSuperset = false;
+      lettre = 0;
+    }
+
+    if (!nomExercice) continue;
+
+    if (!courante) {
+      courante = { nom: NOM_SEANCE_PAR_DEFAUT, exercises: [] };
+      seances.push(courante);
+    }
+    if (courante.exercises.length >= MAX_EXERCICES_PAR_SEANCE) continue;
+
+    const technique = techniqueDepuisTexte(colonne(ligne, "technique") || colonne(ligne, "notes"));
+    const mode = modeDepuisTexte(colonne(ligne, "mode")) || "muscu";
+
+    const exercice = {
+      name: nomExercice,
+      mode,
+      sets: premierNombre(colonne(ligne, "series")),
+      reps: premierNombre(colonne(ligne, "reps")),
+      weight: premierNombre(colonne(ligne, "charge")),
+      repUnit: "reps",
+      rpe: premierNombre(colonne(ligne, "rpe"))
+    };
+
+    if (technique && technique.technique === "superset") {
+      if (technique.supersetGroupe) {
+        exercice.supersetGroupe = technique.supersetGroupe;
+        lettre = Math.max(lettre, LETTRES_SUPERSET.indexOf(technique.supersetGroupe) + 1);
+      } else {
+        if (!precedentEnSuperset) lettre = Math.min(lettre + 1, LETTRES_SUPERSET.length);
+        exercice.supersetGroupe = LETTRES_SUPERSET[lettre - 1];
+      }
+      exercice.technique = "superset";
+      precedentEnSuperset = true;
+    } else {
+      precedentEnSuperset = false;
+      if (technique) Object.assign(exercice, technique);
+    }
+
+    courante.exercises.push(exercice);
+  }
+
+  const retenues = seances.filter((s) => s.exercises.length);
+  return { seances: retenues, erreur: retenues.length ? null : "aucun-exercice" };
+}
+
+/** Chaine complete : d'un texte colle ou telecharge aux seances types. */
+export function seancesDepuisTexte(texte) {
+  return seancesDepuisTableau(analyserTableau(texte));
+}
+
+/**
+ * Identifiant du classeur et de l'onglet, extraits d'une URL Google Sheets.
+ *
+ * Deux formes existent, et elles ne se telechargent pas de la meme facon :
+ * l'URL d'edition (/spreadsheets/d/ID/edit) et l'URL de publication
+ * (/spreadsheets/d/e/2PACX-.../pubhtml), que Google delivre quand on choisit
+ * « Publier sur le Web ».
+ */
+export function identifiantFeuille(url) {
+  const brut = String(url == null ? "" : url).trim();
+  if (!/docs\.google\.com/.test(brut)) return null;
+
+  const gid = (brut.match(/[#?&]gid=(\d+)/) || [])[1] || null;
+
+  const publie = brut.match(/\/spreadsheets\/d\/e\/([A-Za-z0-9_-]+)/);
+  if (publie) return { id: publie[1], publie: true, gid };
+
+  const edition = brut.match(/\/spreadsheets\/d\/([A-Za-z0-9_-]+)/);
+  if (edition) return { id: edition[1], publie: false, gid };
+
+  return null;
+}
+
+/**
+ * URLs a essayer pour telecharger la feuille en CSV, dans l'ordre.
+ *
+ * Aucune des deux n'est fiable a elle seule : /gviz/tq repond a des
+ * documents partages par lien, /export?format=csv passe parfois quand
+ * l'autre echoue. On les essaie l'une apres l'autre plutot que de parier.
+ */
+export function urlsExportCsv(url) {
+  const feuille = identifiantFeuille(url);
+  if (!feuille) return [];
+
+  const suffixeGid = feuille.gid ? "&gid=" + feuille.gid : "";
+  if (feuille.publie) {
+    return ["https://docs.google.com/spreadsheets/d/e/" + feuille.id + "/pub?output=csv" + suffixeGid];
+  }
+  return [
+    "https://docs.google.com/spreadsheets/d/" + feuille.id + "/gviz/tq?tqx=out:csv" + suffixeGid,
+    "https://docs.google.com/spreadsheets/d/" + feuille.id + "/export?format=csv" + suffixeGid
+  ];
+}
+
+/** Une reponse Google qui commence par du HTML est une page de connexion. */
+const estPageHtml = (texte) => /^\s*<(?:!doctype|html|head|meta)/i.test(String(texte || ""));
+
+/**
+ * Telecharge la feuille et rend son contenu CSV.
+ *
+ * NE LANCE JAMAIS. Un import qui echoue n'est pas une panne : c'est le cas
+ * courant, parce qu'un Google Sheets est prive par defaut et que le
+ * navigateur bloque alors la lecture. L'appelant a besoin de savoir
+ * POURQUOI pour proposer le collage, d'ou une raison plutot qu'une
+ * exception.
+ *
+ * Raisons possibles :
+ *  - « url-invalide »  : ce n'est pas un lien Google Sheets ;
+ *  - « inaccessible »  : le document n'est pas partagé par lien ;
+ *  - « reseau »        : hors ligne, ou requete bloquee par le navigateur.
+ */
+export async function telechargerFeuille(url, options = {}) {
+  const recuperer = options.fetchImpl || (typeof fetch === "function" ? fetch : null);
+  const urls = urlsExportCsv(url);
+  if (!urls.length) return { ok: false, raison: "url-invalide" };
+  if (!recuperer) return { ok: false, raison: "reseau" };
+
+  let raison = "reseau";
+  for (const candidate of urls) {
+    try {
+      const reponse = await recuperer(candidate);
+      if (!reponse || !reponse.ok) {
+        raison = "inaccessible";
+        continue;
+      }
+      const texte = await reponse.text();
+      if (!texte || !texte.trim() || estPageHtml(texte)) {
+        raison = "inaccessible";
+        continue;
+      }
+      return { ok: true, texte };
+    } catch (e) {
+      // Une erreur levee par fetch est presque toujours le blocage
+      // d'origine croisee du navigateur, indiscernable d'une panne reseau.
+      raison = "reseau";
+    }
+  }
+  return { ok: false, raison };
+}

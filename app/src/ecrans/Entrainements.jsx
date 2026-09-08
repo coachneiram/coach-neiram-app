@@ -20,6 +20,7 @@
 import { enLigne } from "../lib/semaine.js";
 import { SEANCE_TEMPLATES } from "../lib/catalogues.js";
 import { ConstructeurSeances } from "./ConstructeurSeances.jsx";
+import { ImportSeancesSheets } from "./ImportSeancesSheets.jsx";
 import { Seances } from "./Seances.jsx";
 import { Creneaux } from "./Creneaux.jsx";
 import { SemaineDifficile } from "./SemaineDifficile.jsx";
@@ -38,7 +39,8 @@ export function Entrainements({
   planSemaine,
   onAssignerJour,
   maxisForce,
-  onDefinirMaxiForce
+  onDefinirMaxiForce,
+  onEnregistrerLienSheets
 }) {
   const enTete = enLigne(profile) ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 20 }}>
@@ -62,11 +64,41 @@ export function Entrainements({
 
   // Mode « Google Sheets » : le programme vit ailleurs, l'application ne
   // garde que le pointage.
+  //
+  // AJOUT POSTERIEUR A LA MIGRATION : le client peut desormais IMPORTER ce
+  // programme depuis son tableau, au lieu de le recopier exercice par
+  // exercice. Le pointage reste ce qu'il etait, et reste affiche en
+  // premier : c'est le geste quotidien. Le constructeur n'apparait qu'une
+  // fois des seances importees — sans import, l'ecran est identique a
+  // celui d'avant, a la carte d'import pres.
   if (profile?.trainingMode === "sheets") {
+    const importees = routinesApi.items.some((r) => r.source === "sheets");
     return (
       <>
         {enTete}
         <Seances sessionsApi={sessionsApi} profile={profile} />
+        <div style={{ marginTop: 20 }}>
+          <ImportSeancesSheets
+            routinesApi={routinesApi}
+            profile={profile}
+            onEnregistrerLien={onEnregistrerLienSheets}
+          />
+        </div>
+        {importees && (
+          <div style={{ marginTop: 20 }}>
+            <ProgressionCharges sessions={sessionsApi.items} />
+            <Records sessions={sessionsApi.items} />
+            <ConstructeurSeances
+              routinesApi={routinesApi}
+              sessionsApi={sessionsApi}
+              plOn={profile?.goal === "performance"}
+              planSemaine={planSemaine}
+              onAssignerJour={onAssignerJour}
+              maxisForce={maxisForce}
+              onDefinirMaxiForce={onDefinirMaxiForce}
+            />
+          </div>
+        )}
       </>
     );
   }

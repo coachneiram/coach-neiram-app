@@ -28,10 +28,14 @@ import {
 import {
   ajouterDepuisBibliotheque,
   cleExercice,
+  DEGRESSIVE_PAR_DEFAUT,
   exerciceVide,
   fusionnerExercicesPerso,
+  GROUPES_SUPERSET,
+  paliersDegressifs,
   preparerSeance,
   resumeExercice,
+  TECHNIQUES_SERIE,
   videoExercice
 } from "../lib/constructeur-seances.js";
 import { charger, enregistrer } from "../lib/stockage.js";
@@ -64,6 +68,15 @@ const champCompact = {
   fontFamily: "Inter",
   fontSize: 13,
   outline: "none"
+};
+
+/** Note sous les champs de technique : elle explique ce qui va etre fait. */
+const styleNoteTechnique = {
+  fontSize: 10.5,
+  color: COLORS.textFaint,
+  fontFamily: "IBM Plex Mono",
+  margin: "5px 0 0",
+  lineHeight: 1.4
 };
 
 const styleEtiquette = {
@@ -170,6 +183,29 @@ export function ConstructeurSeances({
     const suivants = [...seanceEditee.exercises];
     suivants[i] = { ...suivants[i], ...correctif };
     setSeanceEditee({ ...seanceEditee, exercises: suivants });
+  };
+
+  /**
+   * Change la technique d'un exercice, en posant ses valeurs de depart.
+   *
+   * Sans pre-remplissage, cocher « Dégressive » n'affiche rien : le client
+   * voit deux champs vides et doit deviner ce qu'on attend. Les valeurs
+   * posees sont celles que Coach Neiram programme le plus souvent, et
+   * restent modifiables.
+   */
+  const changerTechnique = (i, technique) => {
+    const ex = seanceEditee.exercises[i];
+    if (technique === "superset") {
+      modifierExercice(i, { technique, supersetGroupe: ex.supersetGroupe || GROUPES_SUPERSET[0] });
+    } else if (technique === "degressive") {
+      modifierExercice(i, {
+        technique,
+        degressivePaliers: ex.degressivePaliers ?? DEGRESSIVE_PAR_DEFAUT.paliers,
+        degressiveBaissePct: ex.degressiveBaissePct ?? DEGRESSIVE_PAR_DEFAUT.baissePct
+      });
+    } else {
+      modifierExercice(i, { technique: "" });
+    }
   };
 
   const retirerExercice = (i) => {
@@ -625,6 +661,101 @@ export function ConstructeurSeances({
                           </div>
                         )}
                       </div>
+
+                      {/* TEXTE-NOUVEAU
+                          Superset et dégressive n'existaient nulle part dans
+                          l'application : ils ne pouvaient s'écrire que dans les
+                          notes libres de la séance, donc rien n'en remontait au
+                          coach ni d'une semaine sur l'autre. Ces libellés sont
+                          nouveaux par construction, aucun n'a d'équivalent dans
+                          index.html.
+                      */}
+                      {mode !== "cardio" && (
+                        <div style={{ marginTop: 8 }}>
+                          <div style={styleEtiquette}>Technique</div>
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                            <select
+                              value={ex.technique || ""}
+                              onChange={(e) => changerTechnique(i, e.target.value)}
+                              style={{ ...champCompact, padding: "8px 4px", flex: 1, minWidth: 130 }}
+                            >
+                              <option value="">Série classique</option>
+                              {TECHNIQUES_SERIE.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.label}
+                                </option>
+                              ))}
+                            </select>
+
+                            {ex.technique === "superset" && (
+                              <select
+                                aria-label="Groupe de superset"
+                                value={ex.supersetGroupe || GROUPES_SUPERSET[0]}
+                                onChange={(e) => modifierExercice(i, { supersetGroupe: e.target.value })}
+                                style={{ ...champCompact, padding: "8px 4px", width: 96, flexShrink: 0 }}
+                              >
+                                {GROUPES_SUPERSET.map((g) => (
+                                  <option key={g} value={g}>
+                                    Groupe {g}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+
+                            {ex.technique === "degressive" && (
+                              <>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="6"
+                                  aria-label="Nombre de baisses"
+                                  placeholder="2"
+                                  value={ex.degressivePaliers ?? ""}
+                                  onChange={(e) => modifierExercice(i, { degressivePaliers: e.target.value })}
+                                  style={{ ...champCompact, width: 62, flexShrink: 0, textAlign: "center" }}
+                                />
+                                <input
+                                  type="number"
+                                  min="5"
+                                  max="90"
+                                  step="5"
+                                  aria-label="Baisse de charge en pourcentage"
+                                  placeholder="20"
+                                  value={ex.degressiveBaissePct ?? ""}
+                                  onChange={(e) => modifierExercice(i, { degressiveBaissePct: e.target.value })}
+                                  style={{ ...champCompact, width: 70, flexShrink: 0, textAlign: "center" }}
+                                />
+                                <span style={{ fontSize: 11, color: COLORS.textFaint, flexShrink: 0 }}>
+                                  baisses de %
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          {ex.technique === "superset" && (
+                            <p style={styleNoteTechnique}>
+                              Enchaîné sans repos avec les autres exercices marqués groupe{" "}
+                              {ex.supersetGroupe || GROUPES_SUPERSET[0]}.
+                            </p>
+                          )}
+
+                          {ex.technique === "degressive" &&
+                            (paliersDegressifs(ex.weight, ex.degressivePaliers, ex.degressiveBaissePct).length ? (
+                              <p style={styleNoteTechnique}>
+                                Après la série :{" "}
+                                {paliersDegressifs(ex.weight, ex.degressivePaliers, ex.degressiveBaissePct)
+                                  .map((kg) => kg + " kg")
+                                  .join(" puis ")}
+                                , sans repos.
+                              </p>
+                            ) : (
+                              <p style={styleNoteTechnique}>
+                                Saisis la charge de départ pour voir les charges de chaque baisse.
+                              </p>
+                            ))}
+                        </div>
+                      )}
+                      {/* FIN-TEXTE-NOUVEAU */}
                     </div>
                   );
                 })}

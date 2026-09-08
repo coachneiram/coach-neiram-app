@@ -12,7 +12,7 @@
 import { COLORS } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
 import { JOURS_SEMAINE, uid } from "../lib/semaine.js";
-import { ACTIVITY_LEVELS, GOALS, PERFORMANCE_DIRECTIONS } from "../lib/nutrition.js";
+import { ACTIVITY_LEVELS, GOALS, PERFORMANCE_DIRECTIONS, estFaibleEnGlucides } from "../lib/nutrition.js";
 import { HABITUDES_PESEE } from "../lib/fibres.js";
 import { ALLERGENS, COACHING_MODES, DIET_TYPES, TRAINING_MODES } from "../lib/catalogues.js";
 import { Btn, Field, IconBtn, NumberInput, SelectInput, TextInput } from "../ui/primitives.jsx";
@@ -319,6 +319,20 @@ export function ChampsProfil({ value, onChange }) {
           value={value.dietType || "aucun"}
           onChange={(e) => set({ dietType: e.target.value })}
         />
+        {/* TEXTE-NOUVEAU
+            Le kéto ne filtrait que les aliments proposés : les objectifs du
+            jour restaient ceux de tout le monde, glucides compris. La
+            répartition est désormais recalculée, et le client doit voir
+            immédiatement ce que cocher cette case change pour lui — sinon
+            il découvre des macros inhabituelles sans en connaître la cause.
+        */}
+        {estFaibleEnGlucides(value) && (
+          <p style={styleAide}>
+            Objectifs recalculés : tes glucides descendent à 20 à 50 g par jour et tes lipides absorbent le
+            reste de tes calories. Tes protéines et ton total calorique, eux, ne changent pas.
+          </p>
+        )}
+        {/* FIN-TEXTE-NOUVEAU */}
       </Field>
 
       <Field label="Allergies / intolérances">

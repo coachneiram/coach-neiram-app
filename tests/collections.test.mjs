@@ -122,6 +122,65 @@ describe("collection d'entrees", () => {
   });
 });
 
+describe("ajout avec remplacement", () => {
+  /*
+   * Ajoute pour l'import du programme depuis le Google Sheets du coach. Un
+   * client reimporte son tableau a chaque bloc : sans remplacement, il se
+   * retrouverait avec « Haut du corps » en trois exemplaires.
+   */
+  const parNom = (r) => r.name;
+
+  test("une entree existante est remplacee, pas dupliquee", () => {
+    const etat = etatSimule([{ id: "a", name: "Haut du corps", exercises: ["ancien"] }]);
+    collectionApi(CLE, etat.items, etat.setItems).replaceMany(
+      [{ name: "Haut du corps", exercises: ["nouveau"] }],
+      parNom
+    );
+
+    assert.equal(etat.items.length, 1);
+    assert.deepEqual(etat.items[0].exercises, ["nouveau"]);
+  });
+
+  test("l'identifiant est conserve : l'historique des seances y renvoie", () => {
+    const etat = etatSimule([{ id: "a", name: "Haut du corps" }]);
+    collectionApi(CLE, etat.items, etat.setItems).replaceMany([{ name: "Haut du corps" }], parNom);
+    assert.equal(etat.items[0].id, "a", "changer l'identifiant orphelinerait tout le passé");
+  });
+
+  test("ce que le client a cree a la main n'est pas touche", () => {
+    const etat = etatSimule([
+      { id: "a", name: "Haut du corps" },
+      { id: "perso", name: "Ma séance à moi" }
+    ]);
+    collectionApi(CLE, etat.items, etat.setItems).replaceMany(
+      [{ name: "Haut du corps" }, { name: "Bas du corps" }],
+      parNom
+    );
+
+    assert.equal(etat.items.length, 3);
+    assert.ok(etat.items.some((x) => x.id === "perso"), "une séance personnelle a disparu");
+  });
+
+  test("plusieurs entrees passent en une seule ecriture", () => {
+    // Meme piege que pour addMany : `items` est fige au rendu. Enchainer
+    // update puis add ne garderait que la derniere operation.
+    const etat = etatSimule([{ id: "a", name: "A" }]);
+    collectionApi(CLE, etat.items, etat.setItems).replaceMany(
+      [{ name: "A", v: 1 }, { name: "B" }, { name: "C" }],
+      parNom
+    );
+
+    assert.equal(etat.items.length, 3);
+    assert.deepEqual(charger(CLE, []).length, 3);
+  });
+
+  test("une liste vide n'ecrit rien", () => {
+    const etat = etatSimule([{ id: "a", name: "A" }]);
+    collectionApi(CLE, etat.items, etat.setItems).replaceMany([], parNom);
+    assert.equal(etat.items.length, 1);
+  });
+});
+
 describe("journal a une entree par date", () => {
   test("une premiere saisie cree l'entree du jour", () => {
     const etat = etatSimule();
