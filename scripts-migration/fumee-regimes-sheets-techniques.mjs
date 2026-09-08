@@ -226,6 +226,28 @@ try {
   page = await ouvrir({ ...PROFIL, trainingMode: "sheets" }, "Séances");
   texte = await corps(page);
   verifier("la carte d'import est présente", /importer mes séances/i.test(texte));
+
+  /*
+   * ALIGNEMENT DE LA RANGEE HEURE / DUREE / RPE.
+   *
+   * C'est la seule rangee que le client remplit apres CHAQUE seance, et
+   * elle partait en escalier : le libelle « Heure de début » passe sur
+   * deux lignes la ou « Durée » tient sur une, et le champ d'heure natif
+   * mesure quatre pixels de plus qu'un champ numerique. Aucun test
+   * unitaire ne peut voir cela — il faut mesurer la page rendue.
+   */
+  const rangee = await page
+    .locator('input[type="time"], input[placeholder="60"], input[max="10"]')
+    .evaluateAll((n) =>
+      n.map((x) => {
+        const r = x.getBoundingClientRect();
+        return { haut: Math.round(r.top), hauteur: Math.round(r.height), largeur: Math.round(r.width) };
+      })
+    );
+  const ecart = (cle) => Math.max(...rangee.map((c) => c[cle])) - Math.min(...rangee.map((c) => c[cle]));
+  verifier("les trois champs du pointage sont alignés", rangee.length === 3 && ecart("haut") === 0, ecart("haut") + " px d'écart");
+  verifier("ils ont la même taille", ecart("hauteur") === 0 && ecart("largeur") === 0,
+    rangee.map((c) => c.largeur + "×" + c.hauteur).join(" "));
   verifier("le pointage est toujours là", /pointer une séance/i.test(texte));
 
   await page.getByRole("button", { name: /Mon Sheets est privé/i }).click();

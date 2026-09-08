@@ -122,9 +122,24 @@ const styleChamp = {
   outline: "none"
 };
 
+/**
+ * Un libelle et son champ.
+ *
+ * `justifyContent` colle le contenu EN BAS de la case, et c'est ce qui
+ * aligne les champs quand plusieurs Field sont poses cote a cote dans une
+ * grille. Sans lui, un libelle qui passe sur deux lignes — « Heure de
+ * début » la ou le voisin dit « Durée » — descend son propre champ de
+ * quatorze pixels, et la rangee que le client remplit apres chaque seance
+ * part en escalier. Le defaut etait present sur trois ecrans a la fois :
+ * le pointage, le journal et les reglages.
+ *
+ * HORS GRILLE, CETTE LIGNE NE FAIT RIEN. Un Field seul est deja a la
+ * taille de son contenu : il n'a pas de place a distribuer. La correction
+ * ne se voit donc que la ou le probleme existait.
+ */
 export function Field({ label, children }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 6, marginBottom: 14 }}>
       <label
         style={{
           fontSize: 11.5,
