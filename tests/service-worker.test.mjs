@@ -61,6 +61,27 @@ const strategie = (url, options = {}) =>
     origineApp: APP
   });
 
+describe("la version du cache accompagne les changements de regle", () => {
+  /*
+   * Un service worker au contenu identique n'est JAMAIS reinstalle par le
+   * navigateur. Corriger une regle sans changer la version laisserait donc
+   * les clients deja figes appliquer l'ancienne : le correctif ne leur
+   * parviendrait jamais. Un octet different suffit a declencher
+   * l'installation, la purge de l'ancien cache, et le retour a une page
+   * fraiche.
+   */
+  test("le nom du cache porte une version, et elle a bougé depuis la panne", () => {
+    assert.match(sw.CACHE, /^coach-neiram-v\d+$/, "nom de cache sans version : " + sw.CACHE);
+    const numero = Number(sw.CACHE.replace("coach-neiram-v", ""));
+    assert.ok(numero >= 3, "la version doit être incrémentée pour décoincer les clients figés");
+  });
+
+  test("l'activation supprime les caches des versions précédentes", () => {
+    assert.match(source, /caches\.keys\(\)/, "aucune purge des anciens caches à l'activation");
+    assert.match(source, /startsWith\("coach-neiram-"\)/);
+  });
+});
+
 describe("ce qui ne doit JAMAIS etre intercepte", () => {
   test("les envois de pointage vers le proxy", () => {
     assert.equal(
@@ -121,6 +142,32 @@ describe("la page elle-meme : le reseau prime", () => {
 
   test("index.html passe par le reseau d'abord", () => {
     assert.equal(strategie(APP + "/index.html"), "reseau-d-abord");
+
+    /*
+     * LA PAGE SANS LE MODE « NAVIGATE ». C'est le correctif d'une panne
+     * reelle, restee invisible plusieurs heures.
+     *
+     * L'ancienne regle reconnaissait la page a trois signes : le mode
+     * « navigate », l'extension « .html », ou le chemin « / » EXACTEMENT.
+     * L'application n'etant pas servie a la racine d'un domaine mais sous
+     * /coach-neiram-app/, toute demande de la page arrivant sans ce mode
+     * — ce qui se produit sur iPhone quand l'application est installee sur
+     * l'ecran d'accueil et relancee — repartait du cache.
+     *
+     * Le client recevait l'ancienne page, qui pointe vers l'ancien paquet
+     * de code, lui aussi en cache. Rien n'echoue et rien ne s'affiche de
+     * travers : l'application tourne parfaitement, dans sa version d'il y
+     * a plusieurs heures, et peut le rester indefiniment.
+     *
+     * Le test d'origine passait : il ne verifiait ce chemin QU'AVEC le
+     * mode « navigate ».
+     */
+    assert.equal(
+      strategie(APP + "/coach-neiram-app/"),
+      "reseau-d-abord",
+      "la page servie depuis un sous-dossier repartait du cache, sans le mode navigate"
+    );
+    assert.equal(strategie(APP + "/coach-neiram-app/", { mode: "navigate" }), "reseau-d-abord");
   });
 
   test("c'est ce qui garantit qu'un correctif atteint le client", () => {

@@ -26,7 +26,18 @@
  * anciens caches sont supprimes automatiquement a l'activation.
  */
 
-const VERSION = "v2";
+/*
+ * v3 : la regle qui distingue la page des ressources a change.
+ *
+ * Incrementer la version ne sert pas qu'a l'hygiene : c'est le SEUL moyen
+ * de decoincer les clients deja figes. Un service worker au contenu
+ * identique n'est jamais reinstalle par le navigateur — celui d'un client
+ * bloque continuerait donc a appliquer l'ancienne regle, et le correctif
+ * ci-dessous ne lui parviendrait jamais. Un octet different suffit a
+ * declencher l'installation, la purge de l'ancien cache, et le retour a
+ * une page fraiche.
+ */
+const VERSION = "v3";
 const CACHE = "coach-neiram-" + VERSION;
 
 /**
@@ -116,7 +127,26 @@ function strategiePour({ method, url, mode, origineApp }) {
   if (memeOrigine) {
     // La page elle-meme : toujours le reseau d'abord, pour qu'un correctif
     // parvienne au client des le chargement suivant.
-    if (mode === "navigate" || cible.pathname.endsWith(".html") || cible.pathname === "/") {
+    /*
+     * TOUTE ADRESSE QUI SE TERMINE PAR « / » EST LA PAGE, pas une
+     * ressource. C'est le correctif d'une panne reelle, et elle etait
+     * silencieuse.
+     *
+     * La regle ne reconnaissait la page qu'a trois signes : le mode
+     * « navigate », une extension « .html », ou le chemin « / » exactement.
+     * Or l'application n'est pas servie a la racine d'un domaine : elle
+     * vit sous /coach-neiram-app/. Des qu'une demande de la page arrivait
+     * SANS le mode « navigate » — ce qui se produit sur iPhone quand
+     * l'application est installee sur l'ecran d'accueil et relancee — elle
+     * tombait dans « revalidation », donc le CACHE D'ABORD.
+     *
+     * Le client recevait alors l'ancienne page, qui pointe vers l'ancien
+     * paquet de code, lui aussi en cache. Rien n'echoue, rien ne s'affiche
+     * de travers : l'application fonctionne parfaitement, dans sa version
+     * d'il y a plusieurs heures. Et comme la page n'est jamais rafraichie,
+     * elle peut le rester indefiniment.
+     */
+    if (mode === "navigate" || cible.pathname.endsWith(".html") || cible.pathname.endsWith("/")) {
       return "reseau-d-abord";
     }
     // Le reste des fichiers de l'application : affichage immediat depuis le
