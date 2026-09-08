@@ -74,7 +74,7 @@ const TABLEAU_COLLE = [
   // echouer l'import : l'en-tete tombait sur le RPE seul et la charge
   // etait perdue. Le parcours de fumee porte donc sur cette ecriture.
   "Séances\tExercices\tSéries\tReps\tRPE/Charge\tTechnique",
-  "Haut du corps\tDéveloppé couché\t4\t8\t8 / 60\t",
+  "Haut du corps\tDéveloppé couché\t4\t8\t7,5 / 60\t",
   "\tTirage horizontal\t4\t10\t8 / 50\tSuperset",
   "\tÉlévations latérales\t3\t15\t7 / 8\tsuperset",
   "Bas du corps\tSquat\t5\t5\t8 / 90\t"
@@ -261,6 +261,15 @@ try {
   texte = await corps(page);
   verifier("le champ Technique est proposé", /technique/i.test(texte));
 
+  // LE DEMI-RPE, SAISI A LA MAIN. Le champ du constructeur refusait le
+  // demi-point alors que celui du pointage l'acceptait : deux ecrans, deux
+  // comportements, sans que rien ne le signale.
+  const champRpe = page.locator('input[type="number"][max="10"][step="0.5"]').first();
+  verifier("le champ RPE accepte le demi-point", (await champRpe.count()) > 0);
+  await champRpe.fill("7.5");
+  await page.waitForTimeout(200);
+  verifier("la valeur saisie est conservée", (await champRpe.inputValue()) === "7.5");
+
   // Un exercice sans nom est ecarte a l'enregistrement — c'est voulu, et
   // c'est ce qui a fait echouer la premiere version de ce script.
   await page.getByPlaceholder("Exercice").first().fill("Curl barre EZ");
@@ -286,6 +295,7 @@ try {
   await page.waitForTimeout(600);
   texte = await corps(page);
   verifier("la technique remonte dans l'historique", /dégressive ×2/.test(texte));
+  verifier("le demi-RPE s'affiche à la française", /RPE 7,5/.test(texte), (texte.match(/RPE [\d,]+/) || [])[0] || "");
   await page.context().close();
 
   console.log("\n" + (erreurs.length ? "ERREURS JS : " + erreurs.join(" | ") : "aucune erreur JavaScript"));

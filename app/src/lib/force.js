@@ -22,6 +22,38 @@ import { num, round } from "./dates.js";
 /** Lignes de la table RPE, du plus dur au plus facile. */
 export const PALIERS_RPE = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5];
 
+/**
+ * Definition PARTAGEE d'un champ de saisie de RPE.
+ *
+ * POURQUOI ELLE EST PARTAGEE. Les trois champs de RPE de l'application
+ * etaient ecrits a la main, chacun de son cote — et ils avaient divergé
+ * sans que personne ne le voie : le pointage acceptait les demis, le
+ * constructeur de seances non. Un client qui notait 7,5 dans un ecran et
+ * 7 dans l'autre n'avait aucun moyen de comprendre pourquoi.
+ *
+ * LE DEMI-POINT EST LA GRANULARITE UTILE, et ce n'est pas une preference
+ * d'affichage : PALIERS_RPE ci-dessus, la table de correspondance
+ * RPE/pourcentage du 1RM et les seuils de progression de charge
+ * (PROGRESSION_RULES : 6,5 · 7,5 · 8,5 · 9,25) raisonnent tous au demi
+ * depuis le debut. Seule la saisie ne suivait pas. « Entre 7 et 8 » est
+ * la reponse la plus honnete que donne un pratiquant ; l'arrondir a
+ * l'entier jette la moitie de l'information qui sert a calculer sa
+ * prochaine charge.
+ */
+export const CHAMP_RPE = { type: "number", min: "1", max: "10", step: "0.5" };
+
+/**
+ * RPE affiche a la francaise : « 6,5 » et non « 6.5 ».
+ *
+ * Un champ `type="number"` stocke toujours le point decimal, quelle que
+ * soit la langue du clavier. Sans cette conversion, le client saisit
+ * « 6,5 » et se voit relire « 6.5 » dans son historique — et le coach le
+ * lit ainsi dans son bilan.
+ *
+ * Un entier reste un entier : « 8 » ne devient pas « 8,0 ».
+ */
+export const fmtRPE = (v) => (v === "" || v == null ? "" : String(v).replace(".", ","));
+
 export const RPE_CHART = {
   10: [100, 95.5, 92.2, 89.2, 86.3, 83.7, 81.1, 78.6, 76.2, 73.9, 70.7, 68],
   9.5: [97.8, 93.9, 90.7, 87.8, 85, 82.4, 79.9, 77.4, 75.1, 72.3, 69.4, 66.7],

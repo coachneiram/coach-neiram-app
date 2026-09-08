@@ -14,6 +14,7 @@ import { getWeekKey, getWeekRange } from "./semaine.js";
 import { bilanSemaine, semaineCreneaux } from "./creneaux.js";
 import { normaliserCreneaux } from "./semaine.js";
 import { bilanPlanSemaine, etatPlanSemaine, raisonSemaineDifficile, semaineDifficileDe } from "./plan-semaine.js";
+import { fmtRPE } from "./force.js";
 
 /** Longueur maximale d'une note reprise dans le bilan. */
 const LONGUEUR_NOTE = 140;
@@ -82,7 +83,7 @@ export function bilanHebdomadaire(cleSemaine, donnees, profil, objectifs) {
   const sessionNotes = seances
     .filter((s) => s.notes && String(s.notes).trim())
     .sort((a, b) => a.date.localeCompare(b.date))
-    .map((s) => `${fmtWeekShort(s.date)}${s.rpe ? ` (RPE ${s.rpe})` : ""} : « ${tronquer(s.notes)} »`)
+    .map((s) => `${fmtWeekShort(s.date)}${s.rpe ? ` (RPE ${fmtRPE(s.rpe)})` : ""} : « ${tronquer(s.notes)} »`)
     .slice(-4);
 
   // --- Douleurs, regroupees par zone : une gene legere mais recurrente

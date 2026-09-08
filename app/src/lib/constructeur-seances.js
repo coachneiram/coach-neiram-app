@@ -12,7 +12,7 @@
 
 import { num, round, todayISO } from "./dates.js";
 import { uid } from "./semaine.js";
-import { rpeFromRIR } from "./force.js";
+import { fmtRPE, rpeFromRIR } from "./force.js";
 import {
   DEFAULT_CARDIO_FIELDS,
   EXERCISE_LIBRARY,
@@ -336,7 +336,7 @@ export function resumeExercice(ex) {
 
   const unite = ex.repUnit === "sec" ? " s" : "";
   // Le RPE prime ; les RIR ne s'affichent qu'en son absence.
-  const rpe = ex.rpe ? ` · RPE ${ex.rpe}` : ex.rir !== "" && ex.rir != null ? ` · RIR ${ex.rir}` : "";
+  const rpe = ex.rpe ? ` · RPE ${fmtRPE(ex.rpe)}` : ex.rir !== "" && ex.rir != null ? ` · RIR ${ex.rir}` : "";
 
   // La technique se lit en queue de resume, apres le ressenti. Vide tant
   // qu'aucune technique n'est posee : les resumes existants ne bougent pas.

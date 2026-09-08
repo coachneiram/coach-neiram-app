@@ -39,6 +39,7 @@ import {
   videoExercice
 } from "../lib/constructeur-seances.js";
 import { charger, enregistrer } from "../lib/stockage.js";
+import { CHAMP_RPE } from "../lib/force.js";
 import { ForceAthletique } from "./ForceAthletique.jsx";
 import { PlanSemaine } from "./PlanSemaine.jsx";
 import {
@@ -638,9 +639,7 @@ export function ConstructeurSeances({
                             <div>
                               <div style={styleEtiquette}>RPE</div>
                               <input
-                                type="number"
-                                min="1"
-                                max="10"
+                                {...CHAMP_RPE}
                                 value={ex.rpe ?? ""}
                                 onChange={(e) => modifierExercice(i, { rpe: e.target.value })}
                                 style={champCompact}
@@ -788,8 +787,7 @@ export function ConstructeurSeances({
               </Field>
               <Field label="RPE (1-10)">
                 <NumberInput
-                  min={1}
-                  max={10}
+                  {...CHAMP_RPE}
                   value={seanceEditee.rpe}
                   onChange={(e) => setSeanceEditee({ ...seanceEditee, rpe: e.target.value })}
                 />
