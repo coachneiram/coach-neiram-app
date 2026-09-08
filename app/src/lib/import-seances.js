@@ -102,6 +102,67 @@ const ROLES = [
 ];
 
 /**
+ * Derniere ligne non vide d'une cellule d'en-tete.
+ *
+ * UNE CELLULE D'EN-TETE PEUT EN CONTENIR PLUSIEURS. C'est le cas des le
+ * moment ou le tableau contient des cellules fusionnees — une banniere
+ * « JOUR 1 » sur toute la largeur, un bloc « WARMUP », un titre
+ * « Charge » au-dessus des colonnes de semaines. Copiees depuis
+ * l'application Google Sheets, ces zones arrivent dans le presse-papiers
+ * comme UNE cellule contenant plusieurs lignes.
+ *
+ * L'en-tete se retrouvait alors colle a ce qui le surplombe :
+ *
+ *   « JOUR 1 ⏎ Séries »                        au lieu de « Séries »
+ *   « Explications ⏎ … ⏎ Charge ⏎ W1 »        au lieu de « W1 »
+ *
+ * Et le degat n'etait pas visible : « JOUR 1 Séries » commence par
+ * « jour », donc la colonne des SERIES etait lue comme la colonne des
+ * SEANCES. Le client obtenait quatorze seances nommees « 1 », « 3 »,
+ * « 4 » — ses nombres de series — et plus aucune serie nulle part.
+ *
+ * LA DERNIERE LIGNE EST LA BONNE : dans un tableur, ce qui surplombe une
+ * colonne vient avant elle. Le veritable en-tete est celui qui touche les
+ * donnees.
+ */
+export const derniereLigne = (cellule) => {
+  const lignes = String(cellule == null ? "" : cellule)
+    .split(/[\r\n]+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  return lignes.length ? lignes[lignes.length - 1] : "";
+};
+
+/**
+ * Lignes d'une cellule fusionnee SAUF la derniere : ce qui la surplombe.
+ *
+ * Le pendant de derniereLigne. Quand une banniere « JOUR 1 » et l'en-tete
+ * « Séries » n'occupent plus qu'une cellule, le nom de la seance est la,
+ * juste au-dessus de l'en-tete, dans la meme cellule.
+ */
+export const lignesAvalees = (cellule) =>
+  String(cellule == null ? "" : cellule)
+    .split(/[\r\n]+/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, -1);
+
+/**
+ * Premiere ligne non vide d'une cellule.
+ *
+ * Une banniere de seance peut, elle aussi, avoir avale l'en-tete repete
+ * qui la suit : « JOUR 2 ⏎ Exercices ». Le nom de la seance est alors la
+ * PREMIERE ligne — sans quoi la seance s'appelle « JOUR 2 Exercices ».
+ */
+export const premiereLigne = (cellule) => {
+  const lignes = String(cellule == null ? "" : cellule)
+    .split(/[\r\n]+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  return lignes.length ? lignes[0] : "";
+};
+
+/**
  * Role d'un en-tete, en exigeant que le mot-cle OUVRE l'en-tete.
  *
  * LE PLURIEL EST ACCEPTE, et il a fallu un tableau reel pour s'en rendre
@@ -111,7 +172,7 @@ const ROLES = [
  * et exiger le singulier revenait a exiger qu'il ecrive comme le code.
  */
 export function roleDeColonne(entete) {
-  const n = normaliser(entete);
+  const n = normaliser(derniereLigne(entete));
   if (!n) return null;
   for (const { role, prefixes } of ROLES) {
     if (prefixes.some((p) => n === p || n === p + "s" || n.startsWith(p + " ") || n.startsWith(p + "s "))) {
@@ -156,7 +217,7 @@ export function roleDeColonne(entete) {
  * qui reste, et jamais une colonne deja prise.
  */
 export function roleDeColonneLarge(entete) {
-  const n = normaliser(entete);
+  const n = normaliser(derniereLigne(entete));
   if (!n) return null;
   const mots = n.split(" ");
   for (const { role, prefixes } of ROLES) {
@@ -322,7 +383,7 @@ const SEPARATEURS_DOUBLES = /\s*[/|&]\s*|\s+et\s+/;
  * Charge » nomme deux fois la meme chose, ce n'est qu'une colonne.
  */
 export function rolesDeColonne(entete) {
-  const morceaux = String(entete == null ? "" : entete)
+  const morceaux = derniereLigne(entete)
     .split(SEPARATEURS_DOUBLES)
     .map((x) => x.trim())
     .filter(Boolean);
@@ -590,13 +651,32 @@ export function seancesDepuisTableau(lignes) {
    * pendant que les autres portent le leur. On remonte donc au-dessus de
    * l'en-tete pour la retrouver.
    */
-  for (let i = entete.index - 1; i >= 0; i--) {
-    const titre = (lignes[i] || []).find((c) => c && c.trim());
-    if (!titre) continue;
-    if (estTitreDeSeance(titre)) ouvrirSeance(titre.trim());
-    // On ne remonte pas plus haut qu'une ligne pleine : au-dessus, c'est
-    // la legende du tableau, pas son organisation.
-    break;
+  /*
+   * ELLE PEUT AUSSI AVOIR ETE AVALEE PAR L'EN-TETE LUI-MEME.
+   *
+   * Colle depuis Google Sheets, un tableau a cellules fusionnees rend
+   * « JOUR 1 ⏎ Séries » : la banniere et l'en-tete de la colonne
+   * n'occupent plus qu'une cellule, et la ligne au-dessus de l'en-tete
+   * n'existe plus. La seance s'appelait alors « Séance importée » alors
+   * que son nom etait la, une ligne plus haut dans la meme cellule.
+   */
+  for (const cellule of lignes[entete.index] || []) {
+    const avale = lignesAvalees(cellule).find((l) => estTitreDeSeance(l));
+    if (avale) {
+      ouvrirSeance(avale);
+      break;
+    }
+  }
+
+  if (!courante) {
+    for (let i = entete.index - 1; i >= 0; i--) {
+      const titre = (lignes[i] || []).find((c) => c && c.trim());
+      if (!titre) continue;
+      if (estTitreDeSeance(titre)) ouvrirSeance(premiereLigne(titre));
+      // On ne remonte pas plus haut qu'une ligne pleine : au-dessus, c'est
+      // la legende du tableau, pas son organisation.
+      break;
+    }
   }
 
   for (const ligne of lignes.slice(entete.index + 1)) {
@@ -616,7 +696,7 @@ export function seancesDepuisTableau(lignes) {
      */
     const premiereCellule = ligne.find((c) => c && c.trim());
     if (premiereCellule && estTitreDeSeance(premiereCellule)) {
-      ouvrirSeance(premiereCellule.trim());
+      ouvrirSeance(premiereLigne(premiereCellule));
       continue;
     }
 
@@ -766,7 +846,7 @@ export function colonnesLues(entete, ligne) {
   if (!entete) return [];
   const vues = [];
   entete.colonnes.forEach((roles, i) => {
-    const titre = String((ligne && ligne[i]) || "").replace(/\s+/g, " ").trim();
+    const titre = derniereLigne((ligne && ligne[i]) || "");
     for (const role of roles) {
       if (role && LIBELLES_ROLES[role]) vues.push({ role: LIBELLES_ROLES[role], entete: titre });
     }
