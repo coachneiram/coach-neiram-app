@@ -18,9 +18,10 @@
 import { fmtDateLong, parseISO } from "./dates.js";
 import { fmtL } from "./score-jour.js";
 import { ALLERGENS } from "./catalogues.js";
-// Liste complete : sans elle, un regime ajoute apres la migration serait
-// transmis a l'IA sous son identifiant technique (« hyperproteine »).
-import { libelleRegime } from "./regimes.js";
+// Les deux axes en une phrase : sans cela, un client vegetalien en
+// hyperproteine serait decrit a l'IA comme « vegetalien » tout court, et
+// elle proposerait des repas qui ratent la moitie de son objectif.
+import { resumeRegime } from "./regimes.js";
 import { GOALS } from "./nutrition.js";
 import { genererTexte } from "./ia.js";
 
@@ -31,8 +32,8 @@ export const moisLong = (cleMois) =>
 /** Regime et allergies, ajoutes a la ligne PROFIL quand ils existent. */
 export function ligneRegime(profile) {
   const parts = [];
-  const d = (profile && profile.dietType) || "aucun";
-  if (d !== "aucun") parts.push("régime = " + libelleRegime(d));
+  const regime = resumeRegime(profile);
+  if (regime) parts.push("régime = " + regime);
   const alg = (profile && profile.allergies) || [];
   if (alg.length) {
     parts.push(

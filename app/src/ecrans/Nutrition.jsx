@@ -103,11 +103,11 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
                 évite le seul réflexe vraiment coûteux : conclure à un bug
                 et manger au jugé.
             */}
-            {descriptionRegime(profile) && (
-              <p style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 6, lineHeight: 1.5 }}>
-                {descriptionRegime(profile)}
+            {descriptionRegime(profile).map((phrase) => (
+              <p key={phrase} style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 6, lineHeight: 1.5 }}>
+                {phrase}
               </p>
-            )}
+            ))}
             {/* FIN-TEXTE-NOUVEAU */}
           </>
         ) : (

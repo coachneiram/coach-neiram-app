@@ -271,7 +271,16 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
   const suggestions = useMemo(() => {
     if (!restantAujourdhui || restantAujourdhui.kcal < SEUIL_SUGGESTIONS_KCAL) return [];
     return choisirSuggestions(restantAujourdhui, profile, 3);
-  }, [restantAujourdhui ? Math.round(restantAujourdhui.kcal / 50) : null, profile.dietType, (profile.allergies || []).join(",")]);
+    // La repartition entre dans la clef au meme titre que la restriction :
+    // le filtre keto des aliments depend desormais d'elle, et l'oublier
+    // laisserait des suggestions perimees a l'ecran apres un changement de
+    // reglage.
+  }, [
+    restantAujourdhui ? Math.round(restantAujourdhui.kcal / 50) : null,
+    profile.dietType,
+    profile.repartitionMacros,
+    (profile.allergies || []).join(",")
+  ]);
 
   const motivation = useMemo(() => {
     if (date !== todayISO()) return null;

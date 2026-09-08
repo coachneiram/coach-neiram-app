@@ -10,7 +10,7 @@
  * allergique. Elle est donc verifiee contre l'original, cas par cas.
  */
 
-import { EXCLUSIONS } from "./regimes.js";
+import { EXCLUSIONS, repartitionDuProfil, restrictionDuProfil } from "./regimes.js";
 
 /** Categories d'aliments exclues par les regimes sans viande. */
 const CHAIRS = ["viande", "volaille", "poisson", "crustaces"];
@@ -42,18 +42,22 @@ export function regimeOk(aliment, profil) {
   if (regime === "keto" && aliment.c > PLAFOND_GLUCIDES_KETO) return false;
 
   /*
-   * Regimes ajoutes apres la migration.
+   * Regles ajoutees apres la migration.
    *
-   * Ils sont testes EN DERNIER, et leurs regles vivent dans regimes.js.
-   * Les branches ci-dessus sont, elles, la copie ligne a ligne de dietOk
-   * dans index.html, verifiee cas par cas sur tout le catalogue par
+   * Elles sont testees EN DERNIER, et vivent dans regimes.js. Les branches
+   * ci-dessus sont, elles, la copie ligne a ligne de dietOk dans
+   * index.html, verifiee cas par cas sur tout le catalogue par
    * tests/parite-aliments.test.mjs : y melanger des regles nouvelles
    * rendrait cette comparaison impossible a lire, et donc inutile.
    *
-   * Aucun regime d'origine ne figure dans EXCLUSIONS : pour eux, cette
-   * boucle ne fait rien.
+   * LE PLAFOND DE GLUCIDES DU KETO EST TESTE DEUX FOIS, et il le faut : la
+   * branche ci-dessus lit l'ancien champ `dietType`, celle-ci lit le
+   * nouvel axe des repartitions. Un client passe en keto avant la scission
+   * des deux axes et un client passe apres doivent voir le meme catalogue.
    */
-  const exclues = EXCLUSIONS[regime];
+  if (repartitionDuProfil(profil) === "keto" && aliment.c > PLAFOND_GLUCIDES_KETO) return false;
+
+  const exclues = EXCLUSIONS[restrictionDuProfil(profil)];
   if (exclues && contient.some((x) => exclues.includes(x))) return false;
 
   return true;

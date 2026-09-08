@@ -30,6 +30,7 @@ import {
   versFormeJournal
 } from "../lib/edition-aliment.js";
 import { ChoixPhoto } from "../ui/ChoixPhoto.jsx";
+import { resumeRegime } from "../lib/regimes.js";
 
 const CLE_COCHES = "coach_shopping_checked";
 const CLE_AJOUTS = "coach_shopping_custom";
@@ -459,7 +460,7 @@ export function Courses({ profile }) {
           </div>
           <p style={{ fontSize: 11, color: COLORS.textMuted, margin: "8px 0 10px" }}>
             ≈ {idee.totalKcal} kcal · P {idee.totalP} g — {idee.phrase}, adaptée à ton objectif
-            {(profile.dietType && profile.dietType !== "aucun") || (profile.allergies || []).length
+            {resumeRegime(profile) || (profile.allergies || []).length
               ? " et ton régime"
               : ""}
             .

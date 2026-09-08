@@ -319,8 +319,15 @@ export function computeTargets(profile, currentWeightKg) {
   const enDeficit = profile.goal === "perte" || secheDeForce;
   const calibrage = calibrageRegime(profile, { calories, enDeficit });
 
-  const proteinPerKg =
-    calibrage?.proteinesParKg ?? (secheDeForce ? PROTEINES_PAR_KG_SECHE_FORCE : PROTEINES_PAR_KG);
+  // Trois etages, dans cet ordre : la regle de base, la repartition
+  // choisie qui la remplace, la restriction alimentaire qui la majore. Le
+  // plafond ferme la marche — il n'existe que parce que les deux derniers
+  // etages peuvent se cumuler.
+  const proteinesDeBase = secheDeForce ? PROTEINES_PAR_KG_SECHE_FORCE : PROTEINES_PAR_KG;
+  const proteinPerKg = Math.min(
+    (calibrage?.proteinesParKg ?? proteinesDeBase) * (calibrage?.majorationProteines ?? 1),
+    calibrage?.proteinesParKgMax ?? Infinity
+  );
   const fatPerKg = secheDeForce
     ? LIPIDES_PAR_KG_SECHE_FORCE
     : profile.goal === "perte"

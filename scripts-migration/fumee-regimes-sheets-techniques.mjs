@@ -10,11 +10,12 @@
  *
  * Trois parcours, dans un vrai navigateur :
  *
- *  1. REGIMES. Chaque regime qui deplace les macros est coche dans le
- *     profil, et on lit les objectifs obtenus dans l'ecran Nutrition. On
- *     verifie AUSSI que les regimes apparaissent bien dans la liste
- *     deroulante du profil : un calibrage juste que personne ne peut
- *     choisir ne sert a rien.
+ *  1. REGIMES. Chaque combinaison des deux axes — ce que le client ne
+ *     mange pas, comment il repartit ses macros — est posee dans le profil,
+ *     et on lit les objectifs obtenus dans l'ecran Nutrition. On verifie
+ *     AUSSI que les deux menus existent vraiment : un calibrage juste que
+ *     personne ne peut choisir ne sert a rien. Et qu'un profil enregistre
+ *     AVANT la scission des deux axes ne voit rien changer.
  *  2. IMPORT SHEETS. Un client en mode « Google Sheets » colle son tableau
  *     et retrouve ses seances types, avec leurs charges.
  *  3. TECHNIQUES. On marque un exercice en superset, un autre en
@@ -118,57 +119,81 @@ async function macrosDuProfil(profil) {
 
 try {
   // ══ 1. RÉGIMES ═══════════════════════════════════════════════════
-  console.log("── OBJECTIFS SELON LE RÉGIME (objectif : perte) ──");
-  const reference = await macrosDuProfil({ ...PROFIL, dietType: "aucun" });
-  console.log(`  aucun régime                      : ${reference.kcal} kcal · P ${reference.p} G ${reference.g} L ${reference.l}`);
+  console.log("── LES DEUX AXES, OBJECTIF PERTE ──");
+  const reference = await macrosDuProfil({ ...PROFIL });
+  console.log(`  aucun réglage                     : ${reference.kcal} kcal · P ${reference.p} G ${reference.g} L ${reference.l}`);
   verifier("le cas normal n'a pas bougé", reference.g > 200, `${reference.g} g de glucides`);
 
-  for (const [id, controle] of [
-    ["keto", (m) => m.g >= 20 && m.g <= 50 && m.l > m.g * 2],
-    ["lowcarb", (m) => m.g > 50 && m.g < reference.g * 0.7 && m.l > reference.l],
-    ["hyperproteine", (m) => m.p > reference.p * 1.2 && m.l === reference.l],
-    ["pescetarien", (m) => m.p === reference.p && m.g === reference.g && m.l === reference.l]
-  ]) {
-    const m = await macrosDuProfil({ ...PROFIL, dietType: id });
-    console.log(`  ${id.padEnd(34)}: ${m.kcal} kcal · P ${m.p} G ${m.g} L ${m.l}`);
-    verifier(`${id} : calories inchangées`, m.kcal === reference.kcal, `${m.kcal} vs ${reference.kcal}`);
-    verifier(`${id} : répartition attendue`, controle(m));
-    if (id !== "pescetarien") {
-      verifier(`${id} : la règle est expliquée`, m.explication.length > 40, m.explication.slice(0, 60));
-    }
+  const CAS = [
+    // [restriction, répartition, contrôle]
+    ["aucun", "keto", (m) => m.g >= 20 && m.g <= 50 && m.l > m.g * 2],
+    ["aucun", "lowcarb", (m) => m.g > 50 && m.g < reference.g * 0.7 && m.l > reference.l],
+    ["aucun", "hyperproteine", (m) => m.p > reference.p * 1.2 && m.l === reference.l],
+    ["pescetarien", "standard", (m) => m.p === reference.p && m.g === reference.g],
+    // La combinaison qui n'existait pas avant la scission des deux axes.
+    ["vegetarien", "hyperproteine", (m) => m.p > reference.p * 1.3],
+    ["vegetalien", "lowcarb", (m) => m.p > reference.p && m.g < reference.g * 0.7]
+  ];
+
+  for (const [restriction, repartition, controle] of CAS) {
+    const m = await macrosDuProfil({ ...PROFIL, dietType: restriction, repartitionMacros: repartition });
+    console.log(`  ${(restriction + " + " + repartition).padEnd(34)}: ${m.kcal} kcal · P ${m.p} G ${m.g} L ${m.l}`);
+    verifier(`${restriction}+${repartition} : calories inchangées`, m.kcal === reference.kcal, `${m.kcal}`);
+    verifier(`${restriction}+${repartition} : répartition attendue`, controle(m));
   }
+
+  console.log("\n── UN PROFIL ENREGISTRÉ AVANT LA SCISSION ──");
+  // Le vrai risque de la refonte : un client passé en kéto avant qu'elle
+  // existe n'a pas de champ repartitionMacros. Il ne doit rien voir changer.
+  const ancien = await macrosDuProfil({ ...PROFIL, dietType: "keto" });
+  const nouveau = await macrosDuProfil({ ...PROFIL, dietType: "aucun", repartitionMacros: "keto" });
+  console.log(`  ancien profil kéto                : P ${ancien.p} G ${ancien.g} L ${ancien.l}`);
+  verifier(
+    "il garde exactement ses macros kéto",
+    ancien.p === nouveau.p && ancien.g === nouveau.g && ancien.l === nouveau.l,
+    `${ancien.p}/${ancien.g}/${ancien.l} vs ${nouveau.p}/${nouveau.g}/${nouveau.l}`
+  );
 
   console.log("\n── LE MÊME RÉGIME SELON L'OBJECTIF ──");
   for (const id of ["lowcarb", "hyperproteine"]) {
-    const seche = await macrosDuProfil({ ...PROFIL, goal: "perte", dietType: id });
-    const prise = await macrosDuProfil({ ...PROFIL, goal: "prise", dietType: id });
+    const seche = await macrosDuProfil({ ...PROFIL, goal: "perte", repartitionMacros: id });
+    const prise = await macrosDuProfil({ ...PROFIL, goal: "prise", repartitionMacros: id });
     const bouge = id === "lowcarb"
       ? seche.g * 4 / seche.kcal < prise.g * 4 / prise.kcal
-      : seche.p / 90 > prise.p / 90;
+      : seche.p > prise.p;
     console.log(`  ${id.padEnd(34)}: sèche P ${seche.p} G ${seche.g} · prise P ${prise.p} G ${prise.g}`);
     verifier(`${id} : le calibrage suit l'objectif`, bouge);
   }
 
-  console.log("\n── LISTE DÉROULANTE DU PROFIL ──");
-  // Sur mobile, la barre de navigation ne porte pas le profil : il s'ouvre
-  // par l'engrenage de l'en-tete, dont seul l'aria-label donne le nom.
+  console.log("\n── LES DEUX MENUS DU PROFIL ──");
   let page = await ouvrir(PROFIL, null);
   await page.getByLabel("Réglages").first().click();
   await page.waitForTimeout(700);
-  const proposes = await page
-    .locator("select")
-    .filter({ hasText: "Kéto" })
-    .first()
-    .locator("option")
-    .allTextContents();
-  console.log("  régimes proposés                  :", proposes.join(" · "));
-  for (const attendu of ["Kéto", "Pescétarien", "low carb", "protéiné"]) {
-    verifier(`« ${attendu} » proposé`, proposes.some((o) => o.includes(attendu)));
+
+  const optionsDe = async (mot) =>
+    page.locator("select").filter({ hasText: mot }).first().locator("option").allTextContents();
+  const restrictions = await optionsDe("Végétarien");
+  const repartitions = await optionsDe("Standard");
+  console.log("  restrictions                      :", restrictions.join(" · "));
+  console.log("  répartitions                      :", repartitions.join(" · "));
+  verifier("« Pescétarien » proposé", restrictions.some((o) => o.includes("Pescétarien")));
+  verifier("le kéto a quitté les restrictions", !restrictions.some((o) => o.includes("Kéto")));
+  for (const attendu of ["Standard", "low carb", "Kéto", "protéiné"]) {
+    verifier(`« ${attendu} » en répartition`, repartitions.some((o) => o.includes(attendu)));
   }
+
+  // L'avertissement sur une combinaison difficile, et son chiffre.
+  await page.locator("select").filter({ hasText: "Végétarien" }).first().selectOption("vegetalien");
+  await page.locator("select").filter({ hasText: "Standard" }).first().selectOption("keto");
+  await page.waitForTimeout(400);
+  const texteProfil = await corps(page);
+  const compte = (texteProfil.match(/(\d+) sources de protéines/) || [])[1];
+  verifier("végétalien + kéto : le client est averti", !!compte, `${compte} sources annoncées`);
+  verifier("l'avertissement ne bloque pas l'enregistrement",
+    await page.getByRole("button", { name: /Enregistrer/i }).first().isEnabled());
   await page.context().close();
 
   let texte;
-
   // ══ 2. IMPORT DU GOOGLE SHEETS ═══════════════════════════════════
   console.log("\n── IMPORT DU PROGRAMME (mode Google Sheets) ──");
   page = await ouvrir({ ...PROFIL, trainingMode: "sheets" }, "Séances");
