@@ -9,6 +9,7 @@
 
 import { todayISO } from "./dates.js";
 import { getWeekKey } from "./semaine.js";
+import { fmtRPE } from "./force.js";
 
 /** Seances de la semaine en cours, de la plus recente a la plus ancienne. */
 export function seancesDeLaSemaine(seances, aujourdhui = todayISO()) {
@@ -26,7 +27,7 @@ export function seancesDeLaSemaine(seances, aujourdhui = todayISO()) {
  */
 export function resumeSeance(seance) {
   return (
-    [seance.durationMin ? seance.durationMin + " min" : null, seance.rpe ? "RPE " + seance.rpe : null]
+    [seance.durationMin ? seance.durationMin + " min" : null, seance.rpe ? "RPE " + fmtRPE(seance.rpe) : null]
       .filter(Boolean)
       .join(" · ") || "—"
   );

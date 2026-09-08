@@ -16,6 +16,7 @@ import { COLORS } from "../tokens.js";
 import { fmtDateShort, todayISO } from "../lib/dates.js";
 import { creneauPourDate, enLigne, getWeekKey, nowHHMM, slotDayLabel } from "../lib/semaine.js";
 import { envoyerEvenement } from "../lib/synchro-coach.js";
+import { CHAMP_RPE } from "../lib/force.js";
 import { resumeSeance, seancesDeLaSemaine } from "../lib/seances.js";
 import { Btn, Card, Field, IconBtn, NumberInput, SectionTitle, TextArea, TextInput } from "../ui/primitives.jsx";
 import { Dumbbell, Plus, Trash2 } from "../ui/icones.jsx";
@@ -131,7 +132,7 @@ export function Seances({ sessionsApi, profile }) {
             <NumberInput value={duree} placeholder="60" onChange={(e) => setDuree(e.target.value)} />
           </Field>
           <Field label="RPE (1-10)">
-            <NumberInput step="0.5" min="1" max="10" value={rpe} placeholder="8" onChange={(e) => setRpe(e.target.value)} />
+            <NumberInput {...CHAMP_RPE} value={rpe} placeholder="7,5" onChange={(e) => setRpe(e.target.value)} />
           </Field>
         </div>
 
