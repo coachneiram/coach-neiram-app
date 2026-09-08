@@ -348,3 +348,91 @@ describe("l'import montre comment il a lu chaque colonne", () => {
     }
   });
 });
+
+/**
+ * Le MÊME tableau, non plus exporté mais COLLÉ depuis Google Sheets.
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * CE QUE LES CELLULES FUSIONNÉES FONT AU PRESSE-PAPIERS
+ * ─────────────────────────────────────────────────────────────────────
+ *
+ * Un tableau de coach fusionne des cellules pour la mise en page : une
+ * bannière « JOUR 1 » sur toute la largeur, un titre « Charge » au-dessus
+ * des colonnes de semaines. À l'export CSV, ces zones restent des LIGNES
+ * distinctes. Au copier-coller, elles s'effondrent : plusieurs lignes du
+ * tableur arrivent dans UNE cellule, séparées par des retours à la ligne.
+ *
+ * L'en-tête se retrouve alors collé à ce qui le surplombe :
+ *
+ *   « JOUR 1 ⏎ Séries »   au lieu de « Séries »
+ *   « Charge ⏎ W1 »       au lieu de « W1 »
+ *
+ * Et le dégât était invisible : « JOUR 1 Séries » commence par « jour »,
+ * donc la colonne des SÉRIES était lue comme la colonne des SÉANCES. Le
+ * client obtenait quatorze séances nommées « 1 », « 3 », « 4 » — ses
+ * nombres de séries — et plus aucune série nulle part.
+ *
+ * C'est le chemin d'entrée le plus utilisé, parce que c'est le seul qui
+ * marche sur un document privé. Il doit rendre le même programme que le
+ * lien.
+ */
+const COLLAGE_FUSIONNE = [
+  '"JOUR 1\nExercices"\t"JOUR 1\nSéries"\t"JOUR 1\nRépétitions"\t"JOUR 1\nIntensités"\t"JOUR 1\nConsignes"\t"Charge\nW1"\t"Charge\nRPE"',
+  "Gainage\t3\t45 sec\t8\t\t\t6",
+  "Chest press\t3\t8-12\t8\t\t70\t7",
+  '"JOUR 4\nExercices"\t"Séries"\t"Répétitions"\t"Intensités"\t"Consignes"\t"W1"\t"RPE"',
+  "Soulevé de terre\t4\t5\t8\t\t140\t8"
+].join("\n");
+
+describe("collage d'un tableau à cellules fusionnées", () => {
+  const { seances, erreur, colonnes } = lire(COLLAGE_FUSIONNE);
+
+  test("le vrai en-tête est la DERNIÈRE ligne de la cellule", () => {
+    // Dans un tableur, ce qui surplombe une colonne vient avant elle :
+    // l'en-tête véritable est celui qui touche les données.
+    const par = (role) => colonnes.find((c) => c.role === role);
+    assert.equal(par("Exercice").entete, "Exercices");
+    assert.equal(par("Séries").entete, "Séries");
+    assert.equal(par("RPE").entete, "Intensités");
+    assert.equal(par("Charge").entete, "W1");
+  });
+
+  test("la colonne des séries n'est plus prise pour la colonne des séances", () => {
+    // Le symptôme exact rapporté : des séances nommées par des nombres de
+    // séries, et des exercices sans aucune série.
+    assert.equal(erreur, null);
+    assert.ok(
+      !colonnes.some((c) => c.role === "Séance"),
+      "une colonne a encore été lue comme la colonne des séances"
+    );
+    for (const seance of seances) {
+      assert.ok(!/^\d+$/.test(seance.nom), `séance nommée « ${seance.nom} »`);
+    }
+  });
+
+  test("le programme est le même que par le lien", () => {
+    assert.deepEqual(seances.map((s) => s.nom), ["JOUR 1", "JOUR 4"]);
+    const gainage = exercice(parNom(seances, "JOUR 1"), "Gainage");
+    assert.equal(gainage.sets, "3");
+    assert.equal(gainage.reps, "45");
+    assert.equal(gainage.repUnit, "sec");
+    const chest = exercice(parNom(seances, "JOUR 1"), "Chest press");
+    assert.equal(chest.sets, "3");
+    assert.equal(chest.reps, "8");
+    assert.equal(chest.weight, "70");
+    assert.equal(chest.rpe, "8");
+  });
+
+  test("la bannière avalée par l'en-tête nomme quand même la séance", () => {
+    // Sans elle, le bloc s'appelait « Séance importée » alors que son nom
+    // était là, une ligne plus haut dans la même cellule.
+    assert.equal(seances[0].nom, "JOUR 1");
+  });
+
+  test("une bannière qui a avalé l'en-tête répété ne garde que son titre", () => {
+    // « JOUR 4 ⏎ Exercices » est une bannière, pas une séance appelée
+    // « JOUR 4 Exercices ».
+    assert.equal(seances[1].nom, "JOUR 4");
+    assert.equal(seances[1].exercises.length, 1);
+  });
+});
