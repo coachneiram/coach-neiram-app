@@ -1,5 +1,5 @@
 /**
- * Fumee : keto, import Google Sheets, superset et degressive.
+ * Fumee : regimes alimentaires, import Google Sheets, superset et degressive.
  *
  * Les trois ajouts se verifient tres bien en test unitaire — et c'est
  * precisement pour cela que ce script existe. Un calcul juste qui
@@ -10,8 +10,11 @@
  *
  * Trois parcours, dans un vrai navigateur :
  *
- *  1. KETO. Un client coche « Kéto » dans son profil ; on lit ses objectifs
- *     dans l'ecran Nutrition et on verifie que les glucides sont bas.
+ *  1. REGIMES. Chaque regime qui deplace les macros est coche dans le
+ *     profil, et on lit les objectifs obtenus dans l'ecran Nutrition. On
+ *     verifie AUSSI que les regimes apparaissent bien dans la liste
+ *     deroulante du profil : un calibrage juste que personne ne peut
+ *     choisir ne sert a rien.
  *  2. IMPORT SHEETS. Un client en mode « Google Sheets » colle son tableau
  *     et retrouve ses seances types, avec leurs charges.
  *  3. TECHNIQUES. On marque un exercice en superset, un autre en
@@ -19,7 +22,7 @@
  *     s'affichent.
  *
  *   cd app && npm run build && cd ..
- *   node scripts-migration/fumee-keto-sheets-techniques.mjs
+ *   node scripts-migration/fumee-regimes-sheets-techniques.mjs
  */
 
 import { chromium } from "playwright";
@@ -90,34 +93,81 @@ const corps = (page) => page.locator("body").innerText();
  * de ce script a fait sans que rien ne le signale.
  */
 function macroAffichee(texte, libelle) {
-  const m = texte.match(new RegExp("(\\d+)\\s*g\\s*\\n\\s*" + libelle, "i"));
+  // L'unite change d'une ligne a l'autre : « 2280kcal » pour les calories,
+  // « 180g » pour les macros. L'exiger en grammes rendait null sur les
+  // calories, et tous les rapports calcules a partir d'elles devenaient
+  // NaN — donc silencieusement « ok ».
+  const m = texte.match(new RegExp("(\\d+)\\s*(?:kcal|g)\\s*\\n\\s*" + libelle, "i"));
   return m ? Number(m[1]) : null;
 }
 
+/** Lit les quatre objectifs du jour dans l'ecran Nutrition. */
+async function macrosDuProfil(profil) {
+  const page = await ouvrir(profil, "Nutrition");
+  const texte = await corps(page);
+  const lu = {
+    kcal: macroAffichee(texte, "Calories"),
+    p: macroAffichee(texte, "Protéines"),
+    g: macroAffichee(texte, "Glucides"),
+    l: macroAffichee(texte, "Lipides"),
+    explication: (texte.match(/Base actuelle[^\n]*\n+([^\n]+)/) || [])[1] || ""
+  };
+  await page.context().close();
+  return lu;
+}
+
 try {
-  // ══ 1. KETO ══════════════════════════════════════════════════════
-  console.log("── PROFIL KÉTO ──");
-  let page = await ouvrir({ ...PROFIL, dietType: "keto" }, "Nutrition");
-  let texte = await corps(page);
+  // ══ 1. RÉGIMES ═══════════════════════════════════════════════════
+  console.log("── OBJECTIFS SELON LE RÉGIME (objectif : perte) ──");
+  const reference = await macrosDuProfil({ ...PROFIL, dietType: "aucun" });
+  console.log(`  aucun régime                      : ${reference.kcal} kcal · P ${reference.p} G ${reference.g} L ${reference.l}`);
+  verifier("le cas normal n'a pas bougé", reference.g > 200, `${reference.g} g de glucides`);
 
-  const glucides = macroAffichee(texte, "Glucides");
-  const lipides = macroAffichee(texte, "Lipides");
-  const proteines = macroAffichee(texte, "Protéines");
+  for (const [id, controle] of [
+    ["keto", (m) => m.g >= 20 && m.g <= 50 && m.l > m.g * 2],
+    ["lowcarb", (m) => m.g > 50 && m.g < reference.g * 0.7 && m.l > reference.l],
+    ["hyperproteine", (m) => m.p > reference.p * 1.2 && m.l === reference.l],
+    ["pescetarien", (m) => m.p === reference.p && m.g === reference.g && m.l === reference.l]
+  ]) {
+    const m = await macrosDuProfil({ ...PROFIL, dietType: id });
+    console.log(`  ${id.padEnd(34)}: ${m.kcal} kcal · P ${m.p} G ${m.g} L ${m.l}`);
+    verifier(`${id} : calories inchangées`, m.kcal === reference.kcal, `${m.kcal} vs ${reference.kcal}`);
+    verifier(`${id} : répartition attendue`, controle(m));
+    if (id !== "pescetarien") {
+      verifier(`${id} : la règle est expliquée`, m.explication.length > 40, m.explication.slice(0, 60));
+    }
+  }
 
-  console.log(`  macros lues                       : P ${proteines} / G ${glucides} / L ${lipides}`);
-  verifier("glucides bas (20 à 50 g)", glucides >= 20 && glucides <= 50, `${glucides} g`);
-  verifier("lipides devenus majoritaires", lipides > glucides * 2, `${lipides} g`);
+  console.log("\n── LE MÊME RÉGIME SELON L'OBJECTIF ──");
+  for (const id of ["lowcarb", "hyperproteine"]) {
+    const seche = await macrosDuProfil({ ...PROFIL, goal: "perte", dietType: id });
+    const prise = await macrosDuProfil({ ...PROFIL, goal: "prise", dietType: id });
+    const bouge = id === "lowcarb"
+      ? seche.g * 4 / seche.kcal < prise.g * 4 / prise.kcal
+      : seche.p / 90 > prise.p / 90;
+    console.log(`  ${id.padEnd(34)}: sèche P ${seche.p} G ${seche.g} · prise P ${prise.p} G ${prise.g}`);
+    verifier(`${id} : le calibrage suit l'objectif`, bouge);
+  }
+
+  console.log("\n── LISTE DÉROULANTE DU PROFIL ──");
+  // Sur mobile, la barre de navigation ne porte pas le profil : il s'ouvre
+  // par l'engrenage de l'en-tete, dont seul l'aria-label donne le nom.
+  let page = await ouvrir(PROFIL, null);
+  await page.getByLabel("Réglages").first().click();
+  await page.waitForTimeout(700);
+  const proposes = await page
+    .locator("select")
+    .filter({ hasText: "Kéto" })
+    .first()
+    .locator("option")
+    .allTextContents();
+  console.log("  régimes proposés                  :", proposes.join(" · "));
+  for (const attendu of ["Kéto", "Pescétarien", "low carb", "protéiné"]) {
+    verifier(`« ${attendu} » proposé`, proposes.some((o) => o.includes(attendu)));
+  }
   await page.context().close();
 
-  console.log("\n── LE MÊME PROFIL SANS KÉTO ──");
-  page = await ouvrir({ ...PROFIL, dietType: "aucun" }, "Nutrition");
-  texte = await corps(page);
-  const glucidesNormal = macroAffichee(texte, "Glucides");
-  const proteinesNormal = macroAffichee(texte, "Protéines");
-  console.log(`  glucides sans kéto                : ${glucidesNormal} g`);
-  verifier("le cas normal n'a pas bougé", glucidesNormal > 100, `${glucidesNormal} g`);
-  verifier("les protéines sont les mêmes", proteines === proteinesNormal, `${proteines} vs ${proteinesNormal}`);
-  await page.context().close();
+  let texte;
 
   // ══ 2. IMPORT DU GOOGLE SHEETS ═══════════════════════════════════
   console.log("\n── IMPORT DU PROGRAMME (mode Google Sheets) ──");

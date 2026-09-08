@@ -10,6 +10,8 @@
  * allergique. Elle est donc verifiee contre l'original, cas par cas.
  */
 
+import { EXCLUSIONS } from "./regimes.js";
+
 /** Categories d'aliments exclues par les regimes sans viande. */
 const CHAIRS = ["viande", "volaille", "poisson", "crustaces"];
 
@@ -38,6 +40,21 @@ export function regimeOk(aliment, profil) {
   }
   if (regime === "vegetalien" && contient.some((x) => PRODUITS_ANIMAUX.includes(x))) return false;
   if (regime === "keto" && aliment.c > PLAFOND_GLUCIDES_KETO) return false;
+
+  /*
+   * Regimes ajoutes apres la migration.
+   *
+   * Ils sont testes EN DERNIER, et leurs regles vivent dans regimes.js.
+   * Les branches ci-dessus sont, elles, la copie ligne a ligne de dietOk
+   * dans index.html, verifiee cas par cas sur tout le catalogue par
+   * tests/parite-aliments.test.mjs : y melanger des regles nouvelles
+   * rendrait cette comparaison impossible a lire, et donc inutile.
+   *
+   * Aucun regime d'origine ne figure dans EXCLUSIONS : pour eux, cette
+   * boucle ne fait rien.
+   */
+  const exclues = EXCLUSIONS[regime];
+  if (exclues && contient.some((x) => exclues.includes(x))) return false;
 
   return true;
 }

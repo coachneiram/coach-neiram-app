@@ -12,9 +12,10 @@
 import { COLORS } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
 import { JOURS_SEMAINE, uid } from "../lib/semaine.js";
-import { ACTIVITY_LEVELS, GOALS, PERFORMANCE_DIRECTIONS, estFaibleEnGlucides } from "../lib/nutrition.js";
+import { ACTIVITY_LEVELS, GOALS, PERFORMANCE_DIRECTIONS } from "../lib/nutrition.js";
+import { REGIMES, descriptionRegime } from "../lib/regimes.js";
 import { HABITUDES_PESEE } from "../lib/fibres.js";
-import { ALLERGENS, COACHING_MODES, DIET_TYPES, TRAINING_MODES } from "../lib/catalogues.js";
+import { ALLERGENS, COACHING_MODES, TRAINING_MODES } from "../lib/catalogues.js";
 import { Btn, Field, IconBtn, NumberInput, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { Plus, Trash2 } from "../ui/icones.jsx";
 
@@ -315,23 +316,20 @@ export function ChampsProfil({ value, onChange }) {
 
       <Field label="Régime alimentaire">
         <SelectInput
-          options={DIET_TYPES}
+          options={REGIMES}
           value={value.dietType || "aucun"}
           onChange={(e) => set({ dietType: e.target.value })}
         />
         {/* TEXTE-NOUVEAU
-            Le kéto ne filtrait que les aliments proposés : les objectifs du
+            Le régime ne filtrait que les aliments proposés : les objectifs du
             jour restaient ceux de tout le monde, glucides compris. La
             répartition est désormais recalculée, et le client doit voir
-            immédiatement ce que cocher cette case change pour lui — sinon
-            il découvre des macros inhabituelles sans en connaître la cause.
+            immédiatement ce que ce choix change pour lui — sinon il découvre
+            des macros inhabituelles sans en connaître la cause. La phrase
+            dépend aussi de son objectif : un même régime ne se calibre pas
+            pareil en sèche et en prise de masse.
         */}
-        {estFaibleEnGlucides(value) && (
-          <p style={styleAide}>
-            Objectifs recalculés : tes glucides descendent à 20 à 50 g par jour et tes lipides absorbent le
-            reste de tes calories. Tes protéines et ton total calorique, eux, ne changent pas.
-          </p>
-        )}
+        {descriptionRegime(value) && <p style={styleAide}>{descriptionRegime(value)}</p>}
         {/* FIN-TEXTE-NOUVEAU */}
       </Field>
 

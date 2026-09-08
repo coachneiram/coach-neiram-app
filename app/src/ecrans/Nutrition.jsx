@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import { COLORS } from "../tokens.js";
 import { fmtDateShort } from "../lib/dates.js";
 import { computeCalibration, etatCalibrage } from "../lib/nutrition.js";
+import { descriptionRegime } from "../lib/regimes.js";
 import { objectifFibres, totalFibres } from "../lib/fibres.js";
 import { todayISO } from "../lib/dates.js";
 import { Btn, Card, MacroTarget, SectionTitle } from "../ui/primitives.jsx";
@@ -95,6 +96,19 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
             <p style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 12 }}>
               Base actuelle : {base}. Poids utilisé : {currentWeight ? `${currentWeight} kg` : "non renseigné"}.
             </p>
+            {/* TEXTE-NOUVEAU
+                C'est ici que le client lit ses macros du jour, et donc ici
+                qu'il se demande pourquoi ses glucides sont bas. Répéter la
+                règle de son régime à l'endroit où le chiffre le surprend
+                évite le seul réflexe vraiment coûteux : conclure à un bug
+                et manger au jugé.
+            */}
+            {descriptionRegime(profile) && (
+              <p style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 6, lineHeight: 1.5 }}>
+                {descriptionRegime(profile)}
+              </p>
+            )}
+            {/* FIN-TEXTE-NOUVEAU */}
           </>
         ) : (
           <p style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 8 }}>
