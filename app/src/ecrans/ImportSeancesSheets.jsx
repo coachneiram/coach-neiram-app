@@ -27,7 +27,7 @@ import { useState } from "react";
 import { COLORS } from "../tokens.js";
 import { ROUTINE_COLORS } from "../lib/catalogues.js";
 import { resumeExercice } from "../lib/constructeur-seances.js";
-import { normaliser, seancesDepuisTexte, telechargerFeuille } from "../lib/import-seances.js";
+import { identifiantFeuille, normaliser, seancesDepuisTexte, telechargerFeuille } from "../lib/import-seances.js";
 import { Btn, Card, Field, SectionTitle, TextArea, TextInput } from "../ui/primitives.jsx";
 import { Dumbbell, Plus } from "../ui/icones.jsx";
 
@@ -129,6 +129,26 @@ export function ImportSeancesSheets({ routinesApi, profile, onEnregistrerLien })
 
   const total = apercu ? apercu.reduce((n, s) => n + s.exercises.length, 0) : 0;
 
+  /*
+   * UN CLASSEUR A PLUSIEURS ONGLETS N'A PAS DE « BLOC ACTUEL » CONNU DE
+   * L'APPLICATION.
+   *
+   * Elle ne fait qu'un aller-retour vers un lien : elle ne sait pas que le
+   * classeur du coach porte un onglet par bloc de 4 semaines, ni lequel
+   * est en cours. Sans onglet precise dans le lien (sans « #gid=... »),
+   * Google Sheets renvoie toujours le PREMIER onglet du classeur — celui
+   * du tout premier bloc, meme des annees plus tard. C'est arrive : un
+   * client a importe un bloc de 2023 sans le savoir, l'import ayant
+   * parfaitement reussi.
+   *
+   * LA SOLUTION EXISTE DEJA COTE GOOGLE : ouvrir l'onglet voulu ajoute
+   * « #gid=... » a l'adresse. On ne fait ici que rendre ca visible, plutot
+   * que de laisser le client decouvrir apres coup qu'il a importe le
+   * mauvais bloc.
+   */
+  const cible = identifiantFeuille(lien);
+  const lienSansOnglet = Boolean(cible && !cible.gid);
+
   return (
     <Card>
       <SectionTitle>Importer mes séances</SectionTitle>
@@ -156,6 +176,13 @@ export function ImportSeancesSheets({ routinesApi, profile, onEnregistrerLien })
         obligatoire. Deux colonnes réunies en une, comme « RPE/Charge » avec « 8 / 60 » en dessous, sont
         lues dans l'ordre annoncé. Une fourchette de reps (« 8-10 ») est ramenée à sa valeur basse, que
         tu peux ajuster ensuite.
+      </p>
+
+      <p style={styleAide}>
+        Plusieurs blocs dans le même classeur, un onglet par bloc ? Le lien de partage lit toujours le{" "}
+        <strong style={{ color: COLORS.textMuted }}>premier</strong> onglet, même des années plus tard.
+        Pour lire le bloc en cours : ouvre son onglet dans Google Sheets, copie l'adresse depuis la barre
+        du navigateur (elle contient « #gid=... ») et colle-la ci-dessus.
       </p>
 
       <button
@@ -223,6 +250,15 @@ export function ImportSeancesSheets({ routinesApi, profile, onEnregistrerLien })
             {apercu.length} séance{apercu.length > 1 ? "s" : ""} lue{apercu.length > 1 ? "s" : ""}, {total}{" "}
             exercices. Vérifie avant d'enregistrer.
           </div>
+
+          {lienSansOnglet && (
+            <p style={{ ...styleAide, margin: "0 0 10px", color: COLORS.warn }}>
+              Ce lien ne précise pas d'onglet : c'est le premier onglet du classeur qui a été lu, pas
+              forcément ton bloc en cours. Vérifie les noms d'exercices ci-dessous — s'ils datent d'un
+              ancien bloc, ouvre le bon onglet dans Google Sheets et recopie l'adresse depuis la barre du
+              navigateur avant de relire.
+            </p>
+          )}
 
           {colonnes.length > 0 && (
             <div
