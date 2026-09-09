@@ -163,6 +163,70 @@ export const premiereLigne = (cellule) => {
 };
 
 /**
+ * Mots par lesquels une banniere de seance ouvre un bloc, en tete de
+ * cellule. Ecrit sur le texte BRUT — accents compris — pour pouvoir
+ * retirer la banniere sans detruire les separateurs (« / », « & ») dont
+ * rolesDeColonne a besoin juste apres.
+ */
+const BANNIERE_EN_TETE = /^\s*(jours?|s[\u00e9e]ances?|sessions?|semaines?|blocs?|entra[\u00een]nements?|days?)\b[\s:.\u00b7-]*\d*[\s:.\u00b7-]*/i;
+
+/** Au-dela, ce n'est plus un en-tete de colonne : c'est un paragraphe. */
+const LONGUEUR_MAX_ENTETE = 60;
+
+/**
+ * Ce qu'il faut vraiment lire dans une cellule d'en-tete.
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * POURQUOI UNE CELLULE D'EN-TETE CONTIENT AUTRE CHOSE QUE L'EN-TETE
+ * ─────────────────────────────────────────────────────────────────────
+ *
+ * Un tableau de coach fusionne des cellules pour la mise en page : une
+ * banniere « JOUR 1 » sur toute la largeur, un bloc d'explications avec
+ * ses liens video, un titre « Charge » au-dessus des colonnes de
+ * semaines. A l'export CSV ces zones restent des LIGNES distinctes ; au
+ * copier-coller elles s'effondrent dans la cellule d'en-tete.
+ *
+ * Selon l'appareil et l'application source, elles s'y effondrent de deux
+ * facons — et LES DEUX ONT ETE OBSERVEES sur le meme tableau :
+ *
+ *   « JOUR 1 ⏎ Séries »   la cellule garde ses retours a la ligne
+ *   « JOUR 1 Séries »     ils ont ete aplatis en espaces
+ *
+ * Le degat etait le meme et invisible : « JOUR 1 Séries » commence par
+ * « jour », donc la colonne des SERIES etait lue comme la colonne des
+ * SEANCES. Le client obtenait quatorze seances nommees « 1 », « 3 »,
+ * « 4 » — ses nombres de series — et plus aucune serie nulle part.
+ *
+ * Trois passes, de la plus sure a la moins sure :
+ *
+ *  1. LA DERNIERE LIGNE. Dans un tableur, ce qui surplombe une colonne
+ *     vient avant elle : l'en-tete veritable est celui qui touche les
+ *     donnees.
+ *  2. LA QUEUE D'UN PAVE. Un en-tete de colonne ne fait pas soixante
+ *     caracteres. Passe cette longueur, la cellule est un bloc
+ *     d'explications aplati, et seuls ses derniers mots sont l'en-tete.
+ *  3. LA BANNIERE RETIREE. Si ce qui reste apres « JOUR 1 » designe un
+ *     role connu, c'est que la banniere avait ete collee devant.
+ *     CONDITION STRICTE : sans role reconnu derriere, on ne touche a
+ *     rien — « JOUR 1 » tout seul reste une banniere de seance.
+ */
+export function enteteUtile(cellule) {
+  let t = derniereLigne(cellule);
+
+  if (t.length > LONGUEUR_MAX_ENTETE) {
+    const mots = t.split(/\s+/).filter(Boolean);
+    t = mots.slice(-2).join(" ");
+  }
+
+  const reste = t.replace(BANNIERE_EN_TETE, "").trim();
+  if (reste && reste !== t) {
+    const n = normaliser(reste);
+    if (roleStrict(n) || roleLarge(n)) return reste;
+  }
+  return t;
+}
+
+/**
  * Role d'un en-tete, en exigeant que le mot-cle OUVRE l'en-tete.
  *
  * LE PLURIEL EST ACCEPTE, et il a fallu un tableau reel pour s'en rendre
@@ -172,7 +236,11 @@ export const premiereLigne = (cellule) => {
  * et exiger le singulier revenait a exiger qu'il ecrive comme le code.
  */
 export function roleDeColonne(entete) {
-  const n = normaliser(derniereLigne(entete));
+  return roleStrict(normaliser(enteteUtile(entete)));
+}
+
+/** Passe stricte sur un libelle DEJA normalise. */
+function roleStrict(n) {
   if (!n) return null;
   for (const { role, prefixes } of ROLES) {
     if (prefixes.some((p) => n === p || n === p + "s" || n.startsWith(p + " ") || n.startsWith(p + "s "))) {
@@ -217,7 +285,11 @@ export function roleDeColonne(entete) {
  * qui reste, et jamais une colonne deja prise.
  */
 export function roleDeColonneLarge(entete) {
-  const n = normaliser(derniereLigne(entete));
+  return roleLarge(normaliser(enteteUtile(entete)));
+}
+
+/** Passe large sur un libelle DEJA normalise. */
+function roleLarge(n) {
   if (!n) return null;
   const mots = n.split(" ");
   for (const { role, prefixes } of ROLES) {
@@ -383,7 +455,7 @@ const SEPARATEURS_DOUBLES = /\s*[/|&]\s*|\s+et\s+/;
  * Charge » nomme deux fois la meme chose, ce n'est qu'une colonne.
  */
 export function rolesDeColonne(entete) {
-  const morceaux = derniereLigne(entete)
+  const morceaux = enteteUtile(entete)
     .split(SEPARATEURS_DOUBLES)
     .map((x) => x.trim())
     .filter(Boolean);
@@ -538,6 +610,29 @@ export function estTitreDeSeance(texte) {
 }
 
 /**
+ * Banniere de seance collee dans une cellule d'en-tete, s'il y en a une.
+ *
+ * Meme cause que enteteUtile, autre consequence : quand la banniere
+ * « JOUR 1 » est avalee par l'en-tete, la ligne qui la portait n'existe
+ * plus, et le bloc s'appelait « Séance importée » alors que son nom
+ * etait la, dans la meme cellule. On le recupere des deux facons dont
+ * l'effondrement se produit — retour a la ligne conserve, ou aplati en
+ * espaces.
+ */
+export function bannierePrefixe(cellule) {
+  const avalee = lignesAvalees(cellule).find((l) => estTitreDeSeance(l));
+  if (avalee) return avalee;
+
+  const derniere = derniereLigne(cellule);
+  const utile = enteteUtile(cellule);
+  if (utile && utile !== derniere && derniere.endsWith(utile)) {
+    const debut = derniere.slice(0, derniere.length - utile.length).trim();
+    if (debut && estTitreDeSeance(debut)) return debut;
+  }
+  return "";
+}
+
+/**
  * Unite et facteur d'une cellule de repetitions.
  *
  * « 30 sec » n'est pas 30 repetitions, et le confondre change la nature
@@ -661,9 +756,9 @@ export function seancesDepuisTableau(lignes) {
    * que son nom etait la, une ligne plus haut dans la meme cellule.
    */
   for (const cellule of lignes[entete.index] || []) {
-    const avale = lignesAvalees(cellule).find((l) => estTitreDeSeance(l));
-    if (avale) {
-      ouvrirSeance(avale);
+    const avalee = bannierePrefixe(cellule);
+    if (avalee) {
+      ouvrirSeance(avalee);
       break;
     }
   }
@@ -696,7 +791,9 @@ export function seancesDepuisTableau(lignes) {
      */
     const premiereCellule = ligne.find((c) => c && c.trim());
     if (premiereCellule && estTitreDeSeance(premiereCellule)) {
-      ouvrirSeance(premiereLigne(premiereCellule));
+      // La banniere peut avoir avale l'en-tete repete qui la suit, avec ou
+      // sans retour a la ligne : « JOUR 4 ⏎ Exercices », « JOUR 4 Exercices ».
+      ouvrirSeance(bannierePrefixe(premiereCellule) || premiereLigne(premiereCellule));
       continue;
     }
 
@@ -846,7 +943,7 @@ export function colonnesLues(entete, ligne) {
   if (!entete) return [];
   const vues = [];
   entete.colonnes.forEach((roles, i) => {
-    const titre = derniereLigne((ligne && ligne[i]) || "");
+    const titre = enteteUtile((ligne && ligne[i]) || "");
     for (const role of roles) {
       if (role && LIBELLES_ROLES[role]) vues.push({ role: LIBELLES_ROLES[role], entete: titre });
     }
