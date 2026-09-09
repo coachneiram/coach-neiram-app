@@ -511,3 +511,65 @@ describe("téléchargement : un échec n'est jamais une exception", () => {
     assert.deepEqual(r, { ok: false, raison: "reseau" });
   });
 });
+
+describe("téléchargement : /gviz/tq peut répondre 200 avec du texte amputé", () => {
+  const reponse = (texte, ok = true) => ({ ok, text: async () => texte });
+
+  /**
+   * Ce test rejoue une panne réelle, découverte via le fichier d'un
+   * client. /gviz/tq efface silencieusement une bannière « JOUR 2 »
+   * posée dans une colonne autrement toute numérique (une colonne de
+   * Séries : 1, 3, 4...) — comme si la cellule n'avait jamais contenu
+   * de texte. Le second point d'export, /export?format=csv, ne connaît
+   * pas ce défaut et lit les deux journées séparément.
+   *
+   * Les deux réponses sont des CSV valides, aucune n'est vide ni une
+   * page de connexion : rien ne permet de les départager AVANT de les
+   * avoir fait lire par le même analyseur que l'écran utilisera.
+   */
+  const AMPUTEE = [
+    "Exercices,Séries,Reps,RPE",
+    "JOUR 1,,,",
+    "Squat,3,5,7",
+    "Développé couché,3,5,7",
+    ",,,", // la bannière « JOUR 2 » a disparu de sa colonne numérique
+    "Rowing,3,8,7"
+  ].join("\n");
+
+  const INTACTE = [
+    "Exercices,Séries,Reps,RPE",
+    "JOUR 1,,,",
+    "Squat,3,5,7",
+    "Développé couché,3,5,7",
+    "JOUR 2,,,",
+    "Rowing,3,8,7"
+  ].join("\n");
+
+  test("la source qui garde ses deux séances l'emporte sur la première qui répond", async () => {
+    let n = 0;
+    const r = await telechargerFeuille("https://docs.google.com/spreadsheets/d/ABC/edit", {
+      fetchImpl: async () => {
+        n++;
+        return n === 1 ? reponse(AMPUTEE) : reponse(INTACTE);
+      }
+    });
+    assert.equal(n, 2, "les deux points d'export doivent être essayés, pas seulement le premier qui répond");
+    assert.equal(r.ok, true);
+    const { seances, erreur } = seancesDepuisTexte(r.texte);
+    assert.equal(erreur, null);
+    assert.deepEqual(seances.map((s) => s.nom), ["JOUR 1", "JOUR 2"]);
+  });
+
+  test("à séances égales, la première source qui répond est gardée", async () => {
+    // Rien à départager : ne pas changer le comportement des tableaux
+    // qu'une seule source lit déjà bien.
+    let n = 0;
+    const r = await telechargerFeuille("https://docs.google.com/spreadsheets/d/ABC/edit", {
+      fetchImpl: async () => {
+        n++;
+        return reponse(INTACTE);
+      }
+    });
+    assert.equal(r.texte, INTACTE);
+  });
+});

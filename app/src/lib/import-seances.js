@@ -1016,6 +1016,26 @@ const estPageHtml = (texte) => /^\s*<(?:!doctype|html|head|meta)/i.test(String(t
  *  - « url-invalide »  : ce n'est pas un lien Google Sheets ;
  *  - « inaccessible »  : le document n'est pas partagé par lien ;
  *  - « reseau »        : hors ligne, ou requete bloquee par le navigateur.
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * ON GARDE LA MEILLEURE REPONSE, PAS LA PREMIERE QUI REPOND
+ * ─────────────────────────────────────────────────────────────────────
+ *
+ * /gviz/tq repond a des documents que /export refuse par CORS — c'est
+ * pour ca qu'il est essaye en premier. Mais un tableau de coach reel a
+ * montre qu'il peut repondre 200 avec un texte AMPUTE : une bannière
+ * « JOUR 2 » assise dans une colonne autrement toute numerique (une
+ * colonne de Séries : 1, 3, 4...) en ressort vide, comme si la case
+ * n'avait jamais contenu de texte. Rien ne le signale : la reponse est
+ * valide, le CSV est bien forme, seule l'information a disparu. Le
+ * client obtenait un unique bloc « JOUR 1 » avalant les quatre journees
+ * de son programme, sans la moindre erreur a l'ecran.
+ *
+ * Il n'y a pas de reparation possible cote lecture : un texte disparu
+ * en amont ne se retrouve pas par une regle plus maligne. La seule
+ * defense est d'essayer les DEUX sources et de garder celle qui produit
+ * le plus de seances — le signe le plus direct qu'aucune bannière ne
+ * s'est perdue en route.
  */
 export async function telechargerFeuille(url, options = {}) {
   const recuperer = options.fetchImpl || (typeof fetch === "function" ? fetch : null);
@@ -1024,6 +1044,8 @@ export async function telechargerFeuille(url, options = {}) {
   if (!recuperer) return { ok: false, raison: "reseau" };
 
   let raison = "reseau";
+  let meilleur = null;
+
   for (const candidate of urls) {
     try {
       const reponse = await recuperer(candidate);
@@ -1036,12 +1058,17 @@ export async function telechargerFeuille(url, options = {}) {
         raison = "inaccessible";
         continue;
       }
-      return { ok: true, texte };
+
+      // A egalite de seances lues, on garde la premiere source qui a
+      // repondu : ca ne change rien pour les tableaux d'une seule
+      // seance, ni pour ceux que la premiere source lit deja bien.
+      const score = seancesDepuisTexte(texte).seances.length;
+      if (!meilleur || score > meilleur.score) meilleur = { texte, score };
     } catch (e) {
       // Une erreur levee par fetch est presque toujours le blocage
       // d'origine croisee du navigateur, indiscernable d'une panne reseau.
       raison = "reseau";
     }
   }
-  return { ok: false, raison };
+  return meilleur ? { ok: true, texte: meilleur.texte } : { ok: false, raison };
 }
