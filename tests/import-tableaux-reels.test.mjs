@@ -436,3 +436,92 @@ describe("collage d'un tableau à cellules fusionnées", () => {
     assert.equal(seances[1].exercises.length, 1);
   });
 });
+
+/**
+ * Le MÊME collage, mais dont les retours à la ligne ont été APLATIS.
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * L'EFFONDREMENT SE PRODUIT DE DEUX FAÇONS, ET LES DEUX ONT ÉTÉ VUES
+ * ─────────────────────────────────────────────────────────────────────
+ *
+ * Selon l'appareil et l'application source, une cellule fusionnée collée
+ * garde ses retours à la ligne — « JOUR 1 ⏎ Séries » — ou les voit
+ * remplacés par des espaces — « JOUR 1 Séries ». Le second cas est celui
+ * qu'a rapporté le client depuis son iPhone, en capture d'écran : la
+ * colonne des séries était lue comme la colonne des séances.
+ *
+ * Corriger le premier cas seulement laissait donc le bug entier là où il
+ * avait été signalé. Les deux formes doivent rendre le même programme.
+ *
+ * La cellule de « Charge W1 » reproduit aussi ce que devient un bloc
+ * d'explications aplati : un pavé de deux cents caractères avec ses liens
+ * vidéo, dont le vrai en-tête est la queue.
+ */
+const PAVE_EXPLICATIONS =
+  "Explications Vidéo explicative https://exemple.test/watch?v=aaa&pp=bbb%3D " +
+  "12/15 reps dans tous les angles https://exemple.test/watch?v=ccc 2×12 Charge W1";
+
+const COLLAGE_APLATI = [
+  ["Exercices", "JOUR 1 Séries", "Répétitions", "Intensités", "Remarques", PAVE_EXPLICATIONS, "RPE", "W2", "RPE"].join("\t"),
+  "Bench 4CT\t1\t3\t7\tPause 1s\t82,5\t7\t85\t8",
+  "highbar squat\t3\t10\t7\t\t95\t7\t97,5\t8",
+  "JOUR 4 Exercices\t\t\t\t\t\t\t\t",
+  "Soulevé de terre\t4\t5\t8\t\t140\t8\t145\t8"
+].join("\n");
+
+describe("collage à cellules fusionnées, retours à la ligne aplatis", () => {
+  const { seances, erreur, colonnes } = lire(COLLAGE_APLATI);
+
+  test("la bannière collée devant l'en-tête est retirée", () => {
+    // « JOUR 1 Séries » commence par « jour » : la colonne des SÉRIES
+    // était lue comme la colonne des SÉANCES, d'où quatorze séances
+    // nommées par des nombres de séries.
+    assert.equal(erreur, null);
+    const par = (role) => colonnes.find((c) => c.role === role);
+    assert.equal(par("Séries").entete, "Séries");
+    assert.ok(!colonnes.some((c) => c.role === "Séance"), "une colonne est encore lue comme séance");
+  });
+
+  test("elle n'est retirée que si un rôle connu la suit", () => {
+    // Sans cette condition, « JOUR 1 » tout seul cesserait d'être une
+    // bannière de séance — et chaque journée du programme disparaîtrait.
+    assert.deepEqual(seances.map((s) => s.nom), ["JOUR 1", "JOUR 4"]);
+  });
+
+  test("un pavé d'explications aplati se lit par sa queue", () => {
+    // Un en-tête de colonne ne fait pas deux cents caractères. Passé
+    // soixante, la cellule est un bloc d'explications, et seul son dernier
+    // bout est l'en-tête. Lu en entier, il revendiquait « Reps » à cause
+    // du « 12/15 reps » qu'il contient.
+    const charges = colonnes.filter((c) => c.role === "Charge").map((c) => c.entete);
+    assert.deepEqual(charges, ["Charge W1", "W2"]);
+    assert.ok(
+      !colonnes.some((c) => c.entete.length > 60),
+      "un en-tête de deux cents caractères a été retenu tel quel"
+    );
+  });
+
+  test("une bannière dont la suite n'est pas un rôle garde son nom entier", () => {
+    // Le garde-fou de la règle précédente. « JOUR 2 - BENCH / DEADLIFT -
+    // MARDI » est une bannière, pas un en-tête déguisé : rien derrière
+    // « JOUR 2 » ne désigne une colonne, donc on n'y touche pas. Sans
+    // cette condition, la séance s'appelait « JOUR 2 - ».
+    const tableau = [
+      "Exercices\tSéries\tReps",
+      "JOUR 2 - BENCH / DEADLIFT - MARDI\t\t",
+      "Bench\t3\t5"
+    ].join("\n");
+    assert.equal(lire(tableau).seances[0].nom, "JOUR 2 - BENCH / DEADLIFT - MARDI");
+  });
+
+  test("le programme est identique à celui de la forme non aplatie", () => {
+    const bench = exercice(parNom(seances, "JOUR 1"), "Bench 4CT");
+    assert.equal(bench.sets, "1");
+    assert.equal(bench.reps, "3");
+    assert.equal(bench.weight, "82.5");
+    assert.equal(bench.rpe, "7");
+    const sdt = exercice(parNom(seances, "JOUR 4"), "Soulevé de terre");
+    assert.equal(sdt.sets, "4");
+    assert.equal(sdt.weight, "140");
+  });
+});
