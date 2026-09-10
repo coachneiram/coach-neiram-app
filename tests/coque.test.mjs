@@ -77,6 +77,20 @@ describe("mise en page de la coque", () => {
     assert.match(CSS, /main-content[\s\S]*?env\(safe-area-inset-bottom\)/);
   });
 
+  test("une fenetre modale qui defile decouvre sa derniere ligne sur iPhone", () => {
+    // Meme defaut que ci-dessus, mais dans une modale : Reglages defile
+    // jusqu'au bout SANS jamais reveler sa derniere ligne (la version de
+    // l'application), restee sous la barre gestuelle a chaque essai. Un
+    // client a signale « je ne vois plus le numero de version » alors que
+    // le code qui l'affiche n'avait pas change — la ligne existait,
+    // seulement hors de portee.
+    // Borne au corps de LA regle : sans « [^}] », le motif sautait par
+    // dessus l'accolade fermante et retombait sur un autre « env(...) »
+    // plus bas dans le fichier (bottom-nav, main-content) sans que le
+    // test s'en aperçoive.
+    assert.match(CSS, /\.modal-panel\s*\{[^}]*env\(safe-area-inset-bottom\)[^}]*\}/);
+  });
+
   test("les champs de saisie font au moins 16 px sur telephone", () => {
     // En dessous, iOS zoome tout seul au premier appui et ne se remet
     // jamais droit.
