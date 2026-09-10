@@ -40,7 +40,15 @@ body {
   width: 100%;
   max-height: 88vh;
   overflow-y: auto;
-  padding: 22px;
+  /* La barre gestuelle des iPhone n'a jamais ete comptee ici, alors
+     qu'elle l'est pour la barre de navigation et le contenu principal
+     (voir plus bas). Une fenetre modale assez longue pour defiler —
+     Reglages en est une — scrollait jusqu'au bout SANS jamais decouvrir
+     sa derniere ligne : elle restait sous la barre gestuelle, invisible
+     meme en defilement maximal. C'est ainsi que la ligne de version de
+     l'application, tout en bas de Reglages, avait disparu pour un
+     client alors que le code qui l'affiche n'avait pas change. */
+  padding: 22px 22px calc(22px + env(safe-area-inset-bottom));
   animation: slideUp 0.22s ease-out;
 }
 
