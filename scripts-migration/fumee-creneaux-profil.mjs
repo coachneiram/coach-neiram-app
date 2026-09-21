@@ -10,15 +10,31 @@
  * d'etre reparee de bout en bout — en partant du principe que les creneaux
  * arrivent bien jusqu'au stockage.
  *
- * Le script cree un creneau au jour d'hier, sans le pointer, et verifie une
- * regle facile a casser sans s'en rendre compte : un creneau ne compte
- * QU'A PARTIR du jour ou il a ete declare. Une date anterieure s'affiche
- * « Avant la mise en place du creneau · Non suivi », et ne pese ni sur le
- * taux de respect ni sur les alertes.
+ * Le script cree un creneau deja anterieur a sa propre creation, sans le
+ * pointer, et verifie une regle facile a casser sans s'en rendre compte :
+ * un creneau ne compte QU'A PARTIR du jour ou il a ete declare. Une date
+ * anterieure s'affiche « Avant la mise en place du creneau · Non suivi »,
+ * et ne pese ni sur le taux de respect ni sur les alertes.
  *
  * Sans cette regle, une cliente qui declare ses creneaux au bout de trois
  * semaines de suivi verrait aussitot une volee de seances manquees qu'elle
  * n'a jamais ratees — et son coach recevrait une alerte pour rien.
+ *
+ * CE SCRIPT A DEJA ECHOUE UN LUNDI, ET C'ETAIT LE SCRIPT QUI AVAIT TORT.
+ * Choisir « le jour de la semaine d'hier » pour simuler une date passee ne
+ * marche que six jours sur sept : le lundi, la semaine (qui commence le
+ * lundi — voir getMonday) vient tout juste de recommencer, et « hier »
+ * (dimanche) appartient a la semaine PRECEDENTE. Le creneau se retrouvait
+ * cree pour le dimanche A VENIR de cette semaine — une date future, donc
+ * jamais « avant la mise en place ». Le script accusait alors l'application
+ * d'un defaut qu'elle n'avait pas.
+ *
+ * La regle testee compare deux DATES (creneaux.js : r.date < createdAt),
+ * pas des jours de semaine : on la verifie donc en choisissant n'importe
+ * quel jour DE CETTE SEMAINE (aujourd'hui convient toujours, quel que soit
+ * le jour d'execution), puis en reculant sa date de creation d'un cran
+ * apres la fin de la semaine — la ou aucun jour de « cette semaine » ne
+ * peut jamais se trouver. Deterministe tous les jours, y compris le lundi.
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-creneaux-profil.mjs
@@ -46,14 +62,30 @@ const page = await (await nav.newContext(appareil())).newPage();
 const erreurs = [];
 page.on("pageerror", (e) => erreurs.push(e.message));
 
-// Hier, pour que le creneau cree soit deja passe : un creneau a venir ne
-// prouverait rien, puisqu'il n'est ni tenu ni manque.
+// N'importe quel jour DE CETTE SEMAINE convient : aujourd'hui l'est
+// toujours, quel que soit le jour d'execution du script.
 //
 // Les jours sont des identifiants TEXTE (« mon » a « sun »), pas des
 // numeros. Semer un numero passe silencieusement : le creneau existe, mais
 // son jour s'affiche « — » et ne correspond a aucune date.
 const JOURS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-const JOUR_HIER = JOURS[new Date(Date.now() - 86400000).getDay()];
+const JOUR_CHOISI = JOURS[new Date().getDay()];
+
+/**
+ * Date de creation forcee du creneau : le lundi de la semaine SUIVANTE.
+ *
+ * Aucun jour de « cette semaine » ne peut jamais s'y trouver, donc la
+ * comparaison `r.date < createdAt` (creneaux.js) est vraie a coup sur —
+ * sans dependre du jour reel d'execution.
+ */
+const ISO = (d) => d.toISOString().slice(0, 10);
+const AUJOURDHUI = new Date();
+const DECALAGE_LUNDI = (AUJOURDHUI.getDay() + 6) % 7; // 0 = lundi … 6 = dimanche
+const LUNDI_COURANT = new Date(AUJOURDHUI);
+LUNDI_COURANT.setDate(AUJOURDHUI.getDate() - DECALAGE_LUNDI);
+const LUNDI_SUIVANT = new Date(LUNDI_COURANT);
+LUNDI_SUIVANT.setDate(LUNDI_COURANT.getDate() + 7);
+const CREATION_FORCEE = ISO(LUNDI_SUIVANT);
 
 await page.addInitScript(() => {
   if (localStorage.getItem("coach_profile")) return;
@@ -92,7 +124,7 @@ try {
   // contenu, seul repere stable si l'ordre des champs change un jour.
   const listeJours = modale.locator("select").filter({ has: page.locator('option[value="mon"]') }).last();
   if (!(await listeJours.count())) throw new Error("aucun sélecteur de jour dans la ligne de créneau");
-  await listeJours.selectOption(JOUR_HIER);
+  await listeJours.selectOption(JOUR_CHOISI);
   const heures = modale.locator('input[type="time"]');
   await heures.last().fill("18:30");
   const lieux = modale.getByPlaceholder("Lieu");
@@ -107,6 +139,17 @@ try {
   console.log("2. CRÉNEAU ENREGISTRÉ :", creneaux.length
     ? `jour ${creneaux[0].day} · ${creneaux[0].time} · ${creneaux[0].place}`
     : "*** AUCUN — la saisie n'atteint pas le stockage ***");
+
+  // La creation reelle (aujourd'hui) prouve que le formulaire ecrit bien
+  // dans le stockage — c'est le but des etapes 1 et 2. On recule ensuite
+  // cette date, DIRECTEMENT dans le stockage, pour placer le creneau avant
+  // sa propre creation sans dependre du jour reel d'execution : voir le
+  // commentaire d'en-tete.
+  await page.evaluate((forcee) => {
+    const p = JSON.parse(localStorage.getItem("coach_profile"));
+    p.slots = (p.slots || []).map((s) => ({ ...s, createdAt: forcee }));
+    localStorage.setItem("coach_profile", JSON.stringify(p));
+  }, CREATION_FORCEE);
 
   // ── 3. Survit-il au redémarrage ? ────────────────────────────────
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -129,7 +172,10 @@ try {
   // Le jour affiche doit correspondre a celui choisi. Un identifiant non
   // reconnu s'afficherait « — » sans autre signe.
   const JOURS_FR = { mon: "Lundi", tue: "Mardi", wed: "Mercredi", thu: "Jeudi", fri: "Vendredi", sat: "Samedi", sun: "Dimanche" };
-  console.log("   jour affiché       :", bloc.includes(JOURS_FR[JOUR_HIER]) ? JOURS_FR[JOUR_HIER] : `*** ATTENDU ${JOURS_FR[JOUR_HIER]} ***`);
+  console.log(
+    "   jour affiché       :",
+    bloc.includes(JOURS_FR[JOUR_CHOISI]) ? JOURS_FR[JOUR_CHOISI] : `*** ATTENDU ${JOURS_FR[JOUR_CHOISI]} ***`
+  );
 
   // ── 5. La règle : pas de reproche rétroactif ─────────────────────
   const retroactif = /Avant la mise en place du créneau/i.test(bloc) && /Non suivi/i.test(bloc);
