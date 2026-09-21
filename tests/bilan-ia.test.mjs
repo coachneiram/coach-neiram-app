@@ -191,6 +191,54 @@ describe("parite du prompt hebdomadaire", () => {
     ]);
     assert.deepEqual(imagesDuBilan(null, null), [], "aucune photo, aucune image jointe");
   });
+
+  /*
+   * ECART DELIBERE AVEC L'ORIGINAL — la seule regle de ce fichier qui a
+   * une exception.
+   *
+   * `photos` vaut par defaut `{}`, un objet donc VRAI, meme quand le
+   * client n'a rien photographie cette semaine-la. L'original teste
+   * `thisPhotos && lastPhotos` : un client sans photo cette semaine mais
+   * qui en avait une la precedente recevait quand meme la consigne
+   * « compare l'aspect visuel entre les deux semaines » — et le bilan
+   * livre au client decrivait une evolution visuelle a partir d'une
+   * photo qui n'existait pas cette semaine-la.
+   *
+   * Ne pas comparer a promptLegacy ici : c'est justement le defaut de
+   * l'original qui est corrige.
+   */
+  test("un jeu de photos vide ne declenche pas de fausse comparaison visuelle", () => {
+    const avecVraiesPhotos = promptBilanHebdo({
+      weekStats: SEMAINE,
+      lastWeekStats: null,
+      profile: PROFIL,
+      targets: OBJECTIFS,
+      lastActionsText: null,
+      thisPhotos: { face: "d1" },
+      lastPhotos: { face: "d2" }
+    });
+    assert.match(avecVraiesPhotos, /photos de progression.*sont jointes/);
+
+    for (const [thisPhotos, lastPhotos] of [
+      [{}, { face: "d2" }], // rien pris cette semaine, une photo la semaine precedente
+      [{ face: "d1" }, {}], // l'inverse
+      [{}, {}]
+    ]) {
+      const p = promptBilanHebdo({
+        weekStats: SEMAINE,
+        lastWeekStats: null,
+        profile: PROFIL,
+        targets: OBJECTIFS,
+        lastActionsText: null,
+        thisPhotos,
+        lastPhotos
+      });
+      assert.ok(
+        !/photos de progression/.test(p),
+        `un objet photos sans photo ne doit pas declencher la consigne de comparaison : ${JSON.stringify({ thisPhotos, lastPhotos })}`
+      );
+    }
+  });
 });
 
 describe("parite du prompt mensuel", () => {

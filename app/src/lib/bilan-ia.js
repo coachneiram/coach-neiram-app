@@ -108,6 +108,29 @@ function chiffresSemaine(s, profile) {
     .join("\n");
 }
 
+/**
+ * Un jeu de photos contient-il vraiment une photo ?
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * POURQUOI CETTE QUESTION NE SE REPOND PAS PAR « thisPhotos && lastPhotos »
+ * ─────────────────────────────────────────────────────────────────────
+ *
+ * `photos` vaut par defaut `{}` — un objet, donc VRAI — meme quand le
+ * client n'a photographie rien du tout cette semaine. Le controle
+ * `thisPhotos && lastPhotos` disait donc au modele que des photos des
+ * DEUX semaines etaient jointes des que l'objet existait, sans jamais
+ * verifier qu'il contenait une seule photo.
+ *
+ * Consequence reelle, sur un bilan de client : la semaine sans photo
+ * recevait quand meme la consigne « compare l'aspect visuel entre les
+ * deux semaines », et le modele s'executait — en decrivant un
+ * « raffermissement » sur une photo qui n'existait pas. Ni le client ni
+ * le coach ne pouvaient le voir avant l'envoi : le bilan rendu ne
+ * montre les photos que si `photos` (l'objet COURANT, pas celui du
+ * prompt) en contient une — voir construireBilanHTML.
+ */
+const auMoinsUnePhoto = (photos) => Boolean(photos && (photos.face || photos.profil || photos.dos));
+
 export function promptBilanHebdo({ weekStats, lastWeekStats, profile, lastActionsText, thisPhotos, lastPhotos }) {
   const goalLabel = GOALS.find((g) => g.id === profile.goal)?.label || "non défini";
   return `Tu es un coach sportif et nutrition qui rédige un bilan hebdomadaire structuré, factuel et direct pour un(e) client(e), à partir de ses données réelles.
@@ -141,7 +164,7 @@ Sommeil/stress : ${weekStats.dayNotes && weekStats.dayNotes.length ? weekStats.d
 ACTIONS RECOMMANDÉES LA SEMAINE DERNIÈRE (évalue si elles ont été suivies, à partir des données ci-dessus) :
 ${lastActionsText || "aucune"}
 ${
-  thisPhotos && lastPhotos
+  auMoinsUnePhoto(thisPhotos) && auMoinsUnePhoto(lastPhotos)
     ? "\nDes photos de progression de cette semaine et de la semaine précédente sont jointes (face, profil, dos selon disponibilité) — compare brièvement l'aspect visuel dans la section ÉVOLUTION, avec prudence (conditions de prise non garanties identiques)."
     : ""
 }
