@@ -157,7 +157,19 @@ function LigneAliment({ p, choisi, onChoisir, estFavori, onBasculerFavori }) {
   );
 }
 
-function QuantiteProduit({ produit, onChoisir }) {
+/*
+ * estFavori/onBasculerFavori sont optionnels et reprennent EtoileFavori
+ * tel quel (aucun texte nouveau, seul son EMPLACEMENT change) : apres un
+ * scan de code-barres, le produit trouve n'apparaissait dans AUCUNE liste
+ * munie d'une etoile. La cliente devait retaper son nom en recherche
+ * texte pour pouvoir enfin le mettre en favori — exactement ce que le
+ * favori est cense lui eviter (voir le mode « scan » plus bas).
+ *
+ * La recherche par nom ne passe pas ces props : son etoile est deja sur
+ * la ligne de resultat, avant meme ce choix de quantite ; la repeter ici
+ * doublonnerait l'action plutot que de la faciliter.
+ */
+function QuantiteProduit({ produit, onChoisir, estFavori, onBasculerFavori }) {
   const [grammes, setGrammes] = useState(produit.serving || 100);
   const g = Math.max(0, num(grammes));
   const kcal = Math.round(((produit.kcal100 || 0) * g) / 100);
@@ -175,11 +187,14 @@ function QuantiteProduit({ produit, onChoisir }) {
         marginTop: 10
       }}
     >
-      <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text }}>
-        {produit.name}
-        {produit.brand ? (
-          <span style={{ color: COLORS.textMuted, fontWeight: 400 }}> — {produit.brand}</span>
-        ) : null}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text }}>
+          {produit.name}
+          {produit.brand ? (
+            <span style={{ color: COLORS.textMuted, fontWeight: 400 }}> — {produit.brand}</span>
+          ) : null}
+        </div>
+        {onBasculerFavori && <EtoileFavori actif={estFavori} onBasculer={onBasculerFavori} />}
       </div>
       <div style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 3, fontFamily: "IBM Plex Mono" }}>
         {produit.kcal100} kcal · P{produit.p100} G{produit.c100} L{produit.f100} / 100 g
@@ -612,7 +627,14 @@ export function RechercheAliment({ onChoisir, habitudePesee }) {
               OK
             </Btn>
           </div>
-          {choisi && <QuantiteProduit produit={choisi} onChoisir={onChoisir} />}
+          {choisi && (
+            <QuantiteProduit
+              produit={choisi}
+              onChoisir={onChoisir}
+              estFavori={favApi.estFavori(choisi.code)}
+              onBasculerFavori={() => favApi.basculer(choisi)}
+            />
+          )}
           <p style={{ fontSize: 10, color: COLORS.textFaint, marginTop: 10, marginBottom: 0 }}>
             Produits reconnus via la base ouverte Open Food Facts.
           </p>

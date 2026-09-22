@@ -1,12 +1,20 @@
 /**
  * Fumee : ne rien retaper deux fois.
  *
- * Trois raccourcis repondent a la meme question — « est-ce que je dois
+ * Quatre raccourcis repondent a la meme question — « est-ce que je dois
  * ressaisir mes macros a chaque fois ? » :
  *
  *   1. enregistrer un repas complet, et le rappeler ;
- *   2. mettre un aliment en favori, et le retrouver ;
+ *   2. mettre un aliment en favori depuis la recherche par nom, et le
+ *      retrouver ;
+ *   2bis. mettre en favori un aliment trouve en SCANNANT SON CODE-BARRES,
+ *      sans repasser par la recherche par nom ;
  *   3. enregistrer un plat dans « Mes plats ».
+ *
+ * 2bis a ete signale par le coach : apres un scan, rien ne permettait de
+ * mettre l'aliment trouve en favori — il fallait retaper son nom en
+ * recherche pour enfin voir l'etoile. Exactement ce que le favori est
+ * cense eviter.
  *
  * Le script verifie surtout qu'ils SURVIVENT a la fermeture de l'app :
  * un favori qui disparait au redemarrage ne sert a rien, et c'est
@@ -43,18 +51,37 @@ page.on("pageerror", (e) => erreurs.push(e.message));
 const AUJ = new Date().toISOString().slice(0, 10);
 
 // Open Food Facts est injoignable ici : on simule une reponse stable.
+//
+// DEUX FORMES, PAS UNE : la recherche par nom (search_terms=) et la
+// lecture d'un code-barres (api/v2/product/<code>.json) ne rendent pas la
+// meme enveloppe — « products: [...] » contre « product: {...} », pluriel
+// contre singulier. chercherParCodeBarres lit `donnees.product` : lui
+// servir la forme « recherche » rendrait toujours `undefined`, et le
+// scan semblerait fonctionner alors qu'aucun produit n'est jamais trouve.
+const PRODUIT_BARRES = {
+  product_name: "Compote pomme sans sucre",
+  brands: "Andros",
+  code: "3045320007546",
+  nutriments: { "energy-kcal_100g": 48, proteins_100g: 0.3, carbohydrates_100g: 11, fat_100g: 0.1 }
+};
 await page.route("**/world.openfoodfacts.org/**", async (route) => {
+  const url = route.request().url();
+  const parCode = url.includes("/api/v2/product/");
   await route.fulfill({
     status: 200,
     contentType: "application/json",
-    body: JSON.stringify({
-      products: [{
-        product_name: "Skyr nature",
-        brands: "Danone",
-        code: "3033490004743",
-        nutriments: { "energy-kcal_100g": 63, proteins_100g: 11, carbohydrates_100g: 4, fat_100g: 0.2 }
-      }]
-    })
+    body: JSON.stringify(
+      parCode
+        ? { product: PRODUIT_BARRES }
+        : {
+            products: [{
+              product_name: "Skyr nature",
+              brands: "Danone",
+              code: "3033490004743",
+              nutriments: { "energy-kcal_100g": 63, proteins_100g: 11, carbohydrates_100g: 4, fat_100g: 0.2 }
+            }]
+          }
+    )
   });
 });
 
@@ -112,6 +139,36 @@ try {
   }
   const favoris = await lire("cn_food_favorites");
   console.log("   FAVORI ENREGISTRE  :", favoris.length ? `« ${favoris[0].name} » · ${favoris[0].kcal100} kcal/100 g` : "*** AUCUN ***");
+
+  // ── 2bis. Meme favori, mais depuis un SCAN de code-barres ────────
+  //
+  // Le signalement du coach, mot pour mot : « quand la personne scanne
+  // le code-barres, elle ne peut pas rajouter en favori l'article
+  // qu'elle vient de scanner ». On reste dans la meme modale, on bascule
+  // sur l'onglet Code-barres, on tape un numero (la camera n'est pas
+  // simulable ici, mais chercherCode() est le meme code quel que soit
+  // l'apport du numero) et on verifie que l'etoile existe CETTE FOIS,
+  // sans repasser par la recherche par nom.
+  await modale.getByRole("button", { name: "Code-barres", exact: true }).click();
+  await page.waitForTimeout(400);
+  await modale.getByPlaceholder(/tape le num/i).fill("3045320007546");
+  await modale.getByRole("button", { name: "OK", exact: true }).click();
+  await page.waitForTimeout(900);
+  const etoileScan = modale.getByRole("button", { name: "Ajouter aux favoris" }).first();
+  console.log("2bis. ETOILE APRES SCAN :", (await etoileScan.count()) ? "présente" : "*** ABSENTE ***");
+  if (await etoileScan.count()) {
+    await etoileScan.click();
+    await page.waitForTimeout(500);
+  }
+  const favorisApresScan = await lire("cn_food_favorites");
+  console.log(
+    "     FAVORI ENREGISTRE :",
+    favorisApresScan.length > favoris.length
+      ? `« ${favorisApresScan[0].name} » · ${favorisApresScan[0].kcal100} kcal/100 g`
+      : "*** TOUJOURS AUCUN NOUVEAU FAVORI ***"
+  );
+  await page.getByRole("button", { name: "Fermer" }).first().click();
+  await page.waitForTimeout(400);
 
   // ── 3. Le tout survit-il a la fermeture de l'app ? ───────────────
   await page.reload({ waitUntil: "domcontentloaded" });
