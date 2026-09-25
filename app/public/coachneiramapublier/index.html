@@ -1,0 +1,48 @@
+<!doctype html>
+<!--
+  Ancienne adresse de l'application — voir sw.js dans ce dossier.
+
+  Une cliente qui arrive ici (icone installee depuis l'ancien lien, favori)
+  est renvoyee vers la vraie application, un dossier plus haut. Avant de
+  partir, la page desinstalle tout service worker rattache a cette adresse :
+  c'est lui qui servait l'ancienne version depuis son cache.
+
+  La balise refresh couvre un navigateur sans JavaScript.
+-->
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0B0B0C" />
+    <meta http-equiv="refresh" content="2; url=../" />
+    <title>Coach Neiram</title>
+    <script>
+      (function () {
+        var partir = function () {
+          location.replace("../");
+        };
+        if (!("serviceWorker" in navigator)) return partir();
+        navigator.serviceWorker
+          .getRegistrations()
+          .then(function (inscriptions) {
+            return Promise.all(
+              inscriptions
+                .filter(function (i) {
+                  return i.scope.indexOf("/coachneiramapublier/") !== -1;
+                })
+                .map(function (i) {
+                  return i.unregister();
+                })
+            );
+          })
+          .then(partir, partir);
+      })();
+    </script>
+  </head>
+  <body style="margin: 0; background: #0b0b0c; color: #f5f5f5; font-family: system-ui, sans-serif">
+    <p style="padding: 24px; text-align: center">
+      Ouverture de l'application…<br />
+      <a href="../" style="color: #f5c542">Continuer</a>
+    </p>
+  </body>
+</html>
