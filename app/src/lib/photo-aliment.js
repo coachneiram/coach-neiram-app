@@ -84,25 +84,23 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, au format exact :
 {"name":"nom court du plat en français","portion":"description courte de la portion estimée","calories":0,"protein":0,"carbs":0,"fat":0,"confidence":"faible|moyenne|haute"}
 Les valeurs sont des nombres entiers (kcal et grammes) correspondant à la portion visible sur la photo.`;
 
-/** Estime les apports d'une assiette photographiee. */
-export async function analyserPhotoRepas(dataUrl) {
-  const texte = await genererTexte({
-    prompt: CONSIGNE_REPAS,
-    images: [dataUrl],
-    maxTokens: 900
-  });
-
+/**
+ * Lit l'estimation JSON rendue par le modele. Commun a la photo et a la
+ * description : memes champs, memes valeurs de repli, meme refus de
+ * continuer sur une reponse qui n'est pas du JSON.
+ */
+function lireEstimation(texte, nomParDefaut, origine) {
   let analyse;
   try {
     analyse = JSON.parse(extraireObjetJson(texte));
   } catch (e) {
     // La reponse brute est la seule piste exploitable pour comprendre.
-    console.error("[Coach Neiram] Photo repas — réponse IA non-JSON:", texte);
+    console.error(`[Coach Neiram] ${origine} — réponse IA non-JSON:`, texte);
     throw e;
   }
 
   return {
-    name: String(analyse.name || "Repas (photo)"),
+    name: String(analyse.name || nomParDefaut),
     portion: String(analyse.portion || ""),
     calories: Math.round(num(analyse.calories)),
     protein: Math.round(num(analyse.protein)),
@@ -110,4 +108,47 @@ export async function analyserPhotoRepas(dataUrl) {
     fat: Math.round(num(analyse.fat)),
     confidence: String(analyse.confidence || "moyenne")
   };
+}
+
+/** Estime les apports d'une assiette photographiee. */
+export async function analyserPhotoRepas(dataUrl) {
+  const texte = await genererTexte({
+    prompt: CONSIGNE_REPAS,
+    images: [dataUrl],
+    maxTokens: 900
+  });
+  return lireEstimation(texte, "Repas (photo)", "Photo repas");
+}
+
+/** Au-dela, ce n'est plus la description d'un repas. */
+export const LONGUEUR_MAX_DESCRIPTION = 600;
+
+/**
+ * Consigne pour un repas decrit en mots, tape ou dicte.
+ *
+ * Ajout posterieur a la bascule, d'apres MyFitnessPal et Lifesum (saisie
+ * vocale) : « deux oeufs brouilles, une tartine de pain complet, un cafe »
+ * suffit, sans chercher chaque aliment. Une dictee arrive souvent sans
+ * ponctuation ni majuscules : la consigne le dit au modele. Les quantites
+ * absentes sont estimees en portions courantes, ce que le client verifie
+ * ensuite, comme pour la photo.
+ */
+export function consigneDescription(description) {
+  const texte = String(description || "").trim().slice(0, LONGUEUR_MAX_DESCRIPTION);
+  return `Un client décrit ce qu'il a mangé, en français, parfois dicté à la voix donc sans ponctuation :
+« ${texte} »
+Estime les apports nutritionnels de l'ensemble de ce repas. Quand une quantité n'est pas précisée, prends une portion courante pour un adulte.
+Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, au format exact :
+{"name":"nom court du repas en français","portion":"quantités retenues, en bref","calories":0,"protein":0,"carbs":0,"fat":0,"confidence":"faible|moyenne|haute"}
+Les valeurs sont des nombres entiers (kcal et grammes) pour tout ce qui est décrit.`;
+}
+
+/** Estime les apports d'un repas decrit en mots. */
+export async function analyserDescriptionRepas(description) {
+  if (!String(description || "").trim()) throw new Error("description-vide");
+  const texte = await genererTexte({
+    prompt: consigneDescription(description),
+    maxTokens: 900
+  });
+  return lireEstimation(texte, "Repas (description)", "Description repas");
 }

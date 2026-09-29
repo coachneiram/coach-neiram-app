@@ -15,7 +15,7 @@
  * dans une sauvegarde de journal.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { num, round } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
@@ -23,10 +23,11 @@ import { chercherAliments, chercherParCodeBarres } from "../lib/recherche-alimen
 import { fibresPour, mentionEtat } from "../lib/fibres.js";
 import { ChoixPhoto } from "../ui/ChoixPhoto.jsx";
 import { redimensionnerPhoto } from "../lib/images.js";
-import { analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
+import { analyserDescriptionRepas, analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
+import { completerTexte, demarrerDictee, moteurDictee } from "../lib/dictee.js";
 import { messageErreur } from "../lib/ia.js";
-import { Btn, Field, NumberInput, TextInput } from "../ui/primitives.jsx";
-import { Barcode, Camera, Loader2, Search, Star } from "../ui/icones.jsx";
+import { Btn, Field, NumberInput, TextArea, TextInput } from "../ui/primitives.jsx";
+import { Barcode, Camera, Loader2, Search, Sparkles, Star } from "../ui/icones.jsx";
 
 const CLE_FAVORIS = "cn_food_favorites";
 
@@ -40,6 +41,152 @@ const MSG_FORMAT_PHOTO =
 
 /** Au-dela, la liste des favoris n'est plus un raccourci mais un catalogue. */
 const MAX_FAVORIS = 80;
+
+/* TEXTE-NOUVEAU
+   Ajouts posterieurs a la bascule, d'apres Lifesum, Yuka et MyFitnessPal :
+   badges Nutri-Score et NOVA sur les produits Open Food Facts, et repas
+   decrit en mots (tape ou dicte) puis estime par l'IA. Aucun de ces
+   libelles n'existe dans index.html ; ils sont tous regroupes ici. */
+
+const LIBELLE_DECRIRE = "Décrire";
+const LIBELLE_AUTRE_DESCRIPTION = "Autre description";
+
+/** Couleurs officielles du Nutri-Score (A a E) et des groupes NOVA (1 a 4). */
+const COULEURS_NUTRISCORE = { a: "#038141", b: "#85BB2F", c: "#FECB02", d: "#EE8100", e: "#E63E11" };
+const COULEURS_NOVA = { 1: "#00AA00", 2: "#FFCC00", 3: "#FF6600", 4: "#FF0000" };
+const SENS_NOVA = {
+  1: "brut ou peu transformé",
+  2: "ingrédient culinaire",
+  3: "transformé",
+  4: "ultra-transformé"
+};
+
+/**
+ * Nutri-Score et groupe NOVA d'un produit, quand Open Food Facts les donne.
+ * En liste, deux pastilles compactes ; sur la fiche choisie, le sens du
+ * groupe NOVA en clair — « NOVA 4 » seul ne dit rien a un debutant.
+ */
+function BadgesQualite({ produit, detaille = false }) {
+  const ns = produit && produit.nutriscore;
+  const nova = produit && produit.nova;
+  if (!ns && !nova) return null;
+  const pastille = (fond, texte, sombre) => (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "1px 6px",
+        borderRadius: 5,
+        background: fond,
+        color: sombre ? "#1A1A1A" : "#FFFFFF",
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: 0.2,
+        marginRight: 5,
+        whiteSpace: "nowrap"
+      }}
+    >
+      {texte}
+    </span>
+  );
+  return (
+    <span data-badges-qualite="" style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
+      {ns && pastille(COULEURS_NUTRISCORE[ns], `Nutri-Score ${ns.toUpperCase()}`, ns === "c")}
+      {nova && pastille(COULEURS_NOVA[nova], `NOVA ${nova}`, nova === 2)}
+      {detaille && nova ? <span style={{ fontSize: 10.5, color: COLORS.textMuted }}>{SENS_NOVA[nova]}</span> : null}
+    </span>
+  );
+}
+
+/**
+ * Repas decrit en mots, tape ou dicte, puis estime par l'IA.
+ *
+ * Le bouton micro n'apparait que si le navigateur sait dicter (Chrome,
+ * Safari recent). Sinon la description se tape — et le micro du clavier du
+ * telephone fait le meme travail.
+ */
+function DescriptionRepas({ onEstimation }) {
+  const [texte, setTexte] = useState("");
+  const [ecoute, setEcoute] = useState(false);
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState(null);
+  const arreter = useRef(null);
+  const peutDicter = Boolean(moteurDictee());
+
+  // Quitter l'ecran coupe le micro : une ecoute oubliee continuerait sinon.
+  useEffect(() => () => arreter.current && arreter.current(), []);
+
+  const basculerDictee = () => {
+    if (ecoute) {
+      if (arreter.current) arreter.current();
+      return;
+    }
+    setErreur(null);
+    const debut = texte;
+    const stop = demarrerDictee({
+      surTexte: (dicte) => setTexte(completerTexte(debut, dicte)),
+      surErreur: setErreur,
+      surFin: () => {
+        arreter.current = null;
+        setEcoute(false);
+      }
+    });
+    if (stop) {
+      arreter.current = stop;
+      setEcoute(true);
+    }
+  };
+
+  const estimer = async () => {
+    if (arreter.current) arreter.current();
+    setEnCours(true);
+    setErreur(null);
+    try {
+      onEstimation(await analyserDescriptionRepas(texte));
+    } catch (e) {
+      setErreur(messageErreur(e, "Estimation impossible. Précise les quantités, ou cherche les aliments un par un."));
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  return (
+    <div>
+      <TextArea
+        rows={3}
+        placeholder="Ex : 2 œufs brouillés, une tartine de pain complet beurrée, un café au lait"
+        value={texte}
+        onChange={(e) => setTexte(e.target.value)}
+      />
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        {peutDicter && (
+          <Btn variant="ghost" onClick={basculerDictee} disabled={enCours} style={{ flex: 1 }}>
+            {ecoute ? "⏹ Arrêter" : "🎤 Dicter"}
+          </Btn>
+        )}
+        <Btn
+          icon={enCours ? Loader2 : Sparkles}
+          onClick={estimer}
+          disabled={enCours || !texte.trim()}
+          style={{ flex: 2 }}
+        >
+          {enCours ? "Estimation..." : "Estimer avec l'IA"}
+        </Btn>
+      </div>
+      {ecoute && (
+        <p style={{ fontSize: 11.5, color: COLORS.gold, margin: "8px 0 0" }}>
+          Je t'écoute… décris ton repas, puis touche « Arrêter ».
+        </p>
+      )}
+      {erreur && <p style={{ fontSize: 12, color: COLORS.bad, margin: "8px 0 0" }}>{erreur}</p>}
+      <p style={{ fontSize: 10.5, color: COLORS.textFaint, margin: "8px 0 0", lineHeight: 1.45 }}>
+        Plus tu donnes de quantités (« 150 g de riz », « 2 œufs »), plus l'estimation est juste. Tu pourras
+        corriger les valeurs avant d'ajouter.
+      </p>
+    </div>
+  );
+}
+
+/* FIN-TEXTE-NOUVEAU */
 
 function useFavorisAliments() {
   const [favoris, setFavoris] = useState([]);
@@ -65,7 +212,9 @@ function useFavorisAliments() {
               p100: p.p100 || 0,
               c100: p.c100 || 0,
               f100: p.f100 || 0,
-              serving: p.serving || 100
+              serving: p.serving || 100,
+              nutriscore: p.nutriscore || null,
+              nova: p.nova || null
             },
             ...precedents
           ].slice(0, MAX_FAVORIS);
@@ -145,6 +294,11 @@ function LigneAliment({ p, choisi, onChoisir, estFavori, onBasculerFavori }) {
             <span style={{ color: COLORS.gold, fontSize: 10.5 }}> · {mentionEtat(p.etat)}</span>
           ) : null}
           {/* FIN-TEXTE-NOUVEAU */}
+          {(p.nutriscore || p.nova) && (
+            <span style={{ display: "block" }}>
+              <BadgesQualite produit={p} />
+            </span>
+          )}
         </span>
         <span
           style={{ fontSize: 10.5, color: COLORS.textFaint, fontFamily: "IBM Plex Mono", flexShrink: 0 }}
@@ -199,6 +353,7 @@ function QuantiteProduit({ produit, onChoisir, estFavori, onBasculerFavori }) {
       <div style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 3, fontFamily: "IBM Plex Mono" }}>
         {produit.kcal100} kcal · P{produit.p100} G{produit.c100} L{produit.f100} / 100 g
       </div>
+      <BadgesQualite produit={produit} detaille />
       <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginTop: 10 }}>
         <div style={{ width: 110 }}>
           <Field label="Quantité (g)">
@@ -352,6 +507,78 @@ export function RechercheAliment({ onChoisir, habitudePesee }) {
     }
   };
 
+  /**
+   * Estimation IA modifiable avant ajout. Commune a la photo et a la
+   * description : seul le bouton pour recommencer change.
+   */
+  const carteEstimation = (libelleRecommencer, recommencer) => (
+    <div
+      style={{
+        background: COLORS.bgAlt,
+        border: `1px solid ${COLORS.borderLight}`,
+        borderRadius: 10,
+        padding: 12,
+        marginTop: 10
+      }}
+    >
+      <div style={{ fontSize: 11, color: COLORS.textFaint, marginBottom: 8 }}>
+        Estimation IA ({resultatPhoto.confidence})
+        {resultatPhoto.portion ? ` · ${resultatPhoto.portion}` : ""} — ajuste les valeurs si besoin.
+      </div>
+      <Field label="Nom">
+        <TextInput
+          value={resultatPhoto.name}
+          onChange={(e) => setResultatPhoto({ ...resultatPhoto, name: e.target.value })}
+        />
+      </Field>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+        <Field label="Kcal">
+          <NumberInput
+            value={resultatPhoto.calories}
+            onChange={(e) => setResultatPhoto({ ...resultatPhoto, calories: e.target.value })}
+          />
+        </Field>
+        <Field label="P (g)">
+          <NumberInput
+            value={resultatPhoto.protein}
+            onChange={(e) => setResultatPhoto({ ...resultatPhoto, protein: e.target.value })}
+          />
+        </Field>
+        <Field label="G (g)">
+          <NumberInput
+            value={resultatPhoto.carbs}
+            onChange={(e) => setResultatPhoto({ ...resultatPhoto, carbs: e.target.value })}
+          />
+        </Field>
+        <Field label="L (g)">
+          <NumberInput
+            value={resultatPhoto.fat}
+            onChange={(e) => setResultatPhoto({ ...resultatPhoto, fat: e.target.value })}
+          />
+        </Field>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn variant="ghost" onClick={recommencer} style={{ flex: 1 }}>
+          {libelleRecommencer}
+        </Btn>
+        <Btn
+          onClick={() =>
+            onChoisir({
+              name: resultatPhoto.name,
+              calories: num(resultatPhoto.calories),
+              protein: num(resultatPhoto.protein),
+              carbs: num(resultatPhoto.carbs),
+              fat: num(resultatPhoto.fat)
+            })
+          }
+          style={{ flex: 1 }}
+        >
+          Ajouter
+        </Btn>
+      </div>
+    </div>
+  );
+
   const puce = (id, libelle, Icone) => (
     <button
       key={id}
@@ -381,6 +608,7 @@ export function RechercheAliment({ onChoisir, habitudePesee }) {
         {puce("search", "Recherche", Search)}
         {puce("photo", "Photo IA", Camera)}
         {puce("scan", "Code-barres", Barcode)}
+        {puce("texte", LIBELLE_DECRIRE, Sparkles)}
       </div>
 
       {mode === "search" && (
@@ -512,84 +740,22 @@ export function RechercheAliment({ onChoisir, habitudePesee }) {
               style={{ width: "100%", maxHeight: 170, objectFit: "cover", borderRadius: 10, marginTop: 10 }}
             />
           )}
-          {resultatPhoto && (
-            <div
-              style={{
-                background: COLORS.bgAlt,
-                border: `1px solid ${COLORS.borderLight}`,
-                borderRadius: 10,
-                padding: 12,
-                marginTop: 10
-              }}
-            >
-              <div style={{ fontSize: 11, color: COLORS.textFaint, marginBottom: 8 }}>
-                Estimation IA ({resultatPhoto.confidence})
-                {resultatPhoto.portion ? ` · ${resultatPhoto.portion}` : ""} — ajuste les valeurs si besoin.
-              </div>
-              <Field label="Nom">
-                <TextInput
-                  value={resultatPhoto.name}
-                  onChange={(e) => setResultatPhoto({ ...resultatPhoto, name: e.target.value })}
-                />
-              </Field>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
-                <Field label="Kcal">
-                  <NumberInput
-                    value={resultatPhoto.calories}
-                    onChange={(e) => setResultatPhoto({ ...resultatPhoto, calories: e.target.value })}
-                  />
-                </Field>
-                <Field label="P (g)">
-                  <NumberInput
-                    value={resultatPhoto.protein}
-                    onChange={(e) => setResultatPhoto({ ...resultatPhoto, protein: e.target.value })}
-                  />
-                </Field>
-                <Field label="G (g)">
-                  <NumberInput
-                    value={resultatPhoto.carbs}
-                    onChange={(e) => setResultatPhoto({ ...resultatPhoto, carbs: e.target.value })}
-                  />
-                </Field>
-                <Field label="L (g)">
-                  <NumberInput
-                    value={resultatPhoto.fat}
-                    onChange={(e) => setResultatPhoto({ ...resultatPhoto, fat: e.target.value })}
-                  />
-                </Field>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Btn
-                  variant="ghost"
-                  onClick={() => {
-                    // Effacer le resultat fait reapparaitre le choix
-                    // « Photographier / Choisir » : le client garde les deux
-                    // voies pour sa seconde tentative, pas seulement celle
-                    // qu'il vient d'utiliser.
-                    setResultatPhoto(null);
-                    setApercuPhoto(null);
-                  }}
-                  style={{ flex: 1 }}
-                >
-                  Autre photo
-                </Btn>
-                <Btn
-                  onClick={() =>
-                    onChoisir({
-                      name: resultatPhoto.name,
-                      calories: num(resultatPhoto.calories),
-                      protein: num(resultatPhoto.protein),
-                      carbs: num(resultatPhoto.carbs),
-                      fat: num(resultatPhoto.fat)
-                    })
-                  }
-                  style={{ flex: 1 }}
-                >
-                  Ajouter
-                </Btn>
-              </div>
-            </div>
-          )}
+          {resultatPhoto &&
+            carteEstimation("Autre photo", () => {
+              // Effacer le resultat fait reapparaitre le choix
+              // « Photographier / Choisir » : le client garde les deux
+              // voies pour sa seconde tentative, pas seulement celle
+              // qu'il vient d'utiliser.
+              setResultatPhoto(null);
+              setApercuPhoto(null);
+            })}
+        </div>
+      )}
+
+      {mode === "texte" && (
+        <div>
+          <DescriptionRepas onEstimation={setResultatPhoto} />
+          {resultatPhoto && carteEstimation(LIBELLE_AUTRE_DESCRIPTION, () => setResultatPhoto(null))}
         </div>
       )}
 
