@@ -88,6 +88,14 @@ function chiffresSemaine(s, profile) {
           profile.targetSteps || 8e3
         ).toLocaleString("fr-FR")})`
       : null,
+    // Absentes tant que le client ne compte pas ses portions : le prompt
+    // reste alors identique a celui de l'application d'origine.
+    s.avgFruitsVeg != null
+      ? `Fruits et légumes : ${s.avgFruitsVeg} portions/jour en moyenne (repère : 5)`
+      : null,
+    s.avgProteinPortions != null
+      ? `Portions de protéines : ${s.avgProteinPortions}/jour en moyenne (repère : 3, une par repas)`
+      : null,
     `Calories moyennes : ${s.avgCalories ?? "—"} kcal (jours suivis ${s.loggedDaysCount}/7)`,
     `Macros : P${s.avgProtein ?? "—"} G${s.avgCarbs ?? "—"} L${s.avgFat ?? "—"}`,
     `Poids : ${s.latestWeight ?? "—"} kg${

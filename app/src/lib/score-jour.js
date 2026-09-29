@@ -18,6 +18,7 @@
 
 import { avg, clamp, num } from "./dates.js";
 import { getMonday } from "./semaine.js";
+import { composantesPortions } from "./portions-jour.js";
 
 /** Objectifs par defaut, quand le profil ne les precise pas. */
 export const DEFAUTS = {
@@ -88,6 +89,11 @@ export function composantesDuScore({ journalDuJour, entreesDuJour, totaux, profi
       value: clamp(100 - (Math.abs(totaux.calories - objectifs.calories) / objectifs.calories) * 100, 0, 100)
     });
   }
+
+  // Portions de fruits, legumes et proteines comptees en un geste — ajout
+  // posterieur a la bascule, absent de l'application d'origine. Rien
+  // n'apparait tant que le client ne s'en sert pas.
+  composantes.push(...composantesPortions(form));
 
   // Entrainement : avancement dans la semaine en cours, jusqu'a la date
   // consultee — pas la semaine entiere, sinon consulter un lundi donnerait

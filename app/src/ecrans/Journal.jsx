@@ -29,6 +29,15 @@ import {
   totauxRepasType
 } from "../lib/repas-types.js";
 import { repasSelonHeure } from "../lib/suggestions.js";
+import { entreesACopier, resumeCopie, veille } from "../lib/copier-jour.js";
+import {
+  OBJECTIF_FRUITS_LEGUMES,
+  OBJECTIF_PORTIONS_PROTEINES,
+  PORTIONS,
+  ajusterPortion,
+  fruitsEtLegumes,
+  lirePortion
+} from "../lib/portions-jour.js";
 import { AjoutAliment } from "./AjoutAliment.jsx";
 
 import {
@@ -76,6 +85,120 @@ const styleSousTitre = {
   letterSpacing: 0.5,
   marginBottom: 8
 };
+
+/* TEXTE-NOUVEAU
+   Fonctions ajoutees au Journal apres la bascule, a la demande du coach,
+   d'apres ce que proposent MyFitnessPal, Yazio et Lifesum. Aucune n'existe
+   dans index.html : leurs libelles sont donc nouveaux, et tous regroupes
+   ici plutot que disperses dans l'ecran. */
+
+/**
+ * Reprendre les repas de la veille : toute la journee (grand bouton en tete
+ * de liste) ou un seul repas (lien sous « Rien enregistre »). Le resume
+ * annonce ce qui sera ajoute, pour qu'on ne le decouvre pas apres coup.
+ */
+function RepriseVeille({ journee = false, resume, deLaVeille, onReprendre }) {
+  const detail = `${resume.aliments} aliment${resume.aliments > 1 ? "s" : ""} · ${resume.kcal} kcal`;
+  return journee ? (
+    <Btn variant="ghost" icon={Plus} onClick={onReprendre} style={{ width: "100%", marginTop: 14 }}>
+      Reprendre toute la journée {deLaVeille} · {detail}
+    </Btn>
+  ) : (
+    <button
+      onClick={onReprendre}
+      style={{
+        background: "none",
+        border: "none",
+        padding: "6px 0 0",
+        color: COLORS.gold,
+        fontSize: 11,
+        fontWeight: 600,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 5
+      }}
+    >
+      <Plus size={11} />
+      Reprendre celui {deLaVeille} · {detail}
+    </button>
+  );
+}
+
+/**
+ * Portions du jour : un appui sur + par fruit, par poignee de legumes, par
+ * paume de proteines. Pour apprendre a mieux manger sans rien peser.
+ */
+function PortionsDuJour({ form, onChanger }) {
+  const fl = fruitsEtLegumes(form);
+  const prot = lirePortion(form, "proteinPortions");
+  const bouton = (cle, delta) => {
+    const valeur = lirePortion(form, cle);
+    const inactif = delta < 0 && valeur <= 0;
+    return (
+      <button
+        aria-label={`${delta > 0 ? "Ajouter" : "Retirer"} une portion`}
+        disabled={inactif}
+        onClick={() => onChanger(cle, ajusterPortion(valeur, delta))}
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 9,
+          border: `1px solid ${COLORS.border}`,
+          background: delta > 0 ? COLORS.bgAlt : "transparent",
+          color: delta > 0 ? COLORS.gold : COLORS.textMuted,
+          fontSize: 18,
+          fontWeight: 700,
+          cursor: inactif ? "default" : "pointer",
+          opacity: inactif ? 0.4 : 1
+        }}
+      >
+        {delta > 0 ? "+" : "−"}
+      </button>
+    );
+  };
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <SectionTitle>Portions du jour</SectionTitle>
+      <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "6px 0 12px", lineHeight: 1.45 }}>
+        Un fruit, une poignée de légumes, une paume de viande, poisson, œufs ou tofu = 1 portion.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {PORTIONS.map((p) => (
+          <div key={p.cle} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ flex: 1, fontSize: 13, color: COLORS.text, fontWeight: 600 }}>
+              {p.icone} {p.label}
+            </span>
+            {bouton(p.cle, -1)}
+            <span
+              data-portion={p.cle}
+              style={{ minWidth: 26, textAlign: "center", fontFamily: POLICES.titre, fontSize: 17, fontWeight: 700 }}
+            >
+              {lirePortion(form, p.cle)}
+            </span>
+            {bouton(p.cle, 1)}
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <MiniBar
+          label={fl >= OBJECTIF_FRUITS_LEGUMES ? "Fruits & légumes : objectif atteint 💪" : `Fruits & légumes : ${fl} / ${OBJECTIF_FRUITS_LEGUMES}`}
+          pct={(fl / OBJECTIF_FRUITS_LEGUMES) * 100}
+          valueLabel={`${Math.round(Math.min(1, fl / OBJECTIF_FRUITS_LEGUMES) * 100)}%`}
+          color={COLORS.good}
+        />
+        <MiniBar
+          label={prot >= OBJECTIF_PORTIONS_PROTEINES ? "Protéines : objectif atteint 💪" : `Protéines : ${prot} / ${OBJECTIF_PORTIONS_PROTEINES} (une par repas)`}
+          pct={(prot / OBJECTIF_PORTIONS_PROTEINES) * 100}
+          valueLabel={`${Math.round(Math.min(1, prot / OBJECTIF_PORTIONS_PROTEINES) * 100)}%`}
+          color={COLORS.gold}
+        />
+      </div>
+    </Card>
+  );
+}
+
+/* FIN-TEXTE-NOUVEAU */
 
 export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsApi, targets, profile, onToast }) {
   const [date, setDate] = useState(todayISO());
@@ -215,6 +338,25 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
   };
 
   const entreesDuJour = logEntriesApi.items.filter((e) => e.date === date);
+
+  /*
+   * Reprendre la veille : un repas, ou toute la journee. Le bouton n'est
+   * propose que la ou il n'y a encore rien — un repas deja saisi ne se
+   * double pas par megarde.
+   */
+  const copieDeLaVeille = (mealType = null) =>
+    entreesACopier(logEntriesApi.items, { depuis: veille(date), vers: date, mealType });
+  const deLaVeille = date === todayISO() ? "d'hier" : "de la veille";
+  const copierLaVeille = async (mealType = null) => {
+    const entrees = copieDeLaVeille(mealType);
+    if (!entrees.length) return;
+    await logEntriesApi.addMany(entrees);
+    if (onToast) {
+      const { aliments, kcal } = resumeCopie(entrees);
+      onToast(`${aliments} aliment${aliments > 1 ? "s" : ""} repris ${deLaVeille} (${kcal} kcal).`);
+    }
+  };
+  const journeeVeille = entreesDuJour.length === 0 ? resumeCopie(copieDeLaVeille()) : null;
   const totaux = totauxDuJour(entreesDuJour);
   const corps = bodyApi.getForDate(date) || {};
   const form = formApi.getForDate(date) || {};
@@ -459,9 +601,14 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
           </div>
         )}
 
+        {journeeVeille && journeeVeille.aliments > 0 && (
+          <RepriseVeille journee resume={journeeVeille} deLaVeille={deLaVeille} onReprendre={() => copierLaVeille()} />
+        )}
+
         <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
           {SECTIONS_REPAS.map((section) => {
             const items = entreesDuJour.filter((e) => e.mealType === section.id);
+            const repasVeille = items.length === 0 ? resumeCopie(copieDeLaVeille(section.id)) : null;
             return (
               <div key={section.id}>
                 <div
@@ -493,7 +640,16 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
                 </div>
 
                 {items.length === 0 ? (
-                  <p style={{ fontSize: 12, color: COLORS.textFaint, margin: 0 }}>Rien enregistré.</p>
+                  <>
+                    <p style={{ fontSize: 12, color: COLORS.textFaint, margin: 0 }}>Rien enregistré.</p>
+                    {repasVeille.aliments > 0 && (
+                      <RepriseVeille
+                        resume={repasVeille}
+                        deLaVeille={deLaVeille}
+                        onReprendre={() => copierLaVeille(section.id)}
+                      />
+                    )}
+                  </>
                 ) : (
                   <>
                     <button
@@ -622,6 +778,8 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
           </button>
         </div>
       </Card>
+
+      <PortionsDuJour form={form} onChanger={(cle, valeur) => formApi.upsert(date, { [cle]: valeur })} />
 
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
