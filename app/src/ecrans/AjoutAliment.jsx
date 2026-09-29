@@ -14,10 +14,11 @@ import { useMemo, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { num, round } from "../lib/dates.js";
 import { basisMacros, fmtPortion, itemBasis, scaleMacros, sumMacros, toGramBasis } from "../lib/portions.js";
-import { PALIERS_PORTION, multiplicateur, totauxRepasType } from "../lib/repas-types.js";
+import { PALIERS_PORTION, multiplicateur, quantitesDUnePortion, totauxRepasType } from "../lib/repas-types.js";
 import { Btn, Field, Modal, NumberInput, TextInput } from "../ui/primitives.jsx";
 import { Trash2, X } from "../ui/icones.jsx";
 import { RechercheAliment } from "./RechercheAliment.jsx";
+import { TableauParts } from "./Recettes.jsx";
 
 const ONGLETS = [
   { id: "presets", label: "Repas" },
@@ -68,7 +69,9 @@ const champCompact = {
 function EditeurQuantitesRepas({ titre, items, portions, onAjouter, onAnnuler, onMemoriserPoids }) {
   const bruts = useMemo(() => (items || []).map(itemBasis), [items]);
 
-  const [quantites, setQuantites] = useState(() => bruts.map((b) => String(b.qty)));
+  // Ouvert a UNE part quand le repas en compte plusieurs : c'est ce que le
+  // champ « tu en manges combien ? » affiche. Voir quantitesDUnePortion.
+  const [quantites, setQuantites] = useState(() => quantitesDUnePortion(bruts, portions));
   const [poidsReference, setPoidsReference] = useState(() => bruts.map(() => ""));
   const [enConversion, setEnConversion] = useState(() => bruts.map(() => false));
 
@@ -83,6 +86,7 @@ function EditeurQuantitesRepas({ titre, items, portions, onAjouter, onAnnuler, o
   // Recette en plusieurs parts : on divise toutes les lignes par le nombre
   // de portions produites, puis on multiplie par ce qui est reellement mange.
   const parts = Math.max(1, Math.round(num(portions) || 1));
+  const totalRecetteEntiere = sumMacros(bases.map((b) => basisMacros(b, b.qty)));
   const [mangees, setMangees] = useState("1");
   const appliquerPortions = (v) => {
     setMangees(v);
@@ -163,30 +167,18 @@ function EditeurQuantitesRepas({ titre, items, portions, onAjouter, onAnnuler, o
                 style={{ padding: "8px 10px" }}
               />
             </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {[1, 2, parts]
-                .filter((v, i, a) => a.indexOf(v) === i)
-                .map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => appliquerPortions(String(v))}
-                    style={{
-                      padding: "7px 11px",
-                      borderRadius: 8,
-                      border: `1px solid ${COLORS.border}`,
-                      background: "none",
-                      color: COLORS.textMuted,
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      fontFamily: "IBM Plex Mono"
-                    }}
-                  >
-                    {v}
-                    {v > 1 ? " parts" : " part"}
-                  </button>
-                ))}
-            </div>
+          </div>
+          {/* 1, 2, 3 parts ou la recette entiere, chacune avec ses calories et
+              ses macros : on voit ce que coute chaque choix avant de le faire.
+              Remplace les boutons « 1 part / 2 parts / N parts », qui n'en
+              disaient rien. */}
+          <div style={{ marginTop: 8 }}>
+            <TableauParts
+              total={totalRecetteEntiere}
+              parts={parts}
+              choisi={mangees}
+              onChoisir={(n) => appliquerPortions(String(n))}
+            />
           </div>
         </div>
       )}

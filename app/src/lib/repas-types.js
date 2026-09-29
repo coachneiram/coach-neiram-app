@@ -105,6 +105,107 @@ export function memoriserGrammage(liste, idRepas, index, grammes) {
   return suivant;
 }
 
+/**
+ * Quantites d'une seule portion d'un repas enregistre pour plusieurs parts.
+ *
+ * L'editeur affiche « Recette pour 6 portions — tu en manges combien ? »
+ * avec « 1 » deja saisi. Il ouvrait pourtant les lignes aux quantites de
+ * la recette ENTIERE, et ne divisait qu'une fois ce champ modifie : un
+ * client qui validait sans y toucher enregistrait la quiche complete,
+ * alors que l'ecran lui annoncait une part. Defaut d'origine, deja present
+ * dans index.html ; il devient critique des qu'on cree des recettes.
+ *
+ * Un repas en une seule portion reste tel quel.
+ */
+export function quantitesDUnePortion(bases, portions) {
+  const parts = Math.max(1, Math.round(num(portions) || 1));
+  return (bases || []).map((b) => String(parts > 1 ? Math.round((b.qty / parts) * 100) / 100 : b.qty));
+}
+
+/**
+ * Recettes : les ingredients d'un plat cuisine, pour la recette entiere.
+ *
+ * Une recette EST un repas type — meme stockage, memes champs — avec un
+ * nombre de parts et un marqueur `recette`. Elle se reutilise donc depuis
+ * le Journal exactement comme un repas enregistre (« + ajouter » → Repas),
+ * avec l'editeur qui demande combien de parts on mange. Rien de nouveau a
+ * apprendre de ce cote, et aucun second mecanisme a maintenir.
+ *
+ * Ce qui manquait, c'etait de pouvoir la COMPOSER sans passer par le
+ * journal du jour : saisir 200 g de lardons dans son dejeuner pour ensuite
+ * « Enregistrer ce repas » comptait la quiche entiere dans la journee.
+ */
+export const estRecette = (repas) => Boolean(repas && repas.recette);
+
+export const lireRecettes = () => lireRepasTypes().filter(estRecette);
+
+/** Totaux d'une part : la recette entiere divisee par son nombre de parts. */
+export function totauxParPortion(recette) {
+  const t = totauxRepasType(recette);
+  const parts = Math.max(1, Math.round(num(recette && recette.portions) || 1));
+  return { kcal: t.kcal / parts, p: t.p / parts, c: t.c / parts, f: t.f / parts };
+}
+
+/**
+ * Ce que coutent 1, 2, 3 parts, et la recette entiere.
+ *
+ * Demande du coach : « si elle prend une part, deux parts, trois parts, ou
+ * la quiche entiere », avec calories et macros pour chaque cas, sous les
+ * yeux avant de choisir. Les paliers qui depassent la recette sont omis :
+ * « 3 parts » d'une recette qui en fait 2 n'existe pas. La derniere ligne
+ * est toujours la recette entiere.
+ *
+ * `total` est celui de la recette ENTIERE. Rien a afficher pour un repas
+ * d'une seule portion : il n'y a pas de parts a choisir.
+ */
+export function lignesParParts(total, portions) {
+  const parts = Math.max(1, Math.round(num(portions) || 1));
+  if (parts < 2) return [];
+  return [...[1, 2, 3].filter((n) => n < parts), parts].map((n) => ({
+    parts: n,
+    entiere: n === parts,
+    kcal: (num(total.kcal) * n) / parts,
+    p: (num(total.p) * n) / parts,
+    c: (num(total.c) * n) / parts,
+    f: (num(total.f) * n) / parts
+  }));
+}
+
+/**
+ * Cree ou met a jour une recette. Renvoie la liste complete des repas types.
+ *
+ * Une recette modifiee garde sa place et son identifiant : la supprimer
+ * puis la recreer la ferait changer de rang dans la liste du Journal.
+ * Sans ingredient, rien n'est ecrit — une recette vide n'a rien a ajouter.
+ */
+export function enregistrerRecette(liste, { id, nom, ingredients, portions }) {
+  const items = (ingredients || []).map((e) => ({
+    name: e.name,
+    baseName: e.baseName || null,
+    grams: e.grams != null ? num(e.grams) : null,
+    calories: num(e.calories),
+    protein: num(e.protein),
+    carbs: num(e.carbs),
+    fat: num(e.fat)
+  }));
+  if (!items.length) return liste;
+
+  const champs = {
+    name: String(nom || "").trim() || "Recette",
+    items,
+    portions: Math.max(1, Math.round(num(portions) || 1)),
+    recette: true
+  };
+
+  const existante = id ? liste.find((r) => r.id === id) : null;
+  const suivant = existante
+    ? liste.map((r) => (r.id === id ? { ...r, ...champs } : r))
+    : [{ id: uid(), mealType: null, createdAt: todayISO(), ...champs }, ...liste].slice(0, MAX_REPAS_TYPES);
+
+  enregistrer(CLE_REPAS_TYPES, suivant);
+  return suivant;
+}
+
 /** Multiplicateur saisi, borne et tolerant a la virgule francaise. */
 export function multiplicateur(saisie) {
   const v = parseFloat(String(saisie).replace(",", "."));

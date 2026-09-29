@@ -32,6 +32,7 @@ import {
 } from "../ui/primitives.jsx";
 import { Camera, Pencil, Plus, Trash2, UtensilsCrossed, X } from "../ui/icones.jsx";
 import { RechercheAliment } from "./RechercheAliment.jsx";
+import { Recettes } from "./Recettes.jsx";
 
 export function Plats({ api, habitudePesee }) {
   const [modalOuverte, setModalOuverte] = useState(false);
@@ -105,6 +106,8 @@ export function Plats({ api, habitudePesee }) {
       >
         Importer un aliment — recherche, photo IA ou code-barres
       </Btn>
+
+      <Recettes habitudePesee={habitudePesee} />
 
       {plats.length === 0 ? (
         <EmptyState
