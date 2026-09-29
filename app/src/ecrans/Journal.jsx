@@ -902,7 +902,11 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
 
       <Card style={{ marginBottom: 16 }}>
         <SectionTitle>Sommeil &amp; forme</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
+        {/* minmax(0, 1fr) et non 1fr : un champ horaire ne se retrecit pas
+            sous sa largeur naturelle. Sur un ecran de 320 px, « Coucher » et
+            « Lever » poussaient la page a 362 px — tout le Journal glissait
+            sur le cote et la barre d'onglets sortait de l'ecran. */}
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10, marginTop: 12 }}>
           <Field label="Coucher">
             <TextInput type="time" value={form.bedTime ?? ""} onChange={majSommeil("bedTime")} />
           </Field>
