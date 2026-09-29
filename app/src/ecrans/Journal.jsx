@@ -38,6 +38,7 @@ import {
   fruitsEtLegumes,
   lirePortion
 } from "../lib/portions-jour.js";
+import { serieDuJour } from "../lib/resume-semaine.js";
 import { AjoutAliment } from "./AjoutAliment.jsx";
 
 import {
@@ -195,6 +196,52 @@ function PortionsDuJour({ form, onChanger }) {
         />
       </div>
     </Card>
+  );
+}
+
+/**
+ * Serie de jours notes et paliers (7, 14, 30, 60, 100 jours). Le palier
+ * n'est celebre que le jour ou il tombe ; le matin, avant toute saisie,
+ * la serie d'hier s'affiche avec l'invitation a la prolonger.
+ */
+function BandeauSerie({ serie }) {
+  if (!serie || serie.jours < 1) return null;
+  const s = serie.jours > 1 ? "s" : "";
+  return (
+    <div
+      data-serie=""
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "9px 12px",
+        marginBottom: 16,
+        borderRadius: 10,
+        border: `1px solid ${serie.atteint ? COLORS.gold : COLORS.border}`,
+        background: serie.atteint ? `${COLORS.gold}1A` : COLORS.bgAlt,
+        fontSize: 12.5,
+        color: COLORS.text
+      }}
+    >
+      <span style={{ fontSize: 16 }}>{serie.atteint ? "🎉" : "🔥"}</span>
+      <span>
+        {serie.atteint ? (
+          <strong style={{ color: COLORS.gold }}>Palier des {serie.atteint} jours atteint ! </strong>
+        ) : (
+          <strong>
+            {serie.jours} jour{s} de suite{" "}
+          </strong>
+        )}
+        {serie.prochain ? (
+          <span style={{ color: COLORS.textMuted }}>
+            · prochain palier : {serie.prochain} jours (encore {serie.reste})
+          </span>
+        ) : null}
+        {!serie.aujourdhuiNote ? (
+          <span style={{ color: COLORS.textMuted }}> · note quelque chose aujourd'hui pour la prolonger.</span>
+        ) : null}
+      </span>
+    </div>
   );
 }
 
@@ -459,6 +506,14 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
     });
   }, [date, totaux.protein, eauMl, pas, corps.weightKg, entreesDuJour.length, graineHoraire]);
 
+  const serie = useMemo(
+    () =>
+      date === todayISO()
+        ? serieDuJour({ date, repas: logEntriesApi.items, journal: formApi.items, seances: sessionsApi.items })
+        : null,
+    [date, logEntriesApi.items, formApi.items, sessionsApi.items]
+  );
+
   const majSommeil = (champ) => (e) => {
     const valeur = e.target.value || null;
     const heures = {
@@ -475,6 +530,8 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
       <DateNav date={date} onChange={setDate} iconePrecedent={ChevronLeft} iconeSuivant={ChevronRight} />
 
       <MotivationCard text={motivation} icone={Flame} />
+
+      <BandeauSerie serie={serie} />
 
       {score != null && (
         <Card style={{ marginBottom: 16 }}>
