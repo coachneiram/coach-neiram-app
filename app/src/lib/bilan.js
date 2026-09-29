@@ -15,6 +15,7 @@ import { bilanSemaine, semaineCreneaux } from "./creneaux.js";
 import { normaliserCreneaux } from "./semaine.js";
 import { bilanPlanSemaine, etatPlanSemaine, raisonSemaineDifficile, semaineDifficileDe } from "./plan-semaine.js";
 import { fmtRPE } from "./force.js";
+import { moyennesPortions } from "./portions-jour.js";
 
 /** Longueur maximale d'une note reprise dans le bilan. */
 const LONGUEUR_NOTE = 140;
@@ -66,6 +67,8 @@ export function bilanHebdomadaire(cleSemaine, donnees, profil, objectifs) {
   const avgStress = moyenneOuNull(valeursDe(journal, "stress"), 1);
   const avgWaterMl = moyenneOuNull(valeursPositives(journal, "waterMl"));
   const avgSteps = moyenneOuNull(valeursPositives(journal, "steps"));
+  // Portions comptees en un geste (ajout posterieur a la bascule).
+  const { avgFruitsVeg, avgProteinPortions } = moyennesPortions(journal);
 
   // --- Notes libres : ce que le client a ecrit compte autant que ses
   // chiffres, souvent davantage pour comprendre une mauvaise semaine.
@@ -186,6 +189,8 @@ export function bilanHebdomadaire(cleSemaine, donnees, profil, objectifs) {
     avgStress,
     avgWaterMl,
     avgSteps,
+    avgFruitsVeg,
+    avgProteinPortions,
     dayNotes,
     sessionNotes,
     pains,

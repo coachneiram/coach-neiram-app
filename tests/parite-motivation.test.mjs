@@ -11,6 +11,7 @@ import { test, describe, before } from "node:test";
 import assert from "node:assert/strict";
 import { chargerApp } from "./harness.mjs";
 import { VARIANTES, construireMotivation, serieDeJours } from "../app/src/lib/motivation.js";
+import { addDays } from "../app/src/lib/dates.js";
 
 let legacy;
 before(async () => {
@@ -154,11 +155,9 @@ describe("regles d'affichage", () => {
 });
 
 describe("serie de jours consecutifs", () => {
-  const jour = (n) => {
-    const d = new Date("2026-09-05T00:00:00");
-    d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0, 10);
-  };
+  // Dates locales, comme l'application. Ce helper passait par
+  // toISOString() — la meme erreur que le code teste, ce qui la masquait.
+  const jour = (n) => addDays("2026-09-05", -n);
 
   test("une seule trace suffit a compter le jour", () => {
     assert.equal(serieDeJours({ date: "2026-09-05", repas: [{ date: jour(0) }], journal: [], seances: [] }), 1);
@@ -168,6 +167,23 @@ describe("serie de jours consecutifs", () => {
   test("la serie s'arrete au premier jour vide", () => {
     const repas = [jour(0), jour(1), jour(3)].map((date) => ({ date }));
     assert.equal(serieDeJours({ date: "2026-09-05", repas, journal: [], seances: [] }), 2);
+  });
+
+  test("le jour meme compte, quel que soit le fuseau horaire", () => {
+    // En France, minuit local est encore la veille en UTC. Passer par
+    // toISOString() faisait commencer la serie a hier.
+    const avant = process.env.TZ;
+    try {
+      for (const tz of ["Europe/Paris", "UTC", "America/Martinique", "Pacific/Auckland"]) {
+        process.env.TZ = tz;
+        const repas = [{ date: "2026-09-05" }, { date: "2026-09-04" }];
+        assert.equal(serieDeJours({ date: "2026-09-05", repas, journal: [], seances: [] }), 2, tz);
+        assert.equal(serieDeJours({ date: "2026-09-05", repas: [{ date: "2026-09-05" }], journal: [], seances: [] }), 1, tz);
+      }
+    } finally {
+      if (avant === undefined) delete process.env.TZ;
+      else process.env.TZ = avant;
+    }
   });
 
   test("aucune donnee donne une serie nulle", () => {

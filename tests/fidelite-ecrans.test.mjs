@@ -185,7 +185,10 @@ describe("les ajouts posterieurs a la bascule restent visibles", () => {
     }
     // Le compte est volontairement affiche : il doit rester lisible d'un
     // coup d'oeil combien de textes ne sont plus couverts par le controle.
-    assert.ok(blocs < 25, `${blocs} blocs de texte nouveau : la couverture se dilue`);
+    // Plafond releve de 25 a 30 a l'ajout des fonctions reprises des
+    // applications de reference (copier hier, portions, dictee, Nutri-Score,
+    // resume de la semaine), qui n'ont par nature aucun texte d'origine.
+    assert.ok(blocs < 30, `${blocs} blocs de texte nouveau : la couverture se dilue`);
   });
 });
 

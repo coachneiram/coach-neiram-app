@@ -15,7 +15,7 @@
  * donnerait l'impression d'un bandeau publicitaire.
  */
 
-import { round } from "./dates.js";
+import { addDays, round } from "./dates.js";
 import { fmtL } from "./score-jour.js";
 
 /** Seuils d'affichage : en deca, le message n'apprend rien. */
@@ -129,7 +129,11 @@ export function construireMotivation(ctx) {
 export function serieDeJours({ date, repas, journal, seances, maximum = 60 }) {
   let jours = 0;
   for (let k = 0; k < maximum; k++) {
-    const d = decaler(date, -k);
+    // addDays, comme index.html : l'ancien decaler() passait par
+    // toISOString(), donc par l'heure UTC. En France, minuit local est
+    // encore la veille en UTC : la serie commencait a HIER, et un client
+    // qui venait de noter son premier repas voyait une serie de 0.
+    const d = addDays(date, -k);
     const quelqueChose =
       (repas || []).some((e) => e.date === d) ||
       (journal || []).some((f) => f.date === d) ||
@@ -138,10 +142,4 @@ export function serieDeJours({ date, repas, journal, seances, maximum = 60 }) {
     jours++;
   }
   return jours;
-}
-
-function decaler(iso, n) {
-  const d = new Date(iso + "T00:00:00");
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
 }

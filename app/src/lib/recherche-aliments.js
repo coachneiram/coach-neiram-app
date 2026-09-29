@@ -23,7 +23,27 @@ import { round } from "./dates.js";
 import { trierSelonPesee } from "./fibres.js";
 
 /** Champs demandes a Open Food Facts. */
-const CHAMPS_OFF = "code,product_name,product_name_fr,brands,nutriments,serving_quantity";
+const CHAMPS_OFF = "code,product_name,product_name_fr,brands,nutriments,serving_quantity,nutrition_grades,nova_group";
+
+/**
+ * Nutri-Score (a a e) et groupe NOVA (1 a 4) d'une fiche.
+ *
+ * Ajout posterieur a la bascule, d'apres Lifesum et Yuka : sur un produit
+ * emballe, la lettre et le degre de transformation parlent davantage a un
+ * debutant que ses macros. Open Food Facts les calcule deja ; il suffisait
+ * de les demander. Null quand la fiche ne les donne pas (« unknown »,
+ * « not-applicable », produit non evalue) : un badge invente serait pire
+ * que pas de badge.
+ */
+export function nutriScoreDe(p) {
+  const brut = String((p && (p.nutrition_grades || p.nutriscore_grade)) || "").toLowerCase().trim();
+  return /^[a-e]$/.test(brut) ? brut : null;
+}
+
+export function novaDe(p) {
+  const n = Number(p && p.nova_group);
+  return Number.isInteger(n) && n >= 1 && n <= 4 ? n : null;
+}
 
 const URL_OFF = "https://world.openfoodfacts.org/cgi/search.pl";
 
@@ -46,7 +66,9 @@ export function convertirProduitOFF(p) {
     // plupart des fiches Open Food Facts ne les renseignent pas, et
     // ecrire 0 affirmerait que le produit n'en contient aucune.
     fibres100: n.fiber_100g != null ? round(n.fiber_100g, 1) : null,
-    serving: p.serving_quantity ? parseFloat(p.serving_quantity) : null
+    serving: p.serving_quantity ? parseFloat(p.serving_quantity) : null,
+    nutriscore: nutriScoreDe(p),
+    nova: novaDe(p)
   };
 }
 

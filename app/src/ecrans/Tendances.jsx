@@ -14,7 +14,8 @@
 
 import { useMemo } from "react";
 import { COLORS } from "../tokens.js";
-import { fmtDateShort } from "../lib/dates.js";
+import { fmtDateShort, todayISO } from "../lib/dates.js";
+import { resumeNutritionSemaine } from "../lib/resume-semaine.js";
 import { fmtL } from "../lib/score-jour.js";
 import { serieCorporelle, serieHebdomadaire } from "../lib/tendances.js";
 import { Btn, Card, ProgressRing, SectionTitle, StatChip } from "../ui/primitives.jsx";
@@ -60,6 +61,70 @@ const styleEnTete = {
   marginBottom: 10
 };
 
+/* TEXTE-NOUVEAU
+   Resume nutrition des 7 derniers jours, ajoute apres la bascule d'apres
+   Lifesum et Foodvisor. Le bilan de la semaine est ecrit pour le coach ;
+   celui-ci parle au client, a tout moment : moyennes, meilleur jour, et un
+   seul axe de travail. Absent de index.html, donc libelles nouveaux. */
+function ResumeNutrition({ resume, objectifs }) {
+  const m = resume.moyennes;
+  const ligne = (libelle, valeur, cible, unite) => (
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "4px 0" }}>
+      <span style={{ color: COLORS.textMuted }}>{libelle}</span>
+      <span style={{ color: COLORS.text, fontFamily: "IBM Plex Mono" }}>
+        {valeur != null ? `${valeur}${unite}` : "—"}
+        {cible ? <span style={{ color: COLORS.textFaint }}> / {cible}{unite}</span> : null}
+      </span>
+    </div>
+  );
+  return (
+    <Card>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <SectionTitle>Ma nutrition — 7 derniers jours</SectionTitle>
+        <span style={{ fontSize: 11, color: COLORS.textFaint }}>
+          {fmtDateShort(resume.debut)} — {fmtDateShort(resume.fin)}
+        </span>
+      </div>
+      <div style={{ fontSize: 12.5, color: COLORS.textMuted, marginBottom: 8 }}>
+        {resume.joursSaisis} jour{resume.joursSaisis > 1 ? "s" : ""} noté{resume.joursSaisis > 1 ? "s" : ""} sur 7
+        {resume.joursDansLaCible != null && resume.joursSaisis > 0
+          ? ` · ${resume.joursDansLaCible} dans la cible calorique (±10 %)`
+          : ""}
+      </div>
+      {resume.joursSaisis > 0 && (
+        <div style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: 6 }}>
+          {ligne("Calories moy./jour", m.kcal, objectifs?.calories, " kcal")}
+          {ligne("Protéines moy./jour", m.p, objectifs?.protein, " g")}
+          {ligne("Glucides moy./jour", m.c, objectifs?.carbs, " g")}
+          {ligne("Lipides moy./jour", m.f, objectifs?.fat, " g")}
+          {resume.avgFruitsVeg != null && ligne("Fruits & légumes moy./jour", resume.avgFruitsVeg, 5, "")}
+          {resume.meilleurJour && (
+            <div style={{ fontSize: 12, color: COLORS.good, marginTop: 6 }}>
+              Meilleur jour : {fmtDateShort(resume.meilleurJour.date)} ({resume.meilleurJour.kcal} kcal)
+            </div>
+          )}
+        </div>
+      )}
+      <div
+        style={{
+          marginTop: 12,
+          background: `${COLORS.gold}14`,
+          border: `1px solid ${COLORS.gold}44`,
+          borderRadius: 10,
+          padding: "10px 12px",
+          fontSize: 12.5,
+          color: COLORS.text,
+          lineHeight: 1.5
+        }}
+      >
+        <strong style={{ color: COLORS.gold }}>À travailler : </strong>
+        {resume.axe.texte}
+      </div>
+    </Card>
+  );
+}
+/* FIN-TEXTE-NOUVEAU */
+
 /** Un graphique dans sa carte, avec son titre. */
 function CarteGraphique({ titre, children }) {
   return (
@@ -98,8 +163,21 @@ export function Tendances({
 
   const points = (champ) => serie.map((w) => ({ label: w.label, value: w[champ] }));
 
+  const resumeNutrition = useMemo(
+    () =>
+      resumeNutritionSemaine({
+        entrees: allData.logEntries,
+        journal: allData.dailyForm,
+        objectifs: targets,
+        fin: todayISO()
+      }),
+    [allData.logEntries, allData.dailyForm, targets]
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <ResumeNutrition resume={resumeNutrition} objectifs={targets} />
+
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <SectionTitle>Bilan de la semaine</SectionTitle>
