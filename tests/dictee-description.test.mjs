@@ -13,6 +13,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
+  DELAIS_DICTEE,
+  MSG_DICTEE_MUETTE,
   completerTexte,
   demarrerDictee,
   messageErreurDictee,
@@ -71,7 +73,7 @@ describe("Dictee vocale", () => {
   test("ecoute en francais, avec le texte au fil de la parole", () => {
     const { Moteur, instances } = fauxMoteur();
     const recus = [];
-    const arreter = demarrerDictee({ surTexte: (t) => recus.push(t) }, { webkitSpeechRecognition: Moteur });
+    const arreter = demarrerDictee({ surTexte: (t) => recus.push(t) }, { webkitSpeechRecognition: Moteur, ...horloge() });
     const reco = instances[0];
     assert.equal(typeof arreter, "function");
     assert.equal(reco.lang, "fr-FR");
@@ -85,7 +87,7 @@ describe("Dictee vocale", () => {
   test("arreter coupe le micro et previent la fin", () => {
     const { Moteur, instances } = fauxMoteur();
     let fini = 0;
-    const arreter = demarrerDictee({ surFin: () => fini++ }, { SpeechRecognition: Moteur });
+    const arreter = demarrerDictee({ surFin: () => fini++ }, { SpeechRecognition: Moteur, ...horloge() });
     arreter();
     assert.equal(instances[0].arrete, true);
     assert.equal(fini, 1);
@@ -94,7 +96,7 @@ describe("Dictee vocale", () => {
   test("une erreur est traduite ; un arret volontaire ne l'est pas", () => {
     const { Moteur, instances } = fauxMoteur();
     const erreurs = [];
-    demarrerDictee({ surErreur: (m) => erreurs.push(m) }, { SpeechRecognition: Moteur });
+    demarrerDictee({ surErreur: (m) => erreurs.push(m) }, { SpeechRecognition: Moteur, ...horloge() });
     instances[0].onerror({ error: "not-allowed" });
     instances[0].onerror({ error: "aborted" });
     assert.equal(erreurs.length, 1);
@@ -116,7 +118,7 @@ describe("Dictee vocale", () => {
       }
     }
     let fini = 0;
-    assert.equal(demarrerDictee({ surFin: () => fini++ }, { SpeechRecognition: Refuse }), null);
+    assert.equal(demarrerDictee({ surFin: () => fini++ }, { SpeechRecognition: Refuse, ...horloge() }), null);
     assert.equal(fini, 1);
   });
 
@@ -259,5 +261,220 @@ describe("Nutri-Score et NOVA", () => {
     for (const url of urls) assert.match(url, /nova_group/, url);
     assert.equal(trouve.nutriscore, "d");
     assert.equal(scanne.nova, 4);
+  });
+});
+
+/**
+ * Horloge simulee : les minuteries sont declenchees a la main, pour
+ * reproduire en une milliseconde un navigateur qui ne repond jamais.
+ */
+function horloge() {
+  let t = 0;
+  let id = 0;
+  const attente = new Map();
+  return {
+    setTimeout: (fn, ms) => {
+      attente.set(++id, { fn, a: t + ms });
+      return id;
+    },
+    clearTimeout: (i) => attente.delete(i),
+    avancer(ms) {
+      t += ms;
+      for (const [i, m] of [...attente].sort((x, y) => x[1].a - y[1].a)) {
+        if (m.a <= t && attente.has(i)) {
+          attente.delete(i);
+          m.fn();
+        }
+      }
+    },
+    enAttente: () => attente.size
+  };
+}
+
+/** Moteur « muet » : accepte start() et stop(), mais ne rend jamais rien. */
+function moteurMuet() {
+  const instances = [];
+  class Muet {
+    constructor() {
+      this.appels = [];
+      instances.push(this);
+    }
+    start() {
+      this.appels.push("start");
+    }
+    stop() {
+      this.appels.push("stop");
+    }
+    abort() {
+      this.appels.push("abort");
+    }
+  }
+  return { Muet, instances };
+}
+
+describe("Dictee : jamais d'ecran bloque (signalement « ca a freeze »)", () => {
+  test("navigateur muet : fin forcee apres le delai, avec un message clair", () => {
+    const h = horloge();
+    const { Muet, instances } = moteurMuet();
+    let fins = 0;
+    const erreurs = [];
+    demarrerDictee({ surFin: () => fins++, surErreur: (m) => erreurs.push(m) }, { webkitSpeechRecognition: Muet, ...h });
+    h.avancer(DELAIS_DICTEE.SIGNE_DE_VIE - 1);
+    assert.equal(fins, 0, "pas trop tot : la demande d'autorisation du micro prend du temps");
+    h.avancer(1);
+    assert.equal(fins, 1);
+    assert.deepEqual(erreurs, [MSG_DICTEE_MUETTE]);
+    assert.ok(instances[0].appels.includes("abort"));
+    assert.match(MSG_DICTEE_MUETTE, /micro de ton clavier/);
+  });
+
+  test("« Arreter » sans confirmation du navigateur : fin forcee, sans message d'erreur", () => {
+    const h = horloge();
+    const { Muet, instances } = moteurMuet();
+    let fins = 0;
+    const erreurs = [];
+    const arreter = demarrerDictee({ surFin: () => fins++, surErreur: (m) => erreurs.push(m) }, { SpeechRecognition: Muet, ...h });
+    instances[0].onaudiostart();
+    arreter();
+    assert.ok(instances[0].appels.includes("stop"));
+    h.avancer(DELAIS_DICTEE.ARRET);
+    assert.equal(fins, 1);
+    assert.deepEqual(erreurs, []);
+  });
+
+  test("un micro vivant n'est pas coupe par le premier garde-fou", () => {
+    const h = horloge();
+    const { Muet, instances } = moteurMuet();
+    let fins = 0;
+    const textes = [];
+    demarrerDictee({ surFin: () => fins++, surTexte: (t) => textes.push(t) }, { SpeechRecognition: Muet, ...h });
+    instances[0].onresult({ results: resultat("deux oeufs") });
+    h.avancer(DELAIS_DICTEE.SIGNE_DE_VIE + 1000);
+    assert.equal(fins, 0);
+    assert.deepEqual(textes, ["deux oeufs"]);
+  });
+
+  test("micro demarre mais personne ne parle encore : pas coupe avant la duree maximale", () => {
+    // Le signe de vie, c'est le micro qui demarre — pas forcement des mots.
+    // Sinon, quelqu'un qui reflechit 15 s avant de parler serait coupe.
+    for (const evenement of ["onstart", "onaudiostart"]) {
+      const h = horloge();
+      const { Muet, instances } = moteurMuet();
+      let fins = 0;
+      const erreurs = [];
+      demarrerDictee({ surFin: () => fins++, surErreur: (m) => erreurs.push(m) }, { SpeechRecognition: Muet, ...h });
+      instances[0][evenement]();
+      h.avancer(DELAIS_DICTEE.SIGNE_DE_VIE + 1);
+      assert.equal(fins, 0, evenement);
+      assert.deepEqual(erreurs, [], evenement);
+    }
+  });
+
+  test("duree maximale : l'ecoute finit toujours", () => {
+    const h = horloge();
+    const { Muet, instances } = moteurMuet();
+    let fins = 0;
+    demarrerDictee({ surFin: () => fins++ }, { SpeechRecognition: Muet, ...h });
+    instances[0].onstart();
+    h.avancer(DELAIS_DICTEE.DUREE_MAX);
+    assert.equal(fins, 1);
+  });
+
+  test("la fin n'est annoncee qu'une fois, et les evenements tardifs sont ignores", () => {
+    const h = horloge();
+    const { Muet, instances } = moteurMuet();
+    let fins = 0;
+    const textes = [];
+    demarrerDictee({ surFin: () => fins++, surTexte: (t) => textes.push(t) }, { SpeechRecognition: Muet, ...h });
+    const reco = instances[0];
+    const finNavigateur = reco.onend;
+    h.avancer(DELAIS_DICTEE.SIGNE_DE_VIE);
+    finNavigateur();
+    assert.equal(fins, 1);
+    assert.equal(reco.onresult, null, "les gestionnaires sont detaches apres la fin");
+    assert.equal(h.enAttente(), 0, "aucune minuterie ne reste en attente");
+  });
+
+  test("fin normale : les minuteries sont annulees", () => {
+    const h = horloge();
+    const { Muet, instances } = moteurMuet();
+    let fins = 0;
+    demarrerDictee({ surFin: () => fins++ }, { SpeechRecognition: Muet, ...h });
+    instances[0].onend();
+    assert.equal(fins, 1);
+    assert.equal(h.enAttente(), 0);
+  });
+
+  test("un moteur qui refuse d'etre cree : message, fin, pas de bouton inerte", () => {
+    class Casse {
+      constructor() {
+        throw new Error("NotAllowedError");
+      }
+    }
+    let fins = 0;
+    const erreurs = [];
+    const r = demarrerDictee({ surFin: () => fins++, surErreur: (m) => erreurs.push(m) }, { SpeechRecognition: Casse, ...horloge() });
+    assert.equal(r, null);
+    assert.equal(fins, 1);
+    assert.deepEqual(erreurs, [MSG_DICTEE_MUETTE]);
+  });
+});
+
+describe("Estimation IA : jamais d'attente infinie", () => {
+  /** Serveur qui accepte la requete et ne repond jamais (sauf annulation). */
+  async function avecServeurMuet(fn) {
+    const vrai = globalThis.fetch;
+    const appels = [];
+    globalThis.fetch = (url, options) => {
+      appels.push(options);
+      return new Promise((_, rejeter) => {
+        if (options.signal) options.signal.addEventListener("abort", () => rejeter(new Error("AbortError")));
+      });
+    };
+    try {
+      return await fn(appels);
+    } finally {
+      globalThis.fetch = vrai;
+    }
+  }
+
+  test("delai depasse : erreur « delai », un seul appel, message clair", async () => {
+    const { genererTexte, messageErreur } = await import("../app/src/lib/ia.js");
+    await avecServeurMuet(async (appels) => {
+      await assert.rejects(() => genererTexte({ prompt: "x", delaiMs: 30 }), /delai/);
+      assert.equal(appels.length, 1, "pas d'essai sur le modele suivant : l'attente s'additionnerait");
+      assert.match(messageErreur(new Error("delai")), /trop de temps/);
+    });
+  });
+
+  test("la description d'un repas utilise ce delai", async () => {
+    const vrai = globalThis.fetch;
+    let signal = null;
+    globalThis.fetch = async (url, options) => {
+      signal = options.signal;
+      return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: "{}" }] } }] }) };
+    };
+    try {
+      await analyserDescriptionRepas("deux oeufs");
+      assert.ok(signal, "la requete doit etre annulable");
+    } finally {
+      globalThis.fetch = vrai;
+    }
+  });
+
+  test("sans delai demande, rien ne change pour les autres appels IA", async () => {
+    const { genererTexte } = await import("../app/src/lib/ia.js");
+    const vrai = globalThis.fetch;
+    let options = null;
+    globalThis.fetch = async (url, o) => {
+      options = o;
+      return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: "ok" }] } }] }) };
+    };
+    try {
+      assert.equal(await genererTexte({ prompt: "x" }), "ok");
+      assert.equal(options.signal, undefined);
+    } finally {
+      globalThis.fetch = vrai;
+    }
   });
 });

@@ -120,6 +120,9 @@ export async function analyserPhotoRepas(dataUrl) {
   return lireEstimation(texte, "Repas (photo)", "Photo repas");
 }
 
+/** Attente maximale de l'estimation d'une description, en millisecondes. */
+export const DELAI_DESCRIPTION_MS = 30000;
+
 /** Au-dela, ce n'est plus la description d'un repas. */
 export const LONGUEUR_MAX_DESCRIPTION = 600;
 
@@ -148,7 +151,8 @@ export async function analyserDescriptionRepas(description) {
   if (!String(description || "").trim()) throw new Error("description-vide");
   const texte = await genererTexte({
     prompt: consigneDescription(description),
-    maxTokens: 900
+    maxTokens: 900,
+    delaiMs: DELAI_DESCRIPTION_MS
   });
   return lireEstimation(texte, "Repas (description)", "Description repas");
 }

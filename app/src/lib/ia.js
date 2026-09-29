@@ -21,7 +21,10 @@ export const MSG_ERREUR = {
      tombait dans le repli générique, qui parle de reprendre la photo. La
      cliente refaisait donc des photos d'une assiette parfaitement nette,
      en cherchant un défaut qui n'existait pas. */
-  reseau: "Pas de connexion — l'analyse a besoin d'internet. Réessaie une fois le réseau revenu."
+  reseau: "Pas de connexion — l'analyse a besoin d'internet. Réessaie une fois le réseau revenu.",
+  // Delai depasse (option delaiMs) : sans lui, un reseau qui ne repond pas
+  // laissait l'ecran bloque sur « Estimation... » indefiniment.
+  delai: "L'IA met trop de temps à répondre. Vérifie ta connexion, puis réessaie."
   /* FIN-TEXTE-NOUVEAU */
 };
 
@@ -30,17 +33,28 @@ export function messageErreur(erreur, repli) {
   return MSG_ERREUR[erreur && erreur.message] || repli || MSG_ERREUR.indisponible;
 }
 
-/** Un seul appel, sur un modele donne. */
-async function appelerModele({ model, systemPrompt, messages, maxTokens }) {
+/**
+ * Un seul appel, sur un modele donne.
+ *
+ * `delaiMs` (facultatif) borne l'attente : au-dela, la requete est annulee
+ * et l'erreur « delai » remonte. Sans lui, un reseau qui accepte la requete
+ * mais ne repond jamais laissait l'ecran en attente pour toujours.
+ */
+async function appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs }) {
   let reponse;
+  const annulation = delaiMs && typeof AbortController !== "undefined" ? new AbortController() : null;
+  const minuterie = annulation ? setTimeout(() => annulation.abort(), delaiMs) : null;
   try {
     reponse = await fetch(PROXY_BASE_URL + "/ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, systemPrompt, messages, maxTokens })
+      body: JSON.stringify({ model, systemPrompt, messages, maxTokens }),
+      ...(annulation ? { signal: annulation.signal } : {})
     });
   } catch (e) {
-    throw new Error("reseau");
+    throw new Error(annulation && annulation.signal.aborted ? "delai" : "reseau");
+  } finally {
+    if (minuterie) clearTimeout(minuterie);
   }
 
   // Statuts conserves a l'identique : l'interface s'appuie dessus.
@@ -81,20 +95,22 @@ async function appelerModele({ model, systemPrompt, messages, maxTokens }) {
  * ne ferait que repeter la meme erreur. Un quota atteint laisse une seconde
  * chance apres une courte pause, comme dans la version d'origine.
  */
-export async function genererTexte({ prompt, images, history, systemPrompt, maxTokens }) {
+export async function genererTexte({ prompt, images, history, systemPrompt, maxTokens, delaiMs }) {
   const messages = construireMessages({ prompt, images, history });
   let derniereErreur = null;
 
   for (const model of GEMINI_MODELS) {
     try {
-      return await appelerModele({ model, systemPrompt, messages, maxTokens });
+      return await appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs });
     } catch (e) {
       derniereErreur = e;
-      if (e.message === "bad-key") throw e;
+      // Un delai depasse ne se rattrape pas en essayant le modele suivant :
+      // l'attente s'additionnerait, et c'est justement ce qu'on veut borner.
+      if (e.message === "bad-key" || e.message === "delai") throw e;
       if (e.message === "quota") {
         await new Promise((r) => setTimeout(r, 1600));
         try {
-          return await appelerModele({ model, systemPrompt, messages, maxTokens });
+          return await appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs });
         } catch (e2) {
           derniereErreur = e2;
         }
