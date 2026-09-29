@@ -101,7 +101,7 @@ const styleSousTitre = {
 function RepriseVeille({ journee = false, resume, deLaVeille, onReprendre }) {
   const detail = `${resume.aliments} aliment${resume.aliments > 1 ? "s" : ""} · ${resume.kcal} kcal`;
   return journee ? (
-    <Btn variant="ghost" icon={Plus} onClick={onReprendre} style={{ width: "100%", marginTop: 14 }}>
+    <Btn variant="ghost" icon={Plus} onClick={onReprendre} style={{ width: "100%", marginBottom: 14 }}>
       Reprendre toute la journée {deLaVeille} · {detail}
     </Btn>
   ) : (
@@ -205,7 +205,7 @@ function PortionsDuJour({ form, onChanger }) {
  * la serie d'hier s'affiche avec l'invitation a la prolonger.
  */
 function BandeauSerie({ serie }) {
-  if (!serie || serie.jours < 1) return null;
+  if (!serie || serie.jours < 2) return null;
   const s = serie.jours > 1 ? "s" : "";
   return (
     <div
@@ -572,6 +572,9 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
           </span>
         </div>
 
+        {journeeVeille && journeeVeille.aliments > 0 && (
+          <RepriseVeille journee resume={journeeVeille} deLaVeille={deLaVeille} onReprendre={() => copierLaVeille()} />
+        )}
         <MiniBar
           label="Protéines"
           pct={targets?.protein ? (totaux.protein / targets.protein) * 100 : 0}
@@ -658,9 +661,6 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
           </div>
         )}
 
-        {journeeVeille && journeeVeille.aliments > 0 && (
-          <RepriseVeille journee resume={journeeVeille} deLaVeille={deLaVeille} onReprendre={() => copierLaVeille()} />
-        )}
 
         <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
           {SECTIONS_REPAS.map((section) => {
