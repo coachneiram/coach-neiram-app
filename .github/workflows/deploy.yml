@@ -12,6 +12,14 @@
 # ce que Pages servait deja. Ce workflow publie desormais la construction
 # Vite (app/dist).
 #
+# COURSE ENTRE DEUX PUBLICATIONS (29 septembre 2026) : tant que le reglage
+# Pages est reste sur « Deploy from a branch », GitHub publie AUSSI la racine
+# du depot (l'ancienne application) a chaque push. La derniere publication
+# gagnait, et c'etait souvent l'ancienne. Deux etapes l'empechent desormais :
+# attendre que la publication de GitHub soit finie pour publier en dernier,
+# puis verifier sur le site reel que la nouvelle version est servie.
+# Le vrai correctif reste le reglage « Source : GitHub Actions ».
+#
 # RETOUR EN ARRIERE : remplacer l'etape « Rassembler les fichiers a publier »
 # par la version qui copie la racine (voir l'historique git de ce fichier).
 # L'ancienne application reste dans le depot, intacte, a la racine. Un retour
@@ -30,6 +38,8 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  # Lire l'etat de la publication automatique de GitHub (voir plus bas).
+  actions: read
 
 # Un seul deploiement a la fois ; on n'interrompt pas celui en cours.
 concurrency:
@@ -135,6 +145,23 @@ jobs:
         with:
           path: _site
 
+      # Voir .github/scripts/attendre-pages-github.sh : sans cette attente,
+      # la publication automatique de GitHub pouvait finir APRES la notre et
+      # remettre l'ancienne application en ligne.
+      - name: Attendre la publication automatique de GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPOT: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: bash .github/scripts/attendre-pages-github.sh
+
       - name: Publier
         id: publication
         uses: actions/deploy-pages@v4
+
+      # Un deploiement vert ne suffit pas : on verifie sur le site reel que
+      # c'est bien la nouvelle application qui est servie.
+      - name: Verifier que la nouvelle version est en ligne
+        env:
+          URL: ${{ steps.publication.outputs.page_url }}
+        run: bash .github/scripts/verifier-mise-en-ligne.sh

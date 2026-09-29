@@ -69,6 +69,27 @@ Settings → Pages → Source → « Deploy from a branch » → `main` / `/ (ro
 Le site revient immédiatement à son fonctionnement actuel. Le workflow peut
 rester en place, il devient simplement sans effet.
 
+### ⚠️ Constat du 29 septembre 2026 : l'étape 2 n'était pas faite
+
+Le réglage était resté sur « Deploy from a branch ». Résultat : à chaque push,
+GitHub publiait **deux fois** — notre workflow (nouvelle application) et sa
+propre publication automatique (« pages build and deployment », racine du
+dépôt = ancienne application). La dernière qui finissait gagnait, souvent
+l'ancienne : les clients n'avaient ni le bouton « Photographier » sur
+Android, ni les recettes, alors que tous les workflows étaient verts.
+
+Garde-fous ajoutés dans `deploy.yml` :
+
+- `.github/scripts/attendre-pages-github.sh` : notre publication attend que
+  celle de GitHub soit terminée, pour passer **en dernier** ;
+- `.github/scripts/verifier-mise-en-ligne.sh` : après publication, le
+  workflow interroge le site réel et **échoue** s'il sert encore l'ancienne
+  application.
+
+Le vrai correctif reste l'étape 2 : **Source → GitHub Actions**. Une fois
+fait, la publication automatique de GitHub disparaît et l'attente devient
+instantanée.
+
 ## Phase 8 — publier le build Vite
 
 À ne faire qu'une fois la phase 7 validée **et** les écrans migrés (phase 5).
