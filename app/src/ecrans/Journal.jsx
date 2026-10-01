@@ -19,6 +19,8 @@ import { composantesDuScore, fmtL, libelleDuScore, scoreDuJour, totauxDuJour } f
 import { choisirSuggestions } from "../lib/suggestions.js";
 import { basisMacros, fmtPortion } from "../lib/portions.js";
 import { construireMotivation, serieDeJours } from "../lib/motivation.js";
+import { contexteDuJour, motDuCoach } from "../lib/mot-du-coach.js";
+import { MotDuCoach } from "./MotDuCoach.jsx";
 import { dureeDeSommeil } from "../lib/sommeil.js";
 import { scaleMacros } from "../lib/portions.js";
 import {
@@ -247,7 +249,17 @@ function BandeauSerie({ serie }) {
 
 /* FIN-TEXTE-NOUVEAU */
 
-export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsApi, targets, profile, onToast }) {
+export function Journal({
+  logEntriesApi,
+  dishesApi,
+  bodyApi,
+  formApi,
+  sessionsApi,
+  targets,
+  profile,
+  semainesDifficiles,
+  onToast
+}) {
   const [date, setDate] = useState(todayISO());
   const [ajoutPour, setAjoutPour] = useState(null);
   /*
@@ -506,6 +518,14 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
     });
   }, [date, totaux.protein, eauMl, pas, corps.weightKg, entreesDuJour.length, graineHoraire]);
 
+  // Le mot du coach : seulement sur la journee en cours, comme le message
+  // d'encouragement.
+  const contexteMot = useMemo(
+    () => contexteDuJour({ seances: sessionsApi.items, profil: profile, semainesDifficiles, date }),
+    [sessionsApi.items, profile, semainesDifficiles, date]
+  );
+  const mot = date === todayISO() ? motDuCoach({ date, contexte: contexteMot }) : null;
+
   const serie = useMemo(
     () =>
       date === todayISO()
@@ -528,6 +548,8 @@ export function Journal({ logEntriesApi, dishesApi, bodyApi, formApi, sessionsAp
   return (
     <div>
       <DateNav date={date} onChange={setDate} iconePrecedent={ChevronLeft} iconeSuivant={ChevronRight} />
+
+      <MotDuCoach mot={mot} contexte={contexteMot} />
 
       <MotivationCard text={motivation} icone={Flame} />
 

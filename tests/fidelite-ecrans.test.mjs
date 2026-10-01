@@ -188,7 +188,9 @@ describe("les ajouts posterieurs a la bascule restent visibles", () => {
     // Plafond releve de 25 a 30 a l'ajout des fonctions reprises des
     // applications de reference (copier hier, portions, dictee, Nutri-Score,
     // resume de la semaine), qui n'ont par nature aucun texte d'origine.
-    assert.ok(blocs < 30, `${blocs} blocs de texte nouveau : la couverture se dilue`);
+    // Puis de 30 a 32 pour les trois fonctions de motivation demandees par
+    // le coach (carte de progres, trophees, mot du coach).
+    assert.ok(blocs < 32, `${blocs} blocs de texte nouveau : la couverture se dilue`);
   });
 });
 
