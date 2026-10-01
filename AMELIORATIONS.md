@@ -86,6 +86,47 @@ ils ne sont plus servis, mais ils sont le chemin de retour en arrière.
 pas avant. Tant que personne n'a utilisé la nouvelle version un week-end
 complet, le retour en arrière vaut plus que la propreté du dépôt.
 
+## Source GitHub Pages passée sur « GitHub Actions » — 01/10/2026
+
+**Constat.** Jusqu'au 01/10, Settings → Pages → Source était resté sur
+« Déployer à partir d'une branche ». Chaque fusion sur `main` lançait deux
+publications : la nôtre (workflow « Deploiement ») et celle de GitHub
+(« pages build and deployment »), qui publiait la racine du dépôt,
+c'est-à-dire l'ancienne application. La dernière à finir l'emportait.
+
+**Preuve (29/09/2026, fusion de la PR #47).** Notre publication s'est
+terminée à 09:20:31 UTC
+([exécution 36548453052](https://github.com/coachneiram/coach-neiram-app/actions/runs/36548453052)),
+celle de GitHub à 09:21:00 UTC
+([exécution 36548452134](https://github.com/coachneiram/coach-neiram-app/actions/runs/36548452134)) :
+l'ancienne version a été servie (constaté sur le site réel le jour même)
+jusqu'à la relance manuelle de 09:51–09:52 UTC
+([exécution 36551860410](https://github.com/coachneiram/coach-neiram-app/actions/runs/36551860410)).
+La PR #48 a ensuite fait passer notre publication en dernier
+(`.github/scripts/attendre-pages-github.sh`).
+
+**Fait.** Réglage passé sur « GitHub Actions » le 01/10 (vérifié par Marien
+vers 21h33). Vérification après bascule, relance manuelle du workflow
+« Deploiement » sur `main`
+([exécution 36915272457](https://github.com/coachneiram/coach-neiram-app/actions/runs/36915272457),
+01/10 19:34–19:35 UTC) : workflow vert, étape « Vérifier que la nouvelle
+version est en ligne » comprise ; aucune publication « pages build and
+deployment » depuis la bascule (la dernière date de 19:27 UTC, avant) ; le
+site sert toujours `assets/index-Cn1ag4VM.js`, le build de `main`.
+
+**Limite de cette vérification.** Une relance manuelle ne déclenche jamais
+la publication de GitHub, quel que soit le réglage. La preuve définitive
+viendra de la prochaine fusion sur `main` : elle ne doit produire aucune
+exécution « pages build and deployment ».
+
+**À retirer ensuite, après une semaine de déploiements propres.** L'étape
+« Attendre la publication automatique de GitHub » n'aura plus rien à
+attendre. Le `index.html` racine n'est plus publié ; il reste seulement le
+chemin de retour en arrière (voir CLEAN-02).
+
+**Retour en arrière.** Remettre la source sur « Déployer à partir d'une
+branche » (`main`, racine) rétablit la situation d'avant.
+
 ## Champ fibres — pas fait, et pourquoi
 
 Le catalogue signale le manque : les graines de chia annoncent 490 kcal alors
