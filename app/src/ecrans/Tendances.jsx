@@ -16,7 +16,7 @@ import { useMemo } from "react";
 import { COLORS } from "../tokens.js";
 import { fmtDateShort, todayISO } from "../lib/dates.js";
 import { resumeNutritionSemaine } from "../lib/resume-semaine.js";
-import { CarteProgres } from "./CarteProgres.jsx";
+import { CarteProgres, Parrainage } from "./CarteProgres.jsx";
 import { fmtL } from "../lib/score-jour.js";
 import { serieCorporelle, serieHebdomadaire } from "../lib/tendances.js";
 import { Btn, Card, ProgressRing, SectionTitle, StatChip } from "../ui/primitives.jsx";
@@ -180,6 +180,7 @@ export function Tendances({
       <ResumeNutrition resume={resumeNutrition} objectifs={targets} />
 
       <CarteProgres allData={allData} profile={profile} />
+      <Parrainage profile={profile} />
 
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>

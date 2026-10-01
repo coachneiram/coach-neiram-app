@@ -8,7 +8,8 @@
  *   4. « Inviter un ami » envoie un lien WhatsApp vers le coach, prenom du
  *      parrain deja ecrit ;
  *   5. sans feuille de partage : l'image se telecharge, l'invitation part
- *      par WhatsApp.
+ *      par WhatsApp ;
+ *   6. la carte « Parrainage » montre les trois paliers du coach.
  * L'image produite est enregistree pour controle visuel (CARTE_PNG).
  *
  *   cd app && npm run build && cd ..
@@ -134,6 +135,23 @@ try {
       /https:\/\/wa\.me\/33675359069\?text=/.test(inv.texte || "") && /de la part de Thomas/.test(decodeURIComponent(inv.texte || ""))
         ? "lien WhatsApp du coach, « de la part de Thomas » pré-écrit"
         : `*** « ${inv.texte} » ***`
+    );
+    const parrainage = page.locator("[data-parrainage]");
+    const paliers = await page.$$eval("[data-palier-parrainage]", (els) => els.map((e) => e.innerText.replace(/\s+/g, " ")));
+    if (process.env.PARRAINAGE_PNG) {
+      await parrainage.scrollIntoViewIfNeeded();
+      await parrainage.screenshot({ path: process.env.PARRAINAGE_PNG });
+    }
+    console.log(
+      "6. PARRAINAGE           :",
+      (await parrainage.count()) === 1 &&
+        paliers.length === 3 &&
+        /Une séance offerte/i.test(paliers[0]) &&
+        /55 € offerts/i.test(paliers[1]) &&
+        /−25 %/.test(paliers[2]) &&
+        !/32,50/.test(paliers.join(" "))
+        ? "carte affichée, 3 paliers du coach, sans montant périmé"
+        : `*** ${JSON.stringify(paliers)} ***`
     );
     await ctx.close();
   }

@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
-import { lignesCarte, messageInvitation, nomFichierCarte, statistiquesProgres } from "../lib/carte-progres.js";
+import { PARRAINAGE, lignesCarte, messageInvitation, nomFichierCarte, statistiquesProgres } from "../lib/carte-progres.js";
 import { canvasEnPng, dessinerCarte } from "../lib/dessin-carte.js";
 import { inviterUnAmi, partagerCarte } from "../lib/partage-carte.js";
 import { Btn, Card, SectionTitle } from "../ui/primitives.jsx";
@@ -78,11 +78,6 @@ export function CarteProgres({ allData, profile }) {
     }
   };
 
-  const inviter = async () => {
-    setRetour(null);
-    await inviterUnAmi(messageInvitation({ prenom: profile && (profile.firstName || profile.name) }));
-  };
-
   const poidsDisponible = Boolean(stats && stats.poids && stats.poids.ecart !== 0);
 
   return (
@@ -126,17 +121,63 @@ export function CarteProgres({ allData, profile }) {
         </div>
       )}
 
-      <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${COLORS.border}` }}>
-        <Btn variant="ghost" icon={Send} onClick={inviter} style={{ width: "100%" }}>
+      {retour && <p style={{ fontSize: 12, color: COLORS.textMuted, margin: "10px 0 0" }}>{retour}</p>}
+    </Card>
+  );
+}
+
+/**
+ * Parrainage : les conditions du coach (visuel du 01/10/2026) et le bouton
+ * qui envoie a un ami le lien WhatsApp du coach, prenom du parrain deja
+ * ecrit. Meme bloc de texte nouveau que la carte : c'est la meme
+ * fonctionnalite (le client comme vitrine).
+ */
+export function Parrainage({ profile }) {
+  const inviter = () => inviterUnAmi(messageInvitation({ prenom: profile && (profile.firstName || profile.name) }));
+  return (
+    <Card style={{ marginTop: 16 }}>
+      <div data-parrainage="">
+        <span
+          style={{
+            display: "inline-block",
+            padding: "3px 10px",
+            borderRadius: 20,
+            background: COLORS.gold,
+            color: "#1A1503",
+            fontSize: 10.5,
+            fontWeight: 800,
+            letterSpacing: 2
+          }}
+        >
+          PARRAINAGE
+        </span>
+        <h3 style={{ fontSize: 17, fontWeight: 800, color: COLORS.text, margin: "10px 0 6px", lineHeight: 1.25 }}>
+          {PARRAINAGE.accroche}
+        </h3>
+        <p style={{ fontSize: 12.5, color: COLORS.textMuted, margin: "0 0 12px", lineHeight: 1.5 }}>{PARRAINAGE.explication}</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {PARRAINAGE.paliers.map((p) => (
+            <div
+              key={p.formule}
+              data-palier-parrainage={p.formule}
+              style={{ background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 12px" }}
+            >
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                {p.formule}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: COLORS.gold, marginTop: 2 }}>{p.gain}</div>
+              <div style={{ fontSize: 11.5, color: COLORS.text }}>{PARRAINAGE.precision}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "10px 0 12px", lineHeight: 1.45 }}>{PARRAINAGE.condition}</p>
+        <Btn icon={Send} onClick={inviter} style={{ width: "100%" }}>
           Inviter un ami
         </Btn>
         <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "8px 0 0", lineHeight: 1.45 }}>
           Ton ami reçoit un lien pour écrire directement à ton coach sur WhatsApp, avec ton prénom déjà indiqué.
-          S'il s'inscrit de ta part, tu bénéficies d'une réduction sur ton mois suivant (parrainage).
         </p>
       </div>
-
-      {retour && <p style={{ fontSize: 12, color: COLORS.textMuted, margin: "10px 0 0" }}>{retour}</p>}
     </Card>
   );
 }

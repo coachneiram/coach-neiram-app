@@ -9,7 +9,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
+import { PARRAINAGE,
   lienContactCoach,
   lignesCarte,
   messageInvitation,
@@ -209,5 +209,26 @@ describe("Partage de l'image", () => {
       navigator: { canShare: () => true, share: async () => { throw abandon; } }
     });
     assert.equal(r, "cancelled");
+  });
+});
+
+describe("Parrainage affiche dans l'application", () => {
+  test("les trois paliers du visuel du coach, sur le mois suivant", () => {
+    assert.deepEqual(
+      PARRAINAGE.paliers.map((p) => [p.formule, p.gain]),
+      [
+        ["Suivi hebdo", "Une séance offerte"],
+        ["Suivi mensuel", "55 € offerts"],
+        ["Coaching en ligne", "−25 %"]
+      ]
+    );
+    assert.equal(PARRAINAGE.precision, "sur ton mois suivant");
+    assert.match(PARRAINAGE.condition, /signe un coaching/);
+  });
+
+  test("aucun montant fige pour le coaching en ligne (32,50 € = ancien tarif de 130 €)", () => {
+    const texte = JSON.stringify(PARRAINAGE);
+    assert.doesNotMatch(texte, /32[,.]50/);
+    assert.doesNotMatch(texte, /130/);
   });
 });
