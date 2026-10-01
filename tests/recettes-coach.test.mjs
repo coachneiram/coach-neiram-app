@@ -102,8 +102,16 @@ describe("Ce que voit chaque client", () => {
   const BOWL = "2026-10-01-bowl-poulet-haricots-rouges";
   const OATS = "2026-10-01-overnight-oats-banane-cacahuete";
 
-  test("vegan : seulement le vegan", () => {
-    assert.deepEqual(ids(recettesPourClient(RECETTES_COACH, { dietType: "vegetalien", allergies: [] })), [DAHL]);
+  // Les attentes se calculent sur le catalogue reel : la routine ajoute des
+  // recettes chaque semaine, un test qui fige le catalogue de depart
+  // echouerait a chaque ajout sans rien prouver.
+  const triee = (liste) => [...liste].sort();
+
+  test("vegan : seulement le vegan, et tout le vegan", () => {
+    const vus = ids(recettesPourClient(RECETTES_COACH, { dietType: "vegetalien", allergies: [] }));
+    const vegan = RECETTES_COACH.filter((r) => r.regimes.includes("vegan")).map((r) => r.id);
+    assert.ok(vus.includes(DAHL));
+    assert.deepEqual(triee(vus), triee(vegan));
   });
 
   test("vegetarien : pas de poulet", () => {
@@ -127,7 +135,10 @@ describe("Ce que voit chaque client", () => {
   });
 
   test("keto : pas de recette riche en glucides", () => {
-    assert.deepEqual(recettesPourClient(RECETTES_COACH, { dietType: "keto", allergies: [] }), []);
+    const vus = recettesPourClient(RECETTES_COACH, { dietType: "keto", allergies: [] });
+    assert.ok(vus.every((r) => r.parPortion.c <= 15));
+    assert.ok(!ids(vus).includes(DAHL));
+    assert.deepEqual(triee(ids(vus)), triee(RECETTES_COACH.filter((r) => r.parPortion.c <= 15).map((r) => r.id)));
   });
 
   test("l'objectif du client passe en premier, « pour toi » filtre", () => {
@@ -135,7 +146,9 @@ describe("Ce que voit chaque client", () => {
     assert.deepEqual(profilsDuClient(perf), ["force", "bodybuilding", "hyrox", "marathon", "ironman"]);
     assert.notEqual(recettesPourClient(RECETTES_COACH, perf)[0].id, DAHL);
     assert.ok(!ids(recettesPourClient(RECETTES_COACH, perf, "pour-toi")).includes(DAHL));
-    assert.deepEqual(ids(recettesPourClient(RECETTES_COACH, perf, "marathon")), [OATS]);
+    const marathon = ids(recettesPourClient(RECETTES_COACH, perf, "marathon"));
+    assert.ok(marathon.includes(OATS));
+    assert.deepEqual(triee(marathon), triee(RECETTES_COACH.filter((r) => r.profils.includes("marathon")).map((r) => r.id)));
   });
 
   test("profils : neuf objectifs, « force » couvre powerlifting et force athletique", () => {

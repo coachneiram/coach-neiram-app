@@ -8,8 +8,13 @@ recettes de la semaine et ouvre une pull request. Marien relit et fusionne : la 
 
 - **Ajouter, ne jamais modifier ni supprimer** une recette existante. Les nouvelles recettes vont **en tête** du tableau.
 - **JSON strict** entre les crochets (guillemets doubles, pas de virgule finale, pas de commentaire).
-- `node --test tests/*.test.mjs` doit passer. `tests/recettes-coach.test.mjs` refuse toute recette qui ment
-  (régime, macros, champs).
+- Avant les tests, installer la table des appareils comme la CI : `npm i --no-save playwright-core@1.63.0`.
+  Puis `node --test tests/*.test.mjs` doit passer sans aucun échec. `tests/recettes-coach.test.mjs` refuse toute
+  recette qui ment (régime, macros, champs).
+- **`contient` reflète tous les ingrédients**, y compris les sauces et les céréales : sauce soja → `soja` et `gluten`
+  (le tamari est sans gluten) ; avoine, blé, boulgour, pâtes, tortillas, semoule → `gluten` ; lait, yaourt, skyr,
+  fromage → `lactose` ; amande, noix, noisette, cajou → `fruits-a-coque`. Un client allergique ne voit pas les
+  recettes qui contiennent son allergène : un oubli ici lui montre une recette qu'il ne peut pas manger.
 
 ## Champs (tous obligatoires sauf `adaptations` et `tags`)
 

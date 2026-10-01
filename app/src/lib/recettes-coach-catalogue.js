@@ -122,7 +122,7 @@ export const RECETTES_COACH = [
     "categorie": "diner",
     "profils": ["force", "bodybuilding"],
     "regimes": ["vegan", "vegetarien", "sans-porc"],
-    "contient": ["soja"],
+    "contient": ["soja", "gluten"],
     "portions": 1,
     "preparationMin": 10,
     "cuissonMin": 25,
