@@ -10,7 +10,7 @@
  * allergique. Elle est donc verifiee contre l'original, cas par cas.
  */
 
-import { EXCLUSIONS, repartitionDuProfil, restrictionDuProfil } from "./regimes.js";
+import { EXCLUSIONS, etiquettesArticle, repartitionDuProfil, restrictionDuProfil } from "./regimes.js";
 
 /** Categories d'aliments exclues par les regimes sans viande. */
 const CHAIRS = ["viande", "volaille", "poisson", "crustaces"];
@@ -136,4 +136,4 @@ export function trierPourObjectif(aliments, idCategorie, objectif) {
  * l'huile d'olive ou le sel.
  */
 export const articleCoursesOk = (article, profil) =>
-  regimeOk({ contains: article.contains || [], c: article.c != null ? article.c : 0 }, profil);
+  regimeOk({ contains: etiquettesArticle(article), c: article.c != null ? article.c : 0 }, profil);

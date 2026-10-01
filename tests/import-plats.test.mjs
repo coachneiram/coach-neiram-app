@@ -73,7 +73,7 @@ describe("ce qui est enregistre", () => {
 describe("branchement depuis l'ecran Repas", () => {
   test("l'habitude de pesee du client est transmise au selecteur", () => {
     // Sans elle, un client qui pese cru voit d'abord les fiches « cuit ».
-    assert.match(repas, /<Plats api=\{api\} habitudePesee=\{profile\?\.weighsStaples\} \/>/);
+    assert.match(repas, /<Plats api=\{api\} habitudePesee=\{profile\?\.weighsStaples\}[^>]*\/>/);
     assert.match(plats, /habitudePesee=\{habitudePesee\}/);
   });
 });

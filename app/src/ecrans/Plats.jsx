@@ -33,8 +33,12 @@ import {
 import { Camera, Pencil, Plus, Trash2, UtensilsCrossed, X } from "../ui/icones.jsx";
 import { RechercheAliment } from "./RechercheAliment.jsx";
 import { Recettes } from "./Recettes.jsx";
+import { RecettesCoach } from "./RecettesCoach.jsx";
 
-export function Plats({ api, habitudePesee }) {
+export function Plats({ api, habitudePesee, profile }) {
+  // Une recette du coach ajoutee doit apparaitre tout de suite dans « Mes
+  // recettes », qui lit sa liste a l'ouverture : on la fait relire.
+  const [versionRecettes, setVersionRecettes] = useState(0);
   const [modalOuverte, setModalOuverte] = useState(false);
   const [importOuvert, setImportOuvert] = useState(false);
   const [edition, setEdition] = useState(null);
@@ -86,6 +90,8 @@ export function Plats({ api, habitudePesee }) {
 
   return (
     <div>
+      <RecettesCoach profile={profile} onAjoutee={() => setVersionRecettes((v) => v + 1)} />
+
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <TextInput
           placeholder="Rechercher..."
@@ -107,7 +113,7 @@ export function Plats({ api, habitudePesee }) {
         Importer un aliment — recherche, photo IA ou code-barres
       </Btn>
 
-      <Recettes habitudePesee={habitudePesee} />
+      <Recettes key={versionRecettes} habitudePesee={habitudePesee} />
 
       {plats.length === 0 ? (
         <EmptyState
