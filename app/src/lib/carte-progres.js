@@ -142,4 +142,23 @@ export function messageInvitation({ prenom }) {
 }
 
 /** Nom du fichier image partage. */
+/**
+ * Conditions du parrainage, affichees dans l'application (visuel du coach
+ * du 01/10/2026). Source de verite : memory/offres.md du Business OS
+ * (« Parrainage »). Si les conditions changent, mettre a jour ici le meme
+ * jour. Le montant en euros du coaching en ligne n'est volontairement pas
+ * affiche : il depend du tarif du client.
+ */
+export const PARRAINAGE = {
+  accroche: "Fais profiter un proche, gagne sur ton coaching",
+  explication: "Chaque personne que tu amènes et qui démarre un coaching te fait gagner une réduction sur ton mois suivant.",
+  paliers: [
+    { formule: "Suivi hebdo", gain: "Une séance offerte" },
+    { formule: "Suivi mensuel", gain: "55 € offerts" },
+    { formule: "Coaching en ligne", gain: "−25 %" }
+  ],
+  precision: "sur ton mois suivant",
+  condition: "Valable dès que la personne recommandée signe un coaching."
+};
+
 export const nomFichierCarte = (date) => `progres-coach-neiram-${date}.png`;
