@@ -57,10 +57,45 @@ describe("Une recette qui ment est refusee", () => {
     }
   });
 
-  test("les alternatives vegetales ne sont pas des faux positifs", () => {
+  test("les alternatives vegetales ne sont pas des faux positifs vegan", () => {
+    // Elles restent vegan ; leurs allergenes (avoine, soja, arachide) sont
+    // controles a part, plus bas.
     const vegan = { regimes: ["vegan", "vegetarien", "sans-porc"], contient: [] };
     for (const nom of ["Lait de coco", "Lait d'avoine", "Lait de soja", "Beurre de cacahuète", "Crème de coco", "Persil haché"]) {
       const r = variante({ ...vegan, ingredients: [...base.ingredients, { nom, quantite: "10 g" }] });
+      assert.doesNotMatch(erreurs(r), /vegan/, nom);
+    }
+  });
+
+  test("allergene revele par un ingredient mais absent de « contient » : refuse", () => {
+    const cas = [
+      ["Sauce soja", "gluten"],
+      ["Sauce soja", "soja"],
+      ["Flocons d'avoine", "gluten"],
+      ["Farine de blé", "gluten"],
+      ["Tortillas de blé", "gluten"],
+      ["Skyr nature", "lactose"],
+      ["Beurre doux", "lactose"],
+      ["Œufs", "oeufs"],
+      ["Beurre de cacahuète", "arachides"],
+      ["Purée d'amande", "fruits-a-coque"],
+      ["Noix", "fruits-a-coque"],
+      ["Tofu ferme", "soja"],
+      ["Thon au naturel", "poisson"],
+      ["Crevettes cuites", "crustaces"],
+      ["Escalope de dinde", "volaille"],
+      ["Bœuf haché", "viande"],
+      ["Lardons", "porc"]
+    ];
+    for (const [nom, famille] of cas) {
+      const r = variante({ regimes: [], contient: [], ingredients: [...base.ingredients, { nom, quantite: "10 g" }] });
+      assert.match(erreurs(r), new RegExp(`« ${nom} » → ajouter « ${famille} »`), `${nom} → ${famille}`);
+    }
+  });
+
+  test("allergenes : pas de faux positif sur les homonymes", () => {
+    for (const nom of ["Lait de coco", "Crème de coco", "Noix de coco râpée", "Noix de muscade", "Farine de riz", "Farine de pois chiches", "Tamari", "Pommes de terre"]) {
+      const r = variante({ regimes: ["vegan", "vegetarien", "sans-porc"], contient: nom === "Tamari" ? ["soja"] : [], ingredients: [...base.ingredients, { nom, quantite: "10 g" }] });
       assert.deepEqual(verifierRecette(r), [], nom);
     }
   });
