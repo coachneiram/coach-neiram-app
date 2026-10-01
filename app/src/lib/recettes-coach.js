@@ -104,6 +104,34 @@ const MOTS_ANIMAL = mots(
   "(?:œ|oe)ufs?|miel|beurre(?! de (?:cacahu[eè]te|cajou|amande|noisette))|fromages?|feta|mozzarella|parmesan|ricotta|yaourts?|skyr|cr[èe]me(?! de coco)|whey|lactos[ée]rum|lait(?! (?:de |d'|d’)?(?:coco|soja|avoine|amande|riz|noisette|cajou))"
 );
 
+/**
+ * Ce que revele un ingredient, et qui doit donc figurer dans `contient`.
+ *
+ * Ajoute le 01/10/2026 apres deux oublis de la premiere semaine de la
+ * routine (sauce soja et flocons d'avoine sans « gluten ») : un client
+ * allergique ne voit pas les recettes qui contiennent son allergene, et un
+ * oubli dans `contient` lui en montre une qu'il ne peut pas manger. Les
+ * familles viande, volaille et porc portent les regimes (pescetarien, sans
+ * porc) ; le miel, lui, est deja controle par la regle vegan.
+ */
+const REVELE = {
+  gluten: mots(
+    "bl[ée]|farine(?! (?:de |d'|d’)?(?:riz|pois|sarrasin|ma[ïi]s|coco|amande|ch[âa]taigne|lupin))|p[âa]tes|pain|boulgour|semoule|couscous|avoine|orge|seigle|[ée]peautre|tortillas?|chapelure|seitan|biscottes?|biscuits?|nouilles|wraps?|brioche|sauce soja"
+  ),
+  lactose: mots(
+    "lait(?! (?:de |d'|d’)?(?:coco|soja|avoine|amande|riz|noisette|cajou))|yaourts?|yogourts?|skyr|fromages?|feta|mozzarella|parmesan|ricotta|emmental|comt[ée]|mascarpone|cottage|k[ée]fir|cr[èe]me(?! de coco)|beurre(?! de (?:cacahu[eè]te|cajou|amande|noisette))|whey|lactos[ée]rum|petits?-suisses?"
+  ),
+  oeufs: mots("(?:œ|oe)ufs?|mayonnaise"),
+  arachides: mots("cacahu[eè]tes?|arachides?"),
+  "fruits-a-coque": mots("amandes?|noix(?! de (?:coco|muscade))|noisettes?|cajou|pistaches?|p[ée]can|macadamia"),
+  soja: mots("soja|tofu|tempeh|edamame|tamari|miso"),
+  poisson: mots("thon|saumon|cabillaud|colin|merlu|truite|sardines?|maquereau|anchois|poissons?|surimi|nuoc-m[âa]m"),
+  crustaces: mots("crevettes?|crabe|homard|langoustines?|gambas|[ée]crevisses?"),
+  viande: mots("b(?:œ|oe)uf|veau|agneau|viande|merguez"),
+  volaille: mots("poulet|dinde|canard|pintade|volaille"),
+  porc: MOTS_PORC
+};
+
 /** Les erreurs d'une recette ; une liste vide veut dire qu'elle est publiable. */
 export function verifierRecette(r) {
   const e = [];
@@ -145,6 +173,14 @@ export function verifierRecette(r) {
   if (regimes.includes("vegan")) req(!MOTS_ANIMAL.test(texte) && !MOTS_CHAIR.test(texte) && !MOTS_PORC.test(texte), "« vegan » mais un ingrédient est d'origine animale");
   if (regimes.includes("vegetarien")) req(!MOTS_CHAIR.test(texte) && !MOTS_PORC.test(texte), "« vegetarien » mais un ingrédient est de la viande ou du poisson");
   if (regimes.includes("sans-porc")) req(!MOTS_PORC.test(texte), "« sans-porc » mais un ingrédient contient du porc ou un dérivé");
+  // Chaque allergene ou famille revele par un ingredient doit etre declare.
+  for (const ing of r.ingredients || []) {
+    for (const [famille, motif] of Object.entries(REVELE)) {
+      if (ing && motif.test(String(ing.nom)) && !contient.includes(famille)) {
+        e.push(`allergène manquant : « ${ing.nom} » → ajouter « ${famille} » à contient`);
+      }
+    }
+  }
   // Et l'inverse : une recette vegetale doit le dire, sinon les clients
   // vegetariens ne la verraient jamais.
   if (regimes.includes("vegan")) req(regimes.includes("vegetarien") && regimes.includes("sans-porc"), "vegan implique vegetarien et sans-porc");

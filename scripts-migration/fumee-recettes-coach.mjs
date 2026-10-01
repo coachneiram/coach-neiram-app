@@ -22,6 +22,11 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RECETTES_COACH } from "../app/src/lib/recettes-coach-catalogue.js";
+import { recettesPourClient } from "../app/src/lib/recettes-coach.js";
+
+// Attentes calculees sur le catalogue reel, avec la meme fonction que
+// l'ecran : la routine ajoute des recettes chaque semaine.
+const attendus = (profil, filtre) => recettesPourClient(RECETTES_COACH, { allergies: [], ...profil }, filtre).map((r) => r.id);
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "app", "dist");
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png" };
@@ -60,8 +65,26 @@ const visibles = (page) => page.$$eval("[data-recette-coach]", (els) => els.map(
 try {
   {
     const { ctx, page } = await ouvrir({ goal: "maintien", dietType: "vegetalien" });
-    const ids = await visibles(page);
-    console.log("1. VEGAN                 :", JSON.stringify(ids) === JSON.stringify([DAHL]) ? "seul le dahl vegan est proposé" : `*** ${JSON.stringify(ids)} ***`);
+    const profilVegan = { goal: "maintien", dietType: "vegetalien" };
+    // L'ecran s'ouvre sur « Pour toi » (recettes de son objectif), puis
+    // « Toutes » montre tout ce qui est compatible avec son regime.
+    const pourToi = await visibles(page);
+    await page.locator('[data-filtre="toutes"]').click();
+    await page.waitForTimeout(300);
+    const toutes = await visibles(page);
+    const attenduPourToi = attendus(profilVegan, "pour-toi");
+    const attenduToutes = attendus(profilVegan);
+    const veganSeulement = toutes.every((id) => RECETTES_COACH.find((r) => r.id === id).regimes.includes("vegan"));
+    console.log(
+      "1. VEGAN                 :",
+      JSON.stringify(pourToi) === JSON.stringify(attenduPourToi) &&
+        JSON.stringify(toutes) === JSON.stringify(attenduToutes) &&
+        toutes.includes(DAHL) &&
+        !toutes.includes(BOWL) &&
+        veganSeulement
+        ? `« Pour toi » ${pourToi.length}, « Toutes » ${toutes.length} recettes, toutes vegan`
+        : `*** pour toi ${JSON.stringify(pourToi)}, toutes ${JSON.stringify(toutes)} ***`
+    );
     await ctx.close();
   }
   {
@@ -72,7 +95,9 @@ try {
     const toutes = await visibles(page);
     console.log(
       "2. OBJECTIF              :",
-      !pourToi.includes(DAHL) && pourToi.length === 2 && toutes.length === RECETTES_COACH.length
+      !pourToi.includes(DAHL) &&
+      JSON.stringify(pourToi) === JSON.stringify(attendus({ goal: "performance", dietType: "aucun" }, "pour-toi")) &&
+      toutes.length === RECETTES_COACH.length
         ? `« Pour toi » ${pourToi.length} recettes de performance, « Toutes » ${toutes.length}`
         : `*** pour toi ${JSON.stringify(pourToi)}, toutes ${JSON.stringify(toutes)} ***`
     );

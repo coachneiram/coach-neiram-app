@@ -57,10 +57,45 @@ describe("Une recette qui ment est refusee", () => {
     }
   });
 
-  test("les alternatives vegetales ne sont pas des faux positifs", () => {
+  test("les alternatives vegetales ne sont pas des faux positifs vegan", () => {
+    // Elles restent vegan ; leurs allergenes (avoine, soja, arachide) sont
+    // controles a part, plus bas.
     const vegan = { regimes: ["vegan", "vegetarien", "sans-porc"], contient: [] };
     for (const nom of ["Lait de coco", "Lait d'avoine", "Lait de soja", "Beurre de cacahuète", "Crème de coco", "Persil haché"]) {
       const r = variante({ ...vegan, ingredients: [...base.ingredients, { nom, quantite: "10 g" }] });
+      assert.doesNotMatch(erreurs(r), /vegan/, nom);
+    }
+  });
+
+  test("allergene revele par un ingredient mais absent de « contient » : refuse", () => {
+    const cas = [
+      ["Sauce soja", "gluten"],
+      ["Sauce soja", "soja"],
+      ["Flocons d'avoine", "gluten"],
+      ["Farine de blé", "gluten"],
+      ["Tortillas de blé", "gluten"],
+      ["Skyr nature", "lactose"],
+      ["Beurre doux", "lactose"],
+      ["Œufs", "oeufs"],
+      ["Beurre de cacahuète", "arachides"],
+      ["Purée d'amande", "fruits-a-coque"],
+      ["Noix", "fruits-a-coque"],
+      ["Tofu ferme", "soja"],
+      ["Thon au naturel", "poisson"],
+      ["Crevettes cuites", "crustaces"],
+      ["Escalope de dinde", "volaille"],
+      ["Bœuf haché", "viande"],
+      ["Lardons", "porc"]
+    ];
+    for (const [nom, famille] of cas) {
+      const r = variante({ regimes: [], contient: [], ingredients: [...base.ingredients, { nom, quantite: "10 g" }] });
+      assert.match(erreurs(r), new RegExp(`« ${nom} » → ajouter « ${famille} »`), `${nom} → ${famille}`);
+    }
+  });
+
+  test("allergenes : pas de faux positif sur les homonymes", () => {
+    for (const nom of ["Lait de coco", "Crème de coco", "Noix de coco râpée", "Noix de muscade", "Farine de riz", "Farine de pois chiches", "Tamari", "Pommes de terre"]) {
+      const r = variante({ regimes: ["vegan", "vegetarien", "sans-porc"], contient: nom === "Tamari" ? ["soja"] : [], ingredients: [...base.ingredients, { nom, quantite: "10 g" }] });
       assert.deepEqual(verifierRecette(r), [], nom);
     }
   });
@@ -102,8 +137,16 @@ describe("Ce que voit chaque client", () => {
   const BOWL = "2026-10-01-bowl-poulet-haricots-rouges";
   const OATS = "2026-10-01-overnight-oats-banane-cacahuete";
 
-  test("vegan : seulement le vegan", () => {
-    assert.deepEqual(ids(recettesPourClient(RECETTES_COACH, { dietType: "vegetalien", allergies: [] })), [DAHL]);
+  // Les attentes se calculent sur le catalogue reel : la routine ajoute des
+  // recettes chaque semaine, un test qui fige le catalogue de depart
+  // echouerait a chaque ajout sans rien prouver.
+  const triee = (liste) => [...liste].sort();
+
+  test("vegan : seulement le vegan, et tout le vegan", () => {
+    const vus = ids(recettesPourClient(RECETTES_COACH, { dietType: "vegetalien", allergies: [] }));
+    const vegan = RECETTES_COACH.filter((r) => r.regimes.includes("vegan")).map((r) => r.id);
+    assert.ok(vus.includes(DAHL));
+    assert.deepEqual(triee(vus), triee(vegan));
   });
 
   test("vegetarien : pas de poulet", () => {
@@ -127,7 +170,10 @@ describe("Ce que voit chaque client", () => {
   });
 
   test("keto : pas de recette riche en glucides", () => {
-    assert.deepEqual(recettesPourClient(RECETTES_COACH, { dietType: "keto", allergies: [] }), []);
+    const vus = recettesPourClient(RECETTES_COACH, { dietType: "keto", allergies: [] });
+    assert.ok(vus.every((r) => r.parPortion.c <= 15));
+    assert.ok(!ids(vus).includes(DAHL));
+    assert.deepEqual(triee(ids(vus)), triee(RECETTES_COACH.filter((r) => r.parPortion.c <= 15).map((r) => r.id)));
   });
 
   test("l'objectif du client passe en premier, « pour toi » filtre", () => {
@@ -135,7 +181,9 @@ describe("Ce que voit chaque client", () => {
     assert.deepEqual(profilsDuClient(perf), ["force", "bodybuilding", "hyrox", "marathon", "ironman"]);
     assert.notEqual(recettesPourClient(RECETTES_COACH, perf)[0].id, DAHL);
     assert.ok(!ids(recettesPourClient(RECETTES_COACH, perf, "pour-toi")).includes(DAHL));
-    assert.deepEqual(ids(recettesPourClient(RECETTES_COACH, perf, "marathon")), [OATS]);
+    const marathon = ids(recettesPourClient(RECETTES_COACH, perf, "marathon"));
+    assert.ok(marathon.includes(OATS));
+    assert.deepEqual(triee(marathon), triee(RECETTES_COACH.filter((r) => r.profils.includes("marathon")).map((r) => r.id)));
   });
 
   test("profils : neuf objectifs, « force » couvre powerlifting et force athletique", () => {
