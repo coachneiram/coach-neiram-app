@@ -16,6 +16,7 @@ import { normaliserCreneaux } from "./semaine.js";
 import { bilanPlanSemaine, etatPlanSemaine, raisonSemaineDifficile, semaineDifficileDe } from "./plan-semaine.js";
 import { fmtRPE } from "./force.js";
 import { moyennesPortions } from "./portions-jour.js";
+import { seriesSemaines } from "./trophees.js";
 
 /** Longueur maximale d'une note reprise dans le bilan. */
 const LONGUEUR_NOTE = 140;
@@ -145,6 +146,16 @@ export function bilanHebdomadaire(cleSemaine, donnees, profil, objectifs) {
     : null;
   const planSummary = lignesPlan ? bilanPlanSemaine(lignesPlan) : null;
 
+  // Serie de semaines tenues (trophees, ajout posterieur a la bascule) :
+  // calculee a la fin de la semaine analysee, ou aujourd'hui si elle est en
+  // cours.
+  const series = seriesSemaines({
+    seances: donnees.sessions,
+    profil,
+    semainesDifficiles: donnees.hardWeeks,
+    date: jourReference
+  });
+
   const loggedDaysCount = new Set([
     ...repas.map((e) => e.date),
     ...journal.map((f) => f.date),
@@ -191,6 +202,8 @@ export function bilanHebdomadaire(cleSemaine, donnees, profil, objectifs) {
     avgSteps,
     avgFruitsVeg,
     avgProteinPortions,
+    weeklyStreak: series.serie,
+    weeklyStreakBest: series.meilleure,
     dayNotes,
     sessionNotes,
     pains,
