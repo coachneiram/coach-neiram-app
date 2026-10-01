@@ -12,21 +12,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-
-// La table des appareils vient de playwright-core, installe par la CI
-// (« Installer la table des appareils ») mais pas toujours ailleurs, par
-// exemple dans la session de la routine Recettes. En CI, son absence reste
-// une erreur ; hors CI, seul le groupe qui en a besoin est saute, avec la
-// commande a lancer. L'analyse des scripts, elle, tourne partout.
-let appareil;
-let nomAppareil;
-let sansTable = false;
-try {
-  ({ appareil, nomAppareil } = await import("../scripts-migration/appareil.mjs"));
-} catch (e) {
-  if (process.env.CI) throw e;
-  sansTable = "playwright-core absent : lancer « npm i --no-save playwright-core@1.63.0 » (fait par la CI)";
-}
+import { appareil, nomAppareil } from "../scripts-migration/appareil.mjs";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS = join(ICI, "..", "scripts-migration");
@@ -35,7 +21,7 @@ afterEach(() => {
   delete process.env.APPAREIL;
 });
 
-describe("choisir l'appareil", { skip: sansTable }, () => {
+describe("choisir l'appareil", () => {
   test("sans variable, chaque script garde le sien", () => {
     assert.equal(nomAppareil(), "iPhone 13");
     assert.equal(nomAppareil("Pixel 7"), "Pixel 7");
