@@ -463,6 +463,7 @@ export default function App() {
         sessionsApi={sessionsApi}
         targets={targets}
         profile={profil}
+        semainesDifficiles={semainesDifficiles}
         onToast={afficherToast}
       />
     ),

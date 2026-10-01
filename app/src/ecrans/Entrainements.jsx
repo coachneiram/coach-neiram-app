@@ -22,6 +22,7 @@ import { SEANCE_TEMPLATES } from "../lib/catalogues.js";
 import { ConstructeurSeances } from "./ConstructeurSeances.jsx";
 import { ImportSeancesSheets } from "./ImportSeancesSheets.jsx";
 import { Seances } from "./Seances.jsx";
+import { Trophees } from "./Trophees.jsx";
 import { Creneaux } from "./Creneaux.jsx";
 import { SemaineDifficile } from "./SemaineDifficile.jsx";
 import { SeancesCoach } from "./SeancesCoach.jsx";
@@ -42,6 +43,17 @@ export function Entrainements({
   onDefinirMaxiForce,
   onEnregistrerLienSheets
 }) {
+  // Trophees et serie de semaines : ajout posterieur a la bascule, affiche
+  // dans les deux modes. En ligne, juste apres les creneaux ; sinon, en tete.
+  const trophees = (
+    <Trophees
+      seances={sessionsApi.items}
+      profile={profile}
+      semainesDifficiles={semainesDifficiles}
+      avecJoker={enLigne(profile)}
+    />
+  );
+
   const enTete = enLigne(profile) ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 20 }}>
       <Creneaux
@@ -50,6 +62,7 @@ export function Entrainements({
         raisons={raisonsCreneaux}
         onDefinirRaison={onDefinirRaisonCreneau}
       />
+      {trophees}
       <SemaineDifficile
         profile={profile}
         sessionsApi={sessionsApi}
@@ -60,7 +73,9 @@ export function Entrainements({
       />
       <SeancesCoach routinesApi={routinesApi} modeles={SEANCE_TEMPLATES} />
     </div>
-  ) : null;
+  ) : (
+    <div style={{ marginBottom: 20 }}>{trophees}</div>
+  );
 
   // Mode « Google Sheets » : le programme vit ailleurs, l'application ne
   // garde que le pointage.

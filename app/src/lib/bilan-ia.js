@@ -88,6 +88,10 @@ function chiffresSemaine(s, profile) {
           profile.targetSteps || 8e3
         ).toLocaleString("fr-FR")})`
       : null,
+    // Serie de semaines tenues (trophees) : absente des bilans anterieurs.
+    s.weeklyStreak != null
+      ? `Série : ${s.weeklyStreak} semaine(s) d'affilée avec l'objectif de séances tenu (record ${s.weeklyStreakBest ?? s.weeklyStreak})`
+      : null,
     // Absentes tant que le client ne compte pas ses portions : le prompt
     // reste alors identique a celui de l'application d'origine.
     s.avgFruitsVeg != null

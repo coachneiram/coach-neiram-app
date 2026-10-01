@@ -76,6 +76,10 @@ export function construireBilanHTML({ profile, weekStats, report, photos, target
     stat("Macros moy.", s.avgProtein != null ? `P${s.avgProtein} G${s.avgCarbs} L${s.avgFat}` : null),
     stat("Pas moy./jour", s.avgSteps != null ? Math.round(s.avgSteps).toLocaleString("fr-FR") : null),
     stat("Hydratation moy.", s.avgWaterMl != null ? fmtL(s.avgWaterMl) : null),
+    stat(
+      "Série de semaines",
+      s.weeklyStreak != null ? `${s.weeklyStreak} tenue${s.weeklyStreak > 1 ? "s" : ""} (record ${s.weeklyStreakBest ?? s.weeklyStreak})` : null
+    ),
     stat("Fruits & légumes moy.", s.avgFruitsVeg != null ? `${s.avgFruitsVeg} portions / 5` : null),
     stat("Protéines moy.", s.avgProteinPortions != null ? `${s.avgProteinPortions} portions / 3` : null),
     stat("Énergie / Stress", s.avgEnergy != null ? `${s.avgEnergy}/5 · ${s.avgStress ?? "—"}/10` : null),
