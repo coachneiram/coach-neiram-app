@@ -65,6 +65,18 @@ import { DIET_TYPES, FOOD_DB } from "./catalogues.js";
 const PESCETARIEN = { id: "pescetarien", label: "Pescétarien (poisson, sans viande)" };
 
 /**
+ * Restriction ajoutee pour les recettes du coach (octobre 2026) : une
+ * partie de la clientele ne mange pas de porc. Aucune liste filtree par
+ * regimeOk (suggestions, equivalences, idees de repas) ne contient de porc
+ * aujourd'hui, et un test le verifie : tout ajout devra porter l'etiquette
+ * « porc ». Les recettes du coach declarent leur regime et sont verifiees
+ * ingredient par ingredient (voir recettes-coach.js). La recherche libre
+ * d'aliments n'est pas filtree, comme pour les autres regimes : le client
+ * qui tape « jambon » le trouve.
+ */
+const SANS_PORC = { id: "sans-porc", label: "Sans porc" };
+
+/**
  * Restrictions proposees, dans l'ordre d'affichage.
  *
  * Les libelles des trois premieres viennent de la liste extraite de
@@ -74,7 +86,8 @@ const PESCETARIEN = { id: "pescetarien", label: "Pescétarien (poisson, sans via
  */
 export const RESTRICTIONS = [
   ...["aucun", "vegetarien", "vegetalien"].map((id) => DIET_TYPES.find((d) => d.id === id)).filter(Boolean),
-  PESCETARIEN
+  PESCETARIEN,
+  SANS_PORC
 ];
 
 /**
@@ -86,8 +99,27 @@ export const RESTRICTIONS = [
  * deux implementations de la meme regle finissent toujours par diverger.
  */
 export const EXCLUSIONS = {
-  pescetarien: ["viande", "volaille"]
+  pescetarien: ["viande", "volaille"],
+  "sans-porc": ["porc"]
 };
+
+/**
+ * Etiquettes ajoutees apres la migration, par nom d'article.
+ *
+ * La liste de courses est verifiee a l'identique contre index.html
+ * (tests/parite-*.test.mjs) : on ne peut pas y ajouter l'etiquette « porc »
+ * sans casser cette comparaison. On la pose donc ici, lue au moment du
+ * filtrage. Un article absent de cette table garde ses etiquettes d'origine.
+ */
+export const ETIQUETTES_AJOUTEES = {
+  "Jambon blanc découenné": ["porc"]
+};
+
+/** Etiquettes d'un article : celles d'origine, plus celles ajoutees. */
+export const etiquettesArticle = (article) => [
+  ...((article && article.contains) || []),
+  ...((article && (ETIQUETTES_AJOUTEES[article.n] || ETIQUETTES_AJOUTEES[article.name])) || [])
+];
 
 /**
  * Majoration des proteines des regimes vegetaux, en facteur.

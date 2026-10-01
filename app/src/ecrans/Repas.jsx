@@ -53,7 +53,7 @@ export function Repas({ api, profile, targets, logEntries, iaDisponible = true, 
         ))}
       </div>
 
-      {sousOnglet === "plats" && <Plats api={api} habitudePesee={profile?.weighsStaples} />}
+      {sousOnglet === "plats" && <Plats api={api} habitudePesee={profile?.weighsStaples} profile={profile} />}
       {sousOnglet === "courses" && <Courses profile={profile} />}
       {sousOnglet === "aliments" && (
         <Aliments profile={profile} targets={targets} logEntries={logEntries} />

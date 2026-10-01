@@ -177,8 +177,11 @@ export function lignesParParts(total, portions) {
  * Une recette modifiee garde sa place et son identifiant : la supprimer
  * puis la recreer la ferait changer de rang dans la liste du Journal.
  * Sans ingredient, rien n'est ecrit — une recette vide n'a rien a ajouter.
+ *
+ * `origine` (ajout posterieur) : l'identifiant d'une recette du coach
+ * reprise par le client, pour ne pas la lui faire ajouter deux fois.
  */
-export function enregistrerRecette(liste, { id, nom, ingredients, portions }) {
+export function enregistrerRecette(liste, { id, nom, ingredients, portions, origine }) {
   const items = (ingredients || []).map((e) => ({
     name: e.name,
     baseName: e.baseName || null,
@@ -194,7 +197,8 @@ export function enregistrerRecette(liste, { id, nom, ingredients, portions }) {
     name: String(nom || "").trim() || "Recette",
     items,
     portions: Math.max(1, Math.round(num(portions) || 1)),
-    recette: true
+    recette: true,
+    ...(origine ? { origine } : {})
   };
 
   const existante = id ? liste.find((r) => r.id === id) : null;
