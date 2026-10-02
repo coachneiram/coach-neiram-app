@@ -10,13 +10,21 @@
  *
  * Un trophee nouvellement gagne est celebre une fois, puis memorise comme
  * vu (cle cn_trophees_vus, incluse dans les sauvegardes).
+ *
+ * La celebration porte aussi, au plus une fois toutes les 4 semaines, la
+ * relance du parrainage (lib/relance-parrainage.js).
  */
 
 import { useMemo, useState } from "react";
+import { Send } from "../ui/icones.jsx";
 import { COLORS, POLICES } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
 import { messageSemaine, nouveauxTrophees, trophees } from "../lib/trophees.js";
+import { contexteDuJour } from "../lib/mot-du-coach.js";
+import { messageInvitation } from "../lib/carte-progres.js";
+import { inviterUnAmi } from "../lib/partage-carte.js";
+import { CLE_RELANCE_PARRAINAGE, PHRASE_PARRAINAGE, afficherRelanceParrainage } from "../lib/relance-parrainage.js";
 import { Btn, Card, MiniBar, SectionTitle } from "../ui/primitives.jsx";
 
 const CLE_VUS = "cn_trophees_vus";
@@ -38,6 +46,18 @@ export function Trophees({ seances, profile, semainesDifficiles, avecJoker }) {
   const nouveaux = nouveauxTrophees(etat.liste, vus);
   const { serie, meilleure, enCours } = etat.series;
   const message = messageSemaine(etat.series);
+
+  const [derniereRelance, setDerniereRelance] = useState(() => charger(CLE_RELANCE_PARRAINAGE, null));
+  const contexte = contexteDuJour({ seances, profil: profile, semainesDifficiles, date });
+  const relance = afficherRelanceParrainage({ nouveaux, contexte, derniere: derniereRelance, date });
+  const fermerRelance = () => {
+    setDerniereRelance(date);
+    enregistrer(CLE_RELANCE_PARRAINAGE, date);
+  };
+  const inviter = () => {
+    fermerRelance();
+    inviterUnAmi(messageInvitation({ prenom: profile && (profile.firstName || profile.name) }));
+  };
 
   const marquerVus = () => {
     const suivant = [...new Set([...vus, ...nouveaux.map((t) => t.id)])];
@@ -66,6 +86,43 @@ export function Trophees({ seances, profile, semainesDifficiles, avecJoker }) {
           <div style={{ fontSize: 13, color: COLORS.text, margin: "4px 0 10px" }}>
             {nouveaux.map((t) => t.titre).join(" · ")}
           </div>
+          {relance && (
+            <div
+              data-relance-parrainage=""
+              style={{
+                position: "relative",
+                margin: "0 0 10px",
+                padding: "10px 34px 10px 12px",
+                borderRadius: 8,
+                background: COLORS.bgAlt,
+                border: `1px solid ${COLORS.border}`
+              }}
+            >
+              <button
+                type="button"
+                aria-label="Fermer l'invitation"
+                onClick={fermerRelance}
+                style={{
+                  position: "absolute",
+                  top: 4,
+                  right: 4,
+                  width: 28,
+                  height: 28,
+                  border: "none",
+                  background: "transparent",
+                  color: COLORS.textMuted,
+                  fontSize: 16,
+                  cursor: "pointer"
+                }}
+              >
+                ✕
+              </button>
+              <p style={{ fontSize: 13, color: COLORS.text, margin: "0 0 8px", lineHeight: 1.45 }}>{PHRASE_PARRAINAGE}</p>
+              <Btn variant="ghost" icon={Send} onClick={inviter} style={{ padding: "7px 12px" }}>
+                Inviter un ami
+              </Btn>
+            </div>
+          )}
           <Btn onClick={marquerVus} style={{ padding: "8px 14px" }}>
             Super !
           </Btn>
