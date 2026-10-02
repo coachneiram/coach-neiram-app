@@ -13,7 +13,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { debutSaisi, lignesCarte, statistiquesProgres } from "../app/src/lib/carte-progres.js";
+import { choixDebut, debutSaisi, joursDansMois, lignesCarte, partiesDate, statistiquesProgres } from "../app/src/lib/carte-progres.js";
 import { cleExercice, exerciceTape, exercicesARetenir } from "../app/src/lib/constructeur-seances.js";
 import { EXERCISE_LIBRARY } from "../app/src/lib/catalogues.js";
 import { RECETTES_COACH } from "../app/src/lib/recettes-coach-catalogue.js";
@@ -69,14 +69,51 @@ describe("1. Debut du coaching saisi par le client", () => {
   test("branchement : champ sur la carte, enregistre dans le profil, effacable", () => {
     const carte = lire("../app/src/ecrans/CarteProgres.jsx");
     assert.match(carte, /data-debut-coaching/);
-    assert.match(carte, /value=\{debutManuel \|\| \(stats && stats\.debut\) \|\| ""\}/);
-    assert.match(carte, /max=\{date\}/);
-    assert.match(carte, /onChange=\{\(e\) => onDebutCoaching\(e\.target\.value\)\}/);
+    assert.match(carte, /valeur=\{debutManuel \|\| \(stats && stats\.debut\) \|\| date\}/);
+    assert.match(carte, /onChange=\{onDebutCoaching\}/);
+    // Trois listes, pas le calendrier natif (inutilisable sur Android).
+    assert.doesNotMatch(carte, /type="date"/);
+    for (const l of ["Jour de début", "Mois de début", "Année de début"]) assert.match(carte, new RegExp(`aria-label="${l}"`));
+    assert.match(carte, /const r = choixDebut\(suivantes, date\);/);
+    assert.match(carte, /if \(r\.iso && r\.iso !== valeur\) onChange\(r\.iso\);/);
+    assert.match(carte, /onClick=\{\(\) => onChange\(""\)\}/);
     assert.match(lire("../app/src/ecrans/Tendances.jsx"), /<CarteProgres[^>]*onDebutCoaching=\{onDebutCoaching\}/);
     const app = lire("../app/src/App.jsx");
     assert.match(app, /onDebutCoaching=\{\(d\) => \{/);
     assert.match(app, /const \{ coachingStartDate, \.\.\.reste \} = profil;/);
     assert.match(app, /enregistrerProfil\(d \? \{ \.\.\.reste, coachingStartDate: d \} : reste\)/);
+  });
+});
+
+describe("1 bis. Listes Jour / Mois / Annee (retour Android du coach)", () => {
+  test("date complete et passee : enregistrable", () => {
+    assert.deepEqual(choixDebut({ jour: 3, mois: 1, annee: 2022 }, AUJ), { iso: "2022-01-03" });
+    assert.deepEqual(choixDebut({ jour: 1, mois: 10, annee: 2026 }, AUJ), { iso: AUJ });
+  });
+
+  test("31 fevrier : ramene au dernier jour du mois, annees bissextiles comprises", () => {
+    assert.deepEqual(choixDebut({ jour: 31, mois: 2, annee: 2023 }, AUJ), { iso: "2023-02-28" });
+    assert.deepEqual(choixDebut({ jour: 31, mois: 2, annee: 2024 }, AUJ), { iso: "2024-02-29" });
+    assert.deepEqual(choixDebut({ jour: 31, mois: 4, annee: 2025 }, AUJ), { iso: "2025-04-30" });
+    assert.equal(joursDansMois(2024, 2), 29);
+    assert.equal(joursDansMois(2100, 2), 28);
+    assert.equal(joursDansMois(2026, 12), 31);
+  });
+
+  test("date dans le futur : signalee, jamais enregistree", () => {
+    assert.deepEqual(choixDebut({ jour: 2, mois: 10, annee: 2026 }, AUJ), { futur: true });
+    assert.deepEqual(choixDebut({ jour: 1, mois: 12, annee: 2026 }, AUJ), { futur: true });
+  });
+
+  test("saisie incomplete ou hors bornes : rien", () => {
+    for (const p of [{}, { jour: 1, mois: 13, annee: 2022 }, { jour: 0, mois: 1, annee: 2022 }, { jour: 1, mois: 1, annee: 1999 }, { jour: "x", mois: 1, annee: 2022 }]) {
+      assert.deepEqual(choixDebut(p, AUJ), {}, JSON.stringify(p));
+    }
+  });
+
+  test("aller-retour : les listes reprennent la date affichee", () => {
+    assert.deepEqual(partiesDate("2022-01-03"), { jour: 3, mois: 1, annee: 2022 });
+    assert.deepEqual(choixDebut(partiesDate("2024-02-29"), AUJ), { iso: "2024-02-29" });
   });
 });
 
