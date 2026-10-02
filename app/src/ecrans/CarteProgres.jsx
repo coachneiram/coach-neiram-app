@@ -14,10 +14,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
-import { PARRAINAGE, debutSaisi, lignesCarte, messageInvitation, nomFichierCarte, statistiquesProgres } from "../lib/carte-progres.js";
+import { MOIS_FR, PARRAINAGE, choixDebut, debutSaisi, joursDansMois, lignesCarte, partiesDate, messageInvitation, nomFichierCarte, statistiquesProgres } from "../lib/carte-progres.js";
 import { canvasEnPng, dessinerCarte } from "../lib/dessin-carte.js";
 import { inviterUnAmi, partagerCarte } from "../lib/partage-carte.js";
-import { Btn, Card, Field, SectionTitle, TextInput } from "../ui/primitives.jsx";
+import { Btn, Card, SectionTitle, SelectInput } from "../ui/primitives.jsx";
 import { Loader2, Send, Share } from "../ui/icones.jsx";
 
 /* TEXTE-NOUVEAU
@@ -25,6 +25,73 @@ import { Loader2, Send, Share } from "../ui/icones.jsx";
    du coach pour se demarquer des applications grand public : ce qu'elles
    n'ont pas, c'est un coach dont les clients deviennent la vitrine. Aucun de
    ces libelles n'existe dans index.html. */
+/**
+ * Date de debut du coaching : trois listes Jour / Mois / Annee plutot que le
+ * calendrier natif, qu'on ne savait pas faire remonter a 2022 sur Android.
+ * La date n'est enregistree que lorsqu'elle est complete et passee.
+ */
+function DebutCoaching({ valeur, manuel, date, onChange }) {
+  const [parties, setParties] = useState(() => partiesDate(valeur));
+  const [futur, setFutur] = useState(false);
+  useEffect(() => {
+    setParties(partiesDate(valeur));
+    setFutur(false);
+  }, [valeur]);
+
+  const choisir = (champ, v) => {
+    const suivantes = { ...parties, [champ]: Number(v) };
+    setParties(suivantes);
+    const r = choixDebut(suivantes, date);
+    setFutur(Boolean(r.futur));
+    if (r.iso && r.iso !== valeur) onChange(r.iso);
+  };
+
+  const anneeMax = Number(date.slice(0, 4));
+  const annees = [];
+  for (let a = anneeMax; a >= 2000; a--) annees.push({ id: String(a), label: String(a) });
+  const nbJours = joursDansMois(parties.annee, parties.mois);
+  const jours = Array.from({ length: nbJours }, (_, i) => ({ id: String(i + 1), label: String(i + 1) }));
+  const mois = MOIS_FR.map((m, i) => ({ id: String(i + 1), label: m }));
+  const libelle = { fontSize: 11.5, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 };
+
+  return (
+    <div data-debut-coaching="" style={{ marginBottom: 12 }}>
+      <div style={{ ...libelle, marginBottom: 6 }}>Début de ton coaching</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr 1.2fr", gap: 6 }}>
+        <SelectInput
+          aria-label="Jour de début"
+          value={String(Math.min(parties.jour, nbJours))}
+          onChange={(e) => choisir("jour", e.target.value)}
+          options={jours}
+        />
+        <SelectInput aria-label="Mois de début" value={String(parties.mois)} onChange={(e) => choisir("mois", e.target.value)} options={mois} />
+        <SelectInput aria-label="Année de début" value={String(parties.annee)} onChange={(e) => choisir("annee", e.target.value)} options={annees} />
+      </div>
+      {futur && (
+        <p data-debut-futur="" style={{ fontSize: 11.5, color: COLORS.bad, margin: "6px 0 0" }}>
+          Cette date est dans le futur : choisis le jour de ton premier rendez-vous.
+        </p>
+      )}
+      <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 }}>
+        Suivi(e) par le coach avant l'application ? Mets la date de ton premier rendez-vous : tes semaines de suivi se
+        calculent toutes seules.
+        {manuel && (
+          <>
+            {" "}
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              style={{ background: "none", border: "none", padding: 0, color: COLORS.gold, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}
+            >
+              Revenir au calcul automatique
+            </button>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 export function CarteProgres({ allData, profile, onDebutCoaching }) {
   const [avecPoids, setAvecPoids] = useState(false);
   const [apercu, setApercu] = useState(null);
@@ -93,22 +160,12 @@ export function CarteProgres({ allData, profile, onDebutCoaching }) {
       </p>
 
       {onDebutCoaching && (
-        <div data-debut-coaching="">
-          <Field label="Début de ton coaching">
-            <TextInput
-              type="date"
-              aria-label="Début de ton coaching"
-              value={debutManuel || (stats && stats.debut) || ""}
-              min="2000-01-01"
-              max={date}
-              onChange={(e) => onDebutCoaching(e.target.value)}
-            />
-          </Field>
-          <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "-8px 0 12px", lineHeight: 1.45 }}>
-            Suivi(e) par le coach avant l'application ? Mets la date de ton premier rendez-vous : tes semaines de suivi se
-            calculent toutes seules.
-          </p>
-        </div>
+        <DebutCoaching
+          valeur={debutManuel || (stats && stats.debut) || date}
+          manuel={Boolean(debutManuel)}
+          date={date}
+          onChange={onDebutCoaching}
+        />
       )}
 
       {!stats ? (

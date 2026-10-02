@@ -69,6 +69,42 @@ export function debutSaisi(profil, date) {
   return v;
 }
 
+export const MOIS_FR = [
+  "janvier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+];
+
+/** Nombre de jours d'un mois (mois de 1 a 12). */
+export function joursDansMois(annee, mois) {
+  return new Date(Date.UTC(annee, mois, 0)).getUTCDate();
+}
+
+/** Jour, mois et annee (nombres) d'une date ISO. */
+export function partiesDate(iso) {
+  const [annee, mois, jour] = String(iso).split("-").map(Number);
+  return { jour, mois, annee };
+}
+
+/**
+ * Date de debut choisie avec les trois listes Jour / Mois / Annee.
+ *
+ * Remplace le calendrier natif, inutilisable sur Android pour remonter a
+ * 2022 (retour du coach du 2 octobre 2026) : les listes se comportent pareil
+ * partout. Un jour trop grand pour le mois (31 fevrier) est ramene au
+ * dernier jour du mois. Rend { iso } si la date est utilisable, sinon
+ * { futur: true } (date apres aujourd'hui) ou {} (saisie incomplete).
+ */
+export function choixDebut({ jour, mois, annee }, date) {
+  const a = Number(annee);
+  const m = Number(mois);
+  const j = Number(jour);
+  if (!Number.isInteger(a) || !Number.isInteger(m) || !Number.isInteger(j) || a < 2000 || m < 1 || m > 12 || j < 1) return {};
+  const jj = Math.min(j, joursDansMois(a, m));
+  const iso = `${a}-${String(m).padStart(2, "0")}-${String(jj).padStart(2, "0")}`;
+  if (iso > date) return { futur: true };
+  return { iso };
+}
+
 /**
  * Les chiffres de la carte.
  *

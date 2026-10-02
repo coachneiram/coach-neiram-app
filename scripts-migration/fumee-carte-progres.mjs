@@ -10,9 +10,11 @@
  *   5. sans feuille de partage : l'image se telecharge, l'invitation part
  *      par WhatsApp ;
  *   6. la carte « Parrainage » montre les trois paliers du coach ;
- *   7. « Debut de ton coaching » : pre-rempli avec la premiere saisie ; une
- *      date de 2022 est enregistree dans le profil, redessine la carte et
- *      reste au rechargement ; l'effacer revient au calcul automatique.
+ *   7. « Debut de ton coaching » (listes Jour / Mois / Annee) : pre-rempli
+ *      avec la premiere saisie ; le 03/01/2022 est enregistre dans le
+ *      profil, redessine la carte et reste au rechargement ; une date
+ *      future est signalee et refusee ; « Revenir au calcul automatique »
+ *      efface la date.
  * L'image produite est enregistree pour controle visuel (CARTE_PNG).
  *
  *   cd app && npm run build && cd ..
@@ -157,9 +159,14 @@ try {
         : `*** ${JSON.stringify(paliers)} ***`
     );
 
-    // Debut du coaching saisi a la main.
-    const champ = page.getByRole("textbox", { name: "Début de ton coaching" });
-    const auto = await champ.inputValue();
+    // Debut du coaching saisi a la main, avec les trois listes (le
+    // calendrier natif etait inutilisable sur Android).
+    const jour = page.getByRole("combobox", { name: "Jour de début" });
+    const mois = page.getByRole("combobox", { name: "Mois de début" });
+    const annee = page.getByRole("combobox", { name: "Année de début" });
+    const lire = async () => `${await annee.inputValue()}-${String(await mois.inputValue()).padStart(2, "0")}-${String(await jour.inputValue()).padStart(2, "0")}`;
+    const profilDebut = () => page.evaluate(() => JSON.parse(localStorage.getItem("coach_profile")).coachingStartDate);
+    const auto = await lire();
     const premiere = await page.evaluate(() => {
       const ds = ["coach_sessions", "coach_body_logs", "coach_log_entries"].flatMap((k) =>
         JSON.parse(localStorage.getItem(k) || "[]").map((x) => x.date)
@@ -167,29 +174,37 @@ try {
       return ds.sort()[0];
     });
     const avant = await apercu.getAttribute("src");
-    await champ.fill("2022-01-03");
+    await annee.selectOption("2022");
+    await mois.selectOption("1");
+    await jour.selectOption("3");
     await page.waitForTimeout(900);
-    const profilSaisi = await page.evaluate(() => JSON.parse(localStorage.getItem("coach_profile")).coachingStartDate);
+    const profilSaisi = await profilDebut();
     const redessinee = (await apercu.getAttribute("src")) !== avant;
+    if (process.env.DEBUT_COACHING_PNG) {
+      await page.locator("[data-debut-coaching]").locator("xpath=ancestor::div[.//*[@data-carte-apercu]][1]").screenshot({ path: process.env.DEBUT_COACHING_PNG });
+    }
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForTimeout(900);
     await page.getByRole("button", { name: "Tendances", exact: true }).first().click();
     await page.waitForTimeout(1200);
-    const apresRechargement = await page.getByRole("textbox", { name: "Début de ton coaching" }).inputValue();
-    await page.getByRole("textbox", { name: "Début de ton coaching" }).fill("");
+    const apresRechargement = await lire();
+    // Date future : signalee, rien d'enregistre.
+    const anneeCourante = new Date().getFullYear();
+    await annee.selectOption(String(anneeCourante));
+    await mois.selectOption("12");
+    await jour.selectOption("31");
+    await page.waitForTimeout(500);
+    const futurSignale = (await page.locator("[data-debut-futur]").count()) === 1;
+    const futurEnregistre = (await profilDebut()) > new Date().toISOString().slice(0, 10);
+    await page.getByRole("button", { name: "Revenir au calcul automatique" }).click();
     await page.waitForTimeout(600);
     const efface = await page.evaluate(() => "coachingStartDate" in JSON.parse(localStorage.getItem("coach_profile")));
-    const retourAuto = await page.getByRole("textbox", { name: "Début de ton coaching" }).inputValue();
-    if (process.env.DEBUT_COACHING_PNG) {
-      await page.getByRole("textbox", { name: "Début de ton coaching" }).fill("2022-01-03");
-      await page.waitForTimeout(900);
-      await page.locator("[data-debut-coaching]").locator("xpath=ancestor::div[.//*[@data-carte-apercu]][1]").screenshot({ path: process.env.DEBUT_COACHING_PNG });
-    }
+    const retourAuto = await lire();
     console.log(
       "7. DÉBUT DU COACHING    :",
-      auto === premiere && profilSaisi === "2022-01-03" && redessinee && apresRechargement === "2022-01-03" && !efface && retourAuto === premiere
-        ? `pré-rempli au ${premiere}, 2022-01-03 enregistré et redessiné, gardé au rechargement, effacé → automatique`
-        : `*** auto ${auto}/${premiere}, profil ${profilSaisi}, redessinée ${redessinee}, rechargement ${apresRechargement}, effacé ${!efface}, retour ${retourAuto} ***`
+      auto === premiere && profilSaisi === "2022-01-03" && redessinee && apresRechargement === "2022-01-03" && futurSignale && !futurEnregistre && !efface && retourAuto === premiere
+        ? `listes au ${premiere}, 03/01/2022 enregistré et redessiné, gardé au rechargement, date future refusée, retour au calcul automatique`
+        : `*** auto ${auto}/${premiere}, profil ${profilSaisi}, redessinée ${redessinee}, rechargement ${apresRechargement}, futur signalé ${futurSignale}, futur enregistré ${futurEnregistre}, effacé ${!efface}, retour ${retourAuto} ***`
     );
     await ctx.close();
   }
