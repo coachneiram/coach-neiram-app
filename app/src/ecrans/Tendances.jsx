@@ -144,6 +144,7 @@ export function Tendances({
   monthStats,
   photos,
   onUploadPhoto,
+  onDebutCoaching,
   onGenerate,
   onGenerateMonthly,
   onPartager,
@@ -179,7 +180,7 @@ export function Tendances({
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <ResumeNutrition resume={resumeNutrition} objectifs={targets} />
 
-      <CarteProgres allData={allData} profile={profile} />
+      <CarteProgres allData={allData} profile={profile} onDebutCoaching={onDebutCoaching} />
       <Parrainage profile={profile} />
 
       <Card>

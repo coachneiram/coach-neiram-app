@@ -25,11 +25,19 @@ import { articleCoursesOk } from "../app/src/lib/aliments.js";
 import { enregistrerRecette, estRecette } from "../app/src/lib/repas-types.js";
 import { EQUIV_GLUCIDES, EQUIV_LIPIDES, EQUIV_PROTEINES, EQUIV_FRUITS, SHOPPING_LIST, SUGGESTIONS } from "../app/src/lib/catalogues.js";
 
-const base = RECETTES_COACH[0];
+// Recette de reference des variantes ci-dessous : une recette vegan sans
+// allergene, choisie par ses proprietes et non par sa position. La routine
+// ajoute les nouvelles recettes en tete du catalogue : prendre la premiere
+// faisait echouer ces tests des qu'elle n'etait pas vegan.
+const base = RECETTES_COACH.find((r) => r.regimes.includes("vegan") && r.contient.length === 0);
 const variante = (modif) => ({ ...base, ...modif });
 const erreurs = (r) => verifierRecette(r).join(" | ");
 
 describe("Le catalogue", () => {
+  test("le catalogue garde au moins une recette vegan sans allergene (reference des tests)", () => {
+    assert.ok(base, "aucune recette vegan sans allergene dans le catalogue");
+  });
+
   test("chaque recette du catalogue est publiable", () => {
     for (const r of RECETTES_COACH) assert.deepEqual(verifierRecette(r), [], `${r.id} : ${erreurs(r)}`);
   });

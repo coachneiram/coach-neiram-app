@@ -16,7 +16,7 @@
  * defaut), et le prenom n'y figure jamais.
  */
 
-import { addDays, num, round } from "./dates.js";
+import { num, round } from "./dates.js";
 import { serieDuJour } from "./resume-semaine.js";
 import { lienWhatsappCoach } from "./config.js";
 
@@ -40,22 +40,41 @@ export const COMPTE_INSTAGRAM = "@coachneiram";
 
 const dates = (liste) => (liste || []).map((x) => x && x.date).filter(Boolean);
 
-/** Nombre de jours entre deux dates ISO (b - a). */
+/** Nombre de jours entre deux dates ISO (b - a), sans limite de duree. */
 function joursEntre(a, b) {
-  let n = 0;
-  let d = a;
-  // Boucle bornee : 10 ans de suivi au plus, largement au-dela du besoin.
-  while (d < b && n < 3700) {
-    d = addDays(d, 1);
-    n++;
-  }
-  return n;
+  const utc = (iso) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.max(0, Math.round((utc(b) - utc(a)) / 864e5));
+}
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Date de debut du coaching saisie par le client (profil.coachingStartDate).
+ *
+ * Demande du coach (2 octobre 2026) : des clients sont suivis depuis 2022,
+ * bien avant l'application. Ils saisissent la date de leur premier rendez-
+ * vous et les semaines de suivi se calculent seules a partir d'elle. Rend
+ * null si la date est absente, illisible, dans le futur, ou avant 2000.
+ */
+export function debutSaisi(profil, date) {
+  const v = profil && profil.coachingStartDate;
+  if (typeof v !== "string" || !ISO.test(v)) return null;
+  const [y, m, d] = v.split("-").map(Number);
+  const reelle = new Date(Date.UTC(y, m - 1, d));
+  if (reelle.getUTCFullYear() !== y || reelle.getUTCMonth() !== m - 1 || reelle.getUTCDate() !== d) return null;
+  if (v < "2000-01-01" || v > date) return null;
+  return v;
 }
 
 /**
  * Les chiffres de la carte.
  *
- * - debut : premiere date ou le client a note quoi que ce soit ;
+ * - debut : la date de debut du coaching saisie par le client s'il l'a
+ *   donnee (debutSaisi), sinon la premiere date ou il a note quoi que ce
+ *   soit ;
  * - semaines : semaines entamees depuis ce debut (1 au minimum) ;
  * - seances : seances enregistrees au total ;
  * - joursNotes : jours distincts avec au moins une saisie ;
@@ -64,8 +83,9 @@ function joursEntre(a, b) {
  */
 export function statistiquesProgres({ profil, seances, pesees, repas, journal, date }) {
   const toutes = [...dates(seances), ...dates(pesees), ...dates(repas), ...dates(journal)].filter((d) => d <= date);
-  if (!toutes.length) return null;
-  const debut = toutes.reduce((a, b) => (b < a ? b : a));
+  const saisi = debutSaisi(profil, date);
+  if (!toutes.length && !saisi) return null;
+  const debut = saisi || toutes.reduce((a, b) => (b < a ? b : a));
 
   // Depart : le poids saisi a l'inscription s'il existe — c'est le vrai
   // debut du suivi —, sinon la premiere pesee. Actuel : la derniere pesee.

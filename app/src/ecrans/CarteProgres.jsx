@@ -6,15 +6,18 @@
  * serie, et l'evolution du poids SEULEMENT s'il le choisit), plus un bouton
  * qui envoie a un ami un lien WhatsApp vers le coach, avec le prenom du
  * parrain deja ecrit.
+ *
+ * Le client suivi avant l'application saisit la date de debut de son
+ * coaching : les semaines de suivi se calculent a partir d'elle.
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
-import { PARRAINAGE, lignesCarte, messageInvitation, nomFichierCarte, statistiquesProgres } from "../lib/carte-progres.js";
+import { PARRAINAGE, debutSaisi, lignesCarte, messageInvitation, nomFichierCarte, statistiquesProgres } from "../lib/carte-progres.js";
 import { canvasEnPng, dessinerCarte } from "../lib/dessin-carte.js";
 import { inviterUnAmi, partagerCarte } from "../lib/partage-carte.js";
-import { Btn, Card, SectionTitle } from "../ui/primitives.jsx";
+import { Btn, Card, Field, SectionTitle, TextInput } from "../ui/primitives.jsx";
 import { Loader2, Send, Share } from "../ui/icones.jsx";
 
 /* TEXTE-NOUVEAU
@@ -22,7 +25,7 @@ import { Loader2, Send, Share } from "../ui/icones.jsx";
    du coach pour se demarquer des applications grand public : ce qu'elles
    n'ont pas, c'est un coach dont les clients deviennent la vitrine. Aucun de
    ces libelles n'existe dans index.html. */
-export function CarteProgres({ allData, profile }) {
+export function CarteProgres({ allData, profile, onDebutCoaching }) {
   const [avecPoids, setAvecPoids] = useState(false);
   const [apercu, setApercu] = useState(null);
   const [enCours, setEnCours] = useState(false);
@@ -79,6 +82,7 @@ export function CarteProgres({ allData, profile }) {
   };
 
   const poidsDisponible = Boolean(stats && stats.poids && stats.poids.ecart !== 0);
+  const debutManuel = debutSaisi(profile, date);
 
   return (
     <Card>
@@ -87,6 +91,25 @@ export function CarteProgres({ allData, profile }) {
         Une image prête pour ta story Instagram ou WhatsApp, avec tes chiffres. Ton poids n'y apparaît que si tu le
         choisis.
       </p>
+
+      {onDebutCoaching && (
+        <div data-debut-coaching="">
+          <Field label="Début de ton coaching">
+            <TextInput
+              type="date"
+              aria-label="Début de ton coaching"
+              value={debutManuel || (stats && stats.debut) || ""}
+              min="2000-01-01"
+              max={date}
+              onChange={(e) => onDebutCoaching(e.target.value)}
+            />
+          </Field>
+          <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "-8px 0 12px", lineHeight: 1.45 }}>
+            Suivi(e) par le coach avant l'application ? Mets la date de ton premier rendez-vous : tes semaines de suivi se
+            calculent toutes seules.
+          </p>
+        </div>
+      )}
 
       {!stats ? (
         <p style={{ fontSize: 12.5, color: COLORS.textFaint, margin: 0 }}>

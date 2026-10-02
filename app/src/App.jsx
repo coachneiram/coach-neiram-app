@@ -515,6 +515,11 @@ export default function App() {
         monthStats={monthStats}
         photos={photos}
         onUploadPhoto={setPoseAPhotographier}
+        onDebutCoaching={(d) => {
+          // Date effacee : retour au calcul automatique (premiere saisie).
+          const { coachingStartDate, ...reste } = profil;
+          enregistrerProfil(d ? { ...reste, coachingStartDate: d } : reste);
+        }}
         onPartager={envoyerBilan}
         onGenerate={genererBilan}
         onGenerateMonthly={genererBilanDuMois}
