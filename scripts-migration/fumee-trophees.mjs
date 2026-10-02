@@ -7,7 +7,13 @@
  *   3. les nouveaux trophees sont celebres, « Super ! » les memorise
  *      (cn_trophees_vus) et la banniere ne revient pas au rechargement ;
  *   4. joker : semaines declarees difficiles avec une seule seance, la serie
- *      reste intacte et le message salue la seance maintien.
+ *      reste intacte et le message salue la seance maintien ;
+ *   5. relance du parrainage dans la celebration : la phrase du coach, la
+ *      croix la ferme sans fermer la celebration et memorise la date ;
+ *   6. « Inviter un ami » ouvre le partage avec le message d'invitation ;
+ *      un nouveau trophee moins de 4 semaines apres : celebre, sans relance ;
+ *   7. semaine difficile, reprise, ou « Premier pas » seul (1re seance) :
+ *      celebration, jamais de relance.
  * Capture de l'ecran pour controle visuel (TROPHEES_PNG).
  *
  *   cd app && npm run build && cd ..
@@ -33,6 +39,7 @@ await new Promise((r) => serveur.listen(4647, r));
 
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 const erreurs = [];
+let difficileSansRelance = false;
 
 /**
  * Ouvre l'onglet Seances avec un historique construit relativement au lundi
@@ -43,6 +50,15 @@ async function ouvrir({ semaines, difficiles = [] }) {
   const ctx = await nav.newContext(appareil("Pixel 7"));
   const page = await ctx.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
+  // Partage natif simule : on garde le texte partage pour le verifier.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async (donnees) => {
+        window.__partage = donnees;
+      }
+    });
+  });
   await page.addInitScript(
     ({ semaines, difficiles }) => {
       if (localStorage.getItem("coach_profile")) return;
@@ -76,6 +92,16 @@ async function ouvrir({ semaines, difficiles = [] }) {
 }
 
 const texteDe = async (page) => (await page.locator("body").innerText()).replace(/\s+/g, " ");
+const PHRASE = "Bravo pour ce trophée ! Tu connais quelqu'un qui aurait besoin du même déclic ? Invite-le, ton prochain mois te coûtera moins cher.";
+const relanceDe = (page) => page.locator("[data-relance-parrainage]");
+const aujourdhui = (page) => page.evaluate(() => new Date().toISOString().slice(0, 10));
+const memorisee = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("cn_parrainage_relance") || "null"));
+async function recharger(page) {
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: "Séances", exact: true }).first().click();
+  await page.waitForTimeout(1000);
+}
 const obtenus = (page) =>
   page.$$eval("[data-trophee]", (els) => els.filter((e) => e.dataset.obtenu === "oui").map((e) => e.dataset.trophee));
 
@@ -104,6 +130,22 @@ try {
 
     const banniere = page.locator("[data-nouveau-trophee]");
     const avant = (await banniere.count()) && /4 nouveaux trophées/.test(await banniere.innerText());
+
+    // Relance du parrainage : dans la celebration, fermee par la croix.
+    const phraseVue = (await relanceDe(page).count()) === 1 && (await relanceDe(page).innerText()).replace(/\s+/g, " ").includes(PHRASE);
+    if (process.env.PARRAINAGE_RELANCE_PNG) await banniere.screenshot({ path: process.env.PARRAINAGE_RELANCE_PNG });
+    await page.getByRole("button", { name: "Fermer l'invitation" }).click();
+    await page.waitForTimeout(300);
+    const fermee = (await relanceDe(page).count()) === 0;
+    const celebrationRestee = (await banniere.count()) === 1;
+    const date = await memorisee(page);
+    console.log(
+      "5. RELANCE PARRAINAGE   :",
+      phraseVue && fermee && celebrationRestee && date === (await aujourdhui(page))
+        ? "phrase du coach dans la célébration, la croix la ferme, date mémorisée"
+        : `*** phrase ${phraseVue}, fermée ${fermee}, célébration ${celebrationRestee}, date ${date} ***`
+    );
+
     await page.getByRole("button", { name: "Super !" }).click();
     await page.waitForTimeout(400);
     const apres = await banniere.count();
@@ -137,7 +179,56 @@ try {
         ? "2 semaines difficiles à 1 séance : série intacte à 4, séance maintien saluée"
         : `*** série « ${serie} » ***`
     );
+    difficileSansRelance =
+      (await page.locator("[data-nouveau-trophee]").count()) === 1 && (await relanceDe(page).count()) === 0;
     await ctx.close();
+  }
+
+  // ── Inviter un ami depuis la relance ────────────────────────────
+  {
+    const { ctx, page } = await ouvrir({ semaines: { "-4": 3, "-3": 3, "-2": 3, "-1": 3, 0: 1 } });
+    await relanceDe(page).getByRole("button", { name: /Inviter un ami/ }).click();
+    await page.waitForTimeout(400);
+    const partage = await page.evaluate(() => window.__partage || null);
+    const fermee = (await relanceDe(page).count()) === 0;
+    const date = await memorisee(page);
+    // Un trophee pas encore celebre, moins de 4 semaines apres : celebration
+    // seule, sans relance.
+    await page.evaluate(() => localStorage.setItem("cn_trophees_vus", JSON.stringify(["seances-1", "seances-10", "semaines-2"])));
+    await recharger(page);
+    const celebre = (await page.locator("[data-nouveau-trophee]").count()) === 1;
+    const sansRelance = (await relanceDe(page).count()) === 0;
+    console.log(
+      "6. INVITER UN AMI       :",
+      partage && /Coach Neiram/.test(partage.text || "") && /wa\.me/.test(partage.text || "") && fermee && date === (await aujourdhui(page)) && celebre && sansRelance
+        ? "partage du message d'invitation, relance fermée ; trophée suivant célébré sans relance (< 4 semaines)"
+        : `*** partage ${JSON.stringify(partage)}, fermée ${fermee}, date ${date}, célébré ${celebre}, sans relance ${sansRelance} ***`
+    );
+    await ctx.close();
+  }
+
+  // ── Reprise : semaine precedente ratee ──────────────────────────
+  {
+    const { ctx, page } = await ouvrir({ semaines: { "-4": 3, "-3": 3, "-2": 3, 0: 1 } });
+    const repriseSansRelance =
+      (await page.locator("[data-nouveau-trophee]").count()) === 1 && (await relanceDe(page).count()) === 0;
+    await ctx.close();
+
+    // Nouveau client, premiere seance : « Premier pas » celebre, sans relance.
+    const neuf = await ouvrir({ semaines: { 0: 1 } });
+    const banniere = neuf.page.locator("[data-nouveau-trophee]");
+    const premierPasSansRelance =
+      (await banniere.count()) === 1 &&
+      /Nouveau trophée/.test(await banniere.innerText()) &&
+      /Premier pas/.test(await banniere.innerText()) &&
+      (await relanceDe(neuf.page).count()) === 0;
+    console.log(
+      "7. PAS DE RELANCE       :",
+      difficileSansRelance && repriseSansRelance && premierPasSansRelance
+        ? "semaine difficile, reprise, « Premier pas » seul : trophées célébrés, aucune relance"
+        : `*** difficile ${difficileSansRelance}, reprise ${repriseSansRelance}, premier pas ${premierPasSansRelance} ***`
+    );
+    await neuf.ctx.close();
   }
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
