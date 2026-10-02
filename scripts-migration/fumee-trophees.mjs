@@ -13,7 +13,18 @@
  *   6. « Inviter un ami » ouvre le partage avec le message d'invitation ;
  *      un nouveau trophee moins de 4 semaines apres : celebre, sans relance ;
  *   7. semaine difficile, reprise, ou « Premier pas » seul (1re seance) :
- *      celebration, jamais de relance.
+ *      celebration, jamais de relance ;
+ *   8. client suivi depuis 2022 (date de debut et seances d'avant
+ *      l'application saisies) : « Club des 750 » et « 3 ans de suivi »
+ *      obtenus, prochains paliers « Club des 1000 » (980/1000) et « 5 ans de
+ *      suivi » ; seuls les obtenus et le prochain de chaque famille sont
+ *      affiches.
+ *   9. saisie du suivi depuis les trophees : « Ajouter » ouvre la date de
+ *      debut et le total de seances ; 03/01/2022 et 980 debloquent « Club
+ *      des 750 » et « 3 ans de suivi », le resume s'affiche, et la carte de
+ *      progres (Tendances) reprend la meme date.
+ * Les tuiles attendues sont calculees avec lib/trophees.js sur le meme
+ * historique : l'anciennete depend de la date du jour.
  * Capture de l'ecran pour controle visuel (TROPHEES_PNG).
  *
  *   cd app && npm run build && cd ..
@@ -26,6 +37,7 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { trophees, tropheesAffiches } from "../app/src/lib/trophees.js";
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "app", "dist");
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png" };
@@ -46,7 +58,24 @@ let difficileSansRelance = false;
  * de la semaine en cours : `semaines` = { decalage: nombreDeSeances },
  * `difficiles` = decalages declares en semaine difficile.
  */
-async function ouvrir({ semaines, difficiles = [] }) {
+/** Meme historique que celui pose dans la page (voir ouvrir). */
+function historique(semaines) {
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const auj = new Date();
+  const lundi = new Date(auj.getFullYear(), auj.getMonth(), auj.getDate() - ((auj.getDay() + 6) % 7));
+  const jour = (semaine, j) => iso(new Date(lundi.getFullYear(), lundi.getMonth(), lundi.getDate() + semaine * 7 + j));
+  const seances = [];
+  for (const [decalage, n] of Object.entries(semaines)) {
+    for (let i = 0; i < n; i++) seances.push({ id: `s${decalage}_${i}`, date: jour(Number(decalage), i * 2) });
+  }
+  return seances;
+}
+const tuilesAttendues = (semaines, profil = {}) =>
+  tropheesAffiches(
+    trophees({ seances: historique(semaines), profil: { sessionsPerWeek: 3, ...profil }, semainesDifficiles: {}, date: new Date().toISOString().slice(0, 10) }).liste
+  ).flatMap((f) => f.tuiles);
+
+async function ouvrir({ semaines, difficiles = [], profil = {} }) {
   const ctx = await nav.newContext(appareil("Pixel 7"));
   const page = await ctx.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
@@ -60,7 +89,7 @@ async function ouvrir({ semaines, difficiles = [] }) {
     });
   });
   await page.addInitScript(
-    ({ semaines, difficiles }) => {
+    ({ semaines, difficiles, profil }) => {
       if (localStorage.getItem("coach_profile")) return;
       const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const auj = new Date();
@@ -69,7 +98,7 @@ async function ouvrir({ semaines, difficiles = [] }) {
       localStorage.setItem("coach_profile", JSON.stringify({
         firstName: "Thomas", sex: "homme", age: 36, heightCm: 180, startWeightKg: 88,
         activityLevel: "modere", goal: "perte", sessionsPerWeek: 3, targetWeightKg: 80,
-        trainingMode: "app", coachingMode: "enligne", dietType: "aucun", allergies: []
+        trainingMode: "app", coachingMode: "enligne", dietType: "aucun", allergies: [], ...profil
       }));
       const seances = [];
       for (const [decalage, n] of Object.entries(semaines)) {
@@ -82,7 +111,7 @@ async function ouvrir({ semaines, difficiles = [] }) {
         JSON.stringify(Object.fromEntries(difficiles.map((d) => [jour(d, 0), { active: true, reason: "enfant malade" }])))
       );
     },
-    { semaines, difficiles }
+    { semaines, difficiles, profil }
   );
   await page.goto("http://localhost:4647/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(900);
@@ -119,17 +148,22 @@ try {
     );
 
     const ids = await obtenus(page);
-    const attendus = ["seances-1", "seances-10", "semaines-2", "semaines-4"];
-    const tuiles = await page.locator("[data-trophee]").count();
+    const affichees = await page.$$eval("[data-trophee]", (els) => els.map((e) => e.dataset.trophee));
+    const attendues = tuilesAttendues({ "-4": 3, "-3": 3, "-2": 3, "-1": 3, 0: 1 });
+    const attendus = attendues.filter((t) => t.obtenu).map((t) => t.id);
     console.log(
       "2. TUILES               :",
-      tuiles === 12 && JSON.stringify([...ids].sort()) === JSON.stringify([...attendus].sort()) && /13\/25/.test(texte)
-        ? "12 tuiles, 4 obtenues, « 13/25 » vers Régulier"
-        : `*** ${tuiles} tuiles, obtenus ${JSON.stringify(ids)} ***`
+      JSON.stringify(affichees) === JSON.stringify(attendues.map((t) => t.id)) &&
+        JSON.stringify([...ids].sort()) === JSON.stringify([...attendus].sort()) &&
+        ["seances-1", "seances-10", "semaines-2", "semaines-4"].every((id) => ids.includes(id)) &&
+        affichees.includes("seances-25") && !affichees.includes("seances-50") &&
+        /13\/25/.test(texte)
+        ? `${affichees.length} tuiles (obtenus + prochain par famille), ${ids.length} obtenues, « 13/25 » vers Régulier`
+        : `*** affichées ${JSON.stringify(affichees)}, attendues ${JSON.stringify(attendues.map((t) => t.id))}, obtenus ${JSON.stringify(ids)} ***`
     );
 
     const banniere = page.locator("[data-nouveau-trophee]");
-    const avant = (await banniere.count()) && /4 nouveaux trophées/.test(await banniere.innerText());
+    const avant = (await banniere.count()) && new RegExp(`${attendus.length} nouveaux trophées`).test(await banniere.innerText());
 
     // Relance du parrainage : dans la celebration, fermee par la croix.
     const phraseVue = (await relanceDe(page).count()) === 1 && (await relanceDe(page).innerText()).replace(/\s+/g, " ").includes(PHRASE);
@@ -157,8 +191,8 @@ try {
     const auRechargement = await page.locator("[data-nouveau-trophee]").count();
     console.log(
       "3. CÉLÉBRATION          :",
-      avant && apres === 0 && auRechargement === 0 && vus.length === 4
-        ? "bannière « 4 nouveaux trophées », mémorisée après « Super ! », absente au rechargement"
+      avant && apres === 0 && auRechargement === 0 && vus.length === attendus.length
+        ? `bannière « ${attendus.length} nouveaux trophées », mémorisée après « Super ! », absente au rechargement`
         : `*** avant ${avant}, après ${apres}, rechargement ${auRechargement}, vus ${JSON.stringify(vus)} ***`
     );
     if (process.env.TROPHEES_PNG) {
@@ -229,6 +263,72 @@ try {
         : `*** difficile ${difficileSansRelance}, reprise ${repriseSansRelance}, premier pas ${premierPasSansRelance} ***`
     );
     await neuf.ctx.close();
+  }
+
+  // ── Client suivi depuis 2022 ────────────────────────────────────
+  {
+    const semaines = { "-1": 3, 0: 1 };
+    const profil = { coachingStartDate: "2022-01-03", seancesAvantApp: 976 };
+    const { ctx, page } = await ouvrir({ semaines, profil });
+    const affichees = await page.$$eval("[data-trophee]", (els) => els.map((e) => [e.dataset.trophee, e.dataset.obtenu, e.innerText.replace(/\s+/g, " ")]));
+    const parId = Object.fromEntries(affichees.map(([id, ob, t]) => [id, { ob, t }]));
+    const attendues = tuilesAttendues(semaines, profil).map((t) => t.id);
+    const familles = await page.$$eval("[data-famille-trophees]", (els) => els.map((e) => e.dataset.familleTrophees));
+    if (process.env.TROPHEES_ANCIENS_PNG) {
+      await page.locator("[data-serie-semaines]").locator("xpath=ancestor::div[.//*[@data-trophee]][1]").screenshot({ path: process.env.TROPHEES_ANCIENS_PNG });
+    }
+    console.log(
+      "8. SUIVI DEPUIS 2022    :",
+      JSON.stringify(affichees.map((a) => a[0])) === JSON.stringify(attendues) &&
+        JSON.stringify(familles) === JSON.stringify(["seances", "semaines", "anciennete"]) &&
+        parId["seances-750"]?.ob === "oui" &&
+        parId["seances-1000"]?.ob === "non" && /980\/1000/.test(parId["seances-1000"].t) &&
+        parId["anciennete-36"]?.ob === "oui" &&
+        parId["anciennete-60"]?.ob === "non" && /\/60 mois/.test(parId["anciennete-60"].t)
+        ? "Club des 750 et 3 ans de suivi obtenus ; prochains : Club des 1000 (980/1000) et 5 ans de suivi"
+        : `*** ${JSON.stringify(affichees)} ***`
+    );
+    await ctx.close();
+  }
+
+  // ── Saisie du suivi depuis les trophees ─────────────────────────
+  {
+    const { ctx, page } = await ouvrir({ semaines: { "-1": 3, 0: 1 } });
+    const bloc = page.locator("[data-suivi-coach]");
+    const invitation = /Ajoute ton temps de suivi/.test(await bloc.innerText());
+    await bloc.getByRole("button", { name: "Ajouter" }).click();
+    await page.waitForTimeout(300);
+    await bloc.getByRole("combobox", { name: "Année de début" }).selectOption("2022");
+    await bloc.getByRole("combobox", { name: "Mois de début" }).selectOption("1");
+    await bloc.getByRole("combobox", { name: "Jour de début" }).selectOption("3");
+    const total = bloc.getByRole("textbox", { name: "Séances faites au total" });
+    await total.fill("980");
+    await total.evaluate((e) => e.blur());
+    await page.waitForTimeout(800);
+    const profil = await page.evaluate(() => JSON.parse(localStorage.getItem("coach_profile")));
+    const obtenusApres = await obtenus(page);
+    if (process.env.SUIVI_TROPHEES_PNG) await bloc.screenshot({ path: process.env.SUIVI_TROPHEES_PNG });
+    await bloc.getByRole("button", { name: "Fermer" }).click();
+    await page.waitForTimeout(300);
+    const resume = (await bloc.innerText()).replace(/\s+/g, " ");
+    await page.getByRole("button", { name: "Tendances", exact: true }).first().click();
+    await page.waitForTimeout(1200);
+    const anneeCarte = await page.locator("[data-debut-coaching]").first().getByRole("combobox", { name: "Année de début" }).inputValue();
+    const totalCarte = await page.getByRole("textbox", { name: "Séances faites au total" }).inputValue();
+    console.log(
+      "9. SAISIE DEPUIS TROPHÉES:",
+      invitation &&
+        profil.coachingStartDate === "2022-01-03" &&
+        profil.seancesAvantApp === 976 &&
+        obtenusApres.includes("seances-750") &&
+        obtenusApres.includes("anciennete-36") &&
+        /depuis le 03\/01\/2022 · 980 séances/.test(resume) &&
+        anneeCarte === "2022" &&
+        totalCarte === "980"
+        ? "03/01/2022 et 980 séances saisis dans Séances : Club des 750 et 3 ans de suivi débloqués, même suivi dans Tendances"
+        : `*** invitation ${invitation}, profil ${JSON.stringify({ d: profil.coachingStartDate, a: profil.seancesAvantApp })}, obtenus ${JSON.stringify(obtenusApres)}, résumé « ${resume.slice(0, 120)} », carte ${anneeCarte}/${totalCarte} ***`
+    );
+    await ctx.close();
   }
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);

@@ -453,6 +453,20 @@ export default function App() {
 
   const profil = profile;
 
+  // Suivi avant l'application (date de debut, seances deja faites) : saisi
+  // sur la carte de progres (Tendances) ou dans les trophees (Seances), les
+  // deux ecrivent les memes champs du profil.
+  const definirDebutCoaching = (d) => {
+    // Date effacee : retour au calcul automatique (premiere saisie).
+    const { coachingStartDate, ...reste } = profil;
+    enregistrerProfil(d ? { ...reste, coachingStartDate: d } : reste);
+  };
+  const definirSeancesAvantApp = (n) => {
+    // 0 : plus de seances d'avant l'application, champ retire du profil.
+    const { seancesAvantApp, ...reste } = profil;
+    enregistrerProfil(n > 0 ? { ...reste, seancesAvantApp: n } : reste);
+  };
+
   const ecrans = {
     journal: (
       <Journal
@@ -504,6 +518,8 @@ export default function App() {
         maxisForce={maxisForce}
         onDefinirMaxiForce={definirMaxiForce}
         onEnregistrerLienSheets={(url) => enregistrerProfil({ ...profil, sheetsUrl: url })}
+        onDebutCoaching={definirDebutCoaching}
+        onSeancesAvantApp={definirSeancesAvantApp}
       />
     ),
     tendances: weekStats ? (
@@ -515,16 +531,8 @@ export default function App() {
         monthStats={monthStats}
         photos={photos}
         onUploadPhoto={setPoseAPhotographier}
-        onDebutCoaching={(d) => {
-          // Date effacee : retour au calcul automatique (premiere saisie).
-          const { coachingStartDate, ...reste } = profil;
-          enregistrerProfil(d ? { ...reste, coachingStartDate: d } : reste);
-        }}
-        onSeancesAvantApp={(n) => {
-          // 0 : plus de seances d'avant l'application, champ retire du profil.
-          const { seancesAvantApp, ...reste } = profil;
-          enregistrerProfil(n > 0 ? { ...reste, seancesAvantApp: n } : reste);
-        }}
+        onDebutCoaching={definirDebutCoaching}
+        onSeancesAvantApp={definirSeancesAvantApp}
         onPartager={envoyerBilan}
         onGenerate={genererBilan}
         onGenerateMonthly={genererBilanDuMois}

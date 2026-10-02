@@ -89,7 +89,16 @@ describe("1. Debut du coaching saisi par le client", () => {
     assert.match(carte, /onClick=\{\(\) => onChange\(""\)\}/);
     assert.match(lire("../app/src/ecrans/Tendances.jsx"), /<CarteProgres[^>]*onDebutCoaching=\{onDebutCoaching\}/);
     const app = lire("../app/src/App.jsx");
-    assert.match(app, /onDebutCoaching=\{\(d\) => \{/);
+    // Meme fonction pour la carte de progres (Tendances) et les trophees (Seances).
+    assert.match(app, /const definirDebutCoaching = \(d\) => \{/);
+    assert.equal((app.match(/onDebutCoaching=\{definirDebutCoaching\}/g) || []).length, 2);
+    assert.equal((app.match(/onSeancesAvantApp=\{definirSeancesAvantApp\}/g) || []).length, 2);
+    const entrainements = lire("../app/src/ecrans/Entrainements.jsx");
+    assert.match(entrainements, /onDebutCoaching=\{onDebutCoaching\}\s*onSeancesAvantApp=\{onSeancesAvantApp\}/);
+    const trophees = lire("../app/src/ecrans/Trophees.jsx");
+    assert.match(trophees, /data-suivi-coach/);
+    assert.match(trophees, /<DebutCoaching[\s\S]*?onChange=\{onDebutCoaching\}/);
+    assert.match(trophees, /<SeancesTotales total=\{etat\.total\} seancesApp=\{etat\.totalApp\} avant=\{avantApp\} onChange=\{onSeancesAvantApp\} \/>/);
     assert.match(app, /const \{ coachingStartDate, \.\.\.reste \} = profil;/);
     assert.match(app, /enregistrerProfil\(d \? \{ \.\.\.reste, coachingStartDate: d \} : reste\)/);
   });

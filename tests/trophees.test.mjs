@@ -9,9 +9,14 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
+  PALIERS_ANCIENNETE,
   PALIERS_SEANCES,
   PALIERS_SEMAINES,
+  debutDuSuivi,
+  moisEcoules,
+  tropheesAffiches,
   etatSemaine,
   messageSemaine,
   nouveauxTrophees,
@@ -105,7 +110,9 @@ describe("Serie de semaines", () => {
 
 describe("Trophees", () => {
   test("paliers de seances et de semaines", () => {
-    assert.deepEqual(PALIERS_SEANCES.map((p) => p.n), [1, 10, 25, 50, 100, 200]);
+    // Jusqu'a 1 000 depuis la demande du coach du 2 octobre 2026 (clients
+    // suivis depuis 2022).
+    assert.deepEqual(PALIERS_SEANCES.map((p) => p.n), [1, 10, 25, 50, 100, 200, 300, 500, 750, 1000]);
     assert.deepEqual(PALIERS_SEMAINES.map((p) => p.n), [2, 4, 8, 12, 26, 52]);
   });
 
@@ -132,6 +139,74 @@ describe("Trophees", () => {
     const liste = [{ id: "a", obtenu: true }, { id: "b", obtenu: true }, { id: "c", obtenu: false }];
     assert.deepEqual(nouveauxTrophees(liste, ["a"]).map((t) => t.id), ["b"]);
     assert.deepEqual(nouveauxTrophees(liste, undefined).map((t) => t.id), ["a", "b"]);
+  });
+});
+
+describe("Seances d'avant l'application et anciennete (demande du 2 octobre 2026)", () => {
+  const app = S("2026-09-22", "2026-09-24", "2026-09-28", "2026-09-30");
+  const ancien = { ...PROFIL, coachingStartDate: "2022-01-03", seancesAvantApp: 976 };
+
+  test("paliers d'anciennete en mois", () => {
+    assert.deepEqual(PALIERS_ANCIENNETE.map((p) => p.n), [1, 3, 6, 12, 24, 36, 60]);
+  });
+
+  test("les seances d'avant l'application comptent pour les paliers de seances", () => {
+    const t = trophees({ seances: app, profil: ancien, date: AUJ });
+    assert.equal(t.totalApp, 4);
+    assert.equal(t.total, 980);
+    const parId = Object.fromEntries(t.liste.map((x) => [x.id, x]));
+    assert.equal(parId["seances-750"].obtenu, true);
+    assert.equal(parId["seances-1000"].obtenu, false);
+    assert.equal(parId["seances-1000"].progression, "980/1000");
+  });
+
+  test("anciennete depuis la date saisie : 3 janvier 2022 → 56 mois au 1er octobre 2026", () => {
+    const t = trophees({ seances: app, profil: ancien, date: AUJ });
+    assert.equal(t.mois, 56);
+    const parId = Object.fromEntries(t.liste.map((x) => [x.id, x]));
+    assert.equal(parId["anciennete-36"].obtenu, true);
+    assert.equal(parId["anciennete-36"].detail, "Suivi depuis 3 ans");
+    assert.equal(parId["anciennete-12"].detail, "Suivi depuis 1 an");
+    assert.equal(parId["anciennete-6"].detail, "Suivi depuis 6 mois");
+    assert.equal(parId["anciennete-60"].obtenu, false);
+    assert.equal(parId["anciennete-60"].progression, "56/60 mois");
+  });
+
+  test("sans date saisie : anciennete depuis la premiere seance notee ; sans rien : aucune", () => {
+    assert.equal(debutDuSuivi({ seances: app, profil: PROFIL, date: AUJ }), "2026-09-22");
+    assert.equal(debutDuSuivi({ seances: S("2026-12-01"), profil: PROFIL, date: AUJ }), null, "seance future ignoree");
+    const t = trophees({ seances: [], profil: PROFIL, date: AUJ });
+    assert.ok(t.liste.filter((x) => x.famille === "anciennete").every((x) => !x.obtenu));
+  });
+
+  test("mois entiers : un mois commence le meme jour du mois suivant", () => {
+    assert.equal(moisEcoules("2026-03-15", "2026-03-15"), 0);
+    assert.equal(moisEcoules("2026-03-15", "2026-04-14"), 0);
+    assert.equal(moisEcoules("2026-03-15", "2026-04-15"), 1);
+    assert.equal(moisEcoules("2026-01-31", "2026-02-28"), 0);
+    assert.equal(moisEcoules("2026-01-31", "2026-03-01"), 1);
+    assert.equal(moisEcoules("2025-10-01", "2026-10-01"), 12);
+    assert.equal(moisEcoules("2026-10-02", "2026-10-01"), 0, "jamais negatif");
+  });
+
+  test("affichage : par famille, les obtenus puis le seul prochain", () => {
+    const t = trophees({ seances: app, profil: ancien, date: AUJ });
+    const f = Object.fromEntries(tropheesAffiches(t.liste).map((x) => [x.id, x.tuiles.map((u) => u.id)]));
+    assert.deepEqual(Object.keys(f), ["seances", "semaines", "anciennete"]);
+    assert.deepEqual(f.seances.slice(-2), ["seances-750", "seances-1000"]);
+    assert.equal(f.seances.length, 10);
+    assert.deepEqual(f.anciennete, ["anciennete-1", "anciennete-3", "anciennete-6", "anciennete-12", "anciennete-24", "anciennete-36", "anciennete-60"]);
+    const debutant = tropheesAffiches(trophees({ seances: [], profil: PROFIL, date: AUJ }).liste);
+    assert.deepEqual(debutant.map((x) => x.tuiles.map((u) => u.id)), [["seances-1"], ["semaines-2"], ["anciennete-1"]]);
+    const tout = tropheesAffiches([{ id: "x", famille: "seances", obtenu: true }]);
+    assert.deepEqual(tout.map((x) => x.tuiles.map((u) => u.id)), [["x"]], "tout obtenu : pas de prochain, famille vide masquee");
+  });
+
+  test("l'ecran affiche les tuiles par famille", () => {
+    const ecran = readFileSync(new URL("../app/src/ecrans/Trophees.jsx", import.meta.url), "utf8");
+    assert.match(ecran, /tropheesAffiches\(etat\.liste\)\.map/);
+    assert.match(ecran, /data-famille-trophees=\{famille\.id\}/);
+    assert.doesNotMatch(ecran, /etat\.liste\.map\(/);
   });
 });
 

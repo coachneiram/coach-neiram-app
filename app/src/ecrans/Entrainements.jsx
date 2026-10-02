@@ -41,7 +41,9 @@ export function Entrainements({
   onAssignerJour,
   maxisForce,
   onDefinirMaxiForce,
-  onEnregistrerLienSheets
+  onEnregistrerLienSheets,
+  onDebutCoaching,
+  onSeancesAvantApp
 }) {
   // Trophees et serie de semaines : ajout posterieur a la bascule, affiche
   // dans les deux modes. En ligne, juste apres les creneaux ; sinon, en tete.
@@ -51,6 +53,8 @@ export function Entrainements({
       profile={profile}
       semainesDifficiles={semainesDifficiles}
       avecJoker={enLigne(profile)}
+      onDebutCoaching={onDebutCoaching}
+      onSeancesAvantApp={onSeancesAvantApp}
     />
   );
 

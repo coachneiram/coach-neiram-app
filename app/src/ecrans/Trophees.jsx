@@ -20,7 +20,9 @@ import { Send } from "../ui/icones.jsx";
 import { COLORS, POLICES } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
-import { messageSemaine, nouveauxTrophees, trophees } from "../lib/trophees.js";
+import { messageSemaine, nouveauxTrophees, trophees, tropheesAffiches } from "../lib/trophees.js";
+import { debutSaisi, seancesAvant } from "../lib/carte-progres.js";
+import { DebutCoaching, SeancesTotales } from "./CarteProgres.jsx";
 import { contexteDuJour } from "../lib/mot-du-coach.js";
 import { messageInvitation } from "../lib/carte-progres.js";
 import { inviterUnAmi } from "../lib/partage-carte.js";
@@ -28,12 +30,13 @@ import { CLE_RELANCE_PARRAINAGE, PHRASE_PARRAINAGE, afficherRelanceParrainage } 
 import { Btn, Card, MiniBar, SectionTitle } from "../ui/primitives.jsx";
 
 const CLE_VUS = "cn_trophees_vus";
+const ICONES_FAMILLE = { seances: "🏅", semaines: "🔥", anciennete: "🎖️" };
 
 /* TEXTE-NOUVEAU
    Trophees et serie de semaines tenues, ajoutes a la demande du coach pour
    que les clients restent actifs, d'apres Peloton, Orangetheory et Duolingo.
    Aucun de ces libelles n'existe dans index.html. */
-export function Trophees({ seances, profile, semainesDifficiles, avecJoker }) {
+export function Trophees({ seances, profile, semainesDifficiles, avecJoker, onDebutCoaching, onSeancesAvantApp }) {
   const date = todayISO();
   const etat = useMemo(
     () => trophees({ seances, profil: profile, semainesDifficiles, date }),
@@ -58,6 +61,12 @@ export function Trophees({ seances, profile, semainesDifficiles, avecJoker }) {
     fermerRelance();
     inviterUnAmi(messageInvitation({ prenom: profile && (profile.firstName || profile.name) }));
   };
+
+  const [suiviOuvert, setSuiviOuvert] = useState(false);
+  const debutManuel = debutSaisi(profile, date);
+  const avantApp = seancesAvant(profile);
+  const historiqueSaisi = Boolean(debutManuel || avantApp);
+  const [aa, mm, jj] = (debutManuel || "").split("-");
 
   const marquerVus = () => {
     const suivant = [...new Set([...vus, ...nouveaux.map((t) => t.id)])];
@@ -150,35 +159,75 @@ export function Trophees({ seances, profile, semainesDifficiles, avecJoker }) {
       </div>
       {message && <p style={{ fontSize: 12.5, color: COLORS.text, margin: "0 0 12px", lineHeight: 1.5 }}>{message}</p>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-        {etat.liste.map((t) => (
-          <div
-            key={t.id}
-            data-trophee={t.id}
-            data-obtenu={t.obtenu ? "oui" : "non"}
-            title={t.detail}
-            style={{
-              padding: "10px 6px",
-              borderRadius: 10,
-              textAlign: "center",
-              border: `1px solid ${t.obtenu ? COLORS.gold : COLORS.border}`,
-              background: t.obtenu ? `${COLORS.gold}14` : COLORS.bgAlt,
-              opacity: t.obtenu ? 1 : 0.55
-            }}
-          >
-            <div style={{ fontSize: 22, filter: t.obtenu ? "none" : "grayscale(1)" }}>
-              {t.famille === "seances" ? "🏅" : "🔥"}
-            </div>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: t.obtenu ? COLORS.gold : COLORS.textMuted, marginTop: 4 }}>
-              {t.titre}
-            </div>
-            <div style={{ fontSize: 10, color: COLORS.textFaint, marginTop: 2 }}>{t.obtenu ? t.detail : t.progression}</div>
+      {tropheesAffiches(etat.liste).map((famille) => (
+        <div key={famille.id} data-famille-trophees={famille.id} style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+            {famille.titre}
           </div>
-        ))}
-      </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+            {famille.tuiles.map((t) => (
+              <div
+                key={t.id}
+                data-trophee={t.id}
+                data-obtenu={t.obtenu ? "oui" : "non"}
+                title={t.detail}
+                style={{
+                  padding: "10px 6px",
+                  borderRadius: 10,
+                  textAlign: "center",
+                  border: `1px solid ${t.obtenu ? COLORS.gold : COLORS.border}`,
+                  background: t.obtenu ? `${COLORS.gold}14` : COLORS.bgAlt,
+                  opacity: t.obtenu ? 1 : 0.55
+                }}
+              >
+                <div style={{ fontSize: 22, filter: t.obtenu ? "none" : "grayscale(1)" }}>
+                  {ICONES_FAMILLE[t.famille]}
+                </div>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: t.obtenu ? COLORS.gold : COLORS.textMuted, marginTop: 4 }}>
+                  {t.titre}
+                </div>
+                <div style={{ fontSize: 10, color: COLORS.textFaint, marginTop: 2 }}>{t.obtenu ? t.detail : t.progression}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {onDebutCoaching && onSeancesAvantApp && (
+        <div data-suivi-coach="" style={{ marginTop: 14, padding: "10px 12px", borderRadius: 10, border: `1px dashed ${COLORS.border}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 12.5, color: COLORS.text, lineHeight: 1.45 }}>
+              {historiqueSaisi ? (
+                <>
+                  Ton suivi avec le coach : {debutManuel ? `depuis le ${jj}/${mm}/${aa}` : "date de début non renseignée"}
+                  {" · "}
+                  {etat.total} séance{etat.total > 1 ? "s" : ""}
+                </>
+              ) : (
+                "Suivi(e) par le coach avant l'application ? Ajoute ton temps de suivi et tes séances : tes trophées en tiennent compte."
+              )}
+            </div>
+            <Btn variant="ghost" onClick={() => setSuiviOuvert(!suiviOuvert)} style={{ padding: "7px 12px", flexShrink: 0 }}>
+              {suiviOuvert ? "Fermer" : historiqueSaisi ? "Modifier" : "Ajouter"}
+            </Btn>
+          </div>
+          {suiviOuvert && (
+            <div style={{ marginTop: 12 }}>
+              <DebutCoaching
+                valeur={debutManuel || etat.debut || date}
+                manuel={Boolean(debutManuel)}
+                date={date}
+                onChange={onDebutCoaching}
+              />
+              <SeancesTotales total={etat.total} seancesApp={etat.totalApp} avant={avantApp} onChange={onSeancesAvantApp} />
+            </div>
+          )}
+        </div>
+      )}
 
       <p style={{ fontSize: 10.5, color: COLORS.textFaint, margin: "10px 0 0", lineHeight: 1.45 }}>
-        Une semaine est tenue quand tu atteins ton objectif de séances.
+        Une semaine est tenue quand tu atteins ton objectif de séances. Tes séances d'avant l'application et ta
+        date de début comptent pour les trophées de séances et d'ancienneté.
         {avecJoker && " Semaine difficile déclarée : une seule séance maintien suffit, ta série est protégée."}
       </p>
     </Card>
