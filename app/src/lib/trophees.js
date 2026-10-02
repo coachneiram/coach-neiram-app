@@ -22,11 +22,19 @@
  *
  * Les trophees se fondent sur le MEILLEUR historique, pas sur la serie en
  * cours : un trophee gagne ne se perd jamais.
+ *
+ * Demande du coach (2 octobre 2026) : des clients suivis depuis 2022
+ * approchent les 1 000 seances. Les paliers de seances comptent donc AUSSI
+ * les seances d'avant l'application saisies sur la carte de progres
+ * (profil.seancesAvantApp), et montent jusqu'a 1 000 ; une famille
+ * « anciennete » recompense le temps de suivi depuis le debut du coaching
+ * (date saisie, sinon premiere seance notee).
  */
 
 import { addDays, num } from "./dates.js";
 import { getMonday } from "./semaine.js";
 import { semaineDifficileDe } from "./plan-semaine.js";
+import { debutSaisi, seancesAvant } from "./carte-progres.js";
 
 export const PALIERS_SEANCES = [
   { n: 1, titre: "Premier pas" },
@@ -34,7 +42,22 @@ export const PALIERS_SEANCES = [
   { n: 25, titre: "Régulier" },
   { n: 50, titre: "Club des 50" },
   { n: 100, titre: "Club des 100" },
-  { n: 200, titre: "Club des 200" }
+  { n: 200, titre: "Club des 200" },
+  { n: 300, titre: "Club des 300" },
+  { n: 500, titre: "Club des 500" },
+  { n: 750, titre: "Club des 750" },
+  { n: 1000, titre: "Club des 1000" }
+];
+
+/** Anciennete, en mois de suivi depuis le debut du coaching. */
+export const PALIERS_ANCIENNETE = [
+  { n: 1, titre: "1 mois de suivi" },
+  { n: 3, titre: "3 mois de suivi" },
+  { n: 6, titre: "6 mois de suivi" },
+  { n: 12, titre: "1 an de suivi" },
+  { n: 24, titre: "2 ans de suivi" },
+  { n: 36, titre: "3 ans de suivi" },
+  { n: 60, titre: "5 ans de suivi" }
 ];
 
 export const PALIERS_SEMAINES = [
@@ -117,12 +140,40 @@ export function seriesSemaines({ seances, profil, semainesDifficiles, date }) {
   return { objectif, serie, meilleure, enCours, semainePrecedente: derniere, aDejaCommence };
 }
 
+/** Mois entiers ecoules entre deux dates ISO (le 15 mars au 14 avril : 0). */
+export function moisEcoules(debut, date) {
+  const [a1, m1, j1] = String(debut).split("-").map(Number);
+  const [a2, m2, j2] = String(date).split("-").map(Number);
+  const n = (a2 - a1) * 12 + (m2 - m1) - (j2 < j1 ? 1 : 0);
+  return Math.max(0, n);
+}
+
+/**
+ * Debut du suivi pour l'anciennete : la date saisie par le client sur la
+ * carte de progres, sinon sa premiere seance notee ; null sans l'une ni
+ * l'autre.
+ */
+export function debutDuSuivi({ seances, profil, date }) {
+  const saisi = debutSaisi(profil, date);
+  if (saisi) return saisi;
+  const premiere = (seances || []).map((s) => s && s.date).filter((d) => d && d <= date).sort()[0];
+  return premiere || null;
+}
+
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
+
 /**
  * Les trophees, obtenus ou a venir, avec la progression vers chacun.
+ *
+ * `total` : seances notees dans l'application plus celles d'avant ;
+ * `totalApp` : seances notees dans l'application seulement.
  */
 export function trophees({ seances, profil, semainesDifficiles, date }) {
-  const total = (seances || []).filter((s) => s && s.date && s.date <= date).length;
+  const totalApp = (seances || []).filter((s) => s && s.date && s.date <= date).length;
+  const total = totalApp + seancesAvant(profil);
   const series = seriesSemaines({ seances, profil, semainesDifficiles, date });
+  const debut = debutDuSuivi({ seances, profil, date });
+  const mois = debut ? moisEcoules(debut, date) : 0;
   const liste = [
     ...PALIERS_SEANCES.map((p) => ({
       id: `seances-${p.n}`,
@@ -139,9 +190,17 @@ export function trophees({ seances, profil, semainesDifficiles, date }) {
       detail: `${p.n} semaines d'affilée`,
       obtenu: series.meilleure >= p.n,
       progression: `${Math.min(series.meilleure, p.n)}/${p.n}`
+    })),
+    ...PALIERS_ANCIENNETE.map((p) => ({
+      id: `anciennete-${p.n}`,
+      famille: "anciennete",
+      titre: p.titre,
+      detail: p.n % 12 === 0 ? `Suivi depuis ${pluriel(p.n / 12, "an")}` : `Suivi depuis ${p.n} mois`,
+      obtenu: Boolean(debut) && mois >= p.n,
+      progression: `${Math.min(mois, p.n)}/${p.n} mois`
     }))
   ];
-  return { total, series, liste };
+  return { total, totalApp, mois, debut, series, liste };
 }
 
 /**
@@ -164,6 +223,28 @@ export function messageSemaine({ serie, enCours, semainePrecedente, aDejaCommenc
     return `Encore ${seance} cette semaine pour porter ta série à ${serie + 1} semaine${serie + 1 > 1 ? "s" : ""}.`;
   }
   return `Encore ${seance} cette semaine pour lancer ta série.`;
+}
+
+/** Ordre et titre des familles a l'ecran. */
+export const FAMILLES_TROPHEES = [
+  { id: "seances", titre: "Séances" },
+  { id: "semaines", titre: "Semaines tenues d'affilée" },
+  { id: "anciennete", titre: "Ancienneté" }
+];
+
+/**
+ * Les tuiles a afficher : dans chaque famille, les trophees obtenus puis le
+ * PROCHAIN a gagner seulement. Avec les paliers jusqu'a 1 000 seances et
+ * 5 ans de suivi, tout montrer ferait une grille de 23 tuiles surtout
+ * grisees.
+ */
+export function tropheesAffiches(liste) {
+  return FAMILLES_TROPHEES.map((f) => {
+    const siens = (liste || []).filter((t) => t.famille === f.id);
+    const obtenus = siens.filter((t) => t.obtenu);
+    const prochain = siens.find((t) => !t.obtenu);
+    return { ...f, tuiles: prochain ? [...obtenus, prochain] : obtenus };
+  }).filter((f) => f.tuiles.length);
 }
 
 /** Trophees obtenus pas encore montres au client, a celebrer. */

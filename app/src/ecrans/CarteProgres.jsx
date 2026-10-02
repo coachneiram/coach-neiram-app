@@ -30,7 +30,7 @@ import { Loader2, Send, Share } from "../ui/icones.jsx";
  * calendrier natif, qu'on ne savait pas faire remonter a 2022 sur Android.
  * La date n'est enregistree que lorsqu'elle est complete et passee.
  */
-function DebutCoaching({ valeur, manuel, date, onChange }) {
+export function DebutCoaching({ valeur, manuel, date, onChange }) {
   const [parties, setParties] = useState(() => partiesDate(valeur));
   const [futur, setFutur] = useState(false);
   useEffect(() => {
@@ -98,7 +98,7 @@ function DebutCoaching({ valeur, manuel, date, onChange }) {
  * s'y comportent differemment sur iPhone et Android). Enregistre a la
  * sortie du champ ou avec « OK ».
  */
-function SeancesTotales({ total, seancesApp, avant, onChange }) {
+export function SeancesTotales({ total, seancesApp, avant, onChange }) {
   const [texte, setTexte] = useState(total > 0 ? String(total) : "");
   const [erreur, setErreur] = useState(false);
   useEffect(() => {
