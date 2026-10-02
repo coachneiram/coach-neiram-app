@@ -197,6 +197,29 @@ export function exercicesARetenir(exercices, dejaConnus = []) {
   return ajouts;
 }
 
+/**
+ * Exercice tape par le client dans la bibliotheque (« Ton exercice n'est pas
+ * dans la liste ? »), demande du coach du 2 octobre 2026.
+ *
+ * Si le nom correspond deja a un exercice de la bibliotheque ou a un de ses
+ * exercices personnels (accents et majuscules ignores), c'est celui-la qui
+ * est repris, avec ses valeurs par defaut : pas de doublon « squat » a cote
+ * de « Squat ». Sinon, un exercice de musculation a son nom. Rend null pour
+ * un nom vide.
+ */
+export function exerciceTape(nom, perso = []) {
+  const propre = String(nom || "").trim().replace(/\s+/g, " ").slice(0, 80);
+  const k = cleExercice(propre);
+  if (!k) return null;
+  for (const g of EXERCISE_LIBRARY) {
+    const trouve = g.items.find((it) => cleExercice(it.name) === k);
+    if (trouve) return trouve;
+  }
+  const connu = (perso || []).find((x) => x && cleExercice(x.name) === k);
+  if (connu) return connu;
+  return { name: propre, mode: "muscu", defaults: {} };
+}
+
 /** Fusionne les nouveaux exercices personnels avec ceux deja enregistres. */
 export function fusionnerExercicesPerso(precedents, exercices) {
   const ajouts = exercicesARetenir(exercices, precedents);

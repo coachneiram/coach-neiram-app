@@ -21,8 +21,6 @@ import { enregistrerRecette, lireRepasTypes } from "../lib/repas-types.js";
 import { Btn, Card, Modal, SectionTitle } from "../ui/primitives.jsx";
 import { Plus, X } from "../ui/icones.jsx";
 
-const REGIME_BADGE = { vegan: "Vegan", vegetarien: "Végétarien", "sans-porc": "Sans porc" };
-
 const puce = (actif) => ({
   padding: "6px 11px",
   borderRadius: 20,
@@ -35,8 +33,10 @@ const puce = (actif) => ({
   whiteSpace: "nowrap"
 });
 
-/** Le meilleur badge de regime a afficher, le plus restrictif d'abord. */
-const badgeRegime = (r) => ["vegan", "vegetarien", "sans-porc"].find((g) => (r.regimes || []).includes(g));
+// Pas d'etiquette de regime (« Vegan », « Sans porc »...) sur les fiches,
+// choix du coach du 2 octobre 2026 : une recette se presente pour tout le
+// monde. Le tri, lui, reste : un client ne voit que les recettes compatibles
+// avec son regime et ses allergies (recettesPourClient).
 
 /* TEXTE-NOUVEAU
    Recettes du coach : catalogue hebdomadaire alimente par la routine du
@@ -98,7 +98,6 @@ export function RecettesCoach({ profile, onAjoutee, catalogue = RECETTES_COACH }
 
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {liste.map((r) => {
-                const badge = badgeRegime(r);
                 return (
                   <button
                     key={r.id}
@@ -113,14 +112,7 @@ export function RecettesCoach({ profile, onAjoutee, catalogue = RECETTES_COACH }
                       cursor: "pointer"
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 700, color: COLORS.text }}>{r.nom}</span>
-                      {badge && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.good, whiteSpace: "nowrap" }}>
-                          {REGIME_BADGE[badge]}
-                        </span>
-                      )}
-                    </div>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: COLORS.text }}>{r.nom}</div>
                     <div style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 3 }}>
                       {CATEGORIES_RECETTE[r.categorie]} · {r.preparationMin + r.cuissonMin} min · {r.parPortion.kcal} kcal ·
                       P{r.parPortion.p} G{r.parPortion.c} L{r.parPortion.f} par portion
@@ -140,7 +132,6 @@ export function RecettesCoach({ profile, onAjoutee, catalogue = RECETTES_COACH }
             <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 12 }}>
               {MOMENTS_RECETTE[ouverte.moment]} · {ouverte.portions} portion{ouverte.portions > 1 ? "s" : ""} ·
               préparation {ouverte.preparationMin} min{ouverte.cuissonMin ? ` · cuisson ${ouverte.cuissonMin} min` : ""}
-              {(ouverte.regimes || []).length ? ` · ${ouverte.regimes.map((g) => REGIME_BADGE[g]).join(", ")}` : ""}
             </div>
 
             <div

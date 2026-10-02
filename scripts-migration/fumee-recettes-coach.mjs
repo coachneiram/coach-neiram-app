@@ -8,7 +8,9 @@
  *      comprises) ;
  *   4. « Ajouter a mes recettes » la range dans les recettes du client, une
  *      seule fois, avec les macros de la recette entiere ;
- *   5. « Sans porc » est propose dans le profil.
+ *   5. « Sans porc » est propose dans le profil ;
+ *   6. aucune etiquette de regime (« Vegan », « Sans porc »...) sur la liste
+ *      ni sur la fiche (choix du coach du 2 octobre 2026).
  * Capture pour controle visuel (RECETTES_PNG).
  *
  *   cd app && npm run build && cd ..
@@ -40,6 +42,8 @@ await new Promise((r) => serveur.listen(4651, r));
 
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 const erreurs = [];
+let listeVegan = "";
+let ficheBowl = "";
 const DAHL = "2026-10-01-dahl-lentilles-corail-epinards";
 const BOWL = "2026-10-01-bowl-poulet-haricots-rouges";
 
@@ -75,6 +79,7 @@ try {
     const attenduPourToi = attendus(profilVegan, "pour-toi");
     const attenduToutes = attendus(profilVegan);
     const veganSeulement = toutes.every((id) => RECETTES_COACH.find((r) => r.id === id).regimes.includes("vegan"));
+    listeVegan = await page.locator("[data-recettes-coach]").innerText();
     console.log(
       "1. VEGAN                 :",
       JSON.stringify(pourToi) === JSON.stringify(attenduPourToi) &&
@@ -105,6 +110,7 @@ try {
     await page.locator(`[data-recette-coach="${BOWL}"]`).click();
     await page.waitForTimeout(400);
     const fiche = (await page.locator(`[data-recette-detail="${BOWL}"]`).innerText().catch(() => "")).replace(/\s+/g, " ");
+    ficheBowl = fiche;
     console.log(
       "3. FICHE                 :",
       /Blanc de poulet : 150 g/.test(fiche) && /Dresse le riz/.test(fiche) && /747 kcal/.test(fiche) && /12 g Fibres/.test(fiche) && /par portion/.test(fiche)
@@ -139,6 +145,15 @@ try {
     const ok = [...options, ...options2].includes("Sans porc");
     console.log("5. PROFIL SANS PORC      :", ok ? "option « Sans porc » proposée" : "*** option absente ***");
     await ctx.close();
+  }
+  {
+    const etiquette = /Vegan|Végétarien|Sans porc/;
+    console.log(
+      "6. SANS ÉTIQUETTE        :",
+      listeVegan && ficheBowl && !etiquette.test(listeVegan) && !etiquette.test(ficheBowl)
+        ? "aucune étiquette de régime sur la liste ni sur la fiche"
+        : `*** liste « ${listeVegan.match(etiquette)} », fiche « ${ficheBowl.match(etiquette)} » ***`
+    );
   }
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);

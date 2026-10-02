@@ -9,7 +9,10 @@
  *      parrain deja ecrit ;
  *   5. sans feuille de partage : l'image se telecharge, l'invitation part
  *      par WhatsApp ;
- *   6. la carte « Parrainage » montre les trois paliers du coach.
+ *   6. la carte « Parrainage » montre les trois paliers du coach ;
+ *   7. « Debut de ton coaching » : pre-rempli avec la premiere saisie ; une
+ *      date de 2022 est enregistree dans le profil, redessine la carte et
+ *      reste au rechargement ; l'effacer revient au calcul automatique.
  * L'image produite est enregistree pour controle visuel (CARTE_PNG).
  *
  *   cd app && npm run build && cd ..
@@ -152,6 +155,41 @@ try {
         !/32,50/.test(paliers.join(" "))
         ? "carte affichée, 3 paliers du coach, sans montant périmé"
         : `*** ${JSON.stringify(paliers)} ***`
+    );
+
+    // Debut du coaching saisi a la main.
+    const champ = page.getByRole("textbox", { name: "Début de ton coaching" });
+    const auto = await champ.inputValue();
+    const premiere = await page.evaluate(() => {
+      const ds = ["coach_sessions", "coach_body_logs", "coach_log_entries"].flatMap((k) =>
+        JSON.parse(localStorage.getItem(k) || "[]").map((x) => x.date)
+      );
+      return ds.sort()[0];
+    });
+    const avant = await apercu.getAttribute("src");
+    await champ.fill("2022-01-03");
+    await page.waitForTimeout(900);
+    const profilSaisi = await page.evaluate(() => JSON.parse(localStorage.getItem("coach_profile")).coachingStartDate);
+    const redessinee = (await apercu.getAttribute("src")) !== avant;
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(900);
+    await page.getByRole("button", { name: "Tendances", exact: true }).first().click();
+    await page.waitForTimeout(1200);
+    const apresRechargement = await page.getByRole("textbox", { name: "Début de ton coaching" }).inputValue();
+    await page.getByRole("textbox", { name: "Début de ton coaching" }).fill("");
+    await page.waitForTimeout(600);
+    const efface = await page.evaluate(() => "coachingStartDate" in JSON.parse(localStorage.getItem("coach_profile")));
+    const retourAuto = await page.getByRole("textbox", { name: "Début de ton coaching" }).inputValue();
+    if (process.env.DEBUT_COACHING_PNG) {
+      await page.getByRole("textbox", { name: "Début de ton coaching" }).fill("2022-01-03");
+      await page.waitForTimeout(900);
+      await page.locator("[data-debut-coaching]").locator("xpath=ancestor::div[.//*[@data-carte-apercu]][1]").screenshot({ path: process.env.DEBUT_COACHING_PNG });
+    }
+    console.log(
+      "7. DÉBUT DU COACHING    :",
+      auto === premiere && profilSaisi === "2022-01-03" && redessinee && apresRechargement === "2022-01-03" && !efface && retourAuto === premiere
+        ? `pré-rempli au ${premiere}, 2022-01-03 enregistré et redessiné, gardé au rechargement, effacé → automatique`
+        : `*** auto ${auto}/${premiere}, profil ${profilSaisi}, redessinée ${redessinee}, rechargement ${apresRechargement}, effacé ${!efface}, retour ${retourAuto} ***`
     );
     await ctx.close();
   }

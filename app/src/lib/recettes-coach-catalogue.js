@@ -15,6 +15,201 @@
 
 export const RECETTES_COACH = [
   {
+    "id": "2026-09-28-filet-mignon-porc-pommes-de-terre-haricots",
+    "semaine": "2026-09-28",
+    "nom": "Filet mignon de porc, pommes de terre et haricots verts",
+    "description": "Un plat familial du dimanche, simple et protéiné : filet mignon à la moutarde, pommes de terre rôties au thym et haricots verts.",
+    "categorie": "diner",
+    "profils": [
+      "maintien",
+      "remise-en-forme",
+      "prise"
+    ],
+    "regimes": [],
+    "contient": [
+      "porc"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 30,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Filet mignon de porc",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Pommes de terre",
+        "quantite": "500 g"
+      },
+      {
+        "nom": "Haricots verts (frais ou surgelés)",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 c. à soupe (15 g)"
+      },
+      {
+        "nom": "Moutarde à l'ancienne",
+        "quantite": "1 c. à soupe"
+      },
+      {
+        "nom": "Ail",
+        "quantite": "2 gousses"
+      },
+      {
+        "nom": "Thym, sel, poivre",
+        "quantite": "selon ton goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 200 °C. Coupe les pommes de terre en quartiers, mélange-les avec la moitié de l'huile, l'ail écrasé et le thym, puis enfourne 30 minutes.",
+      "Badigeonne le filet mignon de moutarde et saisis-le 2 minutes sur chaque face dans une poêle avec le reste de l'huile.",
+      "Pose-le sur les pommes de terre pour les 20 dernières minutes : il doit rester légèrement rosé à cœur.",
+      "Pendant ce temps, cuis les haricots verts 8 minutes à l'eau bouillante salée. Tranche le filet et sers."
+    ],
+    "parPortion": {
+      "kcal": 555,
+      "p": 50,
+      "c": 49,
+      "f": 16,
+      "fibres": 10
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : 150 g de pommes de terre par personne et double portion de haricots verts. Prise : 350 g de pommes de terre par personne.",
+    "tags": [
+      "familial",
+      "meal-prep"
+    ]
+  },
+  {
+    "id": "2026-09-28-omelette-jambon-champignons-pain-complet",
+    "semaine": "2026-09-28",
+    "nom": "Omelette jambon et champignons, pain complet",
+    "description": "Un petit-déjeuner salé prêt en 10 minutes, avec 44 g de protéines pour tenir jusqu'au déjeuner.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "force",
+      "bodybuilding",
+      "maintien"
+    ],
+    "regimes": [],
+    "contient": [
+      "oeufs",
+      "porc",
+      "gluten"
+    ],
+    "portions": 1,
+    "preparationMin": 5,
+    "cuissonMin": 7,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Œufs",
+        "quantite": "3"
+      },
+      {
+        "nom": "Jambon blanc découenné",
+        "quantite": "2 tranches (80 g)"
+      },
+      {
+        "nom": "Champignons de Paris",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Pain complet",
+        "quantite": "2 tranches (60 g)"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 c. à café (5 g)"
+      },
+      {
+        "nom": "Sel, poivre, ciboulette",
+        "quantite": "selon ton goût"
+      }
+    ],
+    "etapes": [
+      "Émince les champignons et fais-les revenir 4 minutes dans l'huile.",
+      "Bats les œufs, ajoute le jambon coupé en lanières, verse sur les champignons et laisse prendre 3 minutes à feu moyen.",
+      "Plie l'omelette et sers-la avec le pain complet grillé."
+    ],
+    "parPortion": {
+      "kcal": 512,
+      "p": 44,
+      "c": 28,
+      "f": 25,
+      "fibres": 6
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : 1 tranche de pain, 2 œufs entiers et 1 blanc. Prise : ajoute un fruit et un verre de lait.",
+    "tags": [
+      "rapide"
+    ]
+  },
+  {
+    "id": "2026-09-28-lentilles-vertes-saucisse-fumee-carottes",
+    "semaine": "2026-09-28",
+    "nom": "Lentilles vertes du Puy, saucisse fumée et carottes",
+    "description": "Le classique auvergnat en version équilibrée : beaucoup de lentilles et de fibres, la saucisse pour le goût. Se réchauffe très bien.",
+    "categorie": "dejeuner",
+    "profils": [
+      "maintien",
+      "hyrox",
+      "remise-en-forme"
+    ],
+    "regimes": [],
+    "contient": [
+      "porc"
+    ],
+    "portions": 4,
+    "preparationMin": 10,
+    "cuissonMin": 40,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Lentilles vertes du Puy (sèches)",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Saucisse fumée (type Morteau)",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "1"
+      },
+      {
+        "nom": "Bouquet garni, sel, poivre",
+        "quantite": "1"
+      }
+    ],
+    "etapes": [
+      "Rince les lentilles. Mets-les dans une grande casserole avec l'oignon émincé, les carottes en rondelles et le bouquet garni, et couvre de trois fois leur volume d'eau froide.",
+      "Porte à frémissement, ajoute la saucisse piquée à la fourchette et laisse cuire 35 à 40 minutes à petit feu, sans saler.",
+      "Sale en fin de cuisson, coupe la saucisse en rondelles et sers bien chaud."
+    ],
+    "parPortion": {
+      "kcal": 534,
+      "p": 31,
+      "c": 44,
+      "f": 22,
+      "fibres": 15
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : 50 g de saucisse par personne et une salade verte en entrée. Prise : ajoute 100 g de pain complet.",
+    "tags": [
+      "familial",
+      "economique",
+      "meal-prep"
+    ]
+  },
+  {
     "id": "2026-09-28-curry-pois-chiches-epinards-coco",
     "semaine": "2026-09-28",
     "nom": "Curry de pois chiches, épinards et coco",

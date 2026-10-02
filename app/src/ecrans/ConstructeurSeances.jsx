@@ -29,6 +29,7 @@ import {
   ajouterDepuisBibliotheque,
   cleExercice,
   DEGRESSIVE_PAR_DEFAUT,
+  exerciceTape,
   exerciceVide,
   fusionnerExercicesPerso,
   GROUPES_SUPERSET,
@@ -145,6 +146,7 @@ export function ConstructeurSeances({
   const [modaleSeance, setModaleSeance] = useState(false);
   const [seanceEditee, setSeanceEditee] = useState(null);
   const [bibliothequeOuverte, setBibliothequeOuverte] = useState(false);
+  const [exerciceLibre, setExerciceLibre] = useState("");
 
   const nouvelleRoutine = () => {
     setRoutineEditee({ id: null, name: "", description: "", color: ROUTINE_COLORS[0] });
@@ -222,6 +224,17 @@ export function ConstructeurSeances({
       exercises: ajouterDepuisBibliotheque(seanceEditee.exercises, item)
     });
     setBibliothequeOuverte(false);
+  };
+
+  // Exercice absent de la bibliotheque : range tout de suite dans « Mes
+  // exercices » (sans attendre l'enregistrement de la seance) et ajoute a la
+  // seance en cours.
+  const ajouterExerciceTape = () => {
+    const item = exerciceTape(exerciceLibre, exercicesPerso.items);
+    if (!item) return;
+    exercicesPerso.retenir([{ name: item.name, mode: item.mode || "muscu" }]);
+    setExerciceLibre("");
+    ajouterDeLaBibliotheque(item);
   };
 
   const seancesTriees = [...sessionsApi.items].sort((a, b) => b.date.localeCompare(a.date));
@@ -949,6 +962,40 @@ export function ConstructeurSeances({
         title="Bibliothèque d'exercices"
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* TEXTE-NOUVEAU
+              Ajout d'un exercice absent de la bibliotheque directement depuis
+              celle-ci, demande du coach du 2 octobre 2026 ; avant, il fallait
+              passer par « Exercice libre » puis enregistrer la seance. Aucun
+              de ces libelles n'existe dans index.html. */}
+          <form
+            data-exercice-tape=""
+            onSubmit={(e) => {
+              e.preventDefault();
+              ajouterExerciceTape();
+            }}
+            style={{ border: `1px dashed ${COLORS.border}`, borderRadius: 10, padding: 11 }}
+          >
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>
+              Ton exercice n'est pas dans la liste ?
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <TextInput
+                aria-label="Nom de ton exercice"
+                placeholder="Nom de ton exercice"
+                value={exerciceLibre}
+                maxLength={80}
+                onChange={(e) => setExerciceLibre(e.target.value)}
+                style={{ flex: 1, minWidth: 0 }}
+              />
+              <Btn icon={Plus} disabled={!exerciceLibre.trim()} style={{ flexShrink: 0 }}>
+                Ajouter
+              </Btn>
+            </div>
+            <p style={{ fontSize: 10.5, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 }}>
+              Il s'ajoute à ta séance et reste dans « Mes exercices » pour la prochaine fois.
+            </p>
+          </form>
+          {/* FIN-TEXTE-NOUVEAU */}
           {groupesBibliotheque.map((groupe) => (
             <div key={groupe.group}>
               <div
@@ -971,9 +1018,10 @@ export function ConstructeurSeances({
                   const detail =
                     item.mode === "cardio"
                       ? (item.fields || []).map((f) => CARDIO_FIELD_DEFS[f].label).join(" · ")
-                      : `${item.defaults?.sets || 3}×${item.defaults?.reps || ""}${
-                          item.defaults?.repUnit === "sec" ? " s" : ""
-                        }`;
+                      : // Exercice perso sans repetitions connues : pas de « 3× » orphelin.
+                        item.defaults?.reps
+                        ? `${item.defaults?.sets || 3}×${item.defaults.reps}${item.defaults?.repUnit === "sec" ? " s" : ""}`
+                        : "";
                   const video = videoExercice(item.name);
 
                   const choisir = (
