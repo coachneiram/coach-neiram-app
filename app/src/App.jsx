@@ -520,6 +520,11 @@ export default function App() {
           const { coachingStartDate, ...reste } = profil;
           enregistrerProfil(d ? { ...reste, coachingStartDate: d } : reste);
         }}
+        onSeancesAvantApp={(n) => {
+          // 0 : plus de seances d'avant l'application, champ retire du profil.
+          const { seancesAvantApp, ...reste } = profil;
+          enregistrerProfil(n > 0 ? { ...reste, seancesAvantApp: n } : reste);
+        }}
         onPartager={envoyerBilan}
         onGenerate={genererBilan}
         onGenerateMonthly={genererBilanDuMois}

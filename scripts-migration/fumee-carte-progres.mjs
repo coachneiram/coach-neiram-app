@@ -14,7 +14,12 @@
  *      avec la premiere saisie ; le 03/01/2022 est enregistre dans le
  *      profil, redessine la carte et reste au rechargement ; une date
  *      future est signalee et refusee ; « Revenir au calcul automatique »
- *      efface la date.
+ *      efface la date ;
+ *   8. « Seances faites au total » : pre-rempli avec les seances notees ;
+ *      980 retient 968 seances d'avant l'application (12 deja notees),
+ *      redessine la carte et reste au rechargement ; une saisie illisible
+ *      est signalee sans rien changer ; vider le champ revient aux seances
+ *      notees.
  * L'image produite est enregistree pour controle visuel (CARTE_PNG).
  *
  *   cd app && npm run build && cd ..
@@ -205,6 +210,41 @@ try {
       auto === premiere && profilSaisi === "2022-01-03" && redessinee && apresRechargement === "2022-01-03" && futurSignale && !futurEnregistre && !efface && retourAuto === premiere
         ? `listes au ${premiere}, 03/01/2022 enregistré et redessiné, gardé au rechargement, date future refusée, retour au calcul automatique`
         : `*** auto ${auto}/${premiere}, profil ${profilSaisi}, redessinée ${redessinee}, rechargement ${apresRechargement}, futur signalé ${futurSignale}, futur enregistré ${futurEnregistre}, effacé ${!efface}, retour ${retourAuto} ***`
+    );
+
+    // Nombre total de seances, celles d'avant l'application comprises.
+    const total = page.getByRole("textbox", { name: "Séances faites au total" });
+    const avantApp = () => page.evaluate(() => JSON.parse(localStorage.getItem("coach_profile")).seancesAvantApp);
+    const initial = await total.inputValue();
+    const image1 = await apercu.getAttribute("src");
+    await total.fill("980");
+    await total.evaluate((e) => e.blur());
+    await page.waitForTimeout(900);
+    const retenu = await avantApp();
+    const redessinee2 = (await apercu.getAttribute("src")) !== image1;
+    if (process.env.SEANCES_PNG) {
+      await page.locator("[data-seances-totales]").locator("xpath=ancestor::div[.//*[@data-carte-apercu]][1]").screenshot({ path: process.env.SEANCES_PNG });
+    }
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(900);
+    await page.getByRole("button", { name: "Tendances", exact: true }).first().click();
+    await page.waitForTimeout(1200);
+    const garde = await total.inputValue();
+    await total.fill("abc");
+    await page.locator("[data-seances-totales]").getByRole("button", { name: "OK" }).click();
+    await page.waitForTimeout(400);
+    const erreurVue = (await page.locator("[data-seances-erreur]").count()) === 1;
+    const inchange = (await avantApp()) === 968;
+    await total.fill("");
+    await total.evaluate((e) => e.blur());
+    await page.waitForTimeout(600);
+    const retire = await page.evaluate(() => !("seancesAvantApp" in JSON.parse(localStorage.getItem("coach_profile"))));
+    const retour = await total.inputValue();
+    console.log(
+      "8. SÉANCES AU TOTAL     :",
+      initial === "12" && retenu === 968 && redessinee2 && garde === "980" && erreurVue && inchange && retire && retour === "12"
+        ? "pré-rempli à 12, 980 → 968 d'avant l'app, carte redessinée, gardé au rechargement, saisie illisible refusée, champ vidé → 12"
+        : `*** initial ${initial}, retenu ${retenu}, redessinée ${redessinee2}, rechargement ${garde}, erreur ${erreurVue}, inchangé ${inchange}, retiré ${retire}, retour ${retour} ***`
     );
     await ctx.close();
   }

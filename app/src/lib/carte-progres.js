@@ -105,6 +105,38 @@ export function choixDebut({ jour, mois, annee }, date) {
   return { iso };
 }
 
+/** Plus grand total de seances accepte (20 ans a 5 seances par semaine). */
+export const SEANCES_MAX = 6000;
+
+/**
+ * Seances faites avant l'application (profil.seancesAvantApp).
+ *
+ * Demande du coach (2 octobre 2026) : des clients suivis depuis 2022, une a
+ * quatre fois par semaine, approchent les 1 000 seances. Le client saisit
+ * son total a ce jour ; l'application en retient la part faite avant elle,
+ * et chaque nouvelle seance notee s'y ajoute. Rend 0 si la valeur est
+ * absente ou illisible.
+ */
+export function seancesAvant(profil) {
+  const v = profil && profil.seancesAvantApp;
+  return Number.isInteger(v) && v > 0 && v <= SEANCES_MAX ? v : 0;
+}
+
+/**
+ * Total saisi par le client (texte du champ) → seances a retenir comme
+ * faites avant l'application. Rend null si la saisie n'est pas un nombre
+ * entier entre 0 et SEANCES_MAX ; espaces et points de milliers acceptes
+ * (« 1 000 », « 1.000 »). Un total inferieur aux seances deja notees dans
+ * l'application donne 0 : elles comptent quoi qu'il arrive.
+ */
+export function seancesAvantDepuisTotal(texte, seancesApp) {
+  const propre = String(texte == null ? "" : texte).replace(/[\s.\u202f\u00a0]/g, "");
+  if (!/^\d{1,5}$/.test(propre)) return null;
+  const total = Number(propre);
+  if (total > SEANCES_MAX) return null;
+  return Math.max(0, total - Math.max(0, Number(seancesApp) || 0));
+}
+
 /**
  * Les chiffres de la carte.
  *
@@ -112,7 +144,8 @@ export function choixDebut({ jour, mois, annee }, date) {
  *   donnee (debutSaisi), sinon la premiere date ou il a note quoi que ce
  *   soit ;
  * - semaines : semaines entamees depuis ce debut (1 au minimum) ;
- * - seances : seances enregistrees au total ;
+ * - seances : seances au total, celles d'avant l'application (seancesAvant)
+ *   comprises ; seancesApp : celles notees dans l'application ;
  * - joursNotes : jours distincts avec au moins une saisie ;
  * - serie : jours consecutifs notes jusqu'a aujourd'hui (ou hier, le matin) ;
  * - poids : premiere et derniere pesee, et l'ecart — null sans pesee recente.
@@ -122,6 +155,7 @@ export function statistiquesProgres({ profil, seances, pesees, repas, journal, d
   const saisi = debutSaisi(profil, date);
   if (!toutes.length && !saisi) return null;
   const debut = saisi || toutes.reduce((a, b) => (b < a ? b : a));
+  const seancesApp = (seances || []).filter((s) => s && s.date && s.date <= date).length;
 
   // Depart : le poids saisi a l'inscription s'il existe — c'est le vrai
   // debut du suivi —, sinon la premiere pesee. Actuel : la derniere pesee.
@@ -136,7 +170,8 @@ export function statistiquesProgres({ profil, seances, pesees, repas, journal, d
   return {
     debut,
     semaines: Math.max(1, Math.ceil((joursEntre(debut, date) + 1) / 7)),
-    seances: (seances || []).filter((s) => s && s.date && s.date <= date).length,
+    seancesApp,
+    seances: seancesApp + seancesAvant(profil),
     joursNotes: new Set(toutes).size,
     serie: serieDuJour({ date, repas, journal, seances }).jours,
     poids
