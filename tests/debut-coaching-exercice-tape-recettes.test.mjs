@@ -13,7 +13,17 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { choixDebut, debutSaisi, joursDansMois, lignesCarte, partiesDate, statistiquesProgres } from "../app/src/lib/carte-progres.js";
+import {
+  SEANCES_MAX,
+  choixDebut,
+  debutSaisi,
+  joursDansMois,
+  lignesCarte,
+  partiesDate,
+  seancesAvant,
+  seancesAvantDepuisTotal,
+  statistiquesProgres
+} from "../app/src/lib/carte-progres.js";
 import { cleExercice, exerciceTape, exercicesARetenir } from "../app/src/lib/constructeur-seances.js";
 import { EXERCISE_LIBRARY } from "../app/src/lib/catalogues.js";
 import { RECETTES_COACH } from "../app/src/lib/recettes-coach-catalogue.js";
@@ -114,6 +124,68 @@ describe("1 bis. Listes Jour / Mois / Annee (retour Android du coach)", () => {
   test("aller-retour : les listes reprennent la date affichee", () => {
     assert.deepEqual(partiesDate("2022-01-03"), { jour: 3, mois: 1, annee: 2022 });
     assert.deepEqual(choixDebut(partiesDate("2024-02-29"), AUJ), { iso: "2024-02-29" });
+  });
+});
+
+describe("1 ter. Nombre total de seances, celles d'avant l'application comprises", () => {
+  const app = [{ date: "2026-09-20" }, { date: "2026-09-24" }, { date: "2026-09-28" }];
+
+  test("client suivi depuis 2022 : 980 seances au total, dont 3 dans l'app", () => {
+    const avant = seancesAvantDepuisTotal("980", app.length);
+    assert.equal(avant, 977);
+    const s = statistiquesProgres({ ...vide, profil: { coachingStartDate: "2022-01-03", seancesAvantApp: avant }, seances: app });
+    assert.equal(s.seances, 980);
+    assert.equal(s.seancesApp, 3);
+    assert.deepEqual(lignesCarte(s)[1], { valeur: "980", libelle: "séances réalisées" });
+  });
+
+  test("une nouvelle seance notee s'ajoute toute seule au total", () => {
+    const profil = { seancesAvantApp: 977 };
+    const s = statistiquesProgres({ ...vide, profil, seances: [...app, { date: "2026-09-30" }] });
+    assert.equal(s.seances, 981);
+  });
+
+  test("1 000 et plus : affiche a la francaise", () => {
+    const s = statistiquesProgres({ ...vide, profil: { seancesAvantApp: 997 }, seances: app });
+    assert.equal(s.seances, 1000);
+    assert.match(lignesCarte(s)[1].valeur, /^1\s000$/u);
+  });
+
+  test("saisie : espaces et points de milliers acceptes, le reste refuse", () => {
+    assert.equal(seancesAvantDepuisTotal("1 000", 0), 1000);
+    assert.equal(seancesAvantDepuisTotal("1.000", 0), 1000);
+    assert.equal(seancesAvantDepuisTotal(" 42 ", 2), 40);
+    for (const v of ["abc", "12,5", "-3", "1e3", "", null, "999999", String(SEANCES_MAX + 1)]) {
+      assert.equal(seancesAvantDepuisTotal(v, 0), null, String(v));
+    }
+    assert.equal(seancesAvantDepuisTotal(String(SEANCES_MAX), 0), SEANCES_MAX);
+  });
+
+  test("total inferieur aux seances deja notees : elles comptent quand meme", () => {
+    assert.equal(seancesAvantDepuisTotal("2", app.length), 0);
+    const s = statistiquesProgres({ ...vide, profil: { seancesAvantApp: 0 }, seances: app });
+    assert.equal(s.seances, 3);
+  });
+
+  test("valeur stockee illisible : ignoree", () => {
+    for (const v of [undefined, null, -5, 2.5, "900", SEANCES_MAX + 1]) {
+      assert.equal(seancesAvant({ seancesAvantApp: v }), 0, String(v));
+    }
+    assert.equal(seancesAvant(null), 0);
+  });
+
+  test("branchement : champ sur la carte, enregistre dans le profil, retire a 0", () => {
+    const carte = lire("../app/src/ecrans/CarteProgres.jsx");
+    assert.match(carte, /data-seances-totales/);
+    assert.match(carte, /inputMode="numeric"/);
+    assert.doesNotMatch(carte, /type="number"/);
+    assert.match(carte, /onBlur=\{valider\}/);
+    assert.match(carte, /seancesAvantDepuisTotal\(texte, seancesApp\)/);
+    assert.match(carte, /total=\{seancesApp \+ seancesAvant\(profile\)\}/);
+    assert.match(lire("../app/src/ecrans/Tendances.jsx"), /onSeancesAvantApp=\{onSeancesAvantApp\}/);
+    const appSrc = lire("../app/src/App.jsx");
+    assert.match(appSrc, /const \{ seancesAvantApp, \.\.\.reste \} = profil;/);
+    assert.match(appSrc, /enregistrerProfil\(n > 0 \? \{ \.\.\.reste, seancesAvantApp: n \} : reste\)/);
   });
 });
 

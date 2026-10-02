@@ -14,10 +14,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
-import { MOIS_FR, PARRAINAGE, choixDebut, debutSaisi, joursDansMois, lignesCarte, partiesDate, messageInvitation, nomFichierCarte, statistiquesProgres } from "../lib/carte-progres.js";
+import { MOIS_FR, PARRAINAGE, SEANCES_MAX, choixDebut, debutSaisi, seancesAvant, seancesAvantDepuisTotal, joursDansMois, lignesCarte, partiesDate, messageInvitation, nomFichierCarte, statistiquesProgres } from "../lib/carte-progres.js";
 import { canvasEnPng, dessinerCarte } from "../lib/dessin-carte.js";
 import { inviterUnAmi, partagerCarte } from "../lib/partage-carte.js";
-import { Btn, Card, SectionTitle, SelectInput } from "../ui/primitives.jsx";
+import { Btn, Card, SectionTitle, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { Loader2, Send, Share } from "../ui/icones.jsx";
 
 /* TEXTE-NOUVEAU
@@ -92,7 +92,71 @@ function DebutCoaching({ valeur, manuel, date, onChange }) {
   );
 }
 
-export function CarteProgres({ allData, profile, onDebutCoaching }) {
+/**
+ * Nombre total de seances, celles d'avant l'application comprises. Champ
+ * texte a clavier numerique (pas de champ « nombre » : molette et virgules
+ * s'y comportent differemment sur iPhone et Android). Enregistre a la
+ * sortie du champ ou avec « OK ».
+ */
+function SeancesTotales({ total, seancesApp, avant, onChange }) {
+  const [texte, setTexte] = useState(total > 0 ? String(total) : "");
+  const [erreur, setErreur] = useState(false);
+  useEffect(() => {
+    setTexte(total > 0 ? String(total) : "");
+  }, [total]);
+
+  const valider = () => {
+    const r = texte.trim() === "" ? 0 : seancesAvantDepuisTotal(texte, seancesApp);
+    setErreur(r === null);
+    if (r === null) return;
+    if (r !== avant) onChange(r);
+    else setTexte(total > 0 ? String(total) : "");
+  };
+
+  const libelle = { fontSize: 11.5, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 };
+  return (
+    <form
+      data-seances-totales=""
+      onSubmit={(e) => {
+        e.preventDefault();
+        valider();
+      }}
+      style={{ marginBottom: 12 }}
+    >
+      <div style={{ ...libelle, marginBottom: 6 }}>Séances faites au total</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <TextInput
+          aria-label="Séances faites au total"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          enterKeyHint="done"
+          placeholder="Ex. 980"
+          value={texte}
+          maxLength={6}
+          onChange={(e) => setTexte(e.target.value)}
+          onBlur={valider}
+          style={{ flex: 1, minWidth: 0 }}
+        />
+        <Btn variant="ghost" style={{ flexShrink: 0, padding: "8px 14px" }}>
+          OK
+        </Btn>
+      </div>
+      {erreur ? (
+        <p data-seances-erreur="" style={{ fontSize: 11.5, color: COLORS.bad, margin: "6px 0 0" }}>
+          Écris un nombre entier entre 0 et {SEANCES_MAX}, par exemple 980.
+        </p>
+      ) : (
+        <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 }}>
+          Toutes tes séances avec le coach depuis le début, y compris avant l'application
+          {seancesApp > 0 ? ` (dont ${seancesApp} notée${seancesApp > 1 ? "s" : ""} dans l'application)` : ""}. Les
+          prochaines s'ajoutent toutes seules.
+        </p>
+      )}
+    </form>
+  );
+}
+
+export function CarteProgres({ allData, profile, onDebutCoaching, onSeancesAvantApp }) {
   const [avecPoids, setAvecPoids] = useState(false);
   const [apercu, setApercu] = useState(null);
   const [enCours, setEnCours] = useState(false);
@@ -150,6 +214,7 @@ export function CarteProgres({ allData, profile, onDebutCoaching }) {
 
   const poidsDisponible = Boolean(stats && stats.poids && stats.poids.ecart !== 0);
   const debutManuel = debutSaisi(profile, date);
+  const seancesApp = (allData.sessions || []).filter((s) => s && s.date && s.date <= date).length;
 
   return (
     <Card>
@@ -165,6 +230,15 @@ export function CarteProgres({ allData, profile, onDebutCoaching }) {
           manuel={Boolean(debutManuel)}
           date={date}
           onChange={onDebutCoaching}
+        />
+      )}
+
+      {onSeancesAvantApp && (
+        <SeancesTotales
+          total={seancesApp + seancesAvant(profile)}
+          seancesApp={seancesApp}
+          avant={seancesAvant(profile)}
+          onChange={onSeancesAvantApp}
         />
       )}
 
