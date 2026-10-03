@@ -553,7 +553,9 @@ export function ConstructeurSeances({
                             <option value="pdc">PDC</option>
                             <option value="cardio">Cardio</option>
                             <option value="warmup">Warm-up</option>
-                            {(plOn || mode === "powerlifting") && <option value="powerlifting">Force</option>}
+                            {/* Force proposee a tous (coach, 3 octobre 2026) : elle
+                                n'apparaissait qu'avec l'objectif « performance ». */}
+                            <option value="powerlifting">Force</option>
                           </select>
                           <button
                             onClick={() => retirerExercice(i)}
