@@ -88,6 +88,8 @@ function chiffresSemaine(s, profile) {
           profile.targetSteps || 8e3
         ).toLocaleString("fr-FR")})`
       : null,
+    // Contrat en cours : absent tant que le client ne l'a pas renseigne.
+    s.contrat ? `Contrat : ${s.contrat.ligne}` : null,
     // Serie de semaines tenues (trophees) : absente des bilans anterieurs.
     s.weeklyStreak != null
       ? `Série : ${s.weeklyStreak} semaine(s) d'affilée avec l'objectif de séances tenu (record ${s.weeklyStreakBest ?? s.weeklyStreak})`

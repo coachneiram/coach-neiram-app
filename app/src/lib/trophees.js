@@ -35,6 +35,7 @@ import { addDays, num } from "./dates.js";
 import { getMonday } from "./semaine.js";
 import { semaineDifficileDe } from "./plan-semaine.js";
 import { debutSaisi, seancesAvant } from "./carte-progres.js";
+import { etatContrat, tropheesContrat } from "./contrat.js";
 
 export const PALIERS_SEANCES = [
   { n: 1, titre: "Premier pas" },
@@ -198,7 +199,8 @@ export function trophees({ seances, profil, semainesDifficiles, date }) {
       detail: p.n % 12 === 0 ? `Suivi depuis ${pluriel(p.n / 12, "an")}` : `Suivi depuis ${p.n} mois`,
       obtenu: Boolean(debut) && mois >= p.n,
       progression: `${Math.min(mois, p.n)}/${p.n} mois`
-    }))
+    })),
+    ...tropheesContrat(etatContrat({ profil, seances, date }))
   ];
   return { total, totalApp, mois, debut, series, liste };
 }
@@ -229,7 +231,8 @@ export function messageSemaine({ serie, enCours, semainePrecedente, aDejaCommenc
 export const FAMILLES_TROPHEES = [
   { id: "seances", titre: "Séances" },
   { id: "semaines", titre: "Semaines tenues d'affilée" },
-  { id: "anciennete", titre: "Ancienneté" }
+  { id: "anciennete", titre: "Ancienneté" },
+  { id: "contrat", titre: "Contrat en cours" }
 ];
 
 /**

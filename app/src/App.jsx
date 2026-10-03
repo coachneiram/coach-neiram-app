@@ -461,6 +461,12 @@ export default function App() {
     const { coachingStartDate, ...reste } = profil;
     enregistrerProfil(d ? { ...reste, coachingStartDate: d } : reste);
   };
+  // Contrat en cours (formule + date de debut) : compte a rebours dans les
+  // trophees. null : contrat retire du profil.
+  const definirContrat = (c) => {
+    const { contrat, ...reste } = profil;
+    enregistrerProfil(c ? { ...reste, contrat: c } : reste);
+  };
   const definirSeancesAvantApp = (n) => {
     // 0 : plus de seances d'avant l'application, champ retire du profil.
     const { seancesAvantApp, ...reste } = profil;
@@ -520,6 +526,7 @@ export default function App() {
         onEnregistrerLienSheets={(url) => enregistrerProfil({ ...profil, sheetsUrl: url })}
         onDebutCoaching={definirDebutCoaching}
         onSeancesAvantApp={definirSeancesAvantApp}
+        onContrat={definirContrat}
       />
     ),
     tendances: weekStats ? (

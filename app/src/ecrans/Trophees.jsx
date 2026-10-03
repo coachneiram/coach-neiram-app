@@ -22,7 +22,9 @@ import { todayISO } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
 import { messageSemaine, nouveauxTrophees, trophees, tropheesAffiches } from "../lib/trophees.js";
 import { debutSaisi, seancesAvant } from "../lib/carte-progres.js";
-import { DebutCoaching, SeancesTotales } from "./CarteProgres.jsx";
+import { DebutCoaching, LIBELLE_CHAMP, ListesDate, SeancesTotales } from "./CarteProgres.jsx";
+import { FORMULES_CONTRAT, contratDuProfil, dateCourte, etatContrat, messageFinContrat } from "../lib/contrat.js";
+import { SelectInput } from "../ui/primitives.jsx";
 import { contexteDuJour } from "../lib/mot-du-coach.js";
 import { messageInvitation } from "../lib/carte-progres.js";
 import { inviterUnAmi } from "../lib/partage-carte.js";
@@ -30,13 +32,13 @@ import { CLE_RELANCE_PARRAINAGE, PHRASE_PARRAINAGE, afficherRelanceParrainage } 
 import { Btn, Card, MiniBar, SectionTitle } from "../ui/primitives.jsx";
 
 const CLE_VUS = "cn_trophees_vus";
-const ICONES_FAMILLE = { seances: "🏅", semaines: "🔥", anciennete: "🎖️" };
+const ICONES_FAMILLE = { seances: "🏅", semaines: "🔥", anciennete: "🎖️", contrat: "🤝" };
 
 /* TEXTE-NOUVEAU
    Trophees et serie de semaines tenues, ajoutes a la demande du coach pour
    que les clients restent actifs, d'apres Peloton, Orangetheory et Duolingo.
    Aucun de ces libelles n'existe dans index.html. */
-export function Trophees({ seances, profile, semainesDifficiles, avecJoker, onDebutCoaching, onSeancesAvantApp }) {
+export function Trophees({ seances, profile, semainesDifficiles, avecJoker, onDebutCoaching, onSeancesAvantApp, onContrat }) {
   const date = todayISO();
   const etat = useMemo(
     () => trophees({ seances, profil: profile, semainesDifficiles, date }),
@@ -65,8 +67,11 @@ export function Trophees({ seances, profile, semainesDifficiles, avecJoker, onDe
   const [suiviOuvert, setSuiviOuvert] = useState(false);
   const debutManuel = debutSaisi(profile, date);
   const avantApp = seancesAvant(profile);
-  const historiqueSaisi = Boolean(debutManuel || avantApp);
+  const historiqueSaisi = Boolean(debutManuel || avantApp || contratDuProfil(profile));
   const [aa, mm, jj] = (debutManuel || "").split("-");
+  const contrat = contratDuProfil(profile);
+  const etatDuContrat = etatContrat({ profil: profile, seances, date });
+  const finContrat = messageFinContrat(etatDuContrat);
 
   const marquerVus = () => {
     const suivant = [...new Set([...vus, ...nouveaux.map((t) => t.id)])];
@@ -220,6 +225,64 @@ export function Trophees({ seances, profile, semainesDifficiles, avecJoker, onDe
                 onChange={onDebutCoaching}
               />
               <SeancesTotales total={etat.total} seancesApp={etat.totalApp} avant={avantApp} onChange={onSeancesAvantApp} />
+              {onContrat && (
+                <div data-contrat-saisie="">
+                  <div style={{ ...LIBELLE_CHAMP, marginBottom: 6 }}>Ton contrat en cours</div>
+                  <SelectInput
+                    aria-label="Formule du contrat"
+                    value={contrat ? contrat.formule.id : ""}
+                    onChange={(e) =>
+                      onContrat(e.target.value ? { formule: e.target.value, debut: contrat ? contrat.debut : date } : null)
+                    }
+                    options={[{ id: "", label: "Choisis ta formule" }, ...FORMULES_CONTRAT]}
+                  />
+                  {contrat && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>Début du contrat en cours</div>
+                      <ListesDate
+                        valeur={contrat.debut}
+                        date={date}
+                        onChange={(d) => onContrat({ formule: contrat.formule.id, debut: d })}
+                        etiquettes={{ jour: "Jour de début du contrat", mois: "Mois de début du contrat", annee: "Année de début du contrat" }}
+                        messageFutur="Cette date est dans le futur : choisis le jour où ton contrat actuel a commencé."
+                      />
+                    </div>
+                  )}
+                  <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 }}>
+                    En cas de renouvellement, mets la date de début du nouveau contrat.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {etatDuContrat && (
+            <div data-contrat="" style={{ marginTop: 10, fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5 }}>
+              Contrat {etatDuContrat.formule.label}
+              {etatDuContrat.sansEngagement
+                ? ""
+                : etatDuContrat.termine
+                  ? ` · terminé le ${dateCourte(etatDuContrat.fin)}`
+                  : ` · jusqu'au ${dateCourte(etatDuContrat.fin)} · encore ${etatDuContrat.semainesRestantes} semaine${etatDuContrat.semainesRestantes > 1 ? "s" : ""}`}
+              {" · "}
+              {etatDuContrat.seances} séance{etatDuContrat.seances > 1 ? "s" : ""} notée{etatDuContrat.seances > 1 ? "s" : ""} depuis le début du contrat
+            </div>
+          )}
+          {finContrat && (
+            <div
+              data-fin-contrat=""
+              style={{
+                marginTop: 8,
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: `1px solid ${COLORS.gold}`,
+                background: `${COLORS.gold}14`,
+                fontSize: 12.5,
+                color: COLORS.text,
+                lineHeight: 1.45
+              }}
+            >
+              {finContrat}
             </div>
           )}
         </div>

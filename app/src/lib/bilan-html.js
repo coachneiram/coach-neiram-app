@@ -124,6 +124,16 @@ export function construireBilanHTML({ profile, weekStats, report, photos, target
         "</ul>"
       : "";
 
+  // Contrat : en tete du bilan, en couleur quand la fin approche ou est
+  // passee, pour que le coach ne rate aucun renouvellement.
+  const blocContrat = s.contrat
+    ? `<div data-contrat-bilan style="background:${s.contrat.bientot || s.contrat.termine ? "#F8D0401A" : "#141416"};border:1px solid ${
+        s.contrat.bientot || s.contrat.termine ? "#F8D040" : "#28282D"
+      };border-radius:10px;padding:10px 12px;margin-top:10px;font-size:12.5px;line-height:1.5;color:#F5F5F2"><b style="color:#F8D040">Contrat :</b> ${e(
+        s.contrat.ligne
+      )}</div>`
+    : "";
+
   const blocNotes =
     (s.sessionNotes && s.sessionNotes.length) || (s.dayNotes && s.dayNotes.length)
       ? `<h2 style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#9C9C94;margin:18px 0 8px">Notes du client</h2><ul style="margin:0;padding-left:18px">${[
@@ -148,7 +158,7 @@ export function construireBilanHTML({ profile, weekStats, report, photos, target
     <div style="font-size:12px;color:#9C9C94;margin-top:2px">Semaine du ${e(fmtDateLong(s.start))} au ${e(
       fmtDateLong(s.end)
     )} · objectif : ${e(GOALS.find((g) => g.id === profile.goal)?.label || "—")}</div>
-  </div>
+  </div>${blocContrat}
   <h2 style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#F8D040;margin:22px 0 10px">Chiffres de la semaine</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">${stats}</div>
   ${blocPhotos}

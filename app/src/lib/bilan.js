@@ -17,6 +17,7 @@ import { bilanPlanSemaine, etatPlanSemaine, raisonSemaineDifficile, semaineDiffi
 import { fmtRPE } from "./force.js";
 import { moyennesPortions } from "./portions-jour.js";
 import { seriesSemaines } from "./trophees.js";
+import { etatContrat, ligneContratCoach } from "./contrat.js";
 
 /** Longueur maximale d'une note reprise dans le bilan. */
 const LONGUEUR_NOTE = 140;
@@ -204,6 +205,12 @@ export function bilanHebdomadaire(cleSemaine, donnees, profil, objectifs) {
     avgProteinPortions,
     weeklyStreak: series.serie,
     weeklyStreakBest: series.meilleure,
+    // Contrat en cours (ajout du 3 octobre 2026) : le coach voit dans chaque
+    // bilan la fin de contrat de chacun, signalee quand elle approche.
+    contrat: (() => {
+      const e = etatContrat({ profil, seances: donnees.sessions, date: jourReference });
+      return e ? { ligne: ligneContratCoach(e), bientot: Boolean(e.bientot), termine: Boolean(e.termine) } : null;
+    })(),
     dayNotes,
     sessionNotes,
     pains,

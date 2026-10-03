@@ -23,6 +23,12 @@
  *      debut et le total de seances ; 03/01/2022 et 980 debloquent « Club
  *      des 750 » et « 3 ans de suivi », le resume s'affiche, et la carte de
  *      progres (Tendances) reprend la meme date.
+ *  10. contrat en cours : formule « Suivi hebdo · 3 mois » dont la fin tombe
+ *      dans 3 semaines → compte a rebours et message de fin de contrat,
+ *      trophees « Contrat lancé » et « Mi-parcours » obtenus, « Contrat
+ *      bouclé » a venir ;
+ *      formule mensuelle → plus de message ; « Choisis ta formule » → contrat
+ *      retire du profil.
  * Les tuiles attendues sont calculees avec lib/trophees.js sur le meme
  * historique : l'anciennete depend de la date du jour.
  * Capture de l'ecran pour controle visuel (TROPHEES_PNG).
@@ -38,6 +44,8 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { trophees, tropheesAffiches } from "../app/src/lib/trophees.js";
+import { ajouterMois, etatContrat, messageFinContrat } from "../app/src/lib/contrat.js";
+import { addDays } from "../app/src/lib/dates.js";
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "app", "dist");
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png" };
@@ -327,6 +335,48 @@ try {
         totalCarte === "980"
         ? "03/01/2022 et 980 séances saisis dans Séances : Club des 750 et 3 ans de suivi débloqués, même suivi dans Tendances"
         : `*** invitation ${invitation}, profil ${JSON.stringify({ d: profil.coachingStartDate, a: profil.seancesAvantApp })}, obtenus ${JSON.stringify(obtenusApres)}, résumé « ${resume.slice(0, 120)} », carte ${anneeCarte}/${totalCarte} ***`
+    );
+    await ctx.close();
+  }
+
+  // ── Contrat en cours : compte a rebours ─────────────────────────
+  {
+    const auj = new Date().toISOString().slice(0, 10);
+    const debut = ajouterMois(addDays(auj, 21), -3);
+    const attendu = messageFinContrat(etatContrat({ profil: { contrat: { formule: "hebdo-3", debut } }, seances: [], date: auj }));
+    const [a, m, j] = debut.split("-").map(Number);
+    const { ctx, page } = await ouvrir({ semaines: { "-1": 3, 0: 1 } });
+    const bloc = page.locator("[data-suivi-coach]");
+    await bloc.getByRole("button", { name: "Ajouter" }).click();
+    await page.waitForTimeout(300);
+    await bloc.getByRole("combobox", { name: "Formule du contrat" }).selectOption("hebdo-3");
+    await page.waitForTimeout(300);
+    await bloc.getByRole("combobox", { name: "Année de début du contrat" }).selectOption(String(a));
+    await bloc.getByRole("combobox", { name: "Mois de début du contrat" }).selectOption(String(m));
+    await bloc.getByRole("combobox", { name: "Jour de début du contrat" }).selectOption(String(j));
+    await page.waitForTimeout(500);
+    const contrat = await page.evaluate(() => JSON.parse(localStorage.getItem("coach_profile")).contrat);
+    const resume = (await page.locator("[data-contrat]").innerText().catch(() => "")).replace(/\s+/g, " ");
+    const message = (await page.locator("[data-fin-contrat]").innerText().catch(() => "")).replace(/\s+/g, " ");
+    const tuilesContrat = await page.$$eval("[data-famille-trophees='contrat'] [data-trophee]", (els) =>
+      els.map((e) => `${e.dataset.trophee.replace(/^contrat-\d{4}-\d{2}-\d{2}-/, "")}:${e.dataset.obtenu}`)
+    );
+    const tuilesOk = JSON.stringify(tuilesContrat) === JSON.stringify(["lance:oui", "mi-parcours:oui", "boucle:non"]);
+    if (process.env.CONTRAT_PNG) await bloc.screenshot({ path: process.env.CONTRAT_PNG });
+    await bloc.getByRole("combobox", { name: "Formule du contrat" }).selectOption("mensuel");
+    await page.waitForTimeout(400);
+    const mensuelSansMessage = (await page.locator("[data-fin-contrat]").count()) === 0 && /sans engagement/.test(await page.locator("[data-contrat]").innerText());
+    await bloc.getByRole("combobox", { name: "Formule du contrat" }).selectOption("");
+    await page.waitForTimeout(400);
+    const retire = await page.evaluate(() => !("contrat" in JSON.parse(localStorage.getItem("coach_profile"))));
+    console.log(
+      "10. CONTRAT             :",
+      contrat && contrat.formule === "hebdo-3" && contrat.debut === debut &&
+        /Suivi hebdo · 3 mois · jusqu'au \d{2}\/\d{2}\/\d{4} · encore \d semaines?/.test(resume) &&
+        attendu && message === attendu &&
+        tuilesOk && mensuelSansMessage && retire
+        ? `fin dans 3 semaines : « ${message} » ; trophées lancé + mi-parcours obtenus, bouclé à venir ; mensuel sans message ; formule retirée → contrat effacé`
+        : `*** contrat ${JSON.stringify(contrat)} (attendu ${debut}), résumé « ${resume} », message « ${message} » (attendu « ${attendu} »), tuiles ${JSON.stringify(tuilesContrat)}, mensuel ${mensuelSansMessage}, retiré ${retire} ***`
     );
     await ctx.close();
   }

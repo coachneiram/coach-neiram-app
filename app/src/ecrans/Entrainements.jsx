@@ -43,7 +43,8 @@ export function Entrainements({
   onDefinirMaxiForce,
   onEnregistrerLienSheets,
   onDebutCoaching,
-  onSeancesAvantApp
+  onSeancesAvantApp,
+  onContrat
 }) {
   // Trophees et serie de semaines : ajout posterieur a la bascule, affiche
   // dans les deux modes. En ligne, juste apres les creneaux ; sinon, en tete.
@@ -55,6 +56,7 @@ export function Entrainements({
       avecJoker={enLigne(profile)}
       onDebutCoaching={onDebutCoaching}
       onSeancesAvantApp={onSeancesAvantApp}
+      onContrat={onContrat}
     />
   );
 

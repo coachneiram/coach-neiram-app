@@ -83,7 +83,11 @@ describe("1. Debut du coaching saisi par le client", () => {
     assert.match(carte, /onChange=\{onDebutCoaching\}/);
     // Trois listes, pas le calendrier natif (inutilisable sur Android).
     assert.doesNotMatch(carte, /type="date"/);
-    for (const l of ["Jour de début", "Mois de début", "Année de début"]) assert.match(carte, new RegExp(`aria-label="${l}"`));
+    // Listes partagees (ListesDate) : les libelles du debut de coaching sont
+    // passes en parametre.
+    assert.match(carte, /const ETIQUETTES_DEBUT = \{ jour: "Jour de début", mois: "Mois de début", annee: "Année de début" \};/);
+    assert.match(carte, /etiquettes=\{ETIQUETTES_DEBUT\}/);
+    for (const l of ["jour", "mois", "annee"]) assert.match(carte, new RegExp(`aria-label=\\{etiquettes\\.${l}\\}`));
     assert.match(carte, /const r = choixDebut\(suivantes, date\);/);
     assert.match(carte, /if \(r\.iso && r\.iso !== valeur\) onChange\(r\.iso\);/);
     assert.match(carte, /onClick=\{\(\) => onChange\(""\)\}/);

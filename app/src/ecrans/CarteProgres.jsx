@@ -26,11 +26,12 @@ import { Loader2, Send, Share } from "../ui/icones.jsx";
    n'ont pas, c'est un coach dont les clients deviennent la vitrine. Aucun de
    ces libelles n'existe dans index.html. */
 /**
- * Date de debut du coaching : trois listes Jour / Mois / Annee plutot que le
- * calendrier natif, qu'on ne savait pas faire remonter a 2022 sur Android.
- * La date n'est enregistree que lorsqu'elle est complete et passee.
+ * Une date en trois listes Jour / Mois / Annee, plutot que le calendrier
+ * natif qu'on ne savait pas faire remonter a 2022 sur Android. La date n'est
+ * transmise que lorsqu'elle est complete et passee ; une date future est
+ * signalee (messageFutur) sans etre transmise.
  */
-export function DebutCoaching({ valeur, manuel, date, onChange }) {
+export function ListesDate({ valeur, date, onChange, etiquettes, messageFutur }) {
   const [parties, setParties] = useState(() => partiesDate(valeur));
   const [futur, setFutur] = useState(false);
   useEffect(() => {
@@ -52,26 +53,43 @@ export function DebutCoaching({ valeur, manuel, date, onChange }) {
   const nbJours = joursDansMois(parties.annee, parties.mois);
   const jours = Array.from({ length: nbJours }, (_, i) => ({ id: String(i + 1), label: String(i + 1) }));
   const mois = MOIS_FR.map((m, i) => ({ id: String(i + 1), label: m }));
-  const libelle = { fontSize: 11.5, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 };
 
   return (
-    <div data-debut-coaching="" style={{ marginBottom: 12 }}>
-      <div style={{ ...libelle, marginBottom: 6 }}>Début de ton coaching</div>
+    <>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr 1.2fr", gap: 6 }}>
         <SelectInput
-          aria-label="Jour de début"
+          aria-label={etiquettes.jour}
           value={String(Math.min(parties.jour, nbJours))}
           onChange={(e) => choisir("jour", e.target.value)}
           options={jours}
         />
-        <SelectInput aria-label="Mois de début" value={String(parties.mois)} onChange={(e) => choisir("mois", e.target.value)} options={mois} />
-        <SelectInput aria-label="Année de début" value={String(parties.annee)} onChange={(e) => choisir("annee", e.target.value)} options={annees} />
+        <SelectInput aria-label={etiquettes.mois} value={String(parties.mois)} onChange={(e) => choisir("mois", e.target.value)} options={mois} />
+        <SelectInput aria-label={etiquettes.annee} value={String(parties.annee)} onChange={(e) => choisir("annee", e.target.value)} options={annees} />
       </div>
       {futur && (
-        <p data-debut-futur="" style={{ fontSize: 11.5, color: COLORS.bad, margin: "6px 0 0" }}>
-          Cette date est dans le futur : choisis le jour de ton premier rendez-vous.
+        <p data-date-future="" style={{ fontSize: 11.5, color: COLORS.bad, margin: "6px 0 0" }}>
+          {messageFutur}
         </p>
       )}
+    </>
+  );
+}
+
+const ETIQUETTES_DEBUT = { jour: "Jour de début", mois: "Mois de début", annee: "Année de début" };
+export const LIBELLE_CHAMP = { fontSize: 11.5, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 };
+
+/** Date de debut du coaching (premier rendez-vous avec le coach). */
+export function DebutCoaching({ valeur, manuel, date, onChange }) {
+  return (
+    <div data-debut-coaching="" style={{ marginBottom: 12 }}>
+      <div style={{ ...LIBELLE_CHAMP, marginBottom: 6 }}>Début de ton coaching</div>
+      <ListesDate
+        valeur={valeur}
+        date={date}
+        onChange={onChange}
+        etiquettes={ETIQUETTES_DEBUT}
+        messageFutur="Cette date est dans le futur : choisis le jour de ton premier rendez-vous."
+      />
       <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 }}>
         Suivi(e) par le coach avant l'application ? Mets la date de ton premier rendez-vous : tes semaines de suivi se
         calculent toutes seules.
@@ -113,7 +131,6 @@ export function SeancesTotales({ total, seancesApp, avant, onChange }) {
     else setTexte(total > 0 ? String(total) : "");
   };
 
-  const libelle = { fontSize: 11.5, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 };
   return (
     <form
       data-seances-totales=""
@@ -123,7 +140,7 @@ export function SeancesTotales({ total, seancesApp, avant, onChange }) {
       }}
       style={{ marginBottom: 12 }}
     >
-      <div style={{ ...libelle, marginBottom: 6 }}>Séances faites au total</div>
+      <div style={{ ...LIBELLE_CHAMP, marginBottom: 6 }}>Séances faites au total</div>
       <div style={{ display: "flex", gap: 8 }}>
         <TextInput
           aria-label="Séances faites au total"
