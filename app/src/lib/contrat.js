@@ -147,9 +147,25 @@ export function ligneContratCoach(etat) {
   if (etat.sansEngagement) return `${periode} (sans engagement) · ${seances}`;
   if (etat.termine) return `CONTRAT TERMINÉ le ${dateCourte(etat.fin)} : à renouveler · ${periode} · ${seances}`;
   if (etat.bientot) {
-    return `FIN DE CONTRAT dans ${etat.semainesRestantes} semaine${etat.semainesRestantes > 1 ? "s" : ""} (le ${dateCourte(etat.fin)}) : à renouveler · ${periode} · ${seances}`;
+    return `FIN DE CONTRAT ${echeanceContrat(etat)} (le ${dateCourte(etat.fin)}) : à renouveler · ${periode} · ${seances}`;
   }
-  return `${periode}, jusqu'au ${dateCourte(etat.fin)} (encore ${etat.semainesRestantes} semaines) · ${seances}`;
+  return `${periode}, jusqu'au ${dateCourte(etat.fin)} (fin ${echeanceContrat(etat)}) · ${seances}`;
+}
+
+/**
+ * Echeance du contrat en cours : en semaines (arrondies a la plus proche),
+ * puis en jours la derniere semaine (demande du coach du 3 octobre 2026) :
+ * « dans 4 semaines », « dans 1 semaine », « dans 6 jours », « demain »,
+ * « aujourd'hui » (dernier jour du contrat). Un message, un resume et une
+ * ligne de bilan qui disent la meme chose.
+ */
+export function echeanceContrat(etat) {
+  const j = etat.joursRestants - 1;
+  if (j <= 0) return "aujourd'hui";
+  if (j === 1) return "demain";
+  if (j < 7) return `dans ${j} jours`;
+  const s = Math.round(j / 7);
+  return `dans ${s} semaine${s > 1 ? "s" : ""}`;
 }
 
 /** Date ISO → « 28/02/2027 ». */
@@ -165,8 +181,5 @@ export function messageFinContrat(etat) {
     return `Ton contrat est arrivé à son terme le ${dateCourte(etat.fin)} : parles-en à Marien pour la suite.`;
   }
   if (!etat.bientot) return null;
-  if (etat.semainesRestantes <= 1) {
-    return "Ton contrat se termine cette semaine : parles-en à Marien à ta prochaine séance.";
-  }
-  return `Ton contrat se termine dans ${etat.semainesRestantes} semaines : parles-en à Marien à ta prochaine séance.`;
+  return `Ton contrat se termine ${echeanceContrat(etat)} : parles-en à Marien à ta prochaine séance.`;
 }

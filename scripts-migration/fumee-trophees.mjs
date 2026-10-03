@@ -26,7 +26,7 @@
  *  10. contrat en cours : formule « Suivi hebdo · 3 mois » dont la fin tombe
  *      dans 3 semaines → compte a rebours et message de fin de contrat,
  *      trophees « Contrat lancé » et « Mi-parcours » obtenus, « Contrat
- *      bouclé » a venir ;
+ *      bouclé » a venir ; fin le lendemain → echeance en jours ;
  *      formule mensuelle → plus de message ; « Choisis ta formule » → contrat
  *      retire du profil.
  * Les tuiles attendues sont calculees avec lib/trophees.js sur le meme
@@ -363,6 +363,18 @@ try {
     );
     const tuilesOk = JSON.stringify(tuilesContrat) === JSON.stringify(["lance:oui", "mi-parcours:oui", "boucle:non"]);
     if (process.env.CONTRAT_PNG) await bloc.screenshot({ path: process.env.CONTRAT_PNG });
+    // Derniere semaine : l'echeance passe en jours (fin demain).
+    const debutProche = ajouterMois(addDays(auj, 2), -3);
+    const attenduProche = messageFinContrat(etatContrat({ profil: { contrat: { formule: "hebdo-3", debut: debutProche } }, seances: [], date: auj }));
+    const [a2, m2, j2] = debutProche.split("-").map(Number);
+    await bloc.getByRole("combobox", { name: "Année de début du contrat" }).selectOption(String(a2));
+    await bloc.getByRole("combobox", { name: "Mois de début du contrat" }).selectOption(String(m2));
+    await bloc.getByRole("combobox", { name: "Jour de début du contrat" }).selectOption(String(j2));
+    await page.waitForTimeout(400);
+    const messageProche = (await page.locator("[data-fin-contrat]").innerText().catch(() => "")).replace(/\s+/g, " ");
+    const resumeProche = (await page.locator("[data-contrat]").innerText().catch(() => "")).replace(/\s+/g, " ");
+    const enJours =
+      /se termine (demain|aujourd'hui|dans \d jours) :/.test(messageProche) && messageProche === attenduProche && /fin (demain|aujourd'hui|dans \d jours)/.test(resumeProche);
     await bloc.getByRole("combobox", { name: "Formule du contrat" }).selectOption("mensuel");
     await page.waitForTimeout(400);
     const mensuelSansMessage = (await page.locator("[data-fin-contrat]").count()) === 0 && /sans engagement/.test(await page.locator("[data-contrat]").innerText());
@@ -372,11 +384,11 @@ try {
     console.log(
       "10. CONTRAT             :",
       contrat && contrat.formule === "hebdo-3" && contrat.debut === debut &&
-        /Suivi hebdo · 3 mois · jusqu'au \d{2}\/\d{2}\/\d{4} · encore \d semaines?/.test(resume) &&
+        /Suivi hebdo · 3 mois · jusqu'au \d{2}\/\d{2}\/\d{4} · fin dans 3 semaines/.test(resume) &&
         attendu && message === attendu &&
-        tuilesOk && mensuelSansMessage && retire
-        ? `fin dans 3 semaines : « ${message} » ; trophées lancé + mi-parcours obtenus, bouclé à venir ; mensuel sans message ; formule retirée → contrat effacé`
-        : `*** contrat ${JSON.stringify(contrat)} (attendu ${debut}), résumé « ${resume} », message « ${message} » (attendu « ${attendu} »), tuiles ${JSON.stringify(tuilesContrat)}, mensuel ${mensuelSansMessage}, retiré ${retire} ***`
+        tuilesOk && enJours && mensuelSansMessage && retire
+        ? `fin dans 3 semaines : « ${message} » ; trophées lancé + mi-parcours obtenus, bouclé à venir ; dernière semaine en jours : « ${messageProche} » ; mensuel sans message ; formule retirée → contrat effacé`
+        : `*** contrat ${JSON.stringify(contrat)} (attendu ${debut}), résumé « ${resume} », message « ${message} » (attendu « ${attendu} »), tuiles ${JSON.stringify(tuilesContrat)}, proche « ${messageProche} » / « ${resumeProche} » (attendu « ${attenduProche} »), mensuel ${mensuelSansMessage}, retiré ${retire} ***`
     );
     await ctx.close();
   }
