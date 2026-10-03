@@ -52,7 +52,7 @@ export const VARIANTES = {
     (v) => `Pas : ${v.done} / ${v.target} — il en manque ${v.n}.`
   ],
   streak: [
-    (v) => `${v.days} jours de suivi d'affilée.`,
+    (v) => `${v.days} jours notés d'affilée.`,
     (v) => `${v.days} jours consécutifs renseignés — la régularité paie.`
   ],
   weightGoal: [

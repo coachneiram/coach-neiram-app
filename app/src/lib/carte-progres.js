@@ -148,6 +148,8 @@ export function seancesAvantDepuisTotal(texte, seancesApp) {
  *   comprises ; seancesApp : celles notees dans l'application ;
  * - joursNotes : jours distincts avec au moins une saisie ;
  * - serie : jours consecutifs notes jusqu'a aujourd'hui (ou hier, le matin) ;
+ * - joursSuivi : jours depuis la date de debut du coaching saisie, ce jour
+ *   compris ; null si le client ne l'a pas saisie ;
  * - poids : premiere et derniere pesee, et l'ecart — null sans pesee recente.
  */
 export function statistiquesProgres({ profil, seances, pesees, repas, journal, date }) {
@@ -174,6 +176,7 @@ export function statistiquesProgres({ profil, seances, pesees, repas, journal, d
     seances: seancesApp + seancesAvant(profil),
     joursNotes: new Set(toutes).size,
     serie: serieDuJour({ date, repas, journal, seances }).jours,
+    joursSuivi: saisi ? joursEntre(saisi, date) + 1 : null,
     poids
   };
 }
@@ -209,7 +212,13 @@ export function lignesCarte(stats, { avecPoids = false } = {}) {
       libelle: "depuis le début"
     });
   }
-  if (stats.serie >= 2) {
+  // Client suivi avant l'application (date de debut saisie) : les jours de
+  // suivi depuis ce debut, a la place de la serie de jours notes, qui ne
+  // peut pas remonter avant l'application (choix du coach du 3 octobre
+  // 2026, une cliente lisait sa serie comme sa duree de suivi).
+  if (stats.joursSuivi) {
+    lignes.push({ valeur: nombreFr(stats.joursSuivi), libelle: pluriel(stats.joursSuivi, "jour") + " de suivi" });
+  } else if (stats.serie >= 2) {
     lignes.push({ valeur: nombreFr(stats.serie), libelle: "jours de suite" });
   } else if (stats.joursNotes > 1) {
     lignes.push({ valeur: nombreFr(stats.joursNotes), libelle: "jours suivis" });

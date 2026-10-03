@@ -18,6 +18,7 @@ import { PARRAINAGE,
   statistiquesProgres
 } from "../app/src/lib/carte-progres.js";
 import { inviterUnAmi, partagerCarte } from "../app/src/lib/partage-carte.js";
+import { addDays } from "../app/src/lib/dates.js";
 
 const AUJ = "2026-10-01";
 
@@ -103,6 +104,25 @@ describe("Lignes affichees", () => {
   test("sans serie en cours, les jours suivis prennent la place", () => {
     const l = lignesCarte({ semaines: 3, seances: 4, joursNotes: 12, serie: 0, poids: null });
     assert.deepEqual(l[2], { valeur: "12", libelle: "jours suivis" });
+  });
+
+  test("date de debut saisie : jours de suivi depuis ce debut, a la place de la serie", () => {
+    // Demande du coach (3 octobre 2026) : une cliente notait tout depuis
+    // l'arrivee de l'application et lisait sa serie (49) comme sa duree de
+    // suivi. Avec la date de debut saisie, la carte compte depuis ce debut.
+    const quotidien = Array.from({ length: 46 }, (_, i) => ({ date: addDays("2026-08-17", i) }));
+    const base = { seances: [], pesees: [], repas: quotidien, journal: [], date: AUJ };
+    const sans = statistiquesProgres({ ...base, profil: {} });
+    assert.equal(sans.serie, 46);
+    assert.equal(sans.joursSuivi, null);
+    assert.deepEqual(lignesCarte(sans).at(-1), { valeur: "46", libelle: "jours de suite" });
+    const avec = statistiquesProgres({ ...base, profil: { coachingStartDate: "2024-01-15" } });
+    assert.equal(avec.joursSuivi, 991, "du 15/01/2024 au 01/10/2026, ces deux jours compris");
+    assert.deepEqual(lignesCarte(avec).at(-1), { valeur: nombreFr(991), libelle: "jours de suivi" });
+    assert.ok(!lignesCarte(avec).some((l) => l.libelle === "jours de suite"));
+    // Debut saisi aujourd'hui : 1 jour, au singulier.
+    const jour1 = statistiquesProgres({ ...base, profil: { coachingStartDate: AUJ } });
+    assert.deepEqual(lignesCarte(jour1).at(-1), { valeur: "1", libelle: "jour de suivi" });
   });
 
   test("quatre lignes au plus", () => {
