@@ -23,7 +23,7 @@ import { charger, enregistrer } from "../lib/stockage.js";
 import { messageSemaine, nouveauxTrophees, trophees, tropheesAffiches } from "../lib/trophees.js";
 import { debutSaisi, seancesAvant } from "../lib/carte-progres.js";
 import { DebutCoaching, LIBELLE_CHAMP, ListesDate, SeancesTotales } from "./CarteProgres.jsx";
-import { FORMULES_CONTRAT, contratDuProfil, dateCourte, etatContrat, messageFinContrat } from "../lib/contrat.js";
+import { FORMULES_CONTRAT, contratDuProfil, dateCourte, echeanceContrat, etatContrat, messageFinContrat } from "../lib/contrat.js";
 import { SelectInput } from "../ui/primitives.jsx";
 import { contexteDuJour } from "../lib/mot-du-coach.js";
 import { messageInvitation } from "../lib/carte-progres.js";
@@ -263,7 +263,7 @@ export function Trophees({ seances, profile, semainesDifficiles, avecJoker, onDe
                 ? ""
                 : etatDuContrat.termine
                   ? ` · terminé le ${dateCourte(etatDuContrat.fin)}`
-                  : ` · jusqu'au ${dateCourte(etatDuContrat.fin)} · encore ${etatDuContrat.semainesRestantes} semaine${etatDuContrat.semainesRestantes > 1 ? "s" : ""}`}
+                  : ` · jusqu'au ${dateCourte(etatDuContrat.fin)} · fin ${echeanceContrat(etatDuContrat)}`}
               {" · "}
               {etatDuContrat.seances} séance{etatDuContrat.seances > 1 ? "s" : ""} notée{etatDuContrat.seances > 1 ? "s" : ""} depuis le début du contrat
             </div>

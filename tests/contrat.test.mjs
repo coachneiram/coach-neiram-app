@@ -14,6 +14,7 @@ import {
   ajouterMois,
   contratDuProfil,
   etatContrat,
+  echeanceContrat,
   ligneContratCoach,
   messageFinContrat,
   tropheesContrat
@@ -65,7 +66,7 @@ describe("Compte a rebours", () => {
     assert.equal(messageFinContrat(e), null);
   });
 
-  test("dans les 4 dernieres semaines : message de fin, puis « cette semaine »", () => {
+  test("dans les 4 dernieres semaines : message de fin, en jours la derniere semaine", () => {
     // Fin le 30/10/2026 : 28 jours restants le 3 octobre.
     const juste = etatContrat({ profil: profil("hebdo-3", "2026-07-31"), seances: [], date: AUJ });
     assert.equal(juste.fin, "2026-10-30");
@@ -77,11 +78,27 @@ describe("Compte a rebours", () => {
     assert.equal(avant.bientot, false, "29 jours : pas encore");
     const derniere = etatContrat({ profil: profil("hebdo-3", "2026-07-06"), seances: [], date: AUJ });
     assert.equal(derniere.fin, "2026-10-05");
-    assert.equal(messageFinContrat(derniere), "Ton contrat se termine cette semaine : parles-en à Marien à ta prochaine séance.");
+    assert.equal(messageFinContrat(derniere), "Ton contrat se termine dans 2 jours : parles-en à Marien à ta prochaine séance.");
     const dernierJour = etatContrat({ profil: profil("hebdo-3", "2026-07-04"), seances: [], date: AUJ });
     assert.equal(dernierJour.fin, AUJ);
     assert.equal(dernierJour.joursRestants, 1);
     assert.equal(dernierJour.termine, false);
+    assert.equal(messageFinContrat(dernierJour), "Ton contrat se termine aujourd'hui : parles-en à Marien à ta prochaine séance.");
+  });
+
+  test("echeance : semaines, puis jours la derniere semaine", () => {
+    const fin = (debut) => echeanceContrat(etatContrat({ profil: profil("hebdo-3", debut), seances: [], date: AUJ }));
+    // Arrondi a la semaine la plus proche : fin le 24/10 (dans 21 jours),
+    // le 20/10 (17 jours), le 10/10 (7 jours), puis en jours.
+    assert.equal(fin("2026-07-25"), "dans 3 semaines");
+    assert.equal(fin("2026-07-21"), "dans 2 semaines");
+    assert.equal(fin("2026-07-11"), "dans 1 semaine");
+    assert.equal(fin("2026-07-10"), "dans 6 jours");
+    assert.equal(fin("2026-07-07"), "dans 3 jours");
+    assert.equal(fin("2026-07-05"), "demain");
+    assert.equal(fin("2026-07-04"), "aujourd'hui");
+    const e = etatContrat({ profil: profil("hebdo-3", "2026-07-05"), seances: [], date: AUJ });
+    assert.match(ligneContratCoach(e), /^FIN DE CONTRAT demain \(le 04\/10\/2026\) : à renouveler/);
   });
 
   test("contrat termine : date de fin rappelee", () => {
@@ -154,7 +171,7 @@ describe("Fin de contrat dans le bilan du coach", () => {
     const e = (f, d, s = []) => etatContrat({ profil: profil(f, d), seances: s, date: AUJ });
     assert.equal(
       ligneContratCoach(e("hebdo-6", "2026-09-01", S("2026-09-02", "2026-09-09"))),
-      "Suivi hebdo · 6 mois, depuis le 01/09/2026, jusqu'au 28/02/2027 (encore 22 semaines) · 2 séances notées depuis le début du contrat"
+      "Suivi hebdo · 6 mois, depuis le 01/09/2026, jusqu'au 28/02/2027 (fin dans 21 semaines) · 2 séances notées depuis le début du contrat"
     );
     assert.equal(
       ligneContratCoach(e("hebdo-3", "2026-07-31")),
@@ -173,10 +190,10 @@ describe("Fin de contrat dans le bilan du coach", () => {
   });
 
   test("bilan d'une semaine passee : contrat lu a la fin de cette semaine-la", () => {
-    // Semaine du 31/08 au 06/09 : fin le 14/09, encore 9 jours ce dimanche-la
+    // Semaine du 31/08 au 06/09 : fin le 14/09, dans 8 jours ce dimanche-la
     // (aujourd'hui, le contrat serait termine) ; la seance du 10/09 ne compte pas.
     const b = bilanHebdomadaire("2026-08-31", donnees(S("2026-08-01", "2026-09-02", "2026-09-10")), { weeklyWorkoutTarget: 2, ...profil("hebdo-3", "2026-06-15") }, {});
-    assert.match(b.contrat.ligne, /^FIN DE CONTRAT dans 2 semaines \(le 14\/09\/2026\)/);
+    assert.match(b.contrat.ligne, /^FIN DE CONTRAT dans 1 semaine \(le 14\/09\/2026\)/);
     assert.match(b.contrat.ligne, /2 séances notées/);
     assert.equal(b.contrat.termine, false);
   });
