@@ -199,7 +199,7 @@ try {
     await mois.selectOption("12");
     await jour.selectOption("31");
     await page.waitForTimeout(500);
-    const futurSignale = (await page.locator("[data-debut-futur]").count()) === 1;
+    const futurSignale = (await page.locator("[data-date-future]").count()) === 1;
     const futurEnregistre = (await profilDebut()) > new Date().toISOString().slice(0, 10);
     await page.getByRole("button", { name: "Revenir au calcul automatique" }).click();
     await page.waitForTimeout(600);
