@@ -9,7 +9,9 @@
  *      range tout de suite dans « Mes exercices » (sans enregistrer) ;
  *   3. en rouvrant la bibliotheque, il est dans « Mes exercices » ;
  *   4. un nom deja dans la bibliotheque (tape sans accent, valide avec
- *      Entree) reprend l'exercice de la bibliotheque, sans doublon perso.
+ *      Entree) reprend l'exercice de la bibliotheque, sans doublon perso ;
+ *   5. objectif « maintien » (pas « performance ») : la liste des modes
+ *      propose quand meme « Force », et le choix est garde.
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-exercice-tape.mjs
@@ -104,6 +106,21 @@ try {
     v.includes("Presse à cuisses") && !v.includes("presse a cuisses") && stock2.length === 1
       ? "« presse a cuisses » → « Presse à cuisses » de la bibliothèque, pas de doublon perso"
       : `*** valeurs ${JSON.stringify(v.filter(Boolean).slice(0, 12))}, stock ${JSON.stringify(stock2)} ***`
+  );
+
+  // Mode Force sans objectif « performance » (retour du coach du 3 octobre
+  // 2026 : absent sur un telephone Android dont le profil n'etait pas en
+  // performance).
+  const modes = page.locator("select").filter({ has: page.locator("option[value='warmup']") });
+  const options = await modes.first().locator("option").allInnerTexts();
+  await modes.first().selectOption("powerlifting");
+  await page.waitForTimeout(300);
+  const choisi = await modes.first().inputValue();
+  console.log(
+    "5. MODE FORCE           :",
+    JSON.stringify(options) === JSON.stringify(["Muscu", "PDC", "Cardio", "Warm-up", "Force"]) && choisi === "powerlifting"
+      ? "proposé avec l'objectif maintien, choix gardé"
+      : `*** options ${JSON.stringify(options)}, choisi ${choisi} ***`
   );
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
