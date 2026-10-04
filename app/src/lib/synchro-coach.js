@@ -12,6 +12,7 @@
 
 import { PROXY_BASE_URL } from "./config.js";
 import { CLES_ANNEXES, charger, enregistrer } from "./stockage.js";
+import { enLigne } from "./semaine.js";
 
 /** Au-dela, on abandonne les plus anciens : une file sans fin ne sert personne. */
 const TAILLE_MAX_FILE = 40;
@@ -27,9 +28,17 @@ export const TYPES_EVENEMENTS = [
   "resume_hebdo"
 ];
 
-/** La synchro est-elle active pour ce client ? */
+/**
+ * La synchro est-elle active pour ce client ?
+ *
+ * Activee d'office pour le coaching en ligne (4 octobre 2026) : le script
+ * Google v2.1 et le secret du proxy sont en place. L'application ne connait
+ * ni l'adresse du script ni le secret : elle poste au proxy, qui ajoute le
+ * secret et transmet. L'ancien champ « lien de synchro » du profil reste
+ * reconnu pour les clients qui l'avaient rempli.
+ */
 export function synchroActive(profil) {
-  return !!(profil && profil.coachSyncUrl);
+  return !!profil && (enLigne(profil) || !!profil.coachSyncUrl);
 }
 
 /**
@@ -41,7 +50,7 @@ export async function envoyerEvenement(profil, evenement) {
 
   const charge = {
     ...evenement,
-    client: (profil && profil.name) || "Client sans prénom",
+    client: (profil && (profil.name || profil.firstName)) || "Client sans prénom",
     envoyeLe: new Date().toISOString()
   };
 
@@ -58,22 +67,43 @@ export async function envoyerEvenement(profil, evenement) {
  *
  * Renvoie le nombre d'evenements effectivement remis.
  */
-export async function viderFile(profil) {
+export function viderFile(profil) {
+  // Un seul vidage a la fois : deux vidages simultanes (ouverture de
+  // l'application et alerte, par exemple) enverraient deux fois le meme
+  // pointage au coach.
+  const suite = vidageEnCours.then(() => viderFileMaintenant(profil));
+  vidageEnCours = suite.catch(() => 0);
+  return suite;
+}
+
+let vidageEnCours = Promise.resolve(0);
+
+async function viderFileMaintenant(profil) {
   if (!synchroActive(profil)) return 0;
 
   const file = charger(CLES_ANNEXES.outboxCoach, []);
   if (!Array.isArray(file) || !file.length) return 0;
 
-  const restants = [];
-  let remis = 0;
-
+  const remisCles = [];
   for (const evenement of file) {
-    if (await remettre(evenement)) remis++;
-    else restants.push(evenement);
+    if (await remettre(evenement)) remisCles.push(JSON.stringify(evenement));
   }
 
+  // On relit la file : un evenement ajoute pendant les envois ne doit pas
+  // etre efface par la reecriture. Seuls les evenements remis la quittent.
+  const aRetirer = {};
+  for (const cle of remisCles) aRetirer[cle] = (aRetirer[cle] || 0) + 1;
+  const actuelle = charger(CLES_ANNEXES.outboxCoach, []);
+  const restants = (Array.isArray(actuelle) ? actuelle : []).filter((evenement) => {
+    const cle = JSON.stringify(evenement);
+    if (aRetirer[cle] > 0) {
+      aRetirer[cle] -= 1;
+      return false;
+    }
+    return true;
+  });
   enregistrer(CLES_ANNEXES.outboxCoach, restants);
-  return remis;
+  return remisCles.length;
 }
 
 /** Un envoi. Renvoie true seulement si la reception est confirmee. */

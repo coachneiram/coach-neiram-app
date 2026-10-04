@@ -136,18 +136,15 @@ function ChampsCoaching({ value, set }) {
       )}
 
       {enLigne && (
-        <Field label="Lien de synchro coach (fourni par ton coach)">
-          <TextInput
-            type="url"
-            value={value.coachSyncUrl || ""}
-            placeholder="https://script.google.com/macros/s/.../exec"
-            onChange={(e) => set({ coachSyncUrl: e.target.value.trim() })}
-          />
-          <p style={styleAide}>
-            Envoie tes pointages au tableau de bord du coach et le prévient si deux séances sont manquées. Sans ce
-            lien, l'application te propose de le prévenir toi-même.
-          </p>
-        </Field>
+        /* TEXTE-NOUVEAU
+           Synchro activee d'office pour le coaching en ligne (4 octobre
+           2026) : le champ « lien de synchro » disparait, le client doit
+           savoir ce qui part chez son coach. */
+        <p data-synchro-coach style={styleAide}>
+          Coaching en ligne : tes pointages, tes séances (durée, RPE, note) et les alertes de créneaux sont envoyés
+          automatiquement au tableau de bord de ton coach, qui est prévenu si deux séances sont manquées.
+        </p>
+        /* FIN-TEXTE-NOUVEAU */
       )}
     </>
   );
