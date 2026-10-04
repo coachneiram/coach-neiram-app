@@ -180,6 +180,17 @@ const TYPES_AUTORISES = [
 
 const LONGUEUR_MAX_TEXTE = 500;
 
+/**
+ * Nombre transmis tel quel, 0 compris ; vide si absent ou illisible.
+ * (« Number(x) || "" » effacait les zeros : un resume hebdo a 0 decale
+ * arrivait avec une colonne Decales vide dans le classeur du coach.)
+ */
+function nombreOuVide(valeur) {
+  if (valeur === undefined || valeur === null || valeur === "") return "";
+  const n = Number(valeur);
+  return Number.isFinite(n) ? n : "";
+}
+
 function texteCourt(valeur) {
   if (valeur === undefined || valeur === null) return "";
   return String(valeur).slice(0, LONGUEUR_MAX_TEXTE);
@@ -220,23 +231,23 @@ async function relaiCoachSync(request, env, cors, ip) {
     heureReelle: texteCourt(evenement.heureReelle),
     retard: !!evenement.retard,
     maintien: !!evenement.maintien,
-    dureeMin: Number(evenement.dureeMin) || "",
-    rpe: Number(evenement.rpe) || "",
-    ecartMin: Number(evenement.ecartMin) || "",
+    dureeMin: nombreOuVide(evenement.dureeMin),
+    rpe: nombreOuVide(evenement.rpe),
+    ecartMin: nombreOuVide(evenement.ecartMin),
     motif: texteCourt(evenement.motif),
     message: texteCourt(evenement.message),
     note: texteCourt(evenement.note),
     weekKey: texteCourt(evenement.weekKey),
-    nbManquees: Number(evenement.nbManquees) || "",
+    nbManquees: nombreOuVide(evenement.nbManquees),
     // Champs des deux alertes ajoutees tardivement. Sans eux, le type
     // passait la liste blanche mais arrivait vide de chiffres en aval : le
     // proxy reconstruit l'evenement champ par champ, donc tout champ non
     // nomme ici est silencieusement perdu.
-    nbDecalages: Number(evenement.nbDecalages) || "",
-    honored: Number(evenement.honored) || "",
-    resolved: Number(evenement.resolved) || "",
-    missed: Number(evenement.missed) || "",
-    shifted: Number(evenement.shifted) || "",
+    nbDecalages: nombreOuVide(evenement.nbDecalages),
+    honored: nombreOuVide(evenement.honored),
+    resolved: nombreOuVide(evenement.resolved),
+    missed: nombreOuVide(evenement.missed),
+    shifted: nombreOuVide(evenement.shifted),
     pct: Number.isFinite(Number(evenement.pct)) ? Number(evenement.pct) : "",
     envoyeLe: texteCourt(evenement.envoyeLe)
   };

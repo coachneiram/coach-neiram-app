@@ -242,6 +242,13 @@ describe("branchement", () => {
     assert.match(app, /removeEventListener\("online", relancer\)/);
   });
 
+  test("« Prevenir mon coach » (WhatsApp) reste propose quand la synchro est active", () => {
+    const src = readFileSync(new URL("../app/src/ecrans/Creneaux.jsx", import.meta.url), "utf8");
+    assert.match(src, /\{alerte && \(/);
+    assert.doesNotMatch(src, /sansSynchro/);
+    assert.match(src, /lienWhatsappCoach\(/);
+  });
+
   test("le profil n'a plus de champ « lien de synchro », il informe le client", () => {
     const champs = readFileSync(new URL("../app/src/ecrans/ChampsProfil.jsx", import.meta.url), "utf8");
     assert.doesNotMatch(champs, /coachSyncUrl/);

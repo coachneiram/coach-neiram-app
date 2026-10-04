@@ -33,7 +33,7 @@ import {
 } from "../lib/creneaux.js";
 import { lienWhatsappCoach } from "../lib/config.js";
 import { MISSED_REASONS } from "../lib/catalogues.js";
-import { envoyerEvenement, synchroActive } from "../lib/synchro-coach.js";
+import { envoyerEvenement } from "../lib/synchro-coach.js";
 import {
   Btn,
   Card,
@@ -226,7 +226,6 @@ export function Creneaux({ profile, sessionsApi, raisons, onDefinirRaison }) {
   };
 
   const alerte = manques.length >= SEUIL_ALERTE_MANQUES;
-  const sansSynchro = !synchroActive(profile);
 
   return (
     <Card>
@@ -370,9 +369,10 @@ export function Creneaux({ profile, sessionsApi, raisons, onDefinirRaison }) {
         </div>
       )}
 
-      {/* Sans synchronisation, le coach ne verra rien : le client garde au
-          moins un moyen direct de le prevenir. */}
-      {alerte && sansSynchro && (
+      {/* Le client peut toujours ecrire au coach sur WhatsApp, synchro ou
+          non (demande du coach du 4 octobre 2026) : l'alerte automatique
+          previent, la conversation permet de trouver une solution ensemble. */}
+      {alerte && (
         <div
           style={{
             marginTop: 14,
