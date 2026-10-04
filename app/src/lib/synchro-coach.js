@@ -52,7 +52,32 @@ const REMPLACABLES = [
  * reconnu pour les clients qui l'avaient rempli.
  */
 export function synchroActive(profil) {
+  if (enTestLocal() && !synchroLocaleAutorisee()) return false;
   return !!profil && (enLigne(profil) || !!profil.coachSyncUrl);
+}
+
+/**
+ * Application servie en local (tests de fumee, developpement) : rien ne
+ * part vers le vrai proxy, donc rien n'arrive dans le classeur du coach.
+ * Constate le 4 octobre 2026 : un test de fumee sans interception postait
+ * de fausses alertes « Marien » en production a chaque passage de la CI.
+ * Un test qui intercepte /coach-sync l'autorise explicitement avec
+ * localStorage « cn_synchro_locale » = « 1 ».
+ */
+function enTestLocal() {
+  try {
+    return typeof location !== "undefined" && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  } catch (e) {
+    return false;
+  }
+}
+
+function synchroLocaleAutorisee() {
+  try {
+    return globalThis.localStorage && globalThis.localStorage.getItem("cn_synchro_locale") === "1";
+  } catch (e) {
+    return false;
+  }
 }
 
 /**

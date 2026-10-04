@@ -52,6 +52,24 @@ describe("qui est synchronise", () => {
     assert.equal(synchro.synchroActive(null), false);
   });
 
+  test("application servie en local (tests) : rien ne part vers le vrai proxy", () => {
+    // Constate le 4 octobre 2026 : un test de fumee postait de fausses
+    // alertes « Marien » dans le classeur du coach a chaque passage de la CI.
+    globalThis.location = { hostname: "localhost" };
+    try {
+      assert.equal(synchro.synchroActive(EN_LIGNE), false);
+      globalThis.location = { hostname: "127.0.0.1" };
+      assert.equal(synchro.synchroActive(EN_LIGNE), false);
+      localStorage.setItem("cn_synchro_locale", "1");
+      assert.equal(synchro.synchroActive(EN_LIGNE), true, "un test qui intercepte /coach-sync l'autorise");
+      globalThis.location = { hostname: "coachneiram.github.io" };
+      localStorage.removeItem("cn_synchro_locale");
+      assert.equal(synchro.synchroActive(EN_LIGNE), true, "en production, actif sans rien");
+    } finally {
+      delete globalThis.location;
+    }
+  });
+
   test("ancien lien rempli : toujours reconnu", () => {
     assert.equal(synchro.synchroActive({ name: "X", coachSyncUrl: "https://exemple.test/exec" }), true);
   });

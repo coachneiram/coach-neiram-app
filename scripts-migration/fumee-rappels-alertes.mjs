@@ -55,6 +55,7 @@ await page.addInitScript(() => {
   Fausse.prototype = Vraie.prototype;
   window.Date = Fausse;
 
+  localStorage.setItem("cn_synchro_locale", "1"); // /coach-sync est intercepte ici
   localStorage.setItem("coach_profile", JSON.stringify({
     firstName: "Sabine", name: "Sabine Marchand", sex: "femme", age: 42, heightCm: 165,
     startWeightKg: 72, activityLevel: "actif", goal: "perte", sessionsPerWeek: 6,
@@ -113,6 +114,7 @@ await page2.addInitScript(() => {
   Fausse.UTC = Vraie.UTC;
   Fausse.prototype = Vraie.prototype;
   window.Date = Fausse;
+  localStorage.setItem("cn_synchro_locale", "1"); // /coach-sync est intercepte ici
   localStorage.setItem("coach_profile", JSON.stringify({
     firstName: "Tristan", sex: "homme", age: 30, heightCm: 180, startWeightKg: 78,
     activityLevel: "modere", goal: "prise", sessionsPerWeek: 4, targetWeightKg: 82,
