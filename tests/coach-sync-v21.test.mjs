@@ -82,6 +82,10 @@ describe("1. secret partage", () => {
     assert.equal(s.appeler("genererSecret"), premier);
   });
 
+  test("copie du depot = production : secret exige (04/10/2026)", () => {
+    assert.match(SOURCE_SCRIPT, /^var EXIGER_SECRET = true;$/m);
+  });
+
   test("le secret n'est ecrit nulle part dans le code", () => {
     assert.doesNotMatch(SOURCE_SCRIPT, /SECRET_PARTAGE|REMPLACE-MOI/);
   });
