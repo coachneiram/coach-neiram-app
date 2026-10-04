@@ -29,6 +29,20 @@ export const TYPES_EVENEMENTS = [
 ];
 
 /**
+ * Evenements qui decrivent un ETAT de la semaine : un nouvel envoi remplace
+ * celui qui attend encore en file pour le meme client et la meme semaine,
+ * au lieu de s'y ajouter. Les pointages et justifications, eux, sont des
+ * faits distincts et s'accumulent.
+ */
+const REMPLACABLES = [
+  "semaine_difficile",
+  "alerte_semaines_difficiles",
+  "alerte_seances_manquees",
+  "alerte_decalages",
+  "resume_hebdo"
+];
+
+/**
  * La synchro est-elle active pour ce client ?
  *
  * Activee d'office pour le coaching en ligne (4 octobre 2026) : le script
@@ -55,7 +69,13 @@ export async function envoyerEvenement(profil, evenement) {
   };
 
   const file = charger(CLES_ANNEXES.outboxCoach, []);
-  const nouvelle = (Array.isArray(file) ? file : []).concat([charge]).slice(-TAILLE_MAX_FILE);
+  const remplace = (e) =>
+    REMPLACABLES.includes(charge.type) &&
+    e && e.type === charge.type && e.weekKey === charge.weekKey && e.client === charge.client;
+  const nouvelle = (Array.isArray(file) ? file : [])
+    .filter((e) => !remplace(e))
+    .concat([charge])
+    .slice(-TAILLE_MAX_FILE);
   enregistrer(CLES_ANNEXES.outboxCoach, nouvelle);
 
   await viderFile(profil);

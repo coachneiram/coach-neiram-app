@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { creerLocalStorage } from "./harness.mjs";
 import * as synchro from "../app/src/lib/synchro-coach.js";
+import { verifierAlertesCoach } from "../app/src/lib/moteur-alertes.js";
 import { PROXY_BASE_URL } from "../app/src/lib/config.js";
 import { CLES_ANNEXES, charger, enregistrer } from "../app/src/lib/stockage.js";
 
@@ -140,6 +141,60 @@ describe("evenements identiques", () => {
     enregistrer(CLES_ANNEXES.outboxCoach, [meme, { ...meme }]);
     assert.equal(await synchro.viderFile(EN_LIGNE), 1);
     assert.equal(synchro.enAttente(), 1);
+  });
+});
+
+describe("pas de doublon d'alerte (constate le 4 octobre 2026)", () => {
+  // Le Journal du coach a recu la meme alerte « 3 creneaux decales » 4 fois
+  // en 25 secondes : chaque rafraichissement de l'ecran relancait
+  // l'evaluation avant que la precedente ait note l'alerte comme envoyee.
+  const PROFIL = {
+    name: "Thomas",
+    coachingMode: "enligne",
+    slots: [
+      { id: "c1", day: "tue", time: "18:30" },
+      { id: "c2", day: "fri", time: "18:30" }
+    ]
+  };
+  const evaluer = (envoyer) =>
+    verifierAlertesCoach({
+      profile: PROFIL,
+      seances: [],
+      justifications: {},
+      maintenant: new Date(2026, 8, 8, 14, 0, 0),
+      aujourdhui: "2026-09-08",
+      envoyer
+    });
+
+  test("trois evaluations simultanees : l'alerte part une seule fois", async () => {
+    const envois = [];
+    const envoyer = async (profil, evenement) => {
+      envois.push(evenement.type);
+      await new Promise((r) => setTimeout(r, 10));
+      return true;
+    };
+    await Promise.all([evaluer(envoyer), evaluer(envoyer), evaluer(envoyer)]);
+    assert.equal(envois.filter((t) => t === "alerte_seances_manquees").length, 1, JSON.stringify(envois));
+  });
+
+  test("hors ligne : la meme alerte de la meme semaine n'est gardee qu'une fois en file", async () => {
+    reseauSimule({ reponse: () => new Error("hors ligne") });
+    const alerte = { type: "alerte_decalages", weekKey: "2026-09-28", nbDecalages: 3 };
+    await synchro.envoyerEvenement(EN_LIGNE, alerte);
+    await synchro.envoyerEvenement(EN_LIGNE, { ...alerte, nbDecalages: 4 });
+    const file = charger(CLES_ANNEXES.outboxCoach, []);
+    assert.equal(file.length, 1);
+    assert.equal(file[0].nbDecalages, 4, "la plus recente remplace l'ancienne");
+  });
+
+  test("autre semaine, autre type ou pointage : rien n'est remplace", async () => {
+    reseauSimule({ reponse: () => new Error("hors ligne") });
+    await synchro.envoyerEvenement(EN_LIGNE, { type: "alerte_decalages", weekKey: "2026-09-21" });
+    await synchro.envoyerEvenement(EN_LIGNE, { type: "alerte_decalages", weekKey: "2026-09-28" });
+    await synchro.envoyerEvenement(EN_LIGNE, { type: "resume_hebdo", weekKey: "2026-09-28" });
+    await synchro.envoyerEvenement(EN_LIGNE, { type: "pointage", date: "2026-10-04" });
+    await synchro.envoyerEvenement(EN_LIGNE, { type: "pointage", date: "2026-10-04" });
+    assert.equal(synchro.enAttente(), 5);
   });
 });
 
