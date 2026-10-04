@@ -5,7 +5,7 @@ Ce dossier contient les deux pièces qui mettent les secrets hors du navigateur 
 | Fichier | Rôle | Où il vit une fois installé |
 |---|---|---|
 | `coach-neiram-proxy.js` | Proxy Cloudflare Worker | Cloudflare (gratuit) |
-| `coach-sync.gs` | Script de réception, version durcie | Google Apps Script |
+| `coach-sync.gs` | Script de réception v2.1 (la v2 du coach, durcie) | Google Apps Script, attaché au Sheet « Suivi Coaching en ligne » |
 
 ---
 
@@ -27,95 +27,85 @@ e-mails plafonnés, secrets inaccessibles.
 
 ---
 
-## ⚠️ L'ordre des étapes est important
+## Installer la v2.1 du script Google (octobre 2026)
 
-L'application ne peut pas savoir qu'un envoi a été refusé tant qu'elle poste en
-`no-cors` : un événement rejeté serait **perdu sans message d'erreur**. Il faut donc
-mettre à jour l'application **avant** d'activer la vérification côté Google.
+Le Worker `coach-neiram-proxy` existe déjà et l'application l'utilise
+(`app/src/lib/config.js`). Il reste à installer la v2.1 du script et à poser le
+même secret des deux côtés. Compte 15 minutes, sur ordinateur.
 
-L'ordre ci-dessous respecte cette contrainte. Ne le raccourcis pas.
+**Pourquoi l'ordre compte** : si le script exige le secret avant que Cloudflare
+l'envoie, tout est refusé. L'application garde alors les pointages en file (40 au
+plus) et les renvoie, mais rien n'arrive dans le Sheet tant que ce n'est pas réglé.
+On active donc la vérification en dernier.
 
----
+### Étape 1 — Remplacer le script
 
-## Étape 1 — Créer le Worker sur Cloudflare
+1. Ouvre le Sheet « Suivi Coaching en ligne » → **Extensions** → **Apps Script**.
+2. Clique sur `Code.gs`, sélectionne tout, supprime, colle l'intégralité de
+   `coach-sync.gs`, puis **Enregistrer** (icône disquette).
+3. En haut, dans la liste des fonctions, choisis `migrer` → **Exécuter**. Autorise
+   l'accès si Google le demande. Il ajoute les colonnes manquantes à la fin du
+   Journal, sans rien décaler.
 
-1. Va sur `dash.cloudflare.com` et connecte-toi.
-2. Menu de gauche : **Compute (Workers)** → **Create** → **Start with Hello World** → **Deploy**.
-3. Une fois créé, clique sur **Edit code**.
-4. Efface tout le contenu, colle l'intégralité de `coach-neiram-proxy.js`, puis **Deploy**.
-5. Note l'adresse affichée, du type `https://mon-worker.mon-compte.workers.dev`.
+### Étape 2 — Créer le secret
 
-## Étape 2 — Renseigner les secrets dans Cloudflare
+1. Choisis `genererSecret` → **Exécuter**.
+2. Le secret s'affiche dans le **Journal d'exécution**, en bas de l'éditeur (ou
+   dans une fenêtre du Sheet). Copie-le. Il est aussi rangé dans **Paramètres du
+   projet** (roue dentée) → **Propriétés du script** → `SECRET_SYNC`.
+3. Ne le colle nulle part ailleurs que dans Cloudflare (étape 3).
 
-Dans ton Worker : **Settings** → **Variables and Secrets** → **Add**.
+### Étape 3 — Le poser dans Cloudflare
 
-Ajoute ces trois entrées, **de type Secret** :
+1. `dash.cloudflare.com` → **Workers** → `coach-neiram-proxy` → **Settings** →
+   **Variables and Secrets**.
+2. `COACH_SYNC_SECRET` (type **Secret**) : colle le secret de l'étape 2. Si la
+   variable existe déjà, remplace sa valeur.
+3. Vérifie `COACH_SYNC_URL` : ce doit être l'adresse `/exec` du déploiement actif
+   (Apps Script → **Déployer** → **Gérer les déploiements**).
+4. **Deploy**.
 
-| Nom | Valeur |
+### Étape 4 — Publier la nouvelle version du script
+
+Apps Script → **Déployer** → **Gérer les déploiements** → crayon →
+**Version : Nouvelle version** → **Déployer**. L'adresse `/exec` ne change pas.
+
+Contrôles :
+
+- [ ] L'adresse `/exec` ouverte dans un navigateur affiche « Synchro Coach Neiram
+      active (v2.1) ».
+- [ ] La fonction `verifier` affiche « Secret en place : oui · exigé : non ».
+- [ ] La fonction `testerMail` t'envoie un e-mail et écrit une ligne TEST dans
+      Journal et Alertes (supprime-les ensuite).
+
+### Étape 5 — Vérifier avec un vrai pointage
+
+Une fois la synchro activée dans l'application, pointe un créneau de test :
+
+- [ ] une ligne apparaît dans l'onglet **Journal**, avec l'heure réelle et le statut
+      « tenu » ;
+- [ ] l'onglet **Erreurs** reste vide ;
+- [ ] la colonne **Brut** ne contient pas le secret.
+
+Si l'un de ces points échoue, ne passe pas à l'étape 6 : tant que `EXIGER_SECRET`
+vaut `false`, rien n'est perdu.
+
+### Étape 6 — Verrouiller
+
+Dans `Code.gs`, passe `var EXIGER_SECRET = true;`, enregistre, puis **Nouvelle
+version** (comme à l'étape 4). À partir de là, seules les requêtes passées par le
+proxy, qui ajoute le secret, sont acceptées.
+
+### Ce que la v2.1 change par rapport à la v2
+
+| v2 (installée jusqu'au 04/10/2026) | v2.1 |
 |---|---|
-| `GEMINI_API_KEY` | ta clé Google Gemini |
-| `COACH_SYNC_URL` | l'adresse `/exec` de ton script Google |
-| `COACH_SYNC_SECRET` | un long mot de passe aléatoire, inventé maintenant |
-
-Garde ce mot de passe sous la main : il devra être identique à l'étape 4.
-
-Optionnel, en type Variable (pas Secret) : `ALLOWED_ORIGINS` avec l'adresse de ton
-site, par exemple `https://coachneiram.github.io`.
-
-**Déploie** après avoir ajouté les variables.
-
-## Étape 3 — Installer la version durcie du script Google (sans encore l'activer)
-
-1. Ouvre ton Google Sheets de suivi → **Extensions** → **Apps Script**.
-2. Remplace tout le contenu par `coach-sync.gs`.
-3. Dans le fichier, renseigne :
-   - `EMAIL_COACH` : ton adresse e-mail (garde celle déjà en place)
-   - `SECRET_PARTAGE` : **le même mot de passe** qu'à l'étape 2
-   - `EXIGER_SECRET` : **laisse `false` pour l'instant** ← important
-4. **Déployer** → **Gérer les déploiements** → crayon → **Version : Nouvelle version** → **Déployer**.
-
-À ce stade, la validation des données et le plafond d'e-mails sont déjà actifs.
-L'ancienne application continue de fonctionner normalement.
-
-## Étape 4 — Brancher l'application sur le proxy
-
-Dans `index.html`, ligne 32, remplace :
-
-```js
-const PROXY_BASE_URL = "";
-```
-
-par ton adresse de Worker, **sans barre oblique à la fin** :
-
-```js
-const PROXY_BASE_URL = "https://mon-worker.mon-compte.workers.dev";
-```
-
-Publie ensuite cette modification sur `main` (c'est ce qui met le site à jour).
-
-## Étape 5 — Vérifier avant de verrouiller
-
-Sur ton téléphone ou ton navigateur, après avoir rechargé l'application :
-
-- [ ] Pointe un créneau → une nouvelle ligne apparaît dans l'onglet **Journal** du Sheets
-- [ ] Le champ « Clé IA » a disparu des réglages
-- [ ] Une fonction IA marche (photo de repas, ou bilan hebdo)
-- [ ] Déclare une semaine difficile → tu reçois l'e-mail d'alerte
-
-Si l'un de ces points échoue, **ne passe pas à l'étape 6** : dis-le, on diagnostique
-d'abord. Tant que `EXIGER_SECRET` vaut `false`, rien n'est perdu.
-
-## Étape 6 — Verrouiller
-
-Une fois les quatre cases cochées, retourne dans Apps Script :
-
-```js
-var EXIGER_SECRET = true;
-```
-
-Puis **Déployer** → **Gérer les déploiements** → **Nouvelle version**.
-
-À partir de là, seules les requêtes passant par ton proxy sont acceptées.
+| Aucun secret vérifié | Secret partagé avec le proxy, exigé à l'étape 6 |
+| Corps reçu recopié dans « Brut », secret compris | « Brut » nettoyé : jamais le secret |
+| Erreur renvoyée comme `{statut: "erreur"}`, que le proxy lisait comme un succès : pointage perdu | `{ok: false}` : l'application garde le pointage et le renvoie |
+| Champs attendus (`heure`, `duree`, `statut`) que l'application n'envoie pas : Heure réelle, Durée et Adherence vides | Champs réellement envoyés (`heureReelle`, `dureeMin`, `note`, résumé hebdo) ; Adherence calculé depuis le résumé hebdomadaire |
+| Anti-doublon seul : de faux prénoms épuisent le quota Gmail | Plafond de 20 e-mails par jour, 3 par client, en plus de l'anti-doublon |
+| Texte commençant par `=` exécuté comme formule | Écrit comme du texte |
 
 ---
 
@@ -137,8 +127,13 @@ transmises telles quelles.
 `test-worker.mjs` couvre les deux routes du proxy : validation, plafonds, ajout des
 secrets côté serveur, transmission des erreurs. Il n'appelle aucun service réel.
 
+`tests/coach-sync-v21.test.mjs` exécute le vrai `coach-sync.gs` sur un classeur
+simulé (`tests/doublure-apps-script.mjs`) qui reprend les en-têtes du Sheet du
+coach ; `tests/chaine-coach.test.mjs` fait traverser un événement de bout en bout.
+
 ```
 node worker/test-worker.mjs
+node --test tests/coach-sync-v21.test.mjs tests/chaine-coach.test.mjs
 ```
 
 ---
@@ -148,5 +143,6 @@ node worker/test-worker.mjs
 | Problème | Retour arrière |
 |---|---|
 | Le proxy pose souci | Remettre `PROXY_BASE_URL = ""` et republier : retour au fonctionnement d'avant |
-| Le script refuse tout | Repasser `EXIGER_SECRET` à `false` et redéployer |
+| Le script refuse tout | Repasser `EXIGER_SECRET` à `false` et publier une nouvelle version |
+| La v2.1 pose souci | Recoller la v2 (copie gardée par le coach) et publier une nouvelle version : l'adresse `/exec` ne change pas |
 | Retour complet | Le tag `v0-legacy-baseline` marque l'état de production d'avant cette phase |

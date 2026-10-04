@@ -17,8 +17,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { createContext, runInNewContext } from "node:vm";
 import worker from "../worker/coach-neiram-proxy.js";
+import { creerScript } from "./doublure-apps-script.mjs";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE = join(ICI, "..");
@@ -50,54 +50,13 @@ async function traverserLeProxy(evenement) {
 
 /**
  * Execute le vrai script Apps Script dans un bac a sable, avec des doublures
- * pour les services Google. Rend les lignes ecrites et les mails envoyes.
+ * pour les services Google (tests/doublure-apps-script.mjs). Rend la
+ * reponse, les lignes du Journal et les mails envoyes.
  */
 function executerScriptGoogle(charge) {
-  const lignes = [];
-  const mails = [];
-  const proprietes = {};
-  const feuilles = new Map();
-
-  const faireFeuille = (nom) => ({
-    appendRow: (r) => lignes.push({ feuille: nom, valeurs: r }),
-    getRange: () => ({ setFontWeight() {}, getValues: () => [] }),
-    setFrozenRows() {},
-    getLastRow: () => 1
-  });
-
-  const bac = {
-    SpreadsheetApp: {
-      getActiveSpreadsheet: () => ({
-        getSheetByName: (n) => feuilles.get(n) || null,
-        insertSheet: (n) => {
-          const f = faireFeuille(n);
-          feuilles.set(n, f);
-          return f;
-        }
-      })
-    },
-    MailApp: { sendEmail: (a, sujet, corps) => mails.push({ a, sujet, corps }) },
-    PropertiesService: {
-      getScriptProperties: () => ({
-        getProperty: (c) => proprietes[c] || null,
-        setProperty: (c, v) => { proprietes[c] = v; }
-      })
-    },
-    Utilities: { formatDate: () => "2026-09-06" },
-    Session: { getScriptTimeZone: () => "Europe/Paris" },
-    ContentService: {
-      MimeType: { JSON: "json" },
-      createTextOutput: (t) => ({ setMimeType: () => ({ contenu: t }) })
-    },
-    console
-  };
-
-  const contexte = createContext(bac);
-  runInNewContext(readFileSync(join(RACINE, "worker", "coach-sync.gs"), "utf8"), contexte);
-  const sortie = runInNewContext("doPost(ENTREE)", Object.assign(contexte, {
-    ENTREE: { postData: { contents: JSON.stringify(charge) } }
-  }));
-  return { reponse: JSON.parse(sortie.contenu), lignes, mails };
+  const script = creerScript();
+  const reponse = script.poster(charge);
+  return { reponse, lignes: script.lignes("Journal"), mails: script.mails };
 }
 
 /** Un evenement tel que l'application le construit vraiment. */
@@ -156,11 +115,9 @@ describe("le script Google accepte et traite les deux types", () => {
     const { versGoogle } = await traverserLeProxy(resumeHebdo(85));
     const { reponse, lignes } = executerScriptGoogle(versGoogle);
     assert.equal(reponse.ok, true, "le script ne doit plus repondre type-inconnu");
-    // La premiere ligne est l'en-tete que la doublure ecrit a la creation
-    // de l'onglet ; la donnee est celle d'apres.
-    const donnee = lignes[lignes.length - 1].valeurs;
-    assert.equal(donnee[2], "resume_hebdo");
-    assert.match(donnee.join(" | "), /Taux de respect/);
+    const donnee = lignes[lignes.length - 1];
+    assert.equal(donnee.Type, "resume_hebdo");
+    assert.match(Object.values(donnee).join(" | "), /Taux de respect/);
   });
 
   test("au-dessus du seuil : aucun e-mail, le recap du lundi suffit", async () => {
