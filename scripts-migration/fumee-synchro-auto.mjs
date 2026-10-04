@@ -13,7 +13,9 @@
  *   5. une seance enregistree depuis le constructeur part au coach comme
  *      pointage (elle n'arrivait jamais dans son Journal) ;
  *   6. creneaux manques, synchro active : « Prevenir mon coach » reste
- *      propose et ouvre WhatsApp avec le message pre-ecrit.
+ *      propose et ouvre WhatsApp avec le message pre-ecrit ;
+ *   7. garde-fou : servie en local SANS autorisation explicite, l'application
+ *      n'envoie rien au proxy (un test de fumee ecrivait en production).
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-synchro-auto.mjs
@@ -56,6 +58,7 @@ await page.route("**/coach-sync", async (route) => {
 
 await page.addInitScript(() => {
   if (localStorage.getItem("coach_profile")) return;
+  localStorage.setItem("cn_synchro_locale", "1"); // /coach-sync est intercepte ici
   localStorage.setItem("coach_profile", JSON.stringify({
     name: "Thomas", sex: "homme", age: 36, heightCm: 180, startWeightKg: 80,
     activityLevel: "modere", goal: "maintien", sessionsPerWeek: 3,
@@ -151,7 +154,8 @@ try {
     if (localStorage.getItem("coach_profile")) return;
     // Deux creneaux par semaine, crees il y a longtemps, aucune seance :
     // plusieurs creneaux manques sur les 14 derniers jours.
-    localStorage.setItem("coach_profile", JSON.stringify({
+    localStorage.setItem("cn_synchro_locale", "1"); // /coach-sync est intercepte ici
+  localStorage.setItem("coach_profile", JSON.stringify({
       name: "Thomas", sex: "homme", age: 36, heightCm: 180, startWeightKg: 80,
       activityLevel: "modere", goal: "maintien", sessionsPerWeek: 2,
       trainingMode: "app", coachingMode: "enligne", dietType: "aucun", allergies: [],
@@ -179,6 +183,36 @@ try {
   await ctx2.close();
 } catch (e) {
   console.log("ECHEC 6 :", e.message.split("\n")[0]);
+}
+
+// 7. Garde-fou : en local, sans « cn_synchro_locale », aucun envoi.
+try {
+  const ctx3 = await nav.newContext(appareil("Pixel 7"));
+  const page3 = await ctx3.newPage();
+  const tentatives = [];
+  await page3.route("**/coach-sync", (route) => {
+    tentatives.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
+  });
+  await page3.addInitScript(() => {
+    if (localStorage.getItem("coach_profile")) return;
+    localStorage.setItem("coach_profile", JSON.stringify({
+      name: "Thomas", sex: "homme", age: 36, heightCm: 180, startWeightKg: 80,
+      activityLevel: "modere", goal: "maintien", sessionsPerWeek: 2,
+      trainingMode: "app", coachingMode: "enligne", dietType: "aucun", allergies: [],
+      slots: [{ id: "c1", day: "mon", time: "18:30", place: "", createdAt: "2026-01-01" }]
+    }));
+    localStorage.setItem("cn_coach_outbox", JSON.stringify([{ type: "pointage", date: "2026-10-04", client: "Thomas" }]));
+  });
+  await page3.goto("http://localhost:4661/", { waitUntil: "domcontentloaded" });
+  await page3.waitForTimeout(1500);
+  console.log(
+    "7. GARDE-FOU LOCAL      :",
+    tentatives.length === 0 ? "aucun envoi vers le proxy sans autorisation explicite" : `*** ${tentatives.length} envoi(s) ***`
+  );
+  await ctx3.close();
+} catch (e) {
+  console.log("ECHEC 7 :", e.message.split("\n")[0]);
 }
 
 console.log("ERREURS JS :", erreurs.length ? JSON.stringify(erreurs) : "aucune");

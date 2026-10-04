@@ -128,7 +128,9 @@ export function creerScript({ reglages = {}, proprietes = {}, entetesExistants =
   const contexte = createContext(bac);
   runInNewContext(SOURCE_SCRIPT, contexte);
   // Le depot garde une adresse d'exemple ; en test, une adresse renseignee.
-  for (const [cle, valeur] of Object.entries({ EMAIL_COACH: "coach@test.fr", ...reglages })) contexte[cle] = valeur;
+  // Les tests de logique tournent sans secret exige ; ceux qui portent sur
+  // le secret le reactivent explicitement (reglages.EXIGER_SECRET).
+  for (const [cle, valeur] of Object.entries({ EMAIL_COACH: "coach@test.fr", EXIGER_SECRET: false, ...reglages })) contexte[cle] = valeur;
 
   return {
     feuilles,

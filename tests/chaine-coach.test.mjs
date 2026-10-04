@@ -54,7 +54,11 @@ async function traverserLeProxy(evenement) {
  * reponse, les lignes du Journal et les mails envoyes.
  */
 function executerScriptGoogle(charge) {
-  const script = creerScript();
+  // Configuration de production : secret exige, le meme des deux cotes.
+  const script = creerScript({
+    reglages: { EXIGER_SECRET: true },
+    proprietes: { SECRET_SYNC: ENV.COACH_SYNC_SECRET }
+  });
   const reponse = script.poster(charge);
   return { reponse, lignes: script.lignes("Journal"), mails: script.mails };
 }

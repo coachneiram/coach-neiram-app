@@ -92,6 +92,10 @@ vaut `false`, rien n'est perdu.
 
 ### Étape 6 — Verrouiller
 
+La copie du dépôt est livrée avec `var EXIGER_SECRET = true;` (état de la
+production depuis le 04/10/2026). Sur une nouvelle installation, mets `false` avant
+l'étape 4 et garde-le jusqu'à ce que l'étape 5 soit validée.
+
 Dans `Code.gs`, passe `var EXIGER_SECRET = true;`, enregistre, puis **Nouvelle
 version** (comme à l'étape 4). À partir de là, seules les requêtes passées par le
 proxy, qui ajoute le secret, sont acceptées.

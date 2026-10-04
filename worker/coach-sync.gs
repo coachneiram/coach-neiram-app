@@ -24,8 +24,9 @@
  *    Recopie-le dans Cloudflare (variable COACH_SYNC_SECRET du Worker).
  * 5. Déployer > Gérer les déploiements > crayon > Version : Nouvelle version
  *    > Déployer. L'adresse /exec ne change pas.
- * 6. Laisse EXIGER_SECRET = false tant qu'un vrai pointage n'est pas arrivé
- *    dans l'onglet Journal. Ensuite seulement : true, puis redéploie.
+ * 6. Nouvelle installation : mets EXIGER_SECRET = false tant qu'un vrai
+ *    pointage n'est pas arrivé dans l'onglet Journal, puis remets true et
+ *    redéploie. (En production chez le coach : true depuis le 04/10/2026.)
  */
 
 /* ---------------------------------------------------------------- CONFIG */
@@ -39,9 +40,11 @@ var F_ALERTES  = 'Alertes';
 var F_ERREURS  = 'Erreurs';
 var F_ADHERENCE = 'Adherence';
 
-/** Passer à true UNIQUEMENT quand un vrai pointage est arrivé dans le
- *  Journal avec le secret en place des deux côtés (Cloudflare et ici). */
-var EXIGER_SECRET = false;
+/** true en production depuis le 4 octobre 2026 (version 13 du déploiement,
+ *  vérifiée par un pointage réel accepté avec le secret). Sur une NOUVELLE
+ *  installation : mettre false le temps de vérifier qu'un vrai pointage
+ *  arrive dans le Journal, puis remettre true. */
+var EXIGER_SECRET = true;
 
 /** Nom de la propriété du script qui contient le secret. Le secret n'est
  *  jamais écrit dans ce fichier : genererSecret() le crée et le range dans
