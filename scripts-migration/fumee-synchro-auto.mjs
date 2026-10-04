@@ -9,7 +9,9 @@
  *      proxy accepte, la file est vide ;
  *   3. aucun envoi ne contient de secret ni d'adresse de script Google ;
  *   4. Reglages : le champ « lien de synchro » a disparu, une phrase dit au
- *      client ce qui est envoye a son coach.
+ *      client ce qui est envoye a son coach ;
+ *   5. une seance enregistree depuis le constructeur part au coach comme
+ *      pointage (elle n'arrivait jamais dans son Journal).
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-synchro-auto.mjs
@@ -57,6 +59,7 @@ await page.addInitScript(() => {
     activityLevel: "modere", goal: "maintien", sessionsPerWeek: 3,
     trainingMode: "app", coachingMode: "enligne", dietType: "aucun", allergies: []
   }));
+  localStorage.setItem("coach_routines", JSON.stringify([{ id: "r1", name: "Haut du corps", description: "Pecs / Dos", color: "#2DD4BF" }]));
   localStorage.setItem("cn_coach_outbox", JSON.stringify([
     { type: "pointage", date: "2026-10-04", creneau: "Samedi 10:00", heureReelle: "10:05", client: "Thomas", envoyeLe: "2026-10-04T08:05:00Z" }
   ]));
@@ -105,6 +108,25 @@ try {
     /envoyés automatiquement au tableau de bord de ton coach/.test(texte) && ancienChamp === 0
       ? "plus de lien à recopier, le client est informé de ce qui est envoyé"
       : `*** info « ${texte} », ancien champ ${ancienChamp} ***`
+  );
+
+  // 5. Seance du constructeur : un pointage part au coach.
+  // La fenetre Reglages se ferme par un rechargement (la file est vide).
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1200);
+  const avant = recus.length;
+  await page.getByRole("button", { name: "Séances", exact: true }).first().click();
+  await page.waitForTimeout(500);
+  await page.getByText("Haut du corps").first().click();
+  await page.waitForTimeout(500);
+  await page.getByRole("button", { name: "Enregistrer la séance" }).click();
+  await page.waitForTimeout(1200);
+  const pointages = recus.slice(avant).map((r) => JSON.parse(r.corps)).filter((c) => c.type === "pointage");
+  console.log(
+    "5. SÉANCE CONSTRUCTEUR  :",
+    pointages.length === 1 && pointages[0].client === "Thomas" && /^\d{4}-\d{2}-\d{2}$/.test(pointages[0].date)
+      ? "la séance enregistrée part au coach comme pointage, une seule fois"
+      : `*** ${JSON.stringify(recus.slice(avant))} ***`
   );
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);

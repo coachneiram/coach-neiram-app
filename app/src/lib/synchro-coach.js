@@ -12,7 +12,7 @@
 
 import { PROXY_BASE_URL } from "./config.js";
 import { CLES_ANNEXES, charger, enregistrer } from "./stockage.js";
-import { enLigne } from "./semaine.js";
+import { creneauPourDate, enLigne, slotDayLabel } from "./semaine.js";
 
 /** Au-dela, on abandonne les plus anciens : une file sans fin ne sert personne. */
 const TAILLE_MAX_FILE = 40;
@@ -143,6 +143,28 @@ async function remettre(evenement) {
     // Hors ligne : l'evenement reste en file et repartira plus tard.
     return false;
   }
+}
+
+/**
+ * Pointage a envoyer au coach quand un client en ligne enregistre une
+ * seance depuis le constructeur (demande du coach du 4 octobre 2026 : ces
+ * seances comptaient deja comme creneau tenu dans l'application, mais
+ * n'apparaissaient jamais dans le Journal du coach). Null hors coaching en
+ * ligne. L'heure reelle n'est connue que pour une seance du jour.
+ */
+export function pointageDepuisSeance(profil, seance, { aujourdhui, heure } = {}) {
+  if (!enLigne(profil) || !seance || !seance.date) return null;
+  const creneau = creneauPourDate(profil, seance.date);
+  return {
+    type: "pointage",
+    date: seance.date,
+    creneau: creneau ? slotDayLabel(creneau.day) + (creneau.time ? " " + creneau.time : "") : "hors créneau",
+    lieu: creneau ? creneau.place || "" : "",
+    heureReelle: seance.startTime || (seance.date === aujourdhui && heure ? heure : ""),
+    dureeMin: seance.durationMin,
+    rpe: seance.rpe,
+    note: String(seance.notes || "").trim()
+  };
 }
 
 /** Nombre d'evenements en attente, pour information. */

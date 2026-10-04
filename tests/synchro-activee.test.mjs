@@ -198,6 +198,42 @@ describe("pas de doublon d'alerte (constate le 4 octobre 2026)", () => {
   });
 });
 
+describe("seance du constructeur : pointage pour le coach", () => {
+  const PROFIL = { name: "Thomas", coachingMode: "enligne", slots: [{ id: "c1", day: "sun", time: "10:00", place: "Salle" }] };
+  const seance = { date: "2026-10-04", durationMin: "55", rpe: "7", notes: " Bonne séance ", exercises: [] };
+
+  test("client en ligne : pointage complet, rattache au creneau du jour", () => {
+    assert.deepEqual(synchro.pointageDepuisSeance(PROFIL, seance, { aujourdhui: "2026-10-04", heure: "10:12" }), {
+      type: "pointage",
+      date: "2026-10-04",
+      creneau: "Dimanche 10:00",
+      lieu: "Salle",
+      heureReelle: "10:12",
+      dureeMin: "55",
+      rpe: "7",
+      note: "Bonne séance"
+    });
+  });
+
+  test("seance d'un autre jour : hors creneau, sans heure inventee", () => {
+    const p = synchro.pointageDepuisSeance(PROFIL, { ...seance, date: "2026-10-01" }, { aujourdhui: "2026-10-04", heure: "10:12" });
+    assert.equal(p.creneau, "hors créneau");
+    assert.equal(p.heureReelle, "");
+  });
+
+  test("presentiel ou seance sans date : rien", () => {
+    assert.equal(synchro.pointageDepuisSeance({ ...PROFIL, coachingMode: "presentiel" }, seance), null);
+    assert.equal(synchro.pointageDepuisSeance(PROFIL, { ...seance, date: "" }), null);
+  });
+
+  test("branche dans le constructeur, a la creation seulement", () => {
+    const src = readFileSync(new URL("../app/src/ecrans/ConstructeurSeances.jsx", import.meta.url), "utf8");
+    assert.match(src, /else \{\s*await sessionsApi\.add\(donnees\);[\s\S]*?pointageDepuisSeance\(profile, donnees/);
+    const ent = readFileSync(new URL("../app/src/ecrans/Entrainements.jsx", import.meta.url), "utf8");
+    assert.equal((ent.match(/<ConstructeurSeances[\s\S]*?profile=\{profile\}/g) || []).length, 2);
+  });
+});
+
 describe("branchement", () => {
   test("la file repart a l'ouverture et au retour du reseau", () => {
     const app = readFileSync(new URL("../app/src/App.jsx", import.meta.url), "utf8");

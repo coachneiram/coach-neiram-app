@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { COLORS } from "../tokens.js";
-import { fmtDateShort, num } from "../lib/dates.js";
+import { fmtDateShort, num, todayISO } from "../lib/dates.js";
 import { uid } from "../lib/semaine.js";
 import {
   CARDIO_FIELD_DEFS,
@@ -40,6 +40,7 @@ import {
   videoExercice
 } from "../lib/constructeur-seances.js";
 import { charger, enregistrer } from "../lib/stockage.js";
+import { envoyerEvenement, pointageDepuisSeance } from "../lib/synchro-coach.js";
 import { CHAMP_RPE } from "../lib/force.js";
 import { ForceAthletique } from "./ForceAthletique.jsx";
 import { PlanSemaine } from "./PlanSemaine.jsx";
@@ -134,6 +135,7 @@ function useExercicesPerso() {
 export function ConstructeurSeances({
   routinesApi,
   sessionsApi,
+  profile,
   plOn,
   planSemaine,
   onAssignerJour,
@@ -178,7 +180,17 @@ export function ConstructeurSeances({
     delete donnees.id;
     exercicesPerso.retenir(donnees.exercises);
     if (seanceEditee.id) await sessionsApi.update(seanceEditee.id, donnees);
-    else await sessionsApi.add(donnees);
+    else {
+      await sessionsApi.add(donnees);
+      // Client en ligne : la seance part aussi au Journal du coach. Une
+      // seance modifiee ensuite ne repart pas (le coach l'a deja recue).
+      const maintenant = new Date();
+      const pointage = pointageDepuisSeance(profile, donnees, {
+        aujourdhui: todayISO(),
+        heure: String(maintenant.getHours()).padStart(2, "0") + ":" + String(maintenant.getMinutes()).padStart(2, "0")
+      });
+      if (pointage) envoyerEvenement(profile, pointage);
+    }
     setModaleSeance(false);
   };
 
