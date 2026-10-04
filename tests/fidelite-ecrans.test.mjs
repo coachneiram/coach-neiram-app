@@ -191,8 +191,9 @@ describe("les ajouts posterieurs a la bascule restent visibles", () => {
     // Puis de 30 a 32 pour les trois fonctions de motivation demandees par
     // le coach (carte de progres, trophees, mot du coach). Puis a 33 pour
     // l'ajout d'un exercice absent de la bibliotheque depuis celle-ci
-    // (demande du coach du 2 octobre 2026).
-    assert.ok(blocs < 33, `${blocs} blocs de texte nouveau : la couverture se dilue`);
+    // (demande du coach du 2 octobre 2026). Puis a 34 pour l'information
+    // du client quand la synchro coach devient automatique (4 octobre 2026).
+    assert.ok(blocs < 34, `${blocs} blocs de texte nouveau : la couverture se dilue`);
   });
 });
 

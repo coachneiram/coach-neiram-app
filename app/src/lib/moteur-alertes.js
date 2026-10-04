@@ -37,7 +37,20 @@ const SEMAINES_RESUME = 4;
  * alerte qui n'a pas pu partir doit repartir au prochain passage plutot
  * que d'etre marquee comme traitee.
  */
-export async function verifierAlertesCoach({
+export function verifierAlertesCoach(parametres) {
+  // Une evaluation a la fois. L'ecran relance l'evaluation a chaque
+  // changement de profil ou de seances ; sans cette file, une deuxieme
+  // evaluation demarrait avant que la premiere ait note l'alerte comme
+  // envoyee, et le coach recevait la meme alerte plusieurs fois (constate
+  // le 4 octobre 2026 : 4 fois la meme en 25 secondes).
+  const suite = evaluationEnCours.then(() => evaluerAlertes(parametres));
+  evaluationEnCours = suite.catch(() => null);
+  return suite;
+}
+
+let evaluationEnCours = Promise.resolve(null);
+
+async function evaluerAlertes({
   profile,
   seances,
   justifications,

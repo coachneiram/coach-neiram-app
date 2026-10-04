@@ -38,6 +38,7 @@ import {
   verifierRappelNutrition
 } from "./lib/moteur-rappels.js";
 import { verifierAlertesCoach } from "./lib/moteur-alertes.js";
+import { viderFile } from "./lib/synchro-coach.js";
 import { totauxDuJour } from "./lib/score-jour.js";
 import { Coque } from "./ui/Coque.jsx";
 import { ChoixPhoto } from "./ui/ChoixPhoto.jsx";
@@ -383,6 +384,21 @@ export default function App() {
       arrete = true;
     };
   }, [pret, profile, sessions, raisonsCreneaux]);
+
+  /**
+   * Les envois restes en file (hors ligne, proxy ou script indisponible)
+   * repartent a l'ouverture et des que le telephone retrouve le reseau,
+   * sans attendre le prochain pointage.
+   */
+  useEffect(() => {
+    if (!pret || !profile) return;
+    const relancer = () => {
+      viderFile(profile);
+    };
+    relancer();
+    window.addEventListener("online", relancer);
+    return () => window.removeEventListener("online", relancer);
+  }, [pret, profile]);
 
 
   const weekStats = useMemo(

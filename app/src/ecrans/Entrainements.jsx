@@ -112,6 +112,7 @@ export function Entrainements({
             <ConstructeurSeances
               routinesApi={routinesApi}
               sessionsApi={sessionsApi}
+              profile={profile}
               plOn={profile?.goal === "performance"}
               planSemaine={planSemaine}
               onAssignerJour={onAssignerJour}
@@ -132,6 +133,7 @@ export function Entrainements({
       <ConstructeurSeances
         routinesApi={routinesApi}
         sessionsApi={sessionsApi}
+        profile={profile}
         plOn={profile?.goal === "performance"}
         planSemaine={planSemaine}
         onAssignerJour={onAssignerJour}
