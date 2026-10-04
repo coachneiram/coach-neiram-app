@@ -102,6 +102,15 @@ describe("les deux types ajoutes tardivement traversent le proxy", () => {
     assert.equal(versGoogle.pct, 55);
   });
 
+  test("le proxy garde les zeros (0 decale n'est pas une case vide)", async () => {
+    const { versGoogle } = await traverserLeProxy({ ...resumeHebdo(100, 4), shifted: 0, missed: 0 });
+    assert.equal(versGoogle.shifted, 0);
+    assert.equal(versGoogle.missed, 0);
+    const vide = await traverserLeProxy({ type: "pointage", client: "Sophie", dureeMin: "", rpe: "abc" });
+    assert.equal(vide.versGoogle.dureeMin, "");
+    assert.equal(vide.versGoogle.rpe, "");
+  });
+
   test("le proxy conserve les creneaux decales", async () => {
     const { versGoogle } = await traverserLeProxy(alerteDecalages());
     assert.equal(versGoogle.nbDecalages, 3);

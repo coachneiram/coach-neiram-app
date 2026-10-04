@@ -11,7 +11,9 @@
  *   4. Reglages : le champ « lien de synchro » a disparu, une phrase dit au
  *      client ce qui est envoye a son coach ;
  *   5. une seance enregistree depuis le constructeur part au coach comme
- *      pointage (elle n'arrivait jamais dans son Journal).
+ *      pointage (elle n'arrivait jamais dans son Journal) ;
+ *   6. creneaux manques, synchro active : « Prevenir mon coach » reste
+ *      propose et ouvre WhatsApp avec le message pre-ecrit.
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-synchro-auto.mjs
@@ -130,6 +132,53 @@ try {
   );
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
+}
+
+// 6. Synchro active ET creneaux manques : le bouton WhatsApp reste la.
+try {
+  const ctx2 = await nav.newContext(appareil("Pixel 7"));
+  const page2 = await ctx2.newPage();
+  page2.on("pageerror", (e) => erreurs.push(e.message));
+  await page2.route("**/coach-sync", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) })
+  );
+  await page2.addInitScript(() => {
+    window.__ouverts = [];
+    window.open = (url) => {
+      window.__ouverts.push(String(url));
+      return null;
+    };
+    if (localStorage.getItem("coach_profile")) return;
+    // Deux creneaux par semaine, crees il y a longtemps, aucune seance :
+    // plusieurs creneaux manques sur les 14 derniers jours.
+    localStorage.setItem("coach_profile", JSON.stringify({
+      name: "Thomas", sex: "homme", age: 36, heightCm: 180, startWeightKg: 80,
+      activityLevel: "modere", goal: "maintien", sessionsPerWeek: 2,
+      trainingMode: "app", coachingMode: "enligne", dietType: "aucun", allergies: [],
+      slots: [
+        { id: "c1", day: "mon", time: "18:30", place: "", createdAt: "2026-01-01" },
+        { id: "c2", day: "thu", time: "18:30", place: "", createdAt: "2026-01-01" }
+      ]
+    }));
+  });
+  await page2.goto("http://localhost:4661/", { waitUntil: "domcontentloaded" });
+  await page2.waitForTimeout(1200);
+  await page2.getByRole("button", { name: "Séances", exact: true }).first().click();
+  await page2.waitForTimeout(600);
+  const bouton = page2.getByRole("button", { name: /Prévenir mon coach/ });
+  const visible = (await bouton.count()) === 1;
+  if (visible) await bouton.click();
+  await page2.waitForTimeout(300);
+  const ouverts = await page2.evaluate(() => window.__ouverts);
+  console.log(
+    "6. PRÉVENIR MON COACH   :",
+    visible && /^https:\/\/wa\.me\/\d+\?text=.*manqu/.test(ouverts[0] || "")
+      ? "bouton présent malgré la synchro, ouvre WhatsApp avec le message pré-écrit"
+      : `*** bouton ${visible}, ouverts ${JSON.stringify(ouverts)} ***`
+  );
+  await ctx2.close();
+} catch (e) {
+  console.log("ECHEC 6 :", e.message.split("\n")[0]);
 }
 
 console.log("ERREURS JS :", erreurs.length ? JSON.stringify(erreurs) : "aucune");
