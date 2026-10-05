@@ -15,6 +15,888 @@
 
 export const RECETTES_COACH = [
   {
+    "id": "2026-10-05-tofu-brouille-legumes-pain-complet",
+    "semaine": "2026-10-05",
+    "nom": "Tofu brouillé aux légumes et pain complet",
+    "description": "Un petit-déjeuner salé 100 % végétal : tofu doré aux épices, champignons, poivron et épinards, servi sur du pain complet grillé.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "perte",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "soja",
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 10,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Tofu ferme",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Pain complet",
+        "quantite": "100 g (4 tranches)"
+      },
+      {
+        "nom": "Champignons de Paris",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Épinards frais",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (10 g)"
+      },
+      {
+        "nom": "Sauce soja",
+        "quantite": "1 cuillère à soupe (10 g)"
+      },
+      {
+        "nom": "Curcuma, paprika, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Émiette le tofu à la fourchette et fais revenir les champignons et le poivron en dés 5 minutes dans l'huile.",
+      "Ajoute le tofu, le curcuma, le paprika et la sauce soja, puis cuis 4 minutes en remuant.",
+      "Incorpore les épinards 1 minute jusqu'à ce qu'ils tombent.",
+      "Grille le pain complet et sers le tofu brouillé dessus."
+    ],
+    "parPortion": {
+      "kcal": 348,
+      "p": 24,
+      "c": 27,
+      "f": 16,
+      "fibres": 8
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : 2 tranches de pain par portion, légumes à volonté. Prise de masse : 3 tranches de pain et un filet d'huile en plus.",
+    "tags": [
+      "rapide",
+      "economique",
+      "vegetal"
+    ]
+  },
+  {
+    "id": "2026-10-05-chili-sin-carne-haricots-riz-complet",
+    "semaine": "2026-10-05",
+    "nom": "Chili sin carne, haricots et riz complet",
+    "description": "Un chili végétal épicé et rassasiant, parfait en meal-prep : haricots, maïs, poivron, tomates et riz complet pour recharger les réserves.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "ironman",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 30,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Haricots rouges cuits (conserve rincée)",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Haricots noirs cuits (conserve rincée)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Maïs doux",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "800 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Riz complet cuit",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "2 cuillères à soupe (20 g)"
+      },
+      {
+        "nom": "Ail, cumin, piment doux, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais revenir l'oignon et le poivron en dés 5 minutes dans l'huile avec l'ail et les épices.",
+      "Ajoute les tomates concassées, les haricots et le maïs, puis laisse mijoter 25 minutes à feu doux.",
+      "Réchauffe le riz complet et sers-le avec le chili.",
+      "Garde les portions au frais jusqu'à 4 jours dans des boîtes hermétiques."
+    ],
+    "parPortion": {
+      "kcal": 521,
+      "p": 22,
+      "c": 88,
+      "f": 9,
+      "fibres": 19
+    },
+    "moment": "veille-de-course",
+    "adaptations": "Veille de sortie longue : ajoute 100 g de riz cuit par portion. Remise en forme : garde les quantités indiquées avec une salade verte.",
+    "tags": [
+      "meal-prep",
+      "economique",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-10-05-cookies-avoine-banane-chocolat-vegan",
+    "semaine": "2026-10-05",
+    "nom": "Cookies vegan avoine, banane et chocolat",
+    "description": "Des cookies moelleux sans œuf ni beurre, faciles à emporter pour une sortie longue ou un entraînement. Cuits en 12 minutes.",
+    "categorie": "collation",
+    "profils": [
+      "marathon",
+      "hyrox",
+      "ironman"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 6,
+    "preparationMin": 10,
+    "cuissonMin": 12,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Bananes mûres",
+        "quantite": "240 g (2)"
+      },
+      {
+        "nom": "Chocolat noir 70 % (vegan)",
+        "quantite": "50 g"
+      },
+      {
+        "nom": "Farine de blé",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Huile de colza",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Levure chimique, cannelle",
+        "quantite": "1 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 180 °C. Écrase les bananes à la fourchette.",
+      "Mélange la banane, les flocons, la farine, l'huile, la levure et la cannelle, puis ajoute le chocolat en morceaux.",
+      "Forme 12 petits tas sur une plaque recouverte de papier cuisson et aplatis-les légèrement.",
+      "Enfourne 12 minutes, puis laisse refroidir avant de les ranger dans une boîte."
+    ],
+    "parPortion": {
+      "kcal": 212,
+      "p": 5,
+      "c": 30,
+      "f": 8,
+      "fibres": 4
+    },
+    "moment": "pendant-effort",
+    "adaptations": "Sortie longue : 2 cookies par heure d'effort. Version plus légère : 30 g de chocolat.",
+    "tags": [
+      "meal-prep",
+      "repas-d-effort",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-05-poulet-tandoori-riz-basmati-concombre",
+    "semaine": "2026-10-05",
+    "nom": "Poulet tandoori, riz basmati et concombre au yaourt",
+    "description": "Du poulet mariné au yaourt et aux épices, grillé à la poêle, avec du riz basmati et une salade de concombre fraîche. Riche en protéines.",
+    "categorie": "dejeuner",
+    "profils": [
+      "force",
+      "bodybuilding",
+      "prise"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille",
+      "lactose"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 12,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Blanc de poulet",
+        "quantite": "350 g"
+      },
+      {
+        "nom": "Yaourt nature",
+        "quantite": "125 g"
+      },
+      {
+        "nom": "Riz basmati cuit",
+        "quantite": "350 g"
+      },
+      {
+        "nom": "Concombre",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à café bombée (10 g)"
+      },
+      {
+        "nom": "Tandoori masala, citron, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Coupe le poulet en cubes et mélange-le avec la moitié du yaourt, le masala et le jus de citron. Laisse mariner 30 minutes si tu peux.",
+      "Fais dorer le poulet 10 à 12 minutes dans l'huile en le retournant.",
+      "Coupe le concombre en dés et mélange-le avec le reste du yaourt, du sel et du citron.",
+      "Sers le poulet sur le riz basmati chaud avec le concombre au yaourt."
+    ],
+    "parPortion": {
+      "kcal": 498,
+      "p": 48,
+      "c": 54,
+      "f": 10,
+      "fibres": 1
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Sèche : 200 g de riz cuit pour 2 personnes. Prise de masse : 450 g de riz cuit et une cuillère d'huile en plus.",
+    "tags": [
+      "rapide",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-10-05-salade-pommes-de-terre-sardines-haricots-verts",
+    "semaine": "2026-10-05",
+    "nom": "Salade tiède pommes de terre, sardines et haricots verts",
+    "description": "Une salade complète façon niçoise : pommes de terre, haricots verts et sardines en boîte, relevées d'une vinaigrette à la moutarde.",
+    "categorie": "dejeuner",
+    "profils": [
+      "hyrox",
+      "maintien"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "poisson"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 20,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pommes de terre",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Haricots verts",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Sardines au naturel (boîtes égouttées)",
+        "quantite": "190 g"
+      },
+      {
+        "nom": "Salade verte",
+        "quantite": "60 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Moutarde",
+        "quantite": "1 cuillère à café (5 g)"
+      },
+      {
+        "nom": "Échalote, vinaigre, persil, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais cuire les pommes de terre en morceaux 15 minutes à l'eau salée, ajoute les haricots verts pour les 8 dernières minutes, puis égoutte.",
+      "Prépare la vinaigrette avec l'huile, la moutarde, le vinaigre et l'échalote hachée.",
+      "Mélange les légumes tièdes avec la vinaigrette et la salade verte.",
+      "Ajoute les sardines émiettées et le persil, puis sers."
+    ],
+    "parPortion": {
+      "kcal": 425,
+      "p": 28,
+      "c": 40,
+      "f": 17,
+      "fibres": 8
+    },
+    "moment": "quotidien",
+    "adaptations": "Pour plus d'énergie : ajoute 100 g de pommes de terre par portion. Sèche : réduis l'huile à 1 cuillère à café.",
+    "tags": [
+      "economique",
+      "rapide",
+      "omega-3"
+    ]
+  },
+  {
+    "id": "2026-10-05-boeuf-saute-thai-nouilles-de-riz",
+    "semaine": "2026-10-05",
+    "nom": "Bœuf sauté façon thaï et nouilles de riz",
+    "description": "Un wok express : lanières de bœuf, légumes croquants et nouilles de riz, le tout parfumé au gingembre et à la sauce soja.",
+    "categorie": "diner",
+    "profils": [
+      "bodybuilding",
+      "force"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "viande",
+      "soja",
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 10,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Bœuf (rumsteck ou bavette)",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Nouilles de riz cuites",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Carotte",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Brocoli",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Sauce soja",
+        "quantite": "25 g (environ 2 cuillères à soupe)"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à café bombée (10 g)"
+      },
+      {
+        "nom": "Gingembre, ail",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Coupe le bœuf en fines lanières et les légumes en petits morceaux.",
+      "Fais chauffer l'huile dans un wok ou une grande poêle, saisis le bœuf 2 minutes à feu vif et réserve-le.",
+      "Fais sauter les légumes 5 minutes avec le gingembre et l'ail.",
+      "Remets le bœuf, ajoute les nouilles et la sauce soja, mélange 2 minutes et sers aussitôt."
+    ],
+    "parPortion": {
+      "kcal": 470,
+      "p": 38,
+      "c": 48,
+      "f": 14,
+      "fibres": 6
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Sèche : 200 g de nouilles pour 2 personnes. Prise de masse : 450 g de nouilles et une cuillère d'huile en plus.",
+    "tags": [
+      "rapide",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-10-05-shake-prise-banane-avoine-cacahuete",
+    "semaine": "2026-10-05",
+    "nom": "Shake de prise banane, avoine et cacahuète",
+    "description": "Un shake dense à boire après la séance : lait, banane, avoine, beurre de cacahuète et cacao. Environ 700 kcal sans effort de mastication.",
+    "categorie": "collation",
+    "profils": [
+      "prise",
+      "ironman"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "lactose",
+      "arachides"
+    ],
+    "portions": 1,
+    "preparationMin": 5,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Lait demi-écrémé",
+        "quantite": "400 ml"
+      },
+      {
+        "nom": "Banane",
+        "quantite": "120 g (1)"
+      },
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "60 g"
+      },
+      {
+        "nom": "Beurre de cacahuète",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Cacao maigre en poudre",
+        "quantite": "10 g"
+      }
+    ],
+    "etapes": [
+      "Mets tous les ingrédients dans un blender.",
+      "Mixe 1 minute jusqu'à obtenir une texture lisse.",
+      "Bois-le dans les 30 minutes qui suivent la séance."
+    ],
+    "parPortion": {
+      "kcal": 707,
+      "p": 32,
+      "c": 84,
+      "f": 27,
+      "fibres": 13
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Prise de masse difficile : ajoute 20 g de beurre de cacahuète. Version plus légère : lait écrémé et 40 g d'avoine.",
+    "tags": [
+      "rapide",
+      "sans-cuisson",
+      "prise-de-masse"
+    ]
+  },
+  {
+    "id": "2026-10-05-salade-quinoa-feta-concombre-pois-chiches",
+    "semaine": "2026-10-05",
+    "nom": "Salade de quinoa, feta, concombre et pois chiches",
+    "description": "Une salade complète à la grecque, végétarienne et rassasiante, qui se prépare à l'avance pour le déjeuner du bureau.",
+    "categorie": "dejeuner",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "lactose"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Quinoa cuit",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Feta",
+        "quantite": "80 g"
+      },
+      {
+        "nom": "Concombre",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Tomates cerises",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "160 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Citron, menthe, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Coupe le concombre, les tomates cerises et la feta en dés.",
+      "Mélange le quinoa, les pois chiches et les légumes dans un saladier.",
+      "Assaisonne avec l'huile, le citron, la menthe et le sel, puis ajoute la feta.",
+      "Mets au frais 15 minutes avant de servir."
+    ],
+    "parPortion": {
+      "kcal": 461,
+      "p": 20,
+      "c": 48,
+      "f": 21,
+      "fibres": 11
+    },
+    "moment": "quotidien",
+    "adaptations": "Pour perdre du poids : 200 g de quinoa cuit pour 2 personnes. Pour plus d'énergie : 450 g de quinoa cuit.",
+    "tags": [
+      "meal-prep",
+      "sans-cuisson",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-05-pates-bolognaise-boeuf-allegee",
+    "semaine": "2026-10-05",
+    "nom": "Pâtes à la bolognaise allégée",
+    "description": "Une bolognaise maison au bœuf 5 % et aux légumes, servie sur des pâtes : le plat d'énergie par excellence avant ou après une séance lourde.",
+    "categorie": "diner",
+    "profils": [
+      "force",
+      "prise"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "viande",
+      "gluten",
+      "lactose"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 30,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pâtes cuites",
+        "quantite": "800 g"
+      },
+      {
+        "nom": "Bœuf haché 5 % de matière grasse",
+        "quantite": "500 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Carotte",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Emmental râpé",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Ail, basilic, origan, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais revenir l'oignon et la carotte râpée 5 minutes dans l'huile.",
+      "Ajoute le bœuf haché et fais-le dorer 5 minutes en l'émiettant.",
+      "Verse les tomates concassées, ajoute les herbes et laisse mijoter 20 minutes.",
+      "Sers sur les pâtes chaudes avec l'emmental râpé."
+    ],
+    "parPortion": {
+      "kcal": 596,
+      "p": 43,
+      "c": 70,
+      "f": 16,
+      "fibres": 8
+    },
+    "moment": "avant-entrainement",
+    "adaptations": "Sèche : 150 g de pâtes cuites par portion. Prise de masse : 300 g de pâtes cuites par portion.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-05-tajine-poulet-pois-chiches-abricots-semoule",
+    "semaine": "2026-10-05",
+    "nom": "Tajine de poulet, pois chiches et abricots secs",
+    "description": "Un plat mijoté sucré-salé du Maghreb : poulet tendre, pois chiches, carottes et abricots secs, avec de la semoule. Idéal en batch.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "hyrox",
+      "maintien"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille",
+      "gluten"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 40,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Cuisses de poulet désossées sans peau",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Abricots secs",
+        "quantite": "80 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Carotte",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Semoule cuite",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Cannelle, gingembre, cumin, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais dorer le poulet en morceaux 5 minutes dans l'huile, puis réserve-le.",
+      "Fais revenir l'oignon et les carottes en rondelles 5 minutes avec les épices.",
+      "Remets le poulet, ajoute les pois chiches, les abricots et un grand verre d'eau, puis laisse mijoter 30 minutes à couvert.",
+      "Sers sur la semoule chaude."
+    ],
+    "parPortion": {
+      "kcal": 600,
+      "p": 44,
+      "c": 70,
+      "f": 16,
+      "fibres": 13
+    },
+    "moment": "veille-de-course",
+    "adaptations": "Veille de course : 200 g de semoule cuite par portion. Sèche : 100 g de semoule cuite par portion.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-10-05-colin-ratatouille-riz-complet",
+    "semaine": "2026-10-05",
+    "nom": "Colin d'Alaska, ratatouille et riz complet",
+    "description": "Un dîner léger et riche en fibres : poisson blanc maigre poêlé, ratatouille maison et riz complet. Parfait en phase de perte de poids.",
+    "categorie": "diner",
+    "profils": [
+      "perte",
+      "bodybuilding"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "poisson"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 30,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Filets de colin d'Alaska",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Courgette",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Aubergine",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Riz complet cuit",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Herbes de Provence, ail, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Coupe tous les légumes en dés et fais-les revenir 8 minutes dans la moitié de l'huile.",
+      "Ajoute les tomates concassées et les herbes, puis laisse mijoter 20 minutes.",
+      "Poêle le colin 3 minutes par face avec le reste d'huile, du sel et du poivre.",
+      "Sers le poisson sur la ratatouille, avec le riz complet."
+    ],
+    "parPortion": {
+      "kcal": 447,
+      "p": 34,
+      "c": 53,
+      "f": 11,
+      "fibres": 10
+    },
+    "moment": "quotidien",
+    "adaptations": "Sèche : 150 g de riz complet cuit pour 2 personnes. Maintien : 350 g de riz complet cuit.",
+    "tags": [
+      "economique",
+      "meal-prep"
+    ]
+  },
+  {
+    "id": "2026-10-05-bol-fromage-blanc-kiwi-pomme-noix",
+    "semaine": "2026-10-05",
+    "nom": "Bol de fromage blanc, kiwi, pomme et noix",
+    "description": "Un dessert ou une collation protéinée de 5 minutes : fromage blanc 0 %, fruits frais, flocons d'avoine et noix.",
+    "categorie": "dessert",
+    "profils": [
+      "perte",
+      "bodybuilding",
+      "maintien"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "lactose",
+      "gluten",
+      "fruits-a-coque"
+    ],
+    "portions": 1,
+    "preparationMin": 5,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Fromage blanc 0 %",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Kiwi",
+        "quantite": "100 g (1)"
+      },
+      {
+        "nom": "Pomme",
+        "quantite": "100 g (1/2)"
+      },
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "25 g"
+      },
+      {
+        "nom": "Noix",
+        "quantite": "10 g"
+      },
+      {
+        "nom": "Cannelle",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Verse le fromage blanc dans un bol et saupoudre de cannelle.",
+      "Coupe le kiwi et la pomme en dés et dispose-les par-dessus.",
+      "Termine avec les flocons d'avoine et les noix concassées."
+    ],
+    "parPortion": {
+      "kcal": 385,
+      "p": 26,
+      "c": 50,
+      "f": 9,
+      "fibres": 8
+    },
+    "moment": "quotidien",
+    "adaptations": "Sèche : sans flocons d'avoine. Prise : double les flocons et ajoute 10 g de noix.",
+    "tags": [
+      "rapide",
+      "sans-cuisson",
+      "riche-en-proteines"
+    ]
+  },
+  {
     "id": "2026-09-28-filet-mignon-porc-pommes-de-terre-haricots",
     "semaine": "2026-09-28",
     "nom": "Filet mignon de porc, pommes de terre et haricots verts",
