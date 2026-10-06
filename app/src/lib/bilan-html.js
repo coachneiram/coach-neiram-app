@@ -18,6 +18,7 @@ import { fmtDateLong } from "./dates.js";
 import { fmtL } from "./score-jour.js";
 import { GOALS } from "./nutrition.js";
 import { slugNom } from "./sauvegarde.js";
+import { fmtEcart, fmtValeur, pointsMiniCourbe } from "./progression-corps.js";
 
 /** Les trois poses du suivi photo, dans l'ordre d'affichage. */
 export const POSES_BILAN = ["face", "profil", "dos"];
@@ -134,6 +135,38 @@ export function construireBilanHTML({ profile, weekStats, report, photos, target
       )}</div>`
     : "";
 
+  // Progression du corps depuis la premiere mesure (ajout du 6 octobre
+  // 2026) : poids et mensurations, ecart colore dans le sens de l'objectif,
+  // et une mini-courbe en SVG en ligne, lisible sans l'application.
+  const progression = s.progressionCorps;
+  const blocProgression =
+    progression && progression.lignes && progression.lignes.length
+      ? `<h2 style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#F8D040;margin:22px 0 10px">Progression depuis le ${e(
+          fmtDateLong(progression.depuis)
+        )}</h2><div data-progression-bilan style="background:#141416;border:1px solid #28282D;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;color:#F5F5F2;margin-bottom:8px">${e(
+          progression.titre
+        )}</div><table style="width:100%;border-collapse:collapse;font-size:12.5px;color:#F5F5F2"><tr>${[
+          "Mesure",
+          "Départ",
+          "Actuel",
+          "Écart",
+          ""
+        ]
+          .map((t) => `<th style="text-align:left;font-size:10px;font-weight:600;color:#9C9C94;padding:4px 6px">${t}</th>`)
+          .join("")}</tr>${progression.lignes
+          .map((l) => {
+            const couleur = l.sens === "bon" ? "#4ADE80" : "#F8D040";
+            return `<tr style="border-top:1px solid #28282D"><td style="padding:6px">${e(l.label)}</td><td style="padding:6px;color:#9C9C94">${e(
+              fmtValeur(l.depart) + " " + l.unite
+            )}</td><td style="padding:6px">${e(fmtValeur(l.actuel) + " " + l.unite)}</td><td style="padding:6px;font-weight:700;color:${couleur}">${e(
+              fmtEcart(l.ecart)
+            )}</td><td style="padding:6px;width:90px"><svg viewBox="0 0 100 28" width="90" height="24" preserveAspectRatio="none"><polyline points="${pointsMiniCourbe(
+              l.serie.map((x) => x.value)
+            )}" fill="none" stroke="${couleur}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg></td></tr>`;
+          })
+          .join("")}</table>`
+      : "";
+
   const blocNotes =
     (s.sessionNotes && s.sessionNotes.length) || (s.dayNotes && s.dayNotes.length)
       ? `<h2 style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#9C9C94;margin:18px 0 8px">Notes du client</h2><ul style="margin:0;padding-left:18px">${[
@@ -160,7 +193,7 @@ export function construireBilanHTML({ profile, weekStats, report, photos, target
     )} · objectif : ${e(GOALS.find((g) => g.id === profile.goal)?.label || "—")}</div>
   </div>${blocContrat}
   <h2 style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#F8D040;margin:22px 0 10px">Chiffres de la semaine</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">${stats}</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">${stats}</div>${blocProgression}
   ${blocPhotos}
   ${para("Résumé", sec.resume)}
   ${para("Évolution", sec.evolution)}

@@ -9,15 +9,18 @@
  * selon l'ecran consulte.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { fmtDateShort, fmtWeekShort, round, todayISO } from "../lib/dates.js";
 import { MEASUREMENT_FIELDS, ecart, parDateCroissante } from "../lib/mensurations.js";
+import { GRANDEURS_SUIVIES, progressionCorps } from "../lib/progression-corps.js";
+import { serieCorporelle } from "../lib/tendances.js";
 import { Btn, Card, EmptyState, Field, IconBtn, Modal, NumberInput, SectionTitle, TextInput } from "../ui/primitives.jsx";
 import { Courbe } from "../ui/Courbe.jsx";
+import { ProgressionCorps } from "../ui/ProgressionCorps.jsx";
 import { Pencil, Plus, Ruler, Trash2, X } from "../ui/icones.jsx";
 
-export function Mensurations({ api, bodyApi }) {
+export function Mensurations({ api, bodyApi, objectif }) {
   const [modalOuverte, setModalOuverte] = useState(false);
   const [edition, setEdition] = useState(null);
   const [champCourbe, setChampCourbe] = useState("taille");
@@ -25,6 +28,15 @@ export function Mensurations({ api, bodyApi }) {
   const triees = parDateCroissante(api.items);
   const derniere = triees.length ? triees[triees.length - 1] : null;
   const precedente = triees.length > 1 ? triees[triees.length - 2] : null;
+
+  // Ajout du 6 octobre 2026 : le poids s'affiche avec les mesures et a sa
+  // courbe, et la progression depuis la premiere prise vient en tete.
+  const progression = useMemo(
+    () => progressionCorps({ mesures: api.items, corps: bodyApi.items, objectif }),
+    [api.items, bodyApi.items, objectif]
+  );
+  const poidsLe = (prise) => (prise ? bodyApi.getForDate(prise.date)?.weightKg ?? null : null);
+  const valeurDe = (prise, id) => (id === "poids" ? poidsLe(prise) : prise?.[id] ?? null);
 
   // Une nouvelle prise part des dernieres valeurs connues : on ne remesure
   // pas forcement tout a chaque fois, et repartir de zero ferait perdre les
@@ -59,10 +71,16 @@ export function Mensurations({ api, bodyApi }) {
     setModalOuverte(false);
   };
 
-  const donneesCourbe = triees
-    .filter((m) => m[champCourbe] != null)
-    .map((m) => ({ label: fmtWeekShort(m.date), value: m[champCourbe] }));
-  const libelleCourbe = MEASUREMENT_FIELDS.find((f) => f.id === champCourbe)?.label;
+  const serieDuChamp = (champ) =>
+    champ === "poids"
+      ? serieCorporelle(bodyApi.items, "weightKg")
+      : triees.filter((m) => m[champ] != null).map((m) => ({ label: fmtWeekShort(m.date), value: m[champ] }));
+  // Une mesure jamais reprise n'a pas de courbe : on montre alors la
+  // premiere qui en a une, plutot que de cacher toute la carte.
+  const champAffiche =
+    serieDuChamp(champCourbe).length > 1 ? champCourbe : progression.lignes[0]?.id || champCourbe;
+  const donneesCourbe = serieDuChamp(champAffiche);
+  const libelleCourbe = GRANDEURS_SUIVIES.find((f) => f.id === champAffiche)?.label;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -82,6 +100,8 @@ export function Mensurations({ api, bodyApi }) {
         />
       ) : (
         <>
+          <ProgressionCorps progression={progression} choisie={champAffiche} onChoisir={setChampCourbe} />
+
           <Card>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
               <span style={{ fontSize: 12.5, fontWeight: 600, color: COLORS.text }}>
@@ -92,10 +112,10 @@ export function Mensurations({ api, bodyApi }) {
               )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px,1fr))", gap: 8 }}>
-              {MEASUREMENT_FIELDS.map((f) => {
-                const v = derniere[f.id];
+              {GRANDEURS_SUIVIES.map((f) => {
+                const v = valeurDe(derniere, f.id);
                 if (v == null) return null;
-                const delta = ecart(v, precedente?.[f.id]);
+                const delta = ecart(v, valeurDe(precedente, f.id));
                 return (
                   <div
                     key={f.id}
@@ -110,7 +130,7 @@ export function Mensurations({ api, bodyApi }) {
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 3 }}>
                       <span style={{ fontFamily: "Poppins", fontSize: 17, fontWeight: 700, color: COLORS.text }}>
                         {v}
-                        <span style={{ fontSize: 10, color: COLORS.textMuted, marginLeft: 2 }}>cm</span>
+                        <span style={{ fontSize: 10, color: COLORS.textMuted, marginLeft: 2 }}>{f.unite}</span>
                       </span>
                       {delta != null && (
                         <span
@@ -145,7 +165,7 @@ export function Mensurations({ api, bodyApi }) {
               >
                 <SectionTitle>Évolution — {libelleCourbe}</SectionTitle>
                 <select
-                  value={champCourbe}
+                  value={champAffiche}
                   onChange={(e) => setChampCourbe(e.target.value)}
                   style={{
                     background: COLORS.bgAlt,
@@ -156,7 +176,7 @@ export function Mensurations({ api, bodyApi }) {
                     fontSize: 12.5
                   }}
                 >
-                  {MEASUREMENT_FIELDS.map((f) => (
+                  {GRANDEURS_SUIVIES.map((f) => (
                     <option key={f.id} value={f.id}>
                       {f.label}
                     </option>
