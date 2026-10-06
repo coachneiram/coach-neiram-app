@@ -22,6 +22,8 @@ import { serieCorporelle, serieHebdomadaire } from "../lib/tendances.js";
 import { Btn, Card, ProgressRing, SectionTitle, StatChip } from "../ui/primitives.jsx";
 import { Courbe, Histogramme } from "../ui/Courbe.jsx";
 import { BilanSections } from "../ui/BilanSections.jsx";
+import { EvolutionDuMois, ProgressionCorps } from "../ui/ProgressionCorps.jsx";
+import { progressionCorps } from "../lib/progression-corps.js";
 import { Camera, Droplet, Dumbbell, Flame, Footprints, Loader2, Moon, Scale, Share, Sparkles } from "../ui/icones.jsx";
 
 /** Attente et erreur de generation, communes aux deux bilans. */
@@ -164,6 +166,12 @@ export function Tendances({
   const seriePoids = useMemo(() => serieCorporelle(allData.bodyLogs, "weightKg"), [allData.bodyLogs]);
   const serieMuscle = useMemo(() => serieCorporelle(allData.bodyLogs, "muscleKg"), [allData.bodyLogs]);
 
+  // Ajout du 6 octobre 2026 : poids et mensurations depuis la premiere mesure.
+  const progression = useMemo(
+    () => progressionCorps({ mesures: allData.measurements, corps: allData.bodyLogs, objectif: profile.goal }),
+    [allData.measurements, allData.bodyLogs, profile.goal]
+  );
+
   const points = (champ) => serie.map((w) => ({ label: w.label, value: w[champ] }));
 
   const resumeNutrition = useMemo(
@@ -180,6 +188,8 @@ export function Tendances({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <ResumeNutrition resume={resumeNutrition} objectifs={targets} />
+
+      <ProgressionCorps progression={progression} />
 
       <CarteProgres
         allData={allData}
@@ -308,6 +318,7 @@ export function Tendances({
               {monthStats.workoutsCount} séance{monthStats.workoutsCount > 1 ? "s" : ""}
             </span>
           </div>
+          <EvolutionDuMois monthStats={monthStats} />
           {enGenerationMensuelle ? (
             <p style={styleAttente}>
               <Loader2 size={16} /> Génération du bilan mensuel...

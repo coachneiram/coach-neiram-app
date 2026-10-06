@@ -18,6 +18,7 @@ import { fmtRPE } from "./force.js";
 import { moyennesPortions } from "./portions-jour.js";
 import { seriesSemaines } from "./trophees.js";
 import { etatContrat, ligneContratCoach } from "./contrat.js";
+import { progressionCorps } from "./progression-corps.js";
 
 /** Longueur maximale d'une note reprise dans le bilan. */
 const LONGUEUR_NOTE = 140;
@@ -211,6 +212,14 @@ export function bilanHebdomadaire(cleSemaine, donnees, profil, objectifs) {
       const e = etatContrat({ profil, seances: donnees.sessions, date: jourReference });
       return e ? { ligne: ligneContratCoach(e), bientot: Boolean(e.bientot), termine: Boolean(e.termine) } : null;
     })(),
+    // Progression du corps depuis la premiere mesure (ajout du 6 octobre
+    // 2026) : le coach la retrouve dans le bilan envoye le dimanche.
+    progressionCorps: progressionCorps({
+      mesures: donnees.measurements,
+      corps: donnees.bodyLogs,
+      objectif: profil?.goal,
+      jusquA: end
+    }),
     dayNotes,
     sessionNotes,
     pains,

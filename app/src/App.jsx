@@ -403,7 +403,7 @@ export default function App() {
 
   const weekStats = useMemo(
     () => (profile && targets ? bilanHebdomadaire(getWeekKey(todayISO()), donneesCompletes, profile, targets) : null),
-    [profile, targets, sessions, dailyForm, bodyLogs, logEntries]
+    [profile, targets, sessions, dailyForm, bodyLogs, logEntries, measurements]
   );
 
   const monthStats = useMemo(
@@ -525,7 +525,7 @@ export default function App() {
       />
     ),
     sommeil: <Sommeil formApi={formApi} profile={profil} />,
-    mensurations: <Mensurations api={measurementsApi} bodyApi={bodyApi} />,
+    mensurations: <Mensurations api={measurementsApi} bodyApi={bodyApi} objectif={profil?.goal} />,
     entrainements: (
       <Entrainements
         routinesApi={routinesApi}
