@@ -150,3 +150,30 @@ node --test tests/coach-sync-v21.test.mjs tests/chaine-coach.test.mjs
 | Le script refuse tout | Repasser `EXIGER_SECRET` à `false` et publier une nouvelle version |
 | La v2.1 pose souci | Recoller la v2 (copie gardée par le coach) et publier une nouvelle version : l'adresse `/exec` ne change pas |
 | Retour complet | Le tag `v0-legacy-baseline` marque l'état de production d'avant cette phase |
+
+
+## Rappels push (rappels même appli fermée) — ajout du 7 octobre 2026
+
+Le Worker envoie le rappel de créneau (1 h avant) et celui du bilan du dimanche même
+quand l'application est fermée. Il garde, par téléphone, l'adresse de notification
+(anonyme) et l'heure + le texte des rappels des 7 prochains jours. Aucun nom, aucune
+donnée de suivi.
+
+Installation dans Cloudflare (une seule fois, environ 15 minutes) :
+
+1. **Workers & Pages → KV → Create namespace** : nom `coach-neiram-push`.
+2. **Workers & Pages → coach-neiram-proxy → Settings → Bindings → Add → KV namespace** :
+   nom de variable `PUSH_KV`, namespace `coach-neiram-push`. Deploy.
+3. **Settings → Triggers → Cron Triggers → Add** : `*/15 * * * *` (toutes les 15 minutes).
+4. **Edit code** : recoller `coach-neiram-proxy.js`, puis Deploy.
+
+Aucun secret à copier : les clés VAPID (qui signent les notifications) sont créées par
+le Worker à la première demande et gardées dans le KV (clé `vapid`). Les supprimer
+oblige chaque client à réactiver l'option.
+
+Vérifier : dans l'application, Réglages → l'option « Recevoir mes rappels même appli
+fermée » apparaît (elle reste cachée tant que `PUSH_KV` n'est pas lié). Après
+activation, une clé `ab:…` apparaît dans le namespace KV.
+
+Coût : 0 €. Offre gratuite de KV : 100 000 lectures, 1 000 écritures et 1 000 listes par
+jour ; la tâche planifiée fait 96 listes par jour et n'écrit que lorsqu'un rappel part.

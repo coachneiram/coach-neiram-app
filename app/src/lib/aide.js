@@ -47,9 +47,9 @@ export const AIDE = [
         reponse: [
           "Ouvre Réglages et touche « Tester les notifications » : l'appli te dit ce qui bloque.",
           "Sur iPhone : l'appli doit être installée sur l'écran d'accueil et ouverte depuis son icône. Vérifie aussi Réglages de l'iPhone → Notifications → Coach Neiram : « Bannières » et « Centre de notifications » doivent être cochés.",
-          "Les rappels sont calculés par l'appli elle-même : ils partent quand elle est ouverte ou en arrière-plan depuis peu, pas quand elle est complètement fermée."
+          "Pour recevoir le rappel de créneau et celui du bilan même appli fermée, coche « Recevoir mes rappels même appli fermée » dans Réglages. Sans cette option, les rappels ne partent que lorsque l'appli est ouverte ou en arrière-plan depuis peu."
         ],
-        libelles: ["Tester les notifications"]
+        libelles: ["Tester les notifications", "Recevoir mes rappels même appli fermée"]
       },
       {
         id: "changer-telephone",
@@ -237,7 +237,8 @@ export const AIDE = [
         question: "Qui voit mes données ?",
         reponse: [
           "Ton suivi est enregistré sur ton téléphone, nulle part ailleurs. Ton coach reçoit ce que tu lui envoies : ton bilan, et en coaching en ligne tes séances pointées, ton résumé de la semaine et les alertes de séances manquées.",
-          "Les fonctions IA (photo de repas, description, bilan IA) reçoivent ce que tu leur donnes, le temps de l'analyse."
+          "Les fonctions IA (photo de repas, description, bilan IA) reçoivent ce que tu leur donnes, le temps de l'analyse.",
+          "Si tu actives les rappels même appli fermée, le serveur de ton coach garde seulement l'heure et le texte de tes rappels des 7 prochains jours, sans ton nom. Décocher l'option les efface."
         ],
         libelles: []
       },
