@@ -5,15 +5,22 @@
  * services qui demandent un secret. Rien de sensible ne reste dans le
  * navigateur du client.
  *
- * Deux routes :
- *   POST /ai          -> relaie vers Google Gemini avec la cle du coach
- *   POST /coach-sync  -> relaie vers le Google Apps Script avec le secret partage
+ * Routes :
+ *   POST /ai              -> relaie vers Google Gemini avec la cle du coach
+ *   POST /coach-sync      -> relaie vers le Google Apps Script avec le secret partage
+ *   POST /push/cle        -> cle publique des notifications push (VAPID)
+ *   POST /push/abonner    -> enregistre un telephone et ses rappels a venir
+ *   POST /push/desabonner -> l'oublie
+ * Et une tache planifiee (Cron Trigger, toutes les 15 minutes) qui envoie
+ * les rappels arrives a echeance, meme application fermee.
  *
  * Variables a definir dans Cloudflare (Settings > Variables and Secrets) :
  *   GEMINI_API_KEY      (secret)   cle API Google Gemini
  *   COACH_SYNC_URL      (secret)   URL /exec du Google Apps Script
  *   COACH_SYNC_SECRET   (secret)   mot de passe partage avec le script
  *   ALLOWED_ORIGINS     (variable, optionnel) origines autorisees, separees par des virgules
+ *   PUSH_KV             (liaison KV, pour les rappels push) espace de stockage des
+ *                       abonnements ; sans lui, les routes /push repondent 503
  *
  * Note honnete sur ALLOWED_ORIGINS : le controle d'origine n'arrete qu'un
  * navigateur. Un script hors navigateur peut annoncer l'origine qu'il veut.
@@ -37,7 +44,7 @@ const TAILLE_MAX_SYNC = 16 * 1024;       // 16 Ko : un evenement de pointage est
 // constituer une garantie stricte. Pour une limite dure, ajouter le binding
 // Rate Limiting de Cloudflare (gratuit) — voir wrangler.toml.
 const FENETRE_MS = 60 * 1000;
-const MAX_PAR_FENETRE = { ai: 20, sync: 30 };
+const MAX_PAR_FENETRE = { ai: 20, sync: 30, push: 30 };
 const compteurs = new Map();
 
 function tropDeRequetes(cle, categorie) {
@@ -88,8 +95,17 @@ export default {
 
     if (url.pathname === "/ai") return relaiIa(request, env, cors, ip);
     if (url.pathname === "/coach-sync") return relaiCoachSync(request, env, cors, ip);
+    if (url.pathname.startsWith("/push/")) return routePush(url.pathname, request, env, cors, ip);
 
     return reponseJson({ ok: false, error: "not-found" }, 404, cors);
+  },
+
+  /** Cron Trigger : envoie les rappels push arrives a echeance. */
+  async scheduled(evenement, env, ctx) {
+    if (!env.PUSH_KV) return;
+    const tache = envoyerRappelsDus(env, Date.now());
+    if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(tache);
+    await tache;
   }
 };
 
@@ -289,4 +305,279 @@ async function relaiCoachSync(request, env, cors, ip) {
     // Reponse non JSON : on se fie au statut HTTP.
   }
   return reponseJson({ ok }, ok ? 200 : 502, cors);
+}
+
+/* ------------------------------------------------------------------ */
+/* Notifications push (7 octobre 2026)                                  */
+/* ------------------------------------------------------------------ */
+/*
+ * Les rappels de l'application ne partent que quand elle est ouverte : un
+ * telephone met une application web en pause des qu'on la quitte. Pour
+ * qu'un rappel de creneau arrive application fermee, il faut qu'un serveur
+ * l'envoie a l'heure dite. C'est ce que fait cette partie.
+ *
+ * Ce qui est stocke, par telephone (cle « ab: » + empreinte de l'adresse) :
+ *   - l'adresse de notification fournie par Apple ou Google (anonyme) ;
+ *   - les rappels des 7 prochains jours : heure, titre, texte.
+ * Aucun nom, aucune donnee de suivi : l'application calcule les rappels
+ * sur le telephone et n'envoie que leur texte.
+ *
+ * Les cles VAPID (qui prouvent aux services d'Apple et Google que les
+ * notifications viennent bien de nous) sont creees par le Worker lui-meme
+ * a la premiere demande et gardees dans le KV : personne n'a de secret a
+ * copier.
+ */
+
+const PUSH_RAPPELS_MAX = 60;
+const PUSH_HORIZON_MS = 8 * 24 * 3600 * 1000;
+const PUSH_TAILLE_MAX = 32 * 1024;
+const PUSH_TEXTE_MAX = 200;
+const PUSH_SUJET_VAPID = "https://coachneiram.github.io/coach-neiram-app/";
+
+// Seuls les services de notification des navigateurs sont joignables :
+// sans cette liste, le proxy pourrait etre utilise pour appeler n'importe
+// quelle adresse a intervalle regulier.
+const PUSH_HOTES_AUTORISES = [
+  /^fcm\.googleapis\.com$/,
+  /^android\.googleapis\.com$/,
+  /^web\.push\.apple\.com$/,
+  /^updates\.push\.services\.mozilla\.com$/,
+  /^[a-z0-9.-]+\.notify\.windows\.com$/
+];
+
+function b64url(octets) {
+  let bin = "";
+  const t = new Uint8Array(octets);
+  for (let i = 0; i < t.length; i++) bin += String.fromCharCode(t[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function deB64url(texte) {
+  const norme = String(texte).replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(norme + "===".slice((norme.length + 3) % 4));
+  const t = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) t[i] = bin.charCodeAt(i);
+  return t;
+}
+
+function concat(...parties) {
+  const total = parties.reduce((n, p) => n + p.length, 0);
+  const t = new Uint8Array(total);
+  let i = 0;
+  for (const p of parties) {
+    t.set(p, i);
+    i += p.length;
+  }
+  return t;
+}
+
+const texteEnOctets = (t) => new TextEncoder().encode(t);
+
+async function hkdf(sel, ikm, info, longueur) {
+  const cle = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: sel, info }, cle, longueur * 8);
+  return new Uint8Array(bits);
+}
+
+/** Cle privee P-256 a partir de d (32 octets) et du point public (65 octets). */
+function jwkPrive(d, publique) {
+  return { kty: "EC", crv: "P-256", d: b64url(d), x: b64url(publique.slice(1, 33)), y: b64url(publique.slice(33, 65)), ext: true };
+}
+
+/**
+ * Chiffrement d'une notification, RFC 8291 (aes128gcm, un seul bloc).
+ * `ephemere` et `sel` ne sont fournis que par les tests (vecteurs du RFC) ;
+ * en usage normal ils sont tires au hasard a chaque envoi.
+ */
+async function chiffrerWebPush({ texte, p256dh, auth, ephemere = null, sel = null }) {
+  const cleClient = deB64url(p256dh);
+  const secretAuth = deB64url(auth);
+  const salt = sel || crypto.getRandomValues(new Uint8Array(16));
+
+  let privee;
+  let publique;
+  if (ephemere) {
+    publique = deB64url(ephemere.publique);
+    privee = await crypto.subtle.importKey("jwk", jwkPrive(deB64url(ephemere.privee), publique), { name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]);
+  } else {
+    const paire = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+    privee = paire.privateKey;
+    publique = new Uint8Array(await crypto.subtle.exportKey("raw", paire.publicKey));
+  }
+
+  const publiqueClient = await crypto.subtle.importKey("raw", cleClient, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const secretEcdh = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: publiqueClient }, privee, 256));
+
+  const ikm = await hkdf(secretAuth, secretEcdh, concat(texteEnOctets("WebPush: info\0"), cleClient, publique), 32);
+  const cek = await hkdf(salt, ikm, texteEnOctets("Content-Encoding: aes128gcm\0"), 16);
+  const nonce = await hkdf(salt, ikm, texteEnOctets("Content-Encoding: nonce\0"), 12);
+
+  const cleAes = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const clair = concat(texteEnOctets(texte), new Uint8Array([2]));
+  const chiffre = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, cleAes, clair));
+
+  const taille = new Uint8Array([0, 0, 16, 0]); // rs = 4096
+  return concat(salt, taille, new Uint8Array([publique.length]), publique, chiffre);
+}
+
+/** Cles VAPID du Worker : creees une fois, puis relues dans le KV. */
+async function clesVapid(env) {
+  const stockees = await env.PUSH_KV.get("vapid", "json");
+  if (stockees && stockees.jwk && stockees.publique) return stockees;
+  const paire = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", paire.privateKey);
+  const publique = b64url(await crypto.subtle.exportKey("raw", paire.publicKey));
+  await env.PUSH_KV.put("vapid", JSON.stringify({ jwk, publique }));
+  // Relecture : si deux demandes ont cree une paire au meme moment, tout le
+  // monde utilise celle qui est restee dans le KV.
+  return (await env.PUSH_KV.get("vapid", "json")) || { jwk, publique };
+}
+
+async function enTeteVapid(adresse, vapid, maintenant) {
+  const aud = new URL(adresse).origin;
+  const entete = b64url(texteEnOctets(JSON.stringify({ typ: "JWT", alg: "ES256" })));
+  const contenu = b64url(texteEnOctets(JSON.stringify({ aud, exp: Math.floor(maintenant / 1000) + 12 * 3600, sub: PUSH_SUJET_VAPID })));
+  const cle = await crypto.subtle.importKey("jwk", vapid.jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, cle, texteEnOctets(entete + "." + contenu));
+  return `vapid t=${entete}.${contenu}.${b64url(signature)}, k=${vapid.publique}`;
+}
+
+/** Envoie une notification ; rend le statut HTTP du service (0 si injoignable). */
+async function envoyerPush(abonnement, message, vapid, maintenant) {
+  const corps = await chiffrerWebPush({ texte: JSON.stringify(message), p256dh: abonnement.keys.p256dh, auth: abonnement.keys.auth });
+  try {
+    const r = await fetch(abonnement.endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: await enTeteVapid(abonnement.endpoint, vapid, maintenant),
+        "Content-Encoding": "aes128gcm",
+        "Content-Type": "application/octet-stream",
+        TTL: "3600",
+        Urgency: "high"
+      },
+      body: corps
+    });
+    return r.status;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function adresseAutorisee(adresse) {
+  try {
+    const u = new URL(adresse);
+    return u.protocol === "https:" && PUSH_HOTES_AUTORISES.some((m) => m.test(u.hostname));
+  } catch (e) {
+    return false;
+  }
+}
+
+async function empreinte(texte) {
+  const h = await crypto.subtle.digest("SHA-256", texteEnOctets(texte));
+  return b64url(h).slice(0, 32);
+}
+
+/** Abonnement et rappels nettoyes ; null si quelque chose ne va pas. */
+function abonnementPropre(brut, maintenant) {
+  const ab = brut && brut.abonnement;
+  if (!ab || typeof ab.endpoint !== "string" || !adresseAutorisee(ab.endpoint)) return null;
+  const cles = ab.keys || {};
+  if (typeof cles.p256dh !== "string" || typeof cles.auth !== "string") return null;
+  if (cles.p256dh.length > 120 || cles.auth.length > 40) return null;
+  const rappels = (Array.isArray(brut.rappels) ? brut.rappels : [])
+    .map((r) => ({
+      quand: Number(r && r.quand),
+      titre: String((r && r.titre) || "").slice(0, PUSH_TEXTE_MAX),
+      texte: String((r && r.texte) || "").slice(0, PUSH_TEXTE_MAX),
+      tag: String((r && r.tag) || "").slice(0, 60)
+    }))
+    .filter((r) => Number.isFinite(r.quand) && r.quand > maintenant - 15 * 60 * 1000 && r.quand < maintenant + PUSH_HORIZON_MS && r.titre)
+    .sort((a, b) => a.quand - b.quand)
+    .slice(0, PUSH_RAPPELS_MAX);
+  return { abonnement: { endpoint: ab.endpoint, keys: { p256dh: cles.p256dh, auth: cles.auth } }, rappels, majLe: maintenant };
+}
+
+async function routePush(chemin, request, env, cors, ip) {
+  if (!env.PUSH_KV) return reponseJson({ ok: false, error: "push-non-configure" }, 503, cors);
+  if (tropDeRequetes("push:" + ip, "push")) return reponseJson({ ok: false, error: "trop-de-requetes" }, 429, cors);
+
+  let corps = {};
+  try {
+    const brut = await request.text();
+    if (brut.length > PUSH_TAILLE_MAX) return reponseJson({ ok: false, error: "requete-trop-grosse" }, 413, cors);
+    corps = brut ? JSON.parse(brut) : {};
+  } catch (e) {
+    return reponseJson({ ok: false, error: "json-invalide" }, 400, cors);
+  }
+
+  if (chemin === "/push/cle") {
+    const vapid = await clesVapid(env);
+    return reponseJson({ ok: true, cle: vapid.publique }, 200, cors);
+  }
+
+  if (chemin === "/push/abonner") {
+    const propre = abonnementPropre(corps, Date.now());
+    if (!propre) return reponseJson({ ok: false, error: "abonnement-invalide" }, 400, cors);
+    await env.PUSH_KV.put("ab:" + (await empreinte(propre.abonnement.endpoint)), JSON.stringify(propre));
+    return reponseJson({ ok: true, rappels: propre.rappels.length }, 200, cors);
+  }
+
+  if (chemin === "/push/desabonner") {
+    if (typeof corps.endpoint !== "string") return reponseJson({ ok: false, error: "abonnement-invalide" }, 400, cors);
+    await env.PUSH_KV.delete("ab:" + (await empreinte(corps.endpoint)));
+    return reponseJson({ ok: true }, 200, cors);
+  }
+
+  return reponseJson({ ok: false, error: "not-found" }, 404, cors);
+}
+
+/**
+ * Tache planifiee. Pour chaque telephone : envoie les rappels dont l'heure
+ * est passee, les retire, et oublie le telephone si le service repond que
+ * l'abonnement n'existe plus (404 ou 410 : application desinstallee,
+ * notifications coupees). Un rappel en retard de plus d'une heure n'est
+ * pas envoye : « ton creneau commence dans 1 h » deux heures apres n'aide
+ * personne.
+ */
+async function envoyerRappelsDus(env, maintenant) {
+  const bilan = { envoyes: 0, perimes: 0, oublies: 0 };
+  let vapid = null;
+  let curseur;
+  do {
+    const page = await env.PUSH_KV.list({ prefix: "ab:", cursor: curseur });
+    for (const { name } of page.keys) {
+      const fiche = await env.PUSH_KV.get(name, "json");
+      if (!fiche || !Array.isArray(fiche.rappels)) continue;
+      const dus = fiche.rappels.filter((r) => r.quand <= maintenant);
+      if (!dus.length) continue;
+      const restants = fiche.rappels.filter((r) => r.quand > maintenant);
+      let oublier = false;
+      for (const r of dus) {
+        if (maintenant - r.quand > 3600 * 1000) {
+          bilan.perimes++;
+          continue;
+        }
+        vapid = vapid || (await clesVapid(env));
+        const statut = await envoyerPush(fiche.abonnement, { titre: r.titre, texte: r.texte, tag: r.tag }, vapid, maintenant);
+        if (statut === 404 || statut === 410) {
+          oublier = true;
+          break;
+        }
+        if (statut >= 200 && statut < 300) bilan.envoyes++;
+      }
+      if (oublier) {
+        await env.PUSH_KV.delete(name);
+        bilan.oublies++;
+      } else {
+        await env.PUSH_KV.put(name, JSON.stringify({ ...fiche, rappels: restants }));
+      }
+    }
+    curseur = page.list_complete ? undefined : page.cursor;
+  } while (curseur);
+  return bilan;
+}
+
+// Acces des tests aux fonctions internes (sans effet en production).
+if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
+  Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, abonnementPropre, deB64url, b64url });
 }

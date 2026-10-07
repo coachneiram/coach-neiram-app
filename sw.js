@@ -202,6 +202,29 @@ self.addEventListener("activate", (evenement) => {
  * nouvelle. Ajout du 7 octobre 2026 : les rappels passent desormais par
  * le service worker, seul moyen de notifier sur Android et sur un iPhone.
  */
+/*
+ * Rappel push envoye par le Worker (rappel de creneau, bilan du dimanche),
+ * application fermee. Le message est chiffre de bout en bout ; le
+ * navigateur le dechiffre avant de le remettre ici. Un push sans
+ * notification visible est interdit sur iPhone : on en affiche toujours une.
+ */
+self.addEventListener("push", (evenement) => {
+  let donnees = {};
+  try {
+    donnees = evenement.data ? evenement.data.json() : {};
+  } catch (e) {
+    donnees = {};
+  }
+  evenement.waitUntil(
+    self.registration.showNotification(donnees.titre || "Coach Neiram", {
+      body: donnees.texte || "",
+      tag: donnees.tag || undefined,
+      icon: "icon-192.png",
+      badge: "icon-192.png"
+    })
+  );
+});
+
 self.addEventListener("notificationclick", (evenement) => {
   evenement.notification.close();
   evenement.waitUntil(

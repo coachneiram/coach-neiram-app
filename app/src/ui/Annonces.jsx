@@ -6,10 +6,13 @@
  * fait que les montrer.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { afficherNotification } from "../lib/notifier.js";
 import { AIDE } from "../lib/aide.js";
+import { activerPush, desactiverPush, pushActif, serveurPushPret } from "../lib/push.js";
+import { charger } from "../lib/stockage.js";
+import { CLE_BILAN_ENVOYE } from "../lib/rappel-dimanche.js";
 import { Btn, Modal } from "./primitives.jsx";
 
 /* TEXTE-NOUVEAU
@@ -101,6 +104,78 @@ export function TestNotifications() {
           }}
         >
           {MESSAGES_TEST[etat]}
+        </p>
+      )}
+    </div>
+  );
+}
+
+const MESSAGES_PUSH = {
+  actif: "C'est activé : tes prochains rappels arriveront même appli fermée.",
+  refuse: "Autorise d'abord les notifications pour Coach Neiram (bouton « Tester les notifications » ci-dessus).",
+  indisponible:
+    "Ton téléphone ne le permet pas ici. Sur iPhone, installe l'appli sur l'écran d'accueil et ouvre-la depuis son icône.",
+  erreur: "L'activation n'a pas abouti. Vérifie ta connexion, puis réessaie."
+};
+
+/**
+ * Rappels meme appli fermee. L'option n'apparait que si le serveur de
+ * rappels est en place : avant son installation par le coach, rien a
+ * proposer.
+ */
+export function RappelsAppFermee({ profil, seances, enLigne }) {
+  const [pret, setPret] = useState(false);
+  const [actif, setActif] = useState(pushActif);
+  const [etat, setEtat] = useState(null);
+  const [occupe, setOccupe] = useState(false);
+  useEffect(() => {
+    let vivant = true;
+    serveurPushPret().then((ok) => vivant && setPret(ok));
+    return () => {
+      vivant = false;
+    };
+  }, []);
+  if (!pret) return null;
+  const basculer = async (on) => {
+    // La case suit le toucher tout de suite ; elle revient en arriere si
+    // l'activation echoue.
+    setActif(on);
+    setOccupe(true);
+    if (on) {
+      const r = await activerPush({ profil, seances, bilanEnvoye: charger(CLE_BILAN_ENVOYE, null) });
+      setEtat(r);
+      setActif(r === "actif");
+    } else {
+      await desactiverPush();
+      setEtat(null);
+      setActif(false);
+    }
+    setOccupe(false);
+  };
+  return (
+    <div data-rappels-app-fermee style={{ marginTop: 14 }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={actif}
+          disabled={occupe}
+          onChange={(e) => basculer(e.target.checked)}
+          style={{ width: 17, height: 17, accentColor: COLORS.gold }}
+        />
+        <span style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text }}>Recevoir mes rappels même appli fermée</span>
+      </label>
+      <p style={{ fontSize: 10.5, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.5 }}>
+        {enLigne
+          ? "Ton rappel 1 h avant chaque créneau et celui du bilan du dimanche arrivent même si l'appli est fermée."
+          : "Le rappel du bilan du dimanche arrive même si l'appli est fermée."}{" "}
+        Seuls l'heure et le texte des rappels partent au serveur de ton coach, sans ton nom.
+      </p>
+      {etat && (
+        <p
+          data-resultat-push={etat}
+          style={{ fontSize: 11.5, lineHeight: 1.5, margin: "8px 0 0", color: etat === "actif" ? COLORS.good : COLORS.warn }}
+        >
+          {MESSAGES_PUSH[etat]}
         </p>
       )}
     </div>

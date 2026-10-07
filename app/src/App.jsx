@@ -29,6 +29,7 @@ import { messageErreur } from "./lib/ia.js";
 import { redimensionnerPhoto } from "./lib/images.js";
 import {
   PERIODE_VERIFICATION_MS,
+  CLE_BILAN_ENVOYE,
   marquerBilanEnvoye,
   verifierRappelDimanche
 } from "./lib/rappel-dimanche.js";
@@ -54,6 +55,7 @@ import { Tendances } from "./ecrans/Tendances.jsx";
 import { Reglages } from "./ecrans/Reglages.jsx";
 import { Bienvenue } from "./ecrans/Bienvenue.jsx";
 import { Aide, BandeauInstallation, QuoiDeNeuf } from "./ui/Annonces.jsx";
+import { synchroniserPush } from "./lib/push.js";
 import { CLE_INSTALLATION, bandeauInstallationVisible, estInstallee, finMasquage, plateformeInstallation } from "./lib/installation.js";
 import { NOUVEAUTES_MAX, annoncesAutorisees, lireVues, marquerToutVu, nouveautesAMontrer, nouveautesPour } from "./lib/nouveautes.js";
 
@@ -213,6 +215,7 @@ export default function App() {
     });
     if (resultat === "shared" || resultat === "downloaded") {
       marquerBilanEnvoye(weekStats.weekKey);
+      synchroniserPush({ profil: profile, seances: sessions, bilanEnvoye: weekStats.weekKey });
     }
     if (resultat === "downloaded") {
       afficherToast("Rapport téléchargé — envoie le fichier à ton coach (WhatsApp, mail...).");
@@ -478,6 +481,14 @@ export default function App() {
     setNouveautes([]);
   };
 
+  // Rappels push (7 octobre 2026) : a chaque ouverture et a chaque seance
+  // notee, le planning des 7 prochains jours repart au serveur s'il a change
+  // (un creneau pointe n'a plus a etre rappele).
+  useEffect(() => {
+    if (!pret || !profile) return;
+    synchroniserPush({ profil: profile, seances: sessions, bilanEnvoye: charger(CLE_BILAN_ENVOYE, null) });
+  }, [pret, profile, sessions]);
+
   const weekStats = useMemo(
     () => (profile && targets ? bilanHebdomadaire(getWeekKey(todayISO()), donneesCompletes, profile, targets) : null),
     [profile, targets, sessions, dailyForm, bodyLogs, logEntries, measurements]
@@ -731,6 +742,7 @@ export default function App() {
         onClose={() => setReglagesOuverts(false)}
         profile={profil}
         onSave={enregistrerProfil}
+        seances={sessions}
         onOuvrirAide={() => {
           setReglagesOuverts(false);
           setAideOuverte(true);
