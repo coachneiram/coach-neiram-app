@@ -22,10 +22,20 @@ export const CLE_NOUVEAUTES = "cn_nouveautes_vues";
 export const NOUVEAUTES_MAX = 5;
 
 /**
- * Les plus recentes d'abord. `onglet` : ecran ouvert par le bouton.
+ * Les plus recentes d'abord. `onglet` : ecran ouvert par le bouton ;
+ * `ouvre: "aide"` : le bouton ouvre l'Aide.
  * `pour: "enligne"` : annonce reservee aux clients du coaching en ligne.
  */
 export const NOUVEAUTES = [
+  {
+    id: "2026-10-07-aide",
+    date: "2026-10-07",
+    titre: "Une aide dans ton appli",
+    texte:
+      "Réglages → Aide et questions fréquentes : installer l'appli, recevoir tes rappels, changer de téléphone sans rien perdre, noter tes repas plus vite… Tu peux aussi y tester tes notifications.",
+    ouvre: "aide",
+    bouton: "Voir l'aide"
+  },
   {
     id: "2026-10-06-progression",
     date: "2026-10-06",

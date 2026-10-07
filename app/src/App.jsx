@@ -53,7 +53,8 @@ import { Entrainements } from "./ecrans/Entrainements.jsx";
 import { Tendances } from "./ecrans/Tendances.jsx";
 import { Reglages } from "./ecrans/Reglages.jsx";
 import { Bienvenue } from "./ecrans/Bienvenue.jsx";
-import { QuoiDeNeuf } from "./ui/Annonces.jsx";
+import { Aide, BandeauInstallation, QuoiDeNeuf } from "./ui/Annonces.jsx";
+import { CLE_INSTALLATION, bandeauInstallationVisible, estInstallee, finMasquage, plateformeInstallation } from "./lib/installation.js";
 import { NOUVEAUTES_MAX, annoncesAutorisees, lireVues, marquerToutVu, nouveautesAMontrer, nouveautesPour } from "./lib/nouveautes.js";
 
 /** Duree d'affichage d'une notification passagere, en millisecondes. */
@@ -79,6 +80,18 @@ export default function App() {
   const [toast, setToast] = useState(null);
   // « Quoi de neuf » (7 octobre 2026) : annonces non vues, montrees a l'ouverture.
   const [nouveautes, setNouveautes] = useState([]);
+  const [aideOuverte, setAideOuverte] = useState(false);
+  // Bandeau d'installation (7 octobre 2026) : invitation d'Android a
+  // installer, gardee pour le bouton « Installer ».
+  const [invitationInstall, setInvitationInstall] = useState(null);
+  const [plateforme, setPlateforme] = useState("autre");
+  const [installMasqueeJusqua, setInstallMasqueeJusqua] = useState(() => {
+    try {
+      return localStorage.getItem(CLE_INSTALLATION);
+    } catch (e) {
+      return null;
+    }
+  });
 
   /**
    * Panne d'ecriture du stockage.
@@ -417,6 +430,49 @@ export default function App() {
     if (aMontrer.length) setNouveautes((deja) => (deja.length ? deja : aMontrer));
   }, [pret, profile]);
 
+  useEffect(() => {
+    if (!annoncesAutorisees()) return;
+    const calculer = () =>
+      setPlateforme(plateformeInstallation({ userAgent: navigator.userAgent, installee: estInstallee() }));
+    calculer();
+    const surInvitation = (e) => {
+      e.preventDefault();
+      setInvitationInstall(e);
+    };
+    const surInstallee = () => {
+      setInvitationInstall(null);
+      setPlateforme("installee");
+    };
+    window.addEventListener("beforeinstallprompt", surInvitation);
+    window.addEventListener("appinstalled", surInstallee);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", surInvitation);
+      window.removeEventListener("appinstalled", surInstallee);
+    };
+  }, []);
+
+  const masquerInstallation = () => {
+    const fin = finMasquage(todayISO());
+    setInstallMasqueeJusqua(fin);
+    try {
+      localStorage.setItem(CLE_INSTALLATION, fin);
+    } catch (e) {
+      // Stockage refuse : le bandeau reviendra, sans gravite.
+    }
+  };
+
+  const installer = async () => {
+    if (!invitationInstall) return;
+    invitationInstall.prompt();
+    try {
+      const choix = await invitationInstall.userChoice;
+      if (choix && choix.outcome === "accepted") setPlateforme("installee");
+    } catch (e) {
+      // Fenetre fermee : le bandeau reste.
+    }
+    setInvitationInstall(null);
+  };
+
   const fermerNouveautes = () => {
     marquerToutVu();
     setNouveautes([]);
@@ -629,6 +685,14 @@ export default function App() {
         onFermerToast={() => setToast(null)}
         iconeToast={Droplet}
       >
+        {bandeauInstallationVisible({ plateforme, masqueJusqua: installMasqueeJusqua, aujourdhui: todayISO() }) && (
+          <BandeauInstallation
+            plateforme={plateforme}
+            peutProposer={!!invitationInstall}
+            onInstaller={installer}
+            onMasquer={masquerInstallation}
+          />
+        )}
         {ecrans[ongletActif]}
       </Coque>
 
@@ -667,6 +731,10 @@ export default function App() {
         onClose={() => setReglagesOuverts(false)}
         profile={profil}
         onSave={enregistrerProfil}
+        onOuvrirAide={() => {
+          setReglagesOuverts(false);
+          setAideOuverte(true);
+        }}
         onVoirNouveautes={() => {
           setReglagesOuverts(false);
           setNouveautes(nouveautesPour(profil).slice(0, NOUVEAUTES_MAX));
@@ -678,9 +746,12 @@ export default function App() {
         onFermer={fermerNouveautes}
         onVoir={(n) => {
           fermerNouveautes();
-          setOngletActif(n.onglet);
+          if (n.ouvre === "aide") setAideOuverte(true);
+          else setOngletActif(n.onglet);
         }}
       />
+
+      <Aide open={aideOuverte} onClose={() => setAideOuverte(false)} />
     </>
   );
 }
