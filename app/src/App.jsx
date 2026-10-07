@@ -53,6 +53,8 @@ import { Entrainements } from "./ecrans/Entrainements.jsx";
 import { Tendances } from "./ecrans/Tendances.jsx";
 import { Reglages } from "./ecrans/Reglages.jsx";
 import { Bienvenue } from "./ecrans/Bienvenue.jsx";
+import { QuoiDeNeuf } from "./ui/Annonces.jsx";
+import { NOUVEAUTES_MAX, annoncesAutorisees, lireVues, marquerToutVu, nouveautesAMontrer, nouveautesPour } from "./lib/nouveautes.js";
 
 /** Duree d'affichage d'une notification passagere, en millisecondes. */
 const DUREE_TOAST = 5200;
@@ -75,6 +77,8 @@ export default function App() {
   const [ongletActif, setOngletActif] = useState("journal");
   const [reglagesOuverts, setReglagesOuverts] = useState(false);
   const [toast, setToast] = useState(null);
+  // « Quoi de neuf » (7 octobre 2026) : annonces non vues, montrees a l'ouverture.
+  const [nouveautes, setNouveautes] = useState([]);
 
   /**
    * Panne d'ecriture du stockage.
@@ -401,6 +405,23 @@ export default function App() {
   }, [pret, profile]);
 
 
+  useEffect(() => {
+    if (!pret || !annoncesAutorisees()) return;
+    const vues = lireVues();
+    if (!profile) {
+      // Nouvelle installation : tout lui est neuf, rien a annoncer.
+      if (vues === null) marquerToutVu();
+      return;
+    }
+    const aMontrer = nouveautesAMontrer({ vues, profil: profile });
+    if (aMontrer.length) setNouveautes((deja) => (deja.length ? deja : aMontrer));
+  }, [pret, profile]);
+
+  const fermerNouveautes = () => {
+    marquerToutVu();
+    setNouveautes([]);
+  };
+
   const weekStats = useMemo(
     () => (profile && targets ? bilanHebdomadaire(getWeekKey(todayISO()), donneesCompletes, profile, targets) : null),
     [profile, targets, sessions, dailyForm, bodyLogs, logEntries, measurements]
@@ -646,6 +667,19 @@ export default function App() {
         onClose={() => setReglagesOuverts(false)}
         profile={profil}
         onSave={enregistrerProfil}
+        onVoirNouveautes={() => {
+          setReglagesOuverts(false);
+          setNouveautes(nouveautesPour(profil).slice(0, NOUVEAUTES_MAX));
+        }}
+      />
+
+      <QuoiDeNeuf
+        nouveautes={nouveautes}
+        onFermer={fermerNouveautes}
+        onVoir={(n) => {
+          fermerNouveautes();
+          setOngletActif(n.onglet);
+        }}
       />
     </>
   );

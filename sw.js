@@ -196,6 +196,23 @@ self.addEventListener("activate", (evenement) => {
   );
 });
 
+/*
+ * Toucher une notification (rappel, test depuis les reglages) ramene sur
+ * l'application : la fenetre deja ouverte si elle existe, sinon une
+ * nouvelle. Ajout du 7 octobre 2026 : les rappels passent desormais par
+ * le service worker, seul moyen de notifier sur Android et sur un iPhone.
+ */
+self.addEventListener("notificationclick", (evenement) => {
+  evenement.notification.close();
+  evenement.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((fenetres) => {
+      const fenetre = fenetres.find((f) => typeof f.focus === "function");
+      if (fenetre) return fenetre.focus();
+      return self.clients.openWindow ? self.clients.openWindow(self.registration.scope) : undefined;
+    })
+  );
+});
+
 self.addEventListener("fetch", (evenement) => {
   const requete = evenement.request;
   const strategie = strategiePour({

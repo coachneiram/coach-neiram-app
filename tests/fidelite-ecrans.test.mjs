@@ -194,8 +194,10 @@ describe("les ajouts posterieurs a la bascule restent visibles", () => {
     // (demande du coach du 2 octobre 2026). Puis a 34 pour l'information
     // du client quand la synchro coach devient automatique (4 octobre 2026).
     // Puis a 35 pour la progression du corps (poids et mensurations depuis
-    // la premiere mesure), demandee par le coach le 6 octobre 2026.
-    assert.ok(blocs < 35, `${blocs} blocs de texte nouveau : la couverture se dilue`);
+    // la premiere mesure), demandee par le coach le 6 octobre 2026. Puis a
+    // 36 pour la fenetre « Quoi de neuf » et le test des notifications
+    // (7 octobre 2026).
+    assert.ok(blocs < 36, `${blocs} blocs de texte nouveau : la couverture se dilue`);
   });
 });
 

@@ -31,6 +31,7 @@ import { enLigne } from "../lib/semaine.js";
 import { messageErreurRestauration, restaurerDepuisFichier } from "../lib/sauvegarde-fichier.js";
 import { ChampsProfil } from "./ChampsProfil.jsx";
 import { Btn, Field, Modal, SelectInput } from "../ui/primitives.jsx";
+import { LienNouveautes, TestNotifications } from "../ui/Annonces.jsx";
 import { Download, Upload, X } from "../ui/icones.jsx";
 
 /** Reglages des rappels, avec leurs valeurs par defaut d'origine. */
@@ -189,7 +190,7 @@ function mesurerOccupation() {
  */
 const VERSION_APP = typeof __VERSION_APP__ === "string" ? __VERSION_APP__ : "développement";
 
-export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
+export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNouveautes }) {
   const [occupation, setOccupation] = useState(mesurerOccupation);
   const [messageStockage, setMessageStockage] = useState(null);
 
@@ -290,6 +291,10 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
               aide="Une notification 1 h avant ton créneau du jour, si tu ne l'as pas encore pointé."
             />
           )}
+
+          <div style={styleSection}>
+            <TestNotifications />
+          </div>
 
           {/*
            * Le champ « Clé IA » n'apparait que si aucun proxy n'est
@@ -416,6 +421,11 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer }) {
             Version {VERSION_APP}
           </p>
           {/* FIN-TEXTE-NOUVEAU */}
+          {onVoirNouveautes && (
+            <div style={{ textAlign: "center", marginTop: 8 }}>
+              <LienNouveautes onVoir={onVoirNouveautes} />
+            </div>
+          )}
         </>
       )}
     </Modal>
