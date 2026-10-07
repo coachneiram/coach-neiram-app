@@ -50,13 +50,15 @@ describe("les annonces", () => {
       assert.ok(n.titre && n.titre.length <= 45, n.id);
       assert.ok(n.texte && n.texte.length <= 260, n.id + " : texte trop long pour un telephone");
       assert.ok(n.bouton, n.id);
-      assert.ok(onglets.has(n.onglet), n.id + " : ecran inconnu " + n.onglet);
+      assert.ok(n.ouvre === "aide" || onglets.has(n.onglet), n.id + " : ecran inconnu " + n.onglet);
     }
   });
 
-  test("la derniere nouveaute est la progression du corps", () => {
-    assert.equal(NOUVEAUTES[0].id, "2026-10-06-progression");
-    assert.equal(NOUVEAUTES[0].onglet, "mensurations");
+  test("les deux dernieres nouveautes : l'aide, puis la progression du corps", () => {
+    assert.equal(NOUVEAUTES[0].id, "2026-10-07-aide");
+    assert.equal(NOUVEAUTES[0].ouvre, "aide");
+    assert.equal(NOUVEAUTES[1].id, "2026-10-06-progression");
+    assert.equal(NOUVEAUTES[1].onglet, "mensurations");
   });
 });
 
@@ -241,3 +243,87 @@ describe("branchements", () => {
   });
 });
 
+describe("aide", async () => {
+  const { AIDE, toutesLesQuestions } = await import("../app/src/lib/aide.js");
+  const { readdirSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const racine = new URL("../app/src/", import.meta.url).pathname;
+  const sources = [];
+  const parcourir = (d) => {
+    for (const f of readdirSync(d, { withFileTypes: true })) {
+      if (f.isDirectory()) parcourir(join(d, f.name));
+      else if (/\.(jsx?|mjs)$/.test(f.name) && f.name !== "aide.js") sources.push(readFileSync(join(d, f.name), "utf8"));
+    }
+  };
+  parcourir(racine);
+  const code = sources.join("\n");
+
+  test("identifiants uniques, reponses non vides", () => {
+    const ids = toutesLesQuestions().map((q) => q.id);
+    assert.equal(new Set(ids).size, ids.length);
+    assert.ok(ids.length >= 20);
+    for (const q of toutesLesQuestions()) {
+      assert.ok(q.question && q.reponse.length && q.reponse.every((r) => r.length > 20), q.id);
+    }
+  });
+
+  test("chaque bouton cite par une reponse existe encore dans l'application", () => {
+    for (const q of toutesLesQuestions()) {
+      for (const l of q.libelles) assert.ok(code.includes(l), `« ${l} » (question ${q.id}) introuvable dans le code`);
+    }
+  });
+
+  test("les questions des deux guides PDF sont reprises", () => {
+    const ids = new Set(toutesLesQuestions().map((q) => q.id));
+    for (const id of ["mettre-a-jour", "recette-maison", "reprendre-hier", "portions", "dicter", "nutriscore", "resume-semaine", "routine", "serie", "suivi-coach", "trophees", "partager", "recettes-coach", "exercice-perso", "parrainage", "souci"]) {
+      assert.ok(ids.has(id), id);
+    }
+  });
+
+  test("parrainage et paliers de serie suivent les reglages de l'application", async () => {
+    const { PARRAINAGE } = await import("../app/src/lib/carte-progres.js");
+    const { PALIERS_SERIE } = await import("../app/src/lib/resume-semaine.js");
+    const texte = (id) => toutesLesQuestions().find((q) => q.id === id).reponse.join(" ");
+    for (const p of PARRAINAGE.paliers) assert.ok(texte("parrainage").includes(p.gain.toLowerCase()), p.gain);
+    assert.ok(texte("serie").includes(`${PALIERS_SERIE[PALIERS_SERIE.length - 1]} jours`));
+    assert.equal(AIDE.length, 5);
+  });
+});
+
+describe("bandeau d'installation", async () => {
+  const { plateformeInstallation, estInstallee, bandeauInstallationVisible, finMasquage } = await import("../app/src/lib/installation.js");
+  const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Version/17.5 Mobile/15E148 Safari/604.1";
+  const ANDROID = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36";
+  const MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15";
+
+  test("iPhone, Android, ordinateur, deja installee", () => {
+    assert.equal(plateformeInstallation({ userAgent: IPHONE }), "ios");
+    assert.equal(plateformeInstallation({ userAgent: ANDROID }), "android");
+    assert.equal(plateformeInstallation({ userAgent: MAC }), "autre");
+    assert.equal(plateformeInstallation({ userAgent: IPHONE, installee: true }), "installee");
+  });
+
+  test("l'app ouverte depuis son icone est reconnue comme installee", () => {
+    assert.equal(estInstallee({ navigator: { standalone: true } }), true);
+    assert.equal(estInstallee({ navigator: {}, matchMedia: () => ({ matches: true }) }), true);
+    assert.equal(estInstallee({ navigator: {}, matchMedia: () => ({ matches: false }) }), false);
+  });
+
+  test("visible sur telephone non installe, masquable deux semaines", () => {
+    assert.equal(bandeauInstallationVisible({ plateforme: "ios", aujourdhui: "2026-10-07" }), true);
+    assert.equal(bandeauInstallationVisible({ plateforme: "installee", aujourdhui: "2026-10-07" }), false);
+    assert.equal(bandeauInstallationVisible({ plateforme: "autre", aujourdhui: "2026-10-07" }), false);
+    const fin = finMasquage("2026-10-07");
+    assert.equal(fin, "2026-10-21");
+    assert.equal(bandeauInstallationVisible({ plateforme: "android", masqueJusqua: fin, aujourdhui: "2026-10-20" }), false);
+    assert.equal(bandeauInstallationVisible({ plateforme: "android", masqueJusqua: fin, aujourdhui: "2026-10-22" }), true);
+  });
+
+  test("l'aide et le bandeau sont branches", () => {
+    const app = lire("app/src/App.jsx");
+    assert.match(app, /<Aide open=\{aideOuverte\}/);
+    assert.match(app, /<BandeauInstallation/);
+    assert.match(app, /beforeinstallprompt/);
+    assert.match(lire("app/src/ecrans/Reglages.jsx"), /<LienAide onOuvrir=\{onOuvrirAide\} \/>/);
+  });
+});

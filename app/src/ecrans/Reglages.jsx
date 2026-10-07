@@ -31,7 +31,7 @@ import { enLigne } from "../lib/semaine.js";
 import { messageErreurRestauration, restaurerDepuisFichier } from "../lib/sauvegarde-fichier.js";
 import { ChampsProfil } from "./ChampsProfil.jsx";
 import { Btn, Field, Modal, SelectInput } from "../ui/primitives.jsx";
-import { LienNouveautes, TestNotifications } from "../ui/Annonces.jsx";
+import { LienAide, LienNouveautes, TestNotifications } from "../ui/Annonces.jsx";
 import { Download, Upload, X } from "../ui/icones.jsx";
 
 /** Reglages des rappels, avec leurs valeurs par defaut d'origine. */
@@ -190,7 +190,7 @@ function mesurerOccupation() {
  */
 const VERSION_APP = typeof __VERSION_APP__ === "string" ? __VERSION_APP__ : "développement";
 
-export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNouveautes }) {
+export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNouveautes, onOuvrirAide }) {
   const [occupation, setOccupation] = useState(mesurerOccupation);
   const [messageStockage, setMessageStockage] = useState(null);
 
@@ -272,6 +272,7 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
     <Modal open={open} onClose={onClose} title="Réglages" iconeFermer={X}>
       {value && (
         <>
+          {onOuvrirAide && <LienAide onOuvrir={onOuvrirAide} />}
           <ChampsProfil value={value} onChange={setValue} />
 
           <BlocRappel reglage={RAPPELS.hydratation} value={value} set={set} />

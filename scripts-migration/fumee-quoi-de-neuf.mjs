@@ -1,8 +1,9 @@
 /**
  * Fumee : fenetre « Quoi de neuf » et test des notifications (7 octobre 2026).
  *
- *   1. client deja installe : la fenetre s'ouvre, la progression du corps
- *      en tete ; l'annonce de la synchro est reservee au coaching en ligne ;
+ *   1. client deja installe : la fenetre s'ouvre, l'aide puis la
+ *      progression du corps en tete ; l'annonce de la synchro est reservee
+ *      au coaching en ligne ;
  *   2. « Voir mes mesures » ferme la fenetre et ouvre Mesures ;
  *   3. a la reouverture, plus de fenetre ;
  *   4. Reglages → « Revoir les nouveautes » la rouvre ;
@@ -13,7 +14,12 @@
  *      est remise par le service worker ;
  *   8. notifications bloquees : le client sait ou les reactiver ;
  *   9. telephone sans notifications (iPhone hors ecran d'accueil) : le
- *      client sait comment installer l'app.
+ *      client sait comment installer l'app ;
+ *  10. Reglages → « Aide et questions frequentes » : les questions des
+ *      guides, une reponse s'ouvre d'un toucher ;
+ *  11. « Voir l'aide » depuis la fenetre ouvre l'Aide ;
+ *  12. bandeau d'installation : etapes Android, « Plus tard » le masque, y
+ *      compris apres reouverture ; sur iPhone, les etapes de Safari.
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-quoi-de-neuf.mjs
@@ -40,8 +46,8 @@ const URL_APP = "http://localhost:4694/";
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 const erreurs = [];
 
-async function ouvrir({ profil, notifications = "accordees" }) {
-  const ctx = await nav.newContext(appareil("Pixel 7"));
+async function ouvrir({ profil, notifications = "accordees", telephone = "Pixel 7" }) {
+  const ctx = await nav.newContext(appareil(telephone));
   if (notifications === "accordees") await ctx.grantPermissions(["notifications"]);
   const page = await ctx.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
@@ -98,8 +104,8 @@ try {
       : "";
     console.log(
       "1. A L'OUVERTURE        :",
-      ids[0] === "2026-10-06-progression" && ids.length >= 3 && !ids.includes("2026-10-04-synchro") && /Ta progression en courbes/.test(texte)
-        ? `${ids.length} nouveautés, la progression en tête, rien sur la synchro (présentiel)`
+      ids[0] === "2026-10-07-aide" && ids[1] === "2026-10-06-progression" && ids.length >= 3 && !ids.includes("2026-10-04-synchro") && /Ta progression en courbes/.test(texte)
+        ? `${ids.length} nouveautés, l'aide puis la progression en tête, rien sur la synchro (présentiel)`
         : `*** ${JSON.stringify(ids)} ***`
     );
 
@@ -124,7 +130,7 @@ try {
     const revues = await titres(page);
     console.log(
       "4. REVOIR               :",
-      revues[0] === "2026-10-06-progression" ? `fenêtre rouverte depuis les réglages (${revues.length} nouveautés)` : `*** ${JSON.stringify(revues)} ***`
+      revues[0] === "2026-10-07-aide" ? `fenêtre rouverte depuis les réglages (${revues.length} nouveautés)` : `*** ${JSON.stringify(revues)} ***`
     );
     await page.getByRole("button", { name: "C'est noté" }).click();
     await page.waitForTimeout(400);
@@ -144,6 +150,66 @@ try {
         : `*** ${resultat} ${JSON.stringify(remises)} ***`
     );
     await ctx.close();
+  }
+
+  // 10 a 12 : aide et bandeau d'installation.
+  {
+    const { ctx, page } = await ouvrir({ profil: PROFIL });
+    await page.getByRole("button", { name: "Voir l'aide" }).click();
+    await page.waitForTimeout(500);
+    const depuisFenetre = await page.locator("[data-aide]").count();
+    console.log("11. VOIR L'AIDE         :", depuisFenetre === 1 ? "la fenêtre « Quoi de neuf » ouvre l'Aide" : "*** AIDE NON OUVERTE ***");
+    await page.getByRole("button", { name: "Fermer", exact: true }).last().click();
+    await page.waitForTimeout(400);
+
+    await page.locator('button[aria-label="Réglages"]').first().click();
+    await page.waitForTimeout(600);
+    await page.getByRole("button", { name: "Aide et questions fréquentes" }).click();
+    await page.waitForTimeout(600);
+    const nb = await page.locator("[data-question]").count();
+    const q = page.locator('[data-question="changer-telephone"]');
+    await q.locator("summary").click();
+    await page.waitForTimeout(300);
+    const ouverte = await q.evaluate((d) => d.open);
+    const rep = (await q.innerText()).replace(/\s+/g, " ");
+    console.log(
+      "10. AIDE                :",
+      nb >= 20 && ouverte && /Exporter mes données/.test(rep)
+        ? `${nb} questions ; « Je change de téléphone » s'ouvre et cite « Exporter mes données »`
+        : `*** ${nb} questions, ouverte ${ouverte} ***`
+    );
+    await page.getByRole("button", { name: "Fermer", exact: true }).last().click();
+    await page.waitForTimeout(400);
+
+    // La suite complete impose un seul telephone (APPAREIL) a tous les
+    // contextes : on attend les etapes du telephone reellement simule.
+    const attendu = async (p) => (/iPhone|iPad/.test(await p.evaluate(() => navigator.userAgent)) ? "ios" : "android");
+    const etapes = { ios: /Sur l'écran d'accueil/, android: /Installer l'application/ };
+    const attenduA = await attendu(page);
+    const bandeau = page.locator("[data-bandeau-installation]");
+    const plateforme = (await bandeau.count()) ? await bandeau.getAttribute("data-bandeau-installation") : null;
+    const texteB = (await bandeau.count()) ? (await bandeau.innerText()).replace(/\s+/g, " ") : "";
+    await page.getByRole("button", { name: "Plus tard" }).click();
+    await page.waitForTimeout(300);
+    const apresMasque = await bandeau.count();
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(1000);
+    const apresRecharge = await page.locator("[data-bandeau-installation]").count();
+    await ctx.close();
+
+    const iphone = await ouvrir({ profil: PROFIL, telephone: "iPhone 13" });
+    const attenduI = await attendu(iphone.page);
+    const bi = iphone.page.locator("[data-bandeau-installation]");
+    const texteI = (await bi.count()) ? (await bi.innerText()).replace(/\s+/g, " ") : "";
+    const platI = (await bi.count()) ? await bi.getAttribute("data-bandeau-installation") : null;
+    await iphone.ctx.close();
+    console.log(
+      "12. BANDEAU INSTALL.    :",
+      plateforme === attenduA && etapes[attenduA].test(texteB) && apresMasque === 0 && apresRecharge === 0 &&
+        platI === attenduI && etapes[attenduI].test(texteI)
+        ? `étapes ${attenduA === "ios" ? "Safari" : "Chrome"} puis ${attenduI === "ios" ? "Safari" : "Chrome"} selon le téléphone, « Plus tard » tient après réouverture`
+        : `*** ${plateforme} « ${texteB.slice(0, 60)} » masqué ${apresMasque}/${apresRecharge} ; ${platI} « ${texteI.slice(0, 60)} » ***`
+    );
   }
 
   // 5. Client en ligne.
