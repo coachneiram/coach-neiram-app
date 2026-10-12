@@ -43,6 +43,8 @@ import { charger, enregistrer } from "../lib/stockage.js";
 import { envoyerEvenement, pointageDepuisSeance } from "../lib/synchro-coach.js";
 import { CHAMP_RPE } from "../lib/force.js";
 import { ForceAthletique } from "./ForceAthletique.jsx";
+import { ZoneDictee } from "../ui/Dictee.jsx";
+import { completerSeance } from "../lib/dictee-saisie.js";
 import { PlanSemaine } from "./PlanSemaine.jsx";
 import {
   Btn,
@@ -802,6 +804,13 @@ export function ConstructeurSeances({
                 <button onClick={() => setBibliothequeOuverte(true)} style={styleBoutonPointille}>
                   <Search size={14} /> Bibliothèque
                 </button>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <ZoneDictee
+                  type="seance"
+                  exercicesPerso={exercicesPerso.items}
+                  onResultat={(dictee) => setSeanceEditee((sx) => completerSeance(sx, dictee))}
+                />
               </div>
             </Field>
 

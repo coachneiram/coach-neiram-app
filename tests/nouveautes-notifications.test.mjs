@@ -54,11 +54,13 @@ describe("les annonces", () => {
     }
   });
 
-  test("les deux dernieres nouveautes : l'aide, puis la progression du corps", () => {
-    assert.equal(NOUVEAUTES[0].id, "2026-10-07-aide");
-    assert.equal(NOUVEAUTES[0].ouvre, "aide");
-    assert.equal(NOUVEAUTES[1].id, "2026-10-06-progression");
-    assert.equal(NOUVEAUTES[1].onglet, "mensurations");
+  test("les dernieres nouveautes : la dictee, l'aide, puis la progression du corps", () => {
+    assert.equal(NOUVEAUTES[0].id, "2026-10-12-dictee");
+    assert.equal(NOUVEAUTES[0].onglet, "repas");
+    assert.equal(NOUVEAUTES[1].id, "2026-10-07-aide");
+    assert.equal(NOUVEAUTES[1].ouvre, "aide");
+    assert.equal(NOUVEAUTES[2].id, "2026-10-06-progression");
+    assert.equal(NOUVEAUTES[2].onglet, "mensurations");
   });
 });
 

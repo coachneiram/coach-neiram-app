@@ -15,7 +15,7 @@
  * dans une sauvegarde de journal.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { num, round } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
@@ -24,7 +24,7 @@ import { fibresPour, mentionEtat } from "../lib/fibres.js";
 import { ChoixPhoto } from "../ui/ChoixPhoto.jsx";
 import { redimensionnerPhoto } from "../lib/images.js";
 import { analyserDescriptionRepas, analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
-import { completerTexte, demarrerDictee, moteurDictee } from "../lib/dictee.js";
+import { useDictee } from "../ui/Dictee.jsx";
 import { messageErreur } from "../lib/ia.js";
 import { Btn, Field, NumberInput, TextArea, TextInput } from "../ui/primitives.jsx";
 import { Barcode, Camera, Loader2, Search, Sparkles, Star } from "../ui/icones.jsx";
@@ -106,38 +106,12 @@ function BadgesQualite({ produit, detaille = false }) {
  */
 function DescriptionRepas({ onEstimation }) {
   const [texte, setTexte] = useState("");
-  const [ecoute, setEcoute] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState(null);
-  const arreter = useRef(null);
-  const peutDicter = Boolean(moteurDictee());
-
-  // Quitter l'ecran coupe le micro : une ecoute oubliee continuerait sinon.
-  useEffect(() => () => arreter.current && arreter.current(), []);
-
-  const basculerDictee = () => {
-    if (ecoute) {
-      if (arreter.current) arreter.current();
-      return;
-    }
-    setErreur(null);
-    const debut = texte;
-    const stop = demarrerDictee({
-      surTexte: (dicte) => setTexte(completerTexte(debut, dicte)),
-      surErreur: setErreur,
-      surFin: () => {
-        arreter.current = null;
-        setEcoute(false);
-      }
-    });
-    if (stop) {
-      arreter.current = stop;
-      setEcoute(true);
-    }
-  };
+  const { peutDicter, ecoute, basculer: basculerDictee, couper } = useDictee(texte, setTexte, setErreur);
 
   const estimer = async () => {
-    if (arreter.current) arreter.current();
+    couper();
     setEnCours(true);
     setErreur(null);
     try {

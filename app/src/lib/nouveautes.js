@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-12-dictee",
+    date: "2026-10-12",
+    titre: "Dicte tes plats, recettes et séances",
+    texte:
+      "Plus besoin de tout taper : dans Repas, « Dicter un plat » ou « Dicter toute la recette » ; dans une séance, « Dicter ma séance ». Tu parles, l'IA remplit, tu vérifies avant d'enregistrer.",
+    onglet: "repas",
+    bouton: "Essayer"
+  },
+  {
     id: "2026-10-07-aide",
     date: "2026-10-07",
     titre: "Une aide dans ton appli",

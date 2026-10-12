@@ -31,6 +31,12 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { NOUVEAUTES, NOUVEAUTES_MAX } from "../app/src/lib/nouveautes.js";
+
+// L'ordre attendu vient de la liste elle-meme : annoncer une nouveaute
+// (une entree en tete) ne doit pas casser ce script. Client en presentiel :
+// les annonces reservees au coaching en ligne sont exclues.
+const ATTENDUES = NOUVEAUTES.filter((n) => !n.pour).slice(0, NOUVEAUTES_MAX).map((n) => n.id);
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "app", "dist");
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png" };
@@ -104,8 +110,8 @@ try {
       : "";
     console.log(
       "1. A L'OUVERTURE        :",
-      ids[0] === "2026-10-07-aide" && ids[1] === "2026-10-06-progression" && ids.length >= 3 && !ids.includes("2026-10-04-synchro") && /Ta progression en courbes/.test(texte)
-        ? `${ids.length} nouveautés, l'aide puis la progression en tête, rien sur la synchro (présentiel)`
+      JSON.stringify(ids) === JSON.stringify(ATTENDUES) && !ids.includes("2026-10-04-synchro") && texte.includes(NOUVEAUTES[0].titre)
+        ? `${ids.length} nouveautés, la plus récente en tête (${ids[0]}), rien sur la synchro (présentiel)`
         : `*** ${JSON.stringify(ids)} ***`
     );
 
@@ -130,7 +136,7 @@ try {
     const revues = await titres(page);
     console.log(
       "4. REVOIR               :",
-      revues[0] === "2026-10-07-aide" ? `fenêtre rouverte depuis les réglages (${revues.length} nouveautés)` : `*** ${JSON.stringify(revues)} ***`
+      revues[0] === ATTENDUES[0] ? `fenêtre rouverte depuis les réglages (${revues.length} nouveautés)` : `*** ${JSON.stringify(revues)} ***`
     );
     await page.getByRole("button", { name: "C'est noté" }).click();
     await page.waitForTimeout(400);
