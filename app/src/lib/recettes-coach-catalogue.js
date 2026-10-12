@@ -15,6 +15,838 @@
 
 export const RECETTES_COACH = [
   {
+    "id": "2026-10-12-overnight-chia-soja-framboises",
+    "semaine": "2026-10-12",
+    "nom": "Overnight chia, avoine, lait de soja et framboises",
+    "description": "Un petit-déjeuner froid préparé la veille : chia, avoine, lait de soja et framboises. Zéro cuisson, riche en fibres, 100 % végétal.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "remise-en-forme",
+      "maintien"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "soja",
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Graines de chia",
+        "quantite": "40 g (4 cuillères à soupe)"
+      },
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Lait de soja nature",
+        "quantite": "300 ml"
+      },
+      {
+        "nom": "Framboises (fraîches ou surgelées)",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Graines de courge",
+        "quantite": "20 g"
+      },
+      {
+        "nom": "Cannelle",
+        "quantite": "1 pincée"
+      }
+    ],
+    "etapes": [
+      "Mélange le chia, l'avoine, le lait de soja et la cannelle dans un bocal ou un bol.",
+      "Ferme et place au frais toute la nuit, au minimum 4 heures.",
+      "Le matin, remue, répartis dans deux bols et ajoute les framboises et les graines de courge."
+    ],
+    "parPortion": {
+      "kcal": 271,
+      "p": 15,
+      "c": 19,
+      "f": 15,
+      "fibres": 15
+    },
+    "moment": "quotidien",
+    "adaptations": "Remise en forme : garde les quantités indiquées. Maintien : ajoute une banane en rondelles par portion.",
+    "tags": [
+      "sans-cuisson",
+      "rapide",
+      "economique",
+      "vegetal"
+    ]
+  },
+  {
+    "id": "2026-10-12-boulettes-pois-chiches-spaghetti-complets",
+    "semaine": "2026-10-12",
+    "nom": "Boulettes de pois chiches, sauce tomate et spaghetti complets",
+    "description": "Des boulettes végétales dorées au four, nappées de sauce tomate, avec des spaghetti complets. Un plat de glucides pour recharger avant une grosse sortie.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "ironman",
+      "prise"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 4,
+    "preparationMin": 20,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "480 g"
+      },
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "60 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "2 cuillères à soupe (20 g)"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Spaghetti complets cuits",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Ail, cumin, persil, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 200 °C. Mixe grossièrement les pois chiches avec l'avoine, la moitié de l'oignon, l'ail, le cumin et le sel.",
+      "Forme 16 boulettes, dépose-les sur une plaque et enfourne 20 minutes en les retournant à mi-cuisson.",
+      "Pendant ce temps, fais revenir le reste d'oignon dans l'huile, ajoute les tomates et laisse mijoter 15 minutes.",
+      "Sers les boulettes sur les spaghetti cuits, nappés de sauce."
+    ],
+    "parPortion": {
+      "kcal": 471,
+      "p": 21,
+      "c": 72,
+      "f": 11,
+      "fibres": 18
+    },
+    "moment": "veille-de-course",
+    "adaptations": "Veille de sortie longue : ajoute 100 g de spaghetti cuits par portion. Prise de masse : ajoute un filet d'huile d'olive et 100 g de pâtes par portion.",
+    "tags": [
+      "meal-prep",
+      "economique",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-10-12-bol-edamame-avocat-riz",
+    "semaine": "2026-10-12",
+    "nom": "Bol d'edamame, avocat, carottes et riz basmati",
+    "description": "Un bol vegan façon poke : edamame, avocat, carotte et chou rouge croquants sur du riz basmati, assaisonné soja-citron. Prêt en 15 minutes.",
+    "categorie": "dejeuner",
+    "profils": [
+      "perte",
+      "bodybuilding"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "soja",
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Edamame décortiqués (surgelés, décongelés)",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Riz basmati cuit",
+        "quantite": "280 g"
+      },
+      {
+        "nom": "Avocat",
+        "quantite": "100 g (1/2)"
+      },
+      {
+        "nom": "Carotte râpée",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Chou rouge émincé",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Sauce soja",
+        "quantite": "2 cuillères à café (20 g)"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à café (10 g)"
+      },
+      {
+        "nom": "Jus de citron",
+        "quantite": "1 citron"
+      }
+    ],
+    "etapes": [
+      "Mélange la sauce soja, l'huile et le jus de citron dans un petit bol.",
+      "Répartis le riz dans deux bols, puis dispose l'edamame, l'avocat en tranches, la carotte et le chou rouge.",
+      "Arrose de sauce juste avant de manger."
+    ],
+    "parPortion": {
+      "kcal": 481,
+      "p": 19,
+      "c": 54,
+      "f": 21,
+      "fibres": 12
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : 100 g de riz cuit par portion et légumes à volonté. Bodybuilding : ajoute 50 g d'edamame et 100 g de riz en prise de masse.",
+    "tags": [
+      "rapide",
+      "sans-cuisson",
+      "meal-prep"
+    ]
+  },
+  {
+    "id": "2026-10-12-brochettes-poulet-citron-semoule",
+    "semaine": "2026-10-12",
+    "nom": "Brochettes de poulet citron-thym, semoule et courgettes",
+    "description": "Des brochettes de poulet marinées au citron et au thym, grillées à la poêle, avec de la semoule et des courgettes. Protéines et glucides pour l'effort.",
+    "categorie": "dejeuner",
+    "profils": [
+      "hyrox",
+      "force"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille",
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 12,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Blanc de poulet",
+        "quantite": "320 g"
+      },
+      {
+        "nom": "Semoule cuite",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Courgettes",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Jus de citron",
+        "quantite": "1 citron"
+      },
+      {
+        "nom": "Thym, ail, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Coupe le poulet en cubes et fais-le mariner 10 minutes avec le citron, la moitié de l'huile, le thym et l'ail.",
+      "Enfile le poulet sur des piques et fais-le dorer 8 à 10 minutes à la poêle en le retournant.",
+      "Fais sauter les courgettes en rondelles 5 minutes dans le reste d'huile.",
+      "Sers avec la semoule chaude."
+    ],
+    "parPortion": {
+      "kcal": 432,
+      "p": 43,
+      "c": 38,
+      "f": 12,
+      "fibres": 4
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Hyrox : ajoute 100 g de semoule cuite par portion avant une séance longue. Force : passe à 150 g de poulet par portion.",
+    "tags": [
+      "rapide",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-10-12-steak-hache-patate-douce-petits-pois",
+    "semaine": "2026-10-12",
+    "nom": "Steak haché maison, purée de patate douce et petits pois",
+    "description": "Des steaks de bœuf maigre faits maison, une purée de patate douce et des petits pois. Un repas dense en protéines, simple et économique.",
+    "categorie": "diner",
+    "profils": [
+      "prise",
+      "bodybuilding"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "viande"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 20,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Bœuf haché 5 % de matière grasse",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Patate douce",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Petits pois surgelés",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à café (10 g)"
+      },
+      {
+        "nom": "Oignon, paprika, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Épluche la patate douce, coupe-la en cubes et fais-la cuire 15 minutes à l'eau, puis écrase-la en purée.",
+      "Mélange le bœuf avec l'oignon haché et les épices, forme deux steaks et fais-les cuire 4 minutes par face à la poêle huilée.",
+      "Fais cuire les petits pois 5 minutes à l'eau bouillante.",
+      "Sers les steaks avec la purée et les petits pois."
+    ],
+    "parPortion": {
+      "kcal": 478,
+      "p": 39,
+      "c": 49,
+      "f": 14,
+      "fibres": 12
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Prise de masse : ajoute 100 g de purée et un filet d'huile d'olive par portion. Sèche : réduis la purée à 150 g par portion.",
+    "tags": [
+      "economique",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-10-12-saumon-four-quinoa-brocoli",
+    "semaine": "2026-10-12",
+    "nom": "Saumon au four, quinoa et brocoli",
+    "description": "Un pavé de saumon rôti au citron, du quinoa et du brocoli vapeur. Riche en oméga-3 et en protéines, prêt en 25 minutes avec très peu de vaisselle.",
+    "categorie": "diner",
+    "profils": [
+      "maintien",
+      "perte"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "poisson"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 15,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pavés de saumon",
+        "quantite": "300 g (2)"
+      },
+      {
+        "nom": "Quinoa cuit",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Brocoli",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à café (10 g)"
+      },
+      {
+        "nom": "Citron",
+        "quantite": "1"
+      },
+      {
+        "nom": "Aneth, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 200 °C. Dépose les pavés sur une plaque avec l'huile, le jus de citron, l'aneth, le sel et le poivre.",
+      "Enfourne 12 à 15 minutes selon l'épaisseur.",
+      "Fais cuire le brocoli 6 minutes à la vapeur.",
+      "Sers le saumon avec le quinoa chaud et le brocoli."
+    ],
+    "parPortion": {
+      "kcal": 526,
+      "p": 41,
+      "c": 32,
+      "f": 26,
+      "fibres": 9
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : 150 g de quinoa cuit par portion et brocoli à volonté. Maintien : garde les quantités indiquées.",
+    "tags": [
+      "rapide",
+      "sans-friture"
+    ]
+  },
+  {
+    "id": "2026-10-12-risotto-poulet-champignons",
+    "semaine": "2026-10-12",
+    "nom": "Risotto au poulet et aux champignons",
+    "description": "Un risotto crémeux au poulet et aux champignons, digeste et riche en glucides. Idéal la veille d'une course ou d'une grosse sortie.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "ironman"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille",
+      "lactose"
+    ],
+    "portions": 3,
+    "preparationMin": 10,
+    "cuissonMin": 25,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Riz rond ou arborio",
+        "quantite": "210 g"
+      },
+      {
+        "nom": "Blanc de poulet",
+        "quantite": "360 g"
+      },
+      {
+        "nom": "Champignons de Paris",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "80 g"
+      },
+      {
+        "nom": "Parmesan râpé",
+        "quantite": "45 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "2 cuillères à soupe (20 g)"
+      },
+      {
+        "nom": "Bouillon de légumes chaud",
+        "quantite": "700 ml"
+      }
+    ],
+    "etapes": [
+      "Fais dorer le poulet en dés 5 minutes dans l'huile, puis réserve-le.",
+      "Fais revenir l'oignon et les champignons 4 minutes, ajoute le riz et remue 1 minute.",
+      "Verse le bouillon louche par louche en remuant, pendant 18 minutes environ.",
+      "Remets le poulet, ajoute le parmesan, mélange et sers aussitôt."
+    ],
+    "parPortion": {
+      "kcal": 514,
+      "p": 39,
+      "c": 58,
+      "f": 14,
+      "fibres": 3
+    },
+    "moment": "veille-de-course",
+    "adaptations": "Veille de course : ajoute 50 g de riz cru par portion et réduis le parmesan pour alléger la digestion. Ironman : ajoute une cuillère d'huile d'olive par portion.",
+    "tags": [
+      "repas-d-effort",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-10-12-sandwichs-banane-miel",
+    "semaine": "2026-10-12",
+    "nom": "Petits sandwichs banane-miel pour l'effort",
+    "description": "Des mini-sandwichs banane-miel faciles à emporter et à digérer pendant une sortie longue ou une course. Des glucides rapides, sans cuisson.",
+    "categorie": "collation",
+    "profils": [
+      "ironman",
+      "marathon",
+      "hyrox"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "miel"
+    ],
+    "portions": 4,
+    "preparationMin": 10,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pain de mie complet",
+        "quantite": "200 g (8 tranches)"
+      },
+      {
+        "nom": "Bananes mûres",
+        "quantite": "360 g (3)"
+      },
+      {
+        "nom": "Miel",
+        "quantite": "40 g (2 cuillères à soupe)"
+      }
+    ],
+    "etapes": [
+      "Écrase les bananes à la fourchette avec le miel.",
+      "Étale la préparation sur quatre tranches, couvre avec les quatre autres et coupe en deux triangles.",
+      "Emballe chaque portion dans du papier alu ou un sachet de congélation."
+    ],
+    "parPortion": {
+      "kcal": 230,
+      "p": 6,
+      "c": 47,
+      "f": 2,
+      "fibres": 5
+    },
+    "moment": "pendant-effort",
+    "adaptations": "Sortie longue : 1 sandwich par heure d'effort, avec de l'eau. Ironman : ajoute 1 sandwich par portion sur les sorties de plus de 3 heures.",
+    "tags": [
+      "sans-cuisson",
+      "repas-d-effort",
+      "rapide",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-12-pudding-riz-pommes",
+    "semaine": "2026-10-12",
+    "nom": "Pudding de riz au lait et pommes",
+    "description": "Un dessert de riz au lait mijoté avec des pommes et de la cannelle. Doux, économique, pour recharger les glucides après l'entraînement.",
+    "categorie": "dessert",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "lactose"
+    ],
+    "portions": 4,
+    "preparationMin": 10,
+    "cuissonMin": 35,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Riz rond",
+        "quantite": "160 g"
+      },
+      {
+        "nom": "Lait demi-écrémé",
+        "quantite": "800 ml"
+      },
+      {
+        "nom": "Pommes",
+        "quantite": "300 g (2)"
+      },
+      {
+        "nom": "Sucre",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Cannelle",
+        "quantite": "1 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Fais chauffer le lait avec le sucre et la cannelle, puis verse le riz.",
+      "Laisse cuire 25 minutes à feu doux en remuant souvent.",
+      "Ajoute les pommes en petits dés et poursuis 8 minutes.",
+      "Sers tiède ou froid."
+    ],
+    "parPortion": {
+      "kcal": 320,
+      "p": 10,
+      "c": 61,
+      "f": 4,
+      "fibres": 2
+    },
+    "moment": "recuperation",
+    "adaptations": "Remise en forme : une portion en dessert, sans ajout de sucre. Maintien : ajoute un yaourt nature en accompagnement.",
+    "tags": [
+      "economique",
+      "familial",
+      "meal-prep"
+    ]
+  },
+  {
+    "id": "2026-10-12-bento-poulet-teriyaki-oeuf-riz",
+    "semaine": "2026-10-12",
+    "nom": "Bento de poulet teriyaki, œufs durs et riz",
+    "description": "Un bol complet façon bento : poulet laqué soja-sucre, œufs durs, brocoli et riz. Énergie et protéines pour les séances de force.",
+    "categorie": "dejeuner",
+    "profils": [
+      "force",
+      "bodybuilding"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille",
+      "oeufs",
+      "soja",
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 15,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Riz blanc cuit",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Blanc de poulet",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "4 (200 g)"
+      },
+      {
+        "nom": "Brocoli",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Sauce soja",
+        "quantite": "2 cuillères à soupe (30 g)"
+      },
+      {
+        "nom": "Sucre",
+        "quantite": "2 cuillères à café (10 g)"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à café (10 g)"
+      },
+      {
+        "nom": "Gingembre, ail",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Plonge les œufs 9 minutes dans l'eau bouillante, puis refroidis-les et écale-les.",
+      "Coupe le poulet en lanières et fais-le dorer 6 minutes dans l'huile.",
+      "Ajoute la sauce soja, le sucre, le gingembre et l'ail, et laisse caraméliser 2 minutes.",
+      "Fais cuire le brocoli 5 minutes à la vapeur.",
+      "Répartis le riz, le poulet, le brocoli et les œufs coupés en deux dans deux boîtes."
+    ],
+    "parPortion": {
+      "kcal": 647,
+      "p": 55,
+      "c": 64,
+      "f": 19,
+      "fibres": 4
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Force : ajoute 100 g de riz cuit par portion les jours de grosse séance. Bodybuilding : garde les quantités, retire un œuf en sèche.",
+    "tags": [
+      "meal-prep",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-10-12-pancakes-avoine-fromage-blanc-banane",
+    "semaine": "2026-10-12",
+    "nom": "Pancakes d'avoine, fromage blanc et banane",
+    "description": "Des pancakes moelleux à l'avoine, à la banane et au fromage blanc. Un petit-déjeuner protéiné et calorique, prêt en 15 minutes.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "prise",
+      "force"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "oeufs",
+      "lactose"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 10,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "2 (110 g)"
+      },
+      {
+        "nom": "Fromage blanc 0 %",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Banane mûre",
+        "quantite": "150 g (1)"
+      },
+      {
+        "nom": "Huile de colza",
+        "quantite": "1 cuillère à café (10 g)"
+      },
+      {
+        "nom": "Levure chimique, cannelle",
+        "quantite": "1 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Mixe l'avoine, les œufs, la moitié du fromage blanc, la levure et la moitié de la banane jusqu'à obtenir une pâte lisse.",
+      "Fais cuire des petites louches 2 minutes par face dans une poêle huilée.",
+      "Sers avec le reste de fromage blanc et la banane en rondelles."
+    ],
+    "parPortion": {
+      "kcal": 422,
+      "p": 24,
+      "c": 50,
+      "f": 14,
+      "fibres": 7
+    },
+    "moment": "quotidien",
+    "adaptations": "Prise de masse : ajoute une cuillère de beurre de cacahuète par portion et une seconde banane. Force : garde les quantités et ajoute un fruit.",
+    "tags": [
+      "rapide",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-12-houmous-crudites-pita",
+    "semaine": "2026-10-12",
+    "nom": "Houmous maison, crudités et pita",
+    "description": "Un houmous crémeux fait en 10 minutes avec des pois chiches, servi avec des bâtonnets de légumes et du pain pita. Une collation végétale rassasiante.",
+    "categorie": "collation",
+    "profils": [
+      "perte",
+      "maintien"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 4,
+    "preparationMin": 10,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Jus de citron",
+        "quantite": "2 citrons"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "3 cuillères à soupe (30 g)"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Concombre",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Pain pita",
+        "quantite": "120 g (2)"
+      },
+      {
+        "nom": "Ail, cumin, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Mixe les pois chiches avec le jus de citron, l'huile, l'ail, le cumin, le sel et 4 cuillères à soupe d'eau jusqu'à obtenir une crème lisse.",
+      "Coupe les carottes, le concombre et le poivron en bâtonnets, et le pita en triangles.",
+      "Sers le houmous avec les crudités et le pita."
+    ],
+    "parPortion": {
+      "kcal": 295,
+      "p": 11,
+      "c": 38,
+      "f": 11,
+      "fibres": 10
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : 1/2 pita par portion et crudités à volonté. Maintien : 1 pita entier par portion.",
+    "tags": [
+      "sans-cuisson",
+      "rapide",
+      "economique",
+      "vegetal"
+    ]
+  },
+  {
     "id": "2026-10-05-tofu-brouille-legumes-pain-complet",
     "semaine": "2026-10-05",
     "nom": "Tofu brouillé aux légumes et pain complet",
