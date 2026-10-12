@@ -34,6 +34,8 @@ import { Camera, Pencil, Plus, Trash2, UtensilsCrossed, X } from "../ui/icones.j
 import { RechercheAliment } from "./RechercheAliment.jsx";
 import { Recettes } from "./Recettes.jsx";
 import { RecettesCoach } from "./RecettesCoach.jsx";
+import { ZoneDictee } from "../ui/Dictee.jsx";
+import { platDepuisEstimation } from "../lib/dictee-saisie.js";
 
 export function Plats({ api, habitudePesee, profile }) {
   // Une recette du coach ajoutee doit apparaitre tout de suite dans « Mes
@@ -60,6 +62,12 @@ export function Plats({ api, habitudePesee, profile }) {
 
   const nouveau = () => {
     setEdition({ id: null, name: "", calories: "", protein: "", carbs: "", fat: "" });
+    setModalOuverte(true);
+  };
+
+  // Plat dicte : la fiche s'ouvre remplie, le client verifie et enregistre.
+  const dicte = (estimation) => {
+    setEdition(platDepuisEstimation(estimation));
     setModalOuverte(true);
   };
 
@@ -112,6 +120,8 @@ export function Plats({ api, habitudePesee, profile }) {
       >
         Importer un aliment — recherche, photo IA ou code-barres
       </Btn>
+
+      <ZoneDictee type="plat" onResultat={dicte} />
 
       <Recettes key={versionRecettes} habitudePesee={habitudePesee} />
 

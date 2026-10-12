@@ -118,6 +118,16 @@ export const AIDE = [
         libelles: ["Décrire", "Dicter", "Estimer avec l'IA"]
       },
       {
+        id: "dicter-recette-seance",
+        question: "Puis-je dicter un plat, une recette ou une séance ?",
+        reponse: [
+          "Oui. Onglet Repas : « Dicter un plat » pour un plat habituel, ou « Nouvelle recette » puis « Dicter toute la recette » (nom, nombre de parts, ingrédients avec leurs quantités).",
+          "Pour une séance : ouvre ta séance du jour, puis « Dicter ma séance » sous les exercices. Dis chaque exercice avec ses séries, ses répétitions et sa charge. Un exercice déjà dans la séance est mis à jour, pas doublé.",
+          "Touche « Remplir avec l'IA », puis vérifie les champs : rien n'est enregistré tant que tu n'as pas validé. Tu peux dicter en plusieurs fois, chaque dictée s'ajoute au texte."
+        ],
+        libelles: ["Dicter un plat", "Dicter toute la recette", "Dicter ma séance", "Remplir avec l'IA"]
+      },
+      {
         id: "nutriscore",
         question: "Que veulent dire le Nutri-Score et NOVA ?",
         reponse: [

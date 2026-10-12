@@ -71,8 +71,11 @@ export function messageErreurDictee(code) {
  */
 export const DELAIS_DICTEE = { SIGNE_DE_VIE: 15000, DUREE_MAX: 45000, ARRET: 2000 };
 
+// Le message ne nomme plus le bouton « Estimer avec l'IA » : depuis le
+// 12 octobre 2026, la meme dictee sert aussi aux plats, recettes et
+// seances, ou le bouton s'appelle « Remplir avec l'IA ».
 export const MSG_DICTEE_MUETTE =
-  "La dictée ne répond pas sur ce navigateur. Touche le micro de ton clavier pour dicter, puis « Estimer avec l'IA ».";
+  "La dictée ne répond pas sur ce navigateur. Touche le micro de ton clavier pour dicter dans le champ de texte, puis lance l'IA.";
 
 /**
  * Lance une dictee en francais.

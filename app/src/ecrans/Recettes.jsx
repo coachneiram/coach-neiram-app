@@ -32,6 +32,8 @@ import {
 import { Btn, Card, Field, IconBtn, Modal, NumberInput, TextInput } from "../ui/primitives.jsx";
 import { BookOpen, Pencil, Plus, Trash2, X } from "../ui/icones.jsx";
 import { RechercheAliment } from "./RechercheAliment.jsx";
+import { ZoneDictee } from "../ui/Dictee.jsx";
+import { completerRecette } from "../lib/dictee-saisie.js";
 
 const macros = (t) => `${Math.round(t.kcal)} kcal · P${Math.round(t.p)} G${Math.round(t.c)} L${Math.round(t.f)}`;
 
@@ -119,6 +121,12 @@ export function Recettes({ habitudePesee }) {
     setChoixIngredient(false);
   };
 
+  // Recette dictee : nom, parts et ingredients a verifier avant d'enregistrer.
+  const dicte = (recette) => {
+    setEdition((e) => completerRecette(e, recette));
+    setChoixIngredient(false);
+  };
+
   const retirerIngredient = (index) =>
     setEdition((e) => ({ ...e, ingredients: e.ingredients.filter((_, k) => k !== index) }));
 
@@ -199,6 +207,7 @@ export function Recettes({ habitudePesee }) {
       >
         {edition && (
           <div>
+            <ZoneDictee key={edition.id || "nouvelle"} type="recette" onResultat={dicte} />
             <Field label="Nom de la recette">
               <TextInput
                 placeholder="Ex : Quiche lorraine, pizza maison..."

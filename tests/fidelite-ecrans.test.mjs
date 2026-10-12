@@ -196,8 +196,9 @@ describe("les ajouts posterieurs a la bascule restent visibles", () => {
     // Puis a 35 pour la progression du corps (poids et mensurations depuis
     // la premiere mesure), demandee par le coach le 6 octobre 2026. Puis a
     // 36 pour la fenetre « Quoi de neuf » et le test des notifications
-    // (7 octobre 2026).
-    assert.ok(blocs < 36, `${blocs} blocs de texte nouveau : la couverture se dilue`);
+    // (7 octobre 2026). Puis a 37 pour la dictee d'un plat, d'une recette
+    // ou d'une seance (12 octobre 2026).
+    assert.ok(blocs < 37, `${blocs} blocs de texte nouveau : la couverture se dilue`);
   });
 });
 
