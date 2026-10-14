@@ -197,8 +197,10 @@ describe("les ajouts posterieurs a la bascule restent visibles", () => {
     // la premiere mesure), demandee par le coach le 6 octobre 2026. Puis a
     // 36 pour la fenetre « Quoi de neuf » et le test des notifications
     // (7 octobre 2026). Puis a 37 pour la dictee d'un plat, d'une recette
-    // ou d'une seance (12 octobre 2026).
-    assert.ok(blocs < 37, `${blocs} blocs de texte nouveau : la couverture se dilue`);
+    // ou d'une seance (12 octobre 2026). Puis a 38 pour « Mon évolution »,
+    // chaque donnee au jour, a la semaine, au mois et a l'annee (14 octobre
+    // 2026). Puis a 39 pour la diete flexible dans Nutrition (meme jour).
+    assert.ok(blocs < 39, `${blocs} blocs de texte nouveau : la couverture se dilue`);
   });
 });
 

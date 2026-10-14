@@ -19,6 +19,7 @@ import { descriptionRegime } from "../lib/regimes.js";
 import { objectifFibres, totalFibres } from "../lib/fibres.js";
 import { todayISO } from "../lib/dates.js";
 import { Btn, Card, MacroTarget, SectionTitle } from "../ui/primitives.jsx";
+import { budgetSemaine, messageSemaine } from "../lib/diete-flexible.js";
 
 /** Fenetre d'observation du calibrage, en jours. Valeur d'origine. */
 const FENETRE_CALIBRAGE = 28;
@@ -47,6 +48,12 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
     const duJour = (logEntries || []).filter((e) => e.date === todayISO());
     return { ...totalFibres(duJour), objectif: objectifFibres(targets?.calories) };
   }, [logEntries, targets]);
+
+  // Diete flexible (14 octobre 2026) : le budget calorique se lit a la semaine.
+  const semaine = useMemo(
+    () => budgetSemaine({ entrees: logEntries, objectif: targets?.calories, aujourdhui: todayISO() }),
+    [logEntries, targets]
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -117,6 +124,8 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
         )}
       </Card>
 
+      <DieteFlexible semaine={semaine} />
+
       {calibration && (
         <Card>
           <SectionTitle>Calibrage calorique</SectionTitle>
@@ -173,3 +182,97 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
     </div>
   );
 }
+
+/* TEXTE-NOUVEAU
+   Diete flexible, demandee par le coach le 14 octobre 2026 : rassurer le
+   client (le total de la journee compte, pas la repartition par repas ; la
+   semaine compte plus que la journee ; un plaisir prevu evite de craquer ;
+   un ecart se lisse sans jeuner). index.html n'avait rien de tel. */
+const JOURS = ["L", "M", "M", "J", "V", "S", "D"];
+
+const REGLES = [
+  ["Ton total de la journée compte, pas la répartition.", "3 000 kcal en 6 repas de 500 ou en 3 repas de 1 000, c'est pareil. Mange au rythme qui te va."],
+  ["Mieux encore : lisse sur la semaine.", "Un jour un peu au-dessus, un autre un peu en dessous : c'est ta moyenne de la semaine qui fait le résultat."],
+  ["Prévois ton plaisir.", "Garde 200 à 300 kcal par jour pour ce qui te fait envie, par exemple un petit sachet de M&M's (45 g, environ 230 kcal). Un plaisir prévu évite de craquer."],
+  ["Un écart ? Pas de jeûne le lendemain.", "Raclette en famille, resto, anniversaire : répartis le surplus sur les jours suivants. 4 000 kcal au lieu de 3 000, c'est 200 kcal de moins sur les 5 jours d'après, pas une journée sans manger."],
+  ["Garde tes protéines chaque jour,", "même quand tu lisses : ce sont elles qui protègent tes muscles et ta satiété."]
+];
+
+function DieteFlexible({ semaine }) {
+  const couleur = semaine ? (semaine.etat === "surplus" ? COLORS.warn : semaine.etat === "marge" ? COLORS.blue : COLORS.good) : COLORS.textMuted;
+  return (
+    <Card>
+      <SectionTitle>Ta semaine compte plus que ta journée</SectionTitle>
+      {semaine && (
+        <div data-diete-flexible style={{ marginTop: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+            {semaine.jours.map((j, i) => (
+              <div
+                key={j.date}
+                style={{
+                  textAlign: "center",
+                  borderRadius: 8,
+                  padding: "6px 0",
+                  background: j.aujourdhui ? `${COLORS.gold}1A` : COLORS.bgAlt,
+                  border: `1px solid ${j.aujourdhui ? COLORS.gold : COLORS.border}`
+                }}
+              >
+                <div style={{ fontSize: 10.5, color: j.aujourdhui ? COLORS.gold : COLORS.textFaint, fontWeight: 600 }}>
+                  {JOURS[i]}
+                </div>
+                <div style={{ fontSize: 11, color: j.kcal != null ? COLORS.text : COLORS.textFaint, fontFamily: "IBM Plex Mono" }}>
+                  {j.kcal != null ? j.kcal : "—"}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11.5, color: COLORS.textMuted, margin: "8px 0 0" }}>
+            Budget de la semaine : {semaine.budget.toLocaleString("fr-FR")} kcal ({semaine.cible.toLocaleString("fr-FR")}{" "}
+            × 7)
+            {semaine.joursSansSaisie > 0
+              ? ` · ${semaine.joursSansSaisie} jour${semaine.joursSansSaisie > 1 ? "s" : ""} sans saisie compté${semaine.joursSansSaisie > 1 ? "s" : ""} à l'objectif`
+              : ""}
+          </p>
+          <p
+            style={{
+              fontSize: 13,
+              color: COLORS.text,
+              margin: "10px 0 0",
+              lineHeight: 1.5,
+              borderLeft: `3px solid ${couleur}`,
+              paddingLeft: 10
+            }}
+          >
+            {messageSemaine(semaine)}
+          </p>
+          {semaine.grasMaxG > 0 && (
+            <p style={{ fontSize: 12, color: COLORS.textMuted, margin: "8px 0 0", lineHeight: 1.5 }}>
+              La balance monte après un écart ? C'est surtout de l'eau et du sel. {semaine.ecart.toLocaleString("fr-FR")} kcal
+              de trop, c'est au plus {semaine.grasMaxG} g de graisse.
+            </p>
+          )}
+        </div>
+      )}
+      <div style={{ marginTop: 14 }}>
+        <div
+          style={{
+            fontSize: 10.5,
+            color: COLORS.textMuted,
+            textTransform: "uppercase",
+            letterSpacing: 0.6,
+            fontWeight: 600,
+            marginBottom: 6
+          }}
+        >
+          Les règles de ta diète flexible
+        </div>
+        {REGLES.map(([titre, texte], i) => (
+          <p key={i} style={{ fontSize: 12.5, color: COLORS.textMuted, margin: "0 0 8px", lineHeight: 1.5 }}>
+            <b style={{ color: COLORS.text }}>{titre}</b> {texte}
+          </p>
+        ))}
+      </div>
+    </Card>
+  );
+}
+/* FIN-TEXTE-NOUVEAU */

@@ -54,13 +54,13 @@ describe("les annonces", () => {
     }
   });
 
-  test("les dernieres nouveautes : la dictee, l'aide, puis la progression du corps", () => {
-    assert.equal(NOUVEAUTES[0].id, "2026-10-12-dictee");
-    assert.equal(NOUVEAUTES[0].onglet, "repas");
-    assert.equal(NOUVEAUTES[1].id, "2026-10-07-aide");
-    assert.equal(NOUVEAUTES[1].ouvre, "aide");
-    assert.equal(NOUVEAUTES[2].id, "2026-10-06-progression");
-    assert.equal(NOUVEAUTES[2].onglet, "mensurations");
+  test("les dernieres nouveautes : diete flexible, evolution, puis dictee", () => {
+    assert.equal(NOUVEAUTES[0].id, "2026-10-14-diete-flexible");
+    assert.equal(NOUVEAUTES[0].onglet, "nutrition");
+    assert.equal(NOUVEAUTES[1].id, "2026-10-14-evolution");
+    assert.equal(NOUVEAUTES[1].onglet, "tendances");
+    assert.equal(NOUVEAUTES[2].id, "2026-10-12-dictee");
+    assert.equal(NOUVEAUTES[2].onglet, "repas");
   });
 });
 
@@ -72,8 +72,11 @@ describe("ce qui s'affiche a l'ouverture", () => {
   });
 
   test("l'annonce de la synchro n'est faite qu'aux clients en ligne", () => {
-    assert.ok(nouveautesAMontrer({ vues: null, profil: EN_LIGNE }).some((n) => n.id === "2026-10-04-synchro"));
-    assert.ok(!nouveautesAMontrer({ vues: null, profil: PRESENTIEL }).some((n) => n.id === "2026-10-04-synchro"));
+    // Toutes deja vues sauf la synchro : elle seule reste a annoncer, quel
+    // que soit le nombre d'annonces publiees depuis.
+    const vues = NOUVEAUTES.map((n) => n.id).filter((id) => id !== "2026-10-04-synchro");
+    assert.ok(nouveautesAMontrer({ vues, profil: EN_LIGNE }).some((n) => n.id === "2026-10-04-synchro"));
+    assert.ok(!nouveautesAMontrer({ vues, profil: PRESENTIEL }).some((n) => n.id === "2026-10-04-synchro"));
     assert.ok(!nouveautesPour(PRESENTIEL).some((n) => n.pour === "enligne"));
   });
 

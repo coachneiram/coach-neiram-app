@@ -128,6 +128,16 @@ export const AIDE = [
         libelles: ["Dicter un plat", "Dicter toute la recette", "Dicter ma séance", "Remplir avec l'IA"]
       },
       {
+        id: "ecart",
+        question: "J'ai fait un écart (raclette, resto) : je fais quoi ?",
+        reponse: [
+          "Rien de grave, et surtout pas de jeûne le lendemain. Ce qui compte, c'est ton total de la semaine, pas une journée. Onglet Nutrition, carte « Ta semaine compte plus que ta journée » : l'appli te dit combien viser chaque jour qui reste pour lisser l'écart, sans jamais descendre sous 80 % de ton objectif.",
+          "Exemple : 4 000 kcal au lieu de 3 000, c'est 200 kcal de moins sur les 5 jours suivants. La balance qui monte le lendemain, c'est surtout de l'eau et du sel.",
+          "Ton total de la journée compte plus que la répartition par repas, et un plaisir prévu de 200 à 300 kcal par jour aide à ne pas craquer."
+        ],
+        libelles: ["Ta semaine compte plus que ta journée"]
+      },
+      {
         id: "nutriscore",
         question: "Que veulent dire le Nutri-Score et NOVA ?",
         reponse: [
@@ -192,6 +202,16 @@ export const AIDE = [
           "Mesure-toi au même moment de la journée, idéalement toutes les 2 à 4 semaines."
         ],
         libelles: ["Nouvelle prise", "Ma progression"]
+      },
+      {
+        id: "mon-evolution",
+        question: "Comment voir mon évolution sur une semaine, un mois ou une année ?",
+        reponse: [
+          "Tendances, carte « Mon évolution » : choisis une donnée (pas, calories, protéines, sommeil, stress, séances, poids, mensurations…), puis J, S, M ou A pour le jour, la semaine, le mois ou l'année. Les flèches remontent aux périodes précédentes.",
+          "Touche une barre ou un point pour voir sa valeur. En dessous, les « Points clés » comparent avec la période d'avant et comptent tes jours à l'objectif.",
+          "Un jour sans saisie reste vide : la moyenne ne compte que les jours notés. Dans Mesures, la même carte montre ton poids et tes mensurations."
+        ],
+        libelles: ["Mon évolution", "Points clés"]
       },
       {
         id: "resume-semaine",

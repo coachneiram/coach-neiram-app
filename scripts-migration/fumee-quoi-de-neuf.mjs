@@ -224,7 +224,10 @@ try {
     const ids = await titres(page);
     console.log(
       "5. CLIENT EN LIGNE      :",
-      ids.includes("2026-10-04-synchro") ? "l'annonce de la synchro est présente" : `*** ${JSON.stringify(ids)} ***`
+      // En ligne, les annonces reservees a cette formule comptent aussi.
+      JSON.stringify(ids) === JSON.stringify(NOUVEAUTES.slice(0, NOUVEAUTES_MAX).map((n) => n.id))
+        ? `les ${ids.length} plus récentes, annonces du coaching en ligne comprises`
+        : `*** ${JSON.stringify(ids)} ***`
     );
     await ctx.close();
   }

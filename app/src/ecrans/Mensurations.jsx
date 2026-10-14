@@ -16,7 +16,7 @@ import { MEASUREMENT_FIELDS, ecart, parDateCroissante } from "../lib/mensuration
 import { GRANDEURS_SUIVIES, progressionCorps } from "../lib/progression-corps.js";
 import { serieCorporelle } from "../lib/tendances.js";
 import { Btn, Card, EmptyState, Field, IconBtn, Modal, NumberInput, SectionTitle, TextInput } from "../ui/primitives.jsx";
-import { Courbe } from "../ui/Courbe.jsx";
+import { MonEvolution } from "../ui/Explorateur.jsx";
 import { ProgressionCorps } from "../ui/ProgressionCorps.jsx";
 import { Pencil, Plus, Ruler, Trash2, X } from "../ui/icones.jsx";
 
@@ -79,8 +79,6 @@ export function Mensurations({ api, bodyApi, objectif }) {
   // premiere qui en a une, plutot que de cacher toute la carte.
   const champAffiche =
     serieDuChamp(champCourbe).length > 1 ? champCourbe : progression.lignes[0]?.id || champCourbe;
-  const donneesCourbe = serieDuChamp(champAffiche);
-  const libelleCourbe = GRANDEURS_SUIVIES.find((f) => f.id === champAffiche)?.label;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -152,42 +150,18 @@ export function Mensurations({ api, bodyApi, objectif }) {
             </div>
           </Card>
 
-          {donneesCourbe.length > 1 && (
-            <Card>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: 10,
-                  flexWrap: "wrap"
-                }}
-              >
-                <SectionTitle>Évolution — {libelleCourbe}</SectionTitle>
-                <select
-                  value={champAffiche}
-                  onChange={(e) => setChampCourbe(e.target.value)}
-                  style={{
-                    background: COLORS.bgAlt,
-                    border: `1px solid ${COLORS.border}`,
-                    borderRadius: 8,
-                    padding: "6px 10px",
-                    color: COLORS.text,
-                    fontSize: 12.5
-                  }}
-                >
-                  {GRANDEURS_SUIVIES.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ marginTop: 12 }}>
-                <Courbe data={donneesCourbe} color={COLORS.gold} />
-              </div>
-            </Card>
-          )}
+          {/* Ajout du 14 octobre 2026 : chaque mesure a la semaine, au mois,
+              a l'annee, synchronisee avec les tuiles ci-dessus. */}
+          <MonEvolution
+            donnees={{ measurements: api.items, bodyLogs: bodyApi.items }}
+            profil={{ goal: objectif }}
+            aujourdhui={todayISO()}
+            groupes={["Corps", "Mensurations"]}
+            initial={{ id: champAffiche, periode: "A" }}
+            cleStockage="cn_explorateur_corps"
+            idChoisi={champCourbe}
+            onChoisirId={setChampCourbe}
+          />
 
           <Card>
             <SectionTitle>Historique</SectionTitle>
