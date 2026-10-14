@@ -272,7 +272,9 @@ describe("les ecrans sont branches", () => {
     assert.match(lire("app/src/App.jsx"), /<Mensurations api=\{measurementsApi\} bodyApi=\{bodyApi\} objectif=\{profil\?\.goal\} \/>/);
     const ecran = lire("app/src/ecrans/Mensurations.jsx");
     assert.match(ecran, /<ProgressionCorps progression=\{progression\}/);
-    assert.match(ecran, /GRANDEURS_SUIVIES\.map\(\(f\) => \(\s*<option/);
+    // Depuis le 14 octobre 2026, la courbe d'une mesure passe par « Mon évolution »,
+    // limitee au corps (poids compris) et synchronisee avec les tuiles.
+    assert.match(ecran, /<MonEvolution[\s\S]*groupes=\{\["Corps", "Mensurations"\]\}[\s\S]*onChoisirId=\{setChampCourbe\}/);
   });
   test("Tendances montre la progression et l'evolution du mois", () => {
     const ecran = lire("app/src/ecrans/Tendances.jsx");

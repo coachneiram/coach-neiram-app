@@ -194,6 +194,16 @@ export const AIDE = [
         libelles: ["Nouvelle prise", "Ma progression"]
       },
       {
+        id: "mon-evolution",
+        question: "Comment voir mon évolution sur une semaine, un mois ou une année ?",
+        reponse: [
+          "Tendances, carte « Mon évolution » : choisis une donnée (pas, calories, protéines, sommeil, stress, séances, poids, mensurations…), puis J, S, M ou A pour le jour, la semaine, le mois ou l'année. Les flèches remontent aux périodes précédentes.",
+          "Touche une barre ou un point pour voir sa valeur. En dessous, les « Points clés » comparent avec la période d'avant et comptent tes jours à l'objectif.",
+          "Un jour sans saisie reste vide : la moyenne ne compte que les jours notés. Dans Mesures, la même carte montre ton poids et tes mensurations."
+        ],
+        libelles: ["Mon évolution", "Points clés"]
+      },
+      {
         id: "resume-semaine",
         question: "Où voir le résumé de ma semaine ?",
         reponse: [

@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-14-evolution",
+    date: "2026-10-14",
+    titre: "Ton évolution, jour après jour",
+    texte:
+      "Tendances → Mon évolution : tes pas, tes calories, ton sommeil, tes séances, ton poids et tes mensurations, au jour, à la semaine, au mois ou à l'année. Touche une barre pour voir le détail, et lis tes points clés.",
+    onglet: "tendances",
+    bouton: "Voir mon évolution"
+  },
+  {
     id: "2026-10-12-dictee",
     date: "2026-10-12",
     titre: "Dicte tes plats, recettes et séances",

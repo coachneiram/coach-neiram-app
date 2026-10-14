@@ -6,8 +6,8 @@
  *      kilos perdus depuis la premiere mesure, une tuile par grandeur avec
  *      sa mini-courbe, le poids en tete ;
  *   2. Mesures : la derniere prise affiche aussi le poids, en kg ;
- *   3. Mesures : toucher la tuile du poids trace la courbe « Évolution —
- *      Poids » ;
+ *   3. Mesures : toucher la tuile du poids l'affiche dans « Mon évolution »
+ *      (courbe des mesures, derniere valeur) — depuis le 14 octobre 2026 ;
  *   4. Tendances : la meme carte, la meme phrase ;
  *   5. Tendances : le bilan mensuel montre l'evolution du mois en clair ;
  *   6. le bilan envoye au coach contient la progression et ses mini-courbes ;
@@ -115,11 +115,15 @@ try {
   // 3. Toucher la tuile du poids trace sa courbe.
   await page.locator('[data-tuile-progression="poids"]').click();
   await page.waitForTimeout(500);
-  const apres = (await page.locator("body").innerText()).replace(/\s+/g, " ");
-  const choix = await page.locator("select").first().inputValue();
+  const evolution = page.locator("[data-mon-evolution]");
+  const apres = (await evolution.innerText()).replace(/\s+/g, " ");
+  const choix = await evolution.locator("select").inputValue();
+  const points = await evolution.locator("[data-point]").count();
   console.log(
     "3. COURBE DU POIDS      :",
-    /Évolution — Poids/i.test(apres) && choix === "poids" ? "« Évolution — Poids » tracée, liste sur Poids" : `*** choix ${choix} ***`
+    choix === "poids" && /85,1 ?kg/.test(apres) && points === 3
+      ? "« Mon évolution » sur Poids : 85,1 kg, 3 pesées tracées"
+      : `*** choix ${choix}, ${points} point(s) : ${apres.slice(0, 160)} ***`
   );
 
   // 4 et 5. Tendances.

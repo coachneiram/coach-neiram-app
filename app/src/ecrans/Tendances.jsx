@@ -24,6 +24,7 @@ import { Courbe, Histogramme } from "../ui/Courbe.jsx";
 import { BilanSections } from "../ui/BilanSections.jsx";
 import { EvolutionDuMois, ProgressionCorps } from "../ui/ProgressionCorps.jsx";
 import { progressionCorps } from "../lib/progression-corps.js";
+import { MonEvolution } from "../ui/Explorateur.jsx";
 import { Camera, Droplet, Dumbbell, Flame, Footprints, Loader2, Moon, Scale, Share, Sparkles } from "../ui/icones.jsx";
 
 /** Attente et erreur de generation, communes aux deux bilans. */
@@ -187,6 +188,15 @@ export function Tendances({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Ajout du 14 octobre 2026 : chaque donnee au jour, a la semaine, au mois, a l'annee. */}
+      <MonEvolution
+        donnees={allData}
+        profil={profile}
+        objectifs={targets}
+        aujourdhui={todayISO()}
+        routines={allData.routines || []}
+      />
+
       <ResumeNutrition resume={resumeNutrition} objectifs={targets} />
 
       <ProgressionCorps progression={progression} />
