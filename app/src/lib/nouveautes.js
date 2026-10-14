@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-14-diete-flexible",
+    date: "2026-10-14",
+    titre: "Ta semaine compte plus que ta journée",
+    texte:
+      "Onglet Nutrition : ton budget de la semaine, jour par jour. Un écart (raclette, resto) ? Pas de jeûne : l'appli te dit combien viser les jours suivants pour lisser. Et garde 200 à 300 kcal par jour pour un plaisir prévu.",
+    onglet: "nutrition",
+    bouton: "Voir ma semaine"
+  },
+  {
     id: "2026-10-14-evolution",
     date: "2026-10-14",
     titre: "Ton évolution, jour après jour",

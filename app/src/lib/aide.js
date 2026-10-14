@@ -128,6 +128,16 @@ export const AIDE = [
         libelles: ["Dicter un plat", "Dicter toute la recette", "Dicter ma séance", "Remplir avec l'IA"]
       },
       {
+        id: "ecart",
+        question: "J'ai fait un écart (raclette, resto) : je fais quoi ?",
+        reponse: [
+          "Rien de grave, et surtout pas de jeûne le lendemain. Ce qui compte, c'est ton total de la semaine, pas une journée. Onglet Nutrition, carte « Ta semaine compte plus que ta journée » : l'appli te dit combien viser chaque jour qui reste pour lisser l'écart, sans jamais descendre sous 80 % de ton objectif.",
+          "Exemple : 4 000 kcal au lieu de 3 000, c'est 200 kcal de moins sur les 5 jours suivants. La balance qui monte le lendemain, c'est surtout de l'eau et du sel.",
+          "Ton total de la journée compte plus que la répartition par repas, et un plaisir prévu de 200 à 300 kcal par jour aide à ne pas craquer."
+        ],
+        libelles: ["Ta semaine compte plus que ta journée"]
+      },
+      {
         id: "nutriscore",
         question: "Que veulent dire le Nutri-Score et NOVA ?",
         reponse: [

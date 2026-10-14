@@ -54,13 +54,13 @@ describe("les annonces", () => {
     }
   });
 
-  test("les dernieres nouveautes : l'evolution, la dictee, puis l'aide", () => {
-    assert.equal(NOUVEAUTES[0].id, "2026-10-14-evolution");
-    assert.equal(NOUVEAUTES[0].onglet, "tendances");
-    assert.equal(NOUVEAUTES[1].id, "2026-10-12-dictee");
-    assert.equal(NOUVEAUTES[1].onglet, "repas");
-    assert.equal(NOUVEAUTES[2].id, "2026-10-07-aide");
-    assert.equal(NOUVEAUTES[2].ouvre, "aide");
+  test("les dernieres nouveautes : diete flexible, evolution, puis dictee", () => {
+    assert.equal(NOUVEAUTES[0].id, "2026-10-14-diete-flexible");
+    assert.equal(NOUVEAUTES[0].onglet, "nutrition");
+    assert.equal(NOUVEAUTES[1].id, "2026-10-14-evolution");
+    assert.equal(NOUVEAUTES[1].onglet, "tendances");
+    assert.equal(NOUVEAUTES[2].id, "2026-10-12-dictee");
+    assert.equal(NOUVEAUTES[2].onglet, "repas");
   });
 });
 
