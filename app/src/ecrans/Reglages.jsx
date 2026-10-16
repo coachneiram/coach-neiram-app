@@ -30,7 +30,9 @@ import { exporterSauvegarde } from "../lib/sauvegarde.js";
 import { enLigne } from "../lib/semaine.js";
 import { messageErreurRestauration, restaurerDepuisFichier } from "../lib/sauvegarde-fichier.js";
 import { ChampsProfil } from "./ChampsProfil.jsx";
-import { Btn, Field, Modal, SelectInput } from "../ui/primitives.jsx";
+import { avecAllergiesDeclarees } from "../lib/consigne-coach.js";
+import { Btn, Field, Modal, SelectInput, TextInput } from "../ui/primitives.jsx";
+import { MSG_ACTIVATION, TEXTES_ACCES, accesActuel, activerCode, oublierAcces } from "../lib/acces.js";
 import { LienAide, LienNouveautes, RappelsAppFermee, TestNotifications } from "../ui/Annonces.jsx";
 import { Download, Upload, X } from "../ui/icones.jsx";
 
@@ -190,6 +192,71 @@ function mesurerOccupation() {
  */
 const VERSION_APP = typeof __VERSION_APP__ === "string" ? __VERSION_APP__ : "développement";
 
+/**
+ * Code d'acces donne par le coach (17 octobre 2026, audit P0-3 et P0-4) :
+ * sans lui, le proxy refuse l'IA et l'envoi des seances. Les textes sont
+ * dans lib/acces.js.
+ */
+function CarteAcces() {
+  const [acces, setAcces] = useState(() => accesActuel());
+  const [code, setCode] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState(null);
+
+  const activer = async () => {
+    setEnCours(true);
+    setErreur(null);
+    const r = await activerCode(code);
+    setEnCours(false);
+    if (r.ok) {
+      setAcces(accesActuel());
+      setCode("");
+    } else {
+      setErreur(MSG_ACTIVATION[r.erreur] || MSG_ACTIVATION.indisponible);
+    }
+  };
+  const retirer = () => {
+    if (!window.confirm(TEXTES_ACCES.confirmationRetrait)) return;
+    oublierAcces();
+    setAcces(null);
+  };
+
+  return (
+    <div data-carte-acces style={styleSection}>
+      <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>{TEXTES_ACCES.titre}</div>
+      {acces ? (
+        <>
+          <p style={{ ...styleAide, color: COLORS.good }}>{TEXTES_ACCES.actif(acces.libelle)}</p>
+          <button
+            onClick={retirer}
+            style={{ background: "none", border: "none", padding: 0, color: COLORS.textMuted, fontSize: 11.5, textDecoration: "underline", cursor: "pointer" }}
+          >
+            {TEXTES_ACCES.retirer}
+          </button>
+        </>
+      ) : (
+        <>
+          <p style={styleAide}>{TEXTES_ACCES.explication}</p>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <TextInput
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder={TEXTES_ACCES.champ}
+              aria-label={TEXTES_ACCES.champ}
+              autoCapitalize="characters"
+              autoComplete="one-time-code"
+            />
+            <Btn onClick={activer} disabled={enCours || code.replace(/[\s-]/g, "").length < 8}>
+              {TEXTES_ACCES.bouton}
+            </Btn>
+          </div>
+          {erreur && <p style={{ ...styleAide, color: COLORS.bad, marginTop: 6 }}>{erreur}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNouveautes, onOuvrirAide, seances }) {
   const [occupation, setOccupation] = useState(mesurerOccupation);
   const [messageStockage, setMessageStockage] = useState(null);
@@ -273,6 +340,7 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
       {value && (
         <>
           {onOuvrirAide && <LienAide onOuvrir={onOuvrirAide} />}
+          {PROXY_BASE_URL && <CarteAcces />}
           <ChampsProfil value={value} onChange={setValue} />
 
           <BlocRappel reglage={RAPPELS.hydratation} value={value} set={set} />
@@ -396,7 +464,7 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
 
           <Btn
             onClick={() => {
-              onSave(value);
+              onSave(avecAllergiesDeclarees(value));
               onClose();
             }}
             style={{ width: "100%" }}

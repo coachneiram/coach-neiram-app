@@ -270,6 +270,6 @@ describe("ce que la v2 faisait deja reste en place", () => {
 
   test("doGet annonce la version", () => {
     const s = creerScript();
-    assert.match(s.appeler("doGet").contenu, /v2\.1/);
+    assert.match(s.appeler("doGet").contenu, /v2\.2/);
   });
 });

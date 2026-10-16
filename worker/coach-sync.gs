@@ -1,6 +1,27 @@
 /**
  * Coach Neiram — synchro et alertes du coaching en ligne
- * Version 2.1 (4 octobre 2026) — la v2 installée chez le coach, durcie.
+ * Version 2.2 (17 octobre 2026) — événements signés par le proxy.
+ *
+ * La v2.2 (audit P0-4) : le proxy ne transmet plus le secret. Il signe
+ * chaque événement (HMAC-SHA256 de l'horodatage, d'un nonce et du
+ * contenu) ; ce script refuse une signature fausse, un événement modifié,
+ * un horodatage de plus de 5 minutes et un nonce déjà vu (rejeu). Un
+ * événement refusé n'écrit RIEN, nulle part (pas même dans Erreurs).
+ * Le prénom du client est désormais fixé par le proxy d'après le jeton du
+ * client, et non plus tapé par le client.
+ *
+ * Mise en place de la v2.2 (détail dans worker/SECURITE.md) :
+ *   a. coller ce fichier, ENREGISTRER, puis Déployer > Nouveau déploiement
+ *      (nouvelle adresse /exec : l'ancienne est publique dans l'historique
+ *      du dépôt) ;
+ *   b. mettre la nouvelle adresse dans Cloudflare (COACH_SYNC_URL), coller
+ *      le nouveau Worker ;
+ *   c. vérifier qu'un pointage arrive, puis ACCEPTER_SECRET_EN_CLAIR = false,
+ *      enregistrer, Gérer les déploiements > Nouvelle version ;
+ *   d. archiver l'ANCIEN déploiement (Gérer les déploiements > Archiver) :
+ *      c'est ce qui révoque l'ancienne adresse.
+ *
+ * Historique : version 2.1 (4 octobre 2026) — la v2 installée chez le coach, durcie.
  *
  * La v2 (écriture par en-têtes, anti-doublon, onglets Alertes, Erreurs et
  * Adherence, cases à cocher) est conservée telle quelle. La v2.1 ajoute :
@@ -50,6 +71,18 @@ var EXIGER_SECRET = true;
  *  jamais écrit dans ce fichier : genererSecret() le crée et le range dans
  *  Paramètres du projet > Propriétés du script. */
 var PROPRIETE_SECRET = 'SECRET_SYNC';
+
+/** Secret précédent, accepté pendant une rotation (voir tournerSecret). */
+var PROPRIETE_SECRET_PRECEDENT = 'SECRET_SYNC_PRECEDENT';
+
+/** Transition v2.1 → v2.2 : tant que l'ancien proxy (qui envoie le secret
+ *  en clair) peut encore écrire, true. À passer à false dès qu'un pointage
+ *  signé est arrivé (étape c de la mise en place). */
+var ACCEPTER_SECRET_EN_CLAIR = true;
+
+/** Âge maximal d'un événement signé, et durée de mémoire des nonces. */
+var FENETRE_SIGNATURE_MS = 5 * 60 * 1000;
+var MEMOIRE_NONCE_S = 15 * 60;
 
 /** Types d'événements réellement envoyés par l'application (même liste
  *  que l'application et le proxy ; un test vérifie qu'elles sont égales). */
@@ -123,14 +156,12 @@ function doPost(e) {
     return reponse(false, 'occupe');
   }
   try {
-    var recu = lireCorps(e);
-    if (!recu) {
-      journaliserErreur('Corps vide ou JSON invalide', brutSansSecret(e));
-      return reponse(false, 'json-invalide');
-    }
-    if (EXIGER_SECRET && !secretValide(recu.secret)) {
-      return reponse(false, 'non-autorise');
-    }
+    // Authentification AVANT toute écriture : un envoi refusé ne laisse
+    // aucune trace dans le classeur (sinon n'importe qui pourrait remplir
+    // l'onglet Erreurs avec l'ancienne adresse /exec).
+    var auth = authentifier(lireCorps(e));
+    if (!auth.ok) return reponse(false, auth.erreur);
+    var recu = auth.recu;
     if (TYPES_AUTORISES.indexOf(String(recu.type || '')) === -1) {
       journaliserErreur('Type inconnu : ' + court(recu.type), JSON.stringify(nettoyer(recu)));
       return reponse(false, 'type-inconnu');
@@ -172,7 +203,7 @@ function doPost(e) {
 
 function doGet() {
   return ContentService.createTextOutput(
-    'Synchro Coach Neiram active (v2.1). Utiliser POST.');
+    'Synchro Coach Neiram active (v2.2). Utiliser POST.');
 }
 
 /* ------------------------------------------------------------------ LECTURE */
@@ -205,7 +236,65 @@ function secretAttendu() {
 
 function secretValide(fourni) {
   var attendu = secretAttendu();
-  return attendu !== '' && String(fourni || '') === attendu;
+  return attendu !== '' && egaliteConstante(String(fourni || ''), attendu);
+}
+
+/** Comparaison en temps constant. */
+function egaliteConstante(a, b) {
+  var diff = a.length ^ b.length;
+  for (var i = 0; i < Math.max(a.length, b.length); i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+function hmacHex(secret, message) {
+  var octets = Utilities.computeHmacSha256Signature(message, secret, Utilities.Charset.UTF_8);
+  return octets.map(function (b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join('');
+}
+
+/**
+ * Qui a envoyé cet événement ? Rend { ok: true, recu } ou { ok: false, erreur }.
+ *
+ * Format v2 (proxy v2.2) : { v: 2, ts, nonce, charge, sig } où
+ * sig = HMAC-SHA256(secret, 'v2.' + ts + '.' + nonce + '.' + charge).
+ * Contrôles, dans cet ordre : forme, signature (secret actuel ou
+ * précédent), fraîcheur, nonce jamais vu. Le nonce n'est mémorisé
+ * qu'après une signature valide : un inconnu ne peut pas remplir la mémoire.
+ *
+ * Limite connue : la mémoire des nonces (CacheService) peut être vidée
+ * plus tôt par Google. La fenêtre de 5 minutes borne alors le rejeu.
+ */
+function authentifier(corps) {
+  if (!corps) return { ok: false, erreur: 'json-invalide' };
+
+  if (corps.v === 2) {
+    if (typeof corps.ts !== 'number' || !/^[0-9a-f]{32}$/.test(String(corps.nonce)) ||
+        typeof corps.charge !== 'string' || corps.charge.length > 20000 ||
+        !/^[0-9a-f]{64}$/.test(String(corps.sig))) {
+      return { ok: false, erreur: 'signature-invalide' };
+    }
+    var message = 'v2.' + corps.ts + '.' + corps.nonce + '.' + corps.charge;
+    var props = PropertiesService.getScriptProperties();
+    var secrets = [props.getProperty(PROPRIETE_SECRET), props.getProperty(PROPRIETE_SECRET_PRECEDENT)]
+      .filter(function (s) { return s; });
+    if (!secrets.length) return { ok: false, erreur: 'non-autorise' };
+    var signe = secrets.some(function (s) { return egaliteConstante(hmacHex(s, message), corps.sig); });
+    if (!signe) return { ok: false, erreur: 'signature-invalide' };
+    if (Math.abs(Date.now() - corps.ts) > FENETRE_SIGNATURE_MS) return { ok: false, erreur: 'horodatage-expire' };
+    var cache = CacheService.getScriptCache();
+    if (cache.get('nonce:' + corps.nonce)) return { ok: false, erreur: 'rejeu' };
+    cache.put('nonce:' + corps.nonce, '1', MEMOIRE_NONCE_S);
+    var recu;
+    try { recu = JSON.parse(corps.charge); } catch (err) { return { ok: false, erreur: 'json-invalide' }; }
+    if (!recu || typeof recu !== 'object') return { ok: false, erreur: 'json-invalide' };
+    return { ok: true, recu: recu };
+  }
+
+  // Ancien format (proxy v2.1) : secret en clair dans le corps.
+  if (!EXIGER_SECRET) return { ok: true, recu: corps };
+  if (ACCEPTER_SECRET_EN_CLAIR && secretValide(corps.secret)) return { ok: true, recu: corps };
+  return { ok: false, erreur: 'non-autorise' };
 }
 
 /**
@@ -222,6 +311,29 @@ function genererSecret() {
   }
   afficher('Secret de synchro (à coller dans Cloudflare, variable COACH_SYNC_SECRET) :\n\n' + actuel);
   return actuel;
+}
+
+/**
+ * Rotation du secret, sans coupure :
+ *   1. lancer tournerSecret() : un nouveau secret est créé et affiché,
+ *      l'ancien reste accepté ;
+ *   2. le coller dans Cloudflare (COACH_SYNC_SECRET) ;
+ *   3. vérifier qu'un pointage arrive, puis lancer oublierAncienSecret().
+ * À faire si le secret a pu être vu, et au moins une fois par an.
+ */
+function tournerSecret() {
+  var props = PropertiesService.getScriptProperties();
+  var actuel = props.getProperty(PROPRIETE_SECRET);
+  if (actuel) props.setProperty(PROPRIETE_SECRET_PRECEDENT, actuel);
+  var nouveau = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  props.setProperty(PROPRIETE_SECRET, nouveau);
+  afficher('Nouveau secret (à coller dans Cloudflare, COACH_SYNC_SECRET). L\'ancien reste accepté jusqu\'à oublierAncienSecret() :\n\n' + nouveau);
+  return nouveau;
+}
+
+function oublierAncienSecret() {
+  PropertiesService.getScriptProperties().deleteProperty(PROPRIETE_SECRET_PRECEDENT);
+  afficher('Ancien secret oublié : seul le secret actuel est accepté.');
 }
 
 /* ---------------------------------------------------------------- NETTOYAGE */
@@ -681,7 +793,10 @@ function verifier() {
     lignes.push(sh.getName() + '\n   ' + e);
   });
   lignes.push('Secret en place : ' + (secretAttendu() ? 'oui' : 'NON') +
-              ' · exigé : ' + (EXIGER_SECRET ? 'oui' : 'non'));
+              ' · exigé : ' + (EXIGER_SECRET ? 'oui' : 'non') +
+              ' · ancien format (secret en clair) accepté : ' + (ACCEPTER_SECRET_EN_CLAIR ? 'OUI, à couper' : 'non') +
+              ' · ancien secret encore accepté : ' +
+              (PropertiesService.getScriptProperties().getProperty(PROPRIETE_SECRET_PRECEDENT) ? 'oui' : 'non'));
   afficher(lignes.join('\n\n'));
 }
 

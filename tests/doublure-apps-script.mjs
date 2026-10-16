@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createContext, runInNewContext } from "node:vm";
+import { createHmac } from "node:crypto";
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const SOURCE_SCRIPT = readFileSync(join(RACINE, "worker", "coach-sync.gs"), "utf8");
@@ -74,6 +75,7 @@ export function creerScript({ reglages = {}, proprietes = {}, entetesExistants =
   const feuilles = new Map();
   const mails = [];
   const props = { ...proprietes };
+  const cache = {};
   let uuids = 0;
   const classeur = {
     getSheetByName: (n) => feuilles.get(n) || null,
@@ -115,7 +117,19 @@ export function creerScript({ reglages = {}, proprietes = {}, entetesExistants =
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     Utilities: {
       formatDate: (d, tz, motif) => (motif === "yyyy-MM-dd" ? d.toISOString().slice(0, 10) : "12:00:00"),
-      getUuid: () => "0123abcd-0123-abcd-0123-" + String(++uuids).padStart(12, "0")
+      getUuid: () => "0123abcd-0123-abcd-0123-" + String(++uuids).padStart(12, "0"),
+      // Comme Apps Script : un tableau d'octets SIGNES (-128 a 127).
+      computeHmacSha256Signature: (valeur, cle, charset) =>
+        Array.from(createHmac("sha256", Buffer.from(String(cle), "utf8")).update(Buffer.from(String(valeur), "utf8")).digest(), (o) => (o > 127 ? o - 256 : o)),
+      Charset: { UTF_8: "UTF-8" }
+    },
+    CacheService: {
+      getScriptCache: () => ({
+        get: (c) => (c in cache ? cache[c] : null),
+        put: (c, v) => {
+          cache[c] = String(v);
+        }
+      })
     },
     Session: { getScriptTimeZone: () => "Europe/Paris" },
     ContentService: {
@@ -136,6 +150,7 @@ export function creerScript({ reglages = {}, proprietes = {}, entetesExistants =
     feuilles,
     mails,
     props,
+    cache,
     contexte,
     /** Poste un evenement (objet ou texte brut) et rend la reponse lue. */
     poster(charge) {

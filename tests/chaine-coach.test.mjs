@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import worker from "../worker/coach-neiram-proxy.js";
 import { creerScript } from "./doublure-apps-script.mjs";
+import { fauxD1 } from "./faux-d1.mjs";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE = join(ICI, "..");
@@ -27,25 +28,51 @@ const ENV = {
   GEMINI_API_KEY: "cle-de-test",
   COACH_SYNC_URL: "https://script.google.com/macros/s/FAUX/exec",
   COACH_SYNC_SECRET: "secret-de-test",
-  ALLOWED_ORIGINS: ""
+  ALLOWED_ORIGINS: "",
+  ADMIN_SECRET: "secret-admin-de-test-0123456789abcdef",
+  DB: fauxD1()
 };
+
+/*
+ * Depuis le 17/10/2026, le proxy exige le jeton du client et prend son
+ * prenom sur sa fiche : la cliente « Sophie » recoit un code et l'active,
+ * comme dans la vraie vie.
+ */
+const JETON = await (async () => {
+  const inv = await (
+    await worker.fetch(
+      new Request("https://proxy.test/admin/invitations", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + ENV.ADMIN_SECRET },
+        body: JSON.stringify({ libelle: "Sophie" })
+      }),
+      ENV
+    )
+  ).json();
+  const act = await (
+    await worker.fetch(new Request("https://proxy.test/auth/activer", { method: "POST", body: JSON.stringify({ code: inv.code }) }), ENV)
+  ).json();
+  return act.jeton;
+})();
 
 /** Fait traverser le proxy a un evenement et rend ce qui part vers Google. */
 async function traverserLeProxy(evenement) {
-  let recu = null;
+  let brut = null;
   globalThis.fetch = async (url, init) => {
-    recu = JSON.parse(init.body);
+    brut = init.body;
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   };
   const reponse = await worker.fetch(
     new Request("https://proxy.test/coach-sync", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + JETON },
       body: JSON.stringify(evenement)
     }),
     ENV
   );
-  return { statut: reponse.status, versGoogle: recu };
+  // Ce qui part vers Google est une enveloppe signee (v2) : `versGoogle` est
+  // l'evenement qu'elle porte, `brut` l'enveloppe telle que le script la recoit.
+  return { statut: reponse.status, versGoogle: brut ? JSON.parse(JSON.parse(brut).charge) : null, brut };
 }
 
 /**
@@ -125,8 +152,8 @@ describe("les deux types ajoutes tardivement traversent le proxy", () => {
 
 describe("le script Google accepte et traite les deux types", () => {
   test("le resume est enregistre dans le classeur", async () => {
-    const { versGoogle } = await traverserLeProxy(resumeHebdo(85));
-    const { reponse, lignes } = executerScriptGoogle(versGoogle);
+    const { brut } = await traverserLeProxy(resumeHebdo(85));
+    const { reponse, lignes } = executerScriptGoogle(brut);
     assert.equal(reponse.ok, true, "le script ne doit plus repondre type-inconnu");
     const donnee = lignes[lignes.length - 1];
     assert.equal(donnee.Type, "resume_hebdo");
@@ -134,22 +161,22 @@ describe("le script Google accepte et traite les deux types", () => {
   });
 
   test("au-dessus du seuil : aucun e-mail, le recap du lundi suffit", async () => {
-    const { versGoogle } = await traverserLeProxy(resumeHebdo(85));
-    const { mails } = executerScriptGoogle(versGoogle);
+    const { brut } = await traverserLeProxy(resumeHebdo(85));
+    const { mails } = executerScriptGoogle(brut);
     assert.equal(mails.length, 0);
   });
 
   test("sous le seuil : un e-mail qui porte les vrais chiffres", async () => {
-    const { versGoogle } = await traverserLeProxy(resumeHebdo(50));
-    const { mails } = executerScriptGoogle(versGoogle);
+    const { brut } = await traverserLeProxy(resumeHebdo(50));
+    const { mails } = executerScriptGoogle(brut);
     assert.equal(mails.length, 1);
     assert.match(mails[0].sujet, /Sophie.*50 %/);
     assert.doesNotMatch(mails[0].corps, /undefined|NaN/);
   });
 
   test("l'alerte decalages a son propre texte, pas celui d'une autre", async () => {
-    const { versGoogle } = await traverserLeProxy(alerteDecalages());
-    const { mails } = executerScriptGoogle(versGoogle);
+    const { brut } = await traverserLeProxy(alerteDecalages());
+    const { mails } = executerScriptGoogle(brut);
     assert.equal(mails.length, 1);
     assert.match(mails[0].sujet, /3 créneaux décalés/);
     // Le piege d'origine : un « else » fourre-tout donnait a toute alerte
