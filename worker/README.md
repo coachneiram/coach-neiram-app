@@ -1,5 +1,7 @@
 # Sécurisation de la clé IA et du webhook coach
 
+> **17 octobre 2026 : codes d'accès clients et synchro signée (v2.2).** La procédure à jour est dans [`SECURITE.md`](SECURITE.md). Elle remplace l'étape « Installer la v2.1 » ci-dessous pour toute nouvelle mise en place. Le reste de ce fichier décrit l'historique.
+
 Ce dossier contient les deux pièces qui mettent les secrets hors du navigateur :
 
 | Fichier | Rôle | Où il vit une fois installé |

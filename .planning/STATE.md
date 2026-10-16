@@ -24,11 +24,11 @@ suivi, sans jamais casser l'application en production.
 - Phases 1 à 8 terminées. L'application Vite est en production depuis le 05/09/2026 (GitHub Pages publie `app/dist`, déploiement par GitHub Actions conditionné aux tests).
 - Phase 9 : CLEAN-01 fait ; CLEAN-02 (nettoyage de l'ancien `index.html`) reste ouvert, sans urgence.
 - Depuis la bascule : écrans enrichis par PR successives (jusqu'à #75 : Mon évolution, diète flexible). 38 scripts de fumée tournent sur Pixel 7 et iPhone 13.
-- Phase 10 (P0) : à démarrer. Quatre problèmes P0 identifiés par l'audit : Coach IA sans consigne système, champs du bilan erronés, `/ai` ouvert sans plafond, `/coach-sync` usurpable.
+- Phase 10 (P0) : quatre correctifs P0 codés et testés le 2026-10-17 (`docs/correctifs-p0.md`). REL-01, REL-02 et REL-04 (dépendances `weekStats`) faits côté application. REL-05 et REL-06 : code prêt, en attente des gestes de Marien (`worker/SECURITE.md`). Restent dans P0-A : écran de secours, `storage.persist()`, échappement des photos du bilan, consentement IA, suppression des données, accessibilité de la fenêtre modale.
 - En attente de Marien : décisions D1 à D5 (`docs/audit-produit.md` §9) ; Worker push à recoller (KV `PUSH_KV`, Cron).
 - Branche locale prête, non publiée : bilan mensuel avec photos (attend D1).
 
-Last activity: 2026-10-16 — audit produit et technique, ouverture du milestone v2.
+Last activity: 2026-10-17 — correctifs P0-1 à P0-4 (Coach IA, bilan hebdo, accès par code client, synchro signée).
 
 > Les sections ci-dessous retracent la v1 (septembre 2026). Elles sont conservées pour l'historique ; certaines informations y sont périmées (écrans « restant à migrer », blocage du `git push`).
 
