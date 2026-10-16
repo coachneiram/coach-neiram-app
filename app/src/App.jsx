@@ -763,7 +763,7 @@ export default function App() {
         }}
       />
 
-      <Aide open={aideOuverte} onClose={() => setAideOuverte(false)} />
+      <Aide open={aideOuverte} onClose={() => setAideOuverte(false)} objectifCalories={targets?.calories} />
     </>
   );
 }

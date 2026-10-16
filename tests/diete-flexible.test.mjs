@@ -114,3 +114,19 @@ describe("Regles chiffrees sur l'objectif du client (retour du coach du 16 octob
     assert.equal(reglesDieteFlexible(undefined).length, 5);
   });
 });
+
+describe("L'Aide avec les chiffres du client", () => {
+  test("la reponse « ecart » prend l'objectif du client, le reste de l'Aide ne change pas", async () => {
+    const { AIDE, aidePersonnalisee } = await import("../app/src/lib/aide.js");
+    const perso = aidePersonnalisee({ objectifCalories: 1800 });
+    const ecart = perso.flatMap((s) => s.questions).find((q) => q.id === "ecart");
+    const texte = net(ecart.reponse.join(" "));
+    assert.match(texte, /Pour toi, avec 1 800 kcal par jour : un repas de fête à 2 400 kcal se lisse avec environ 120 kcal de moins/);
+    assert.match(texte, /plaisir prévu de 150 à 200 kcal par jour/);
+    assert.doesNotMatch(texte, /3 000/);
+    assert.equal(ecart.libelles.length, 1, "les libelles cites restent verifies");
+    const autres = (a) => a.flatMap((s) => s.questions).filter((q) => q.id !== "ecart");
+    assert.deepEqual(autres(perso), autres(AIDE));
+    assert.equal(aidePersonnalisee({}), AIDE, "sans objectif, l'Aide d'origine");
+  });
+});

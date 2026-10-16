@@ -9,7 +9,7 @@
 import { useEffect, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { afficherNotification } from "../lib/notifier.js";
-import { AIDE } from "../lib/aide.js";
+import { aidePersonnalisee } from "../lib/aide.js";
 import { activerPush, desactiverPush, pushActif, serveurPushPret } from "../lib/push.js";
 import { charger } from "../lib/stockage.js";
 import { CLE_BILAN_ENVOYE } from "../lib/rappel-dimanche.js";
@@ -226,11 +226,13 @@ export function BandeauInstallation({ plateforme, peutProposer, onInstaller, onM
 }
 
 /** Aide : les questions frequentes, par theme, ouvertes d'un toucher. */
-export function Aide({ open, onClose }) {
+export function Aide({ open, onClose, objectifCalories }) {
+  // Les reponses qui citent un objectif prennent celui du client.
+  const aide = aidePersonnalisee({ objectifCalories });
   return (
     <Modal open={open} onClose={onClose} title="Aide">
       <div data-aide style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {AIDE.map((section) => (
+        {aide.map((section) => (
           <div key={section.id}>
             <div
               style={{

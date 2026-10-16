@@ -6,7 +6,7 @@
  *   2. un ecart de 1 000 kcal la veille donne le conseil des jours restants,
  *      le meme que la bibliotheque, sans jeune, et l'explication de la
  *      balance (eau et sel, grammes de graisse au plus) ;
- *   3. l'Aide repond a « J'ai fait un écart ».
+ *   3. l'Aide repond a « J'ai fait un écart », avec l'objectif du client.
  *
  * Un lundi, il n'y a pas encore de veille dans la semaine : le controle 2
  * verifie alors le message « dans les clous ».
@@ -109,8 +109,18 @@ try {
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: /Aide/ }).first().click();
   await page.waitForTimeout(500);
+  // Les reponses sont repliees : on ouvre la question.
+  await page.locator(".modal-panel").last().getByText(/J'ai fait un écart/).first().click();
+  await page.waitForTimeout(300);
   const aide = net(await page.locator(".modal-panel").last().innerText());
-  console.log("3. AIDE                 :", /J'ai fait un écart/.test(aide) ? "« J'ai fait un écart (raclette, resto) : je fais quoi ? »" : "*** question absente ***");
+  // La reponse prend l'objectif du client (16 octobre 2026).
+  const pourToi = `Pour toi, avec ${cible.toLocaleString("fr-FR").replace(/[\u202f\u00a0]/g, " ")} kcal par jour`;
+  console.log(
+    "3. AIDE                 :",
+    /J'ai fait un écart/.test(aide) && aide.includes(pourToi)
+      ? `« J'ai fait un écart » répond avec ses ${cible} kcal`
+      : `*** « ${pourToi} » absent ***`
+  );
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
 }
