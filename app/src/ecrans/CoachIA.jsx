@@ -10,12 +10,19 @@
  * En cas d'echec, le message de l'utilisateur reste affiche et la
  * conversation n'est pas enregistree. Perdre ce qu'il vient d'ecrire parce
  * que le reseau a lache serait la pire reponse possible.
+ *
+ * La consigne (regime, allergies, objectif, garde-fou medical) est
+ * construite par lib/consigne-coach.js et importee ici directement. Elle
+ * arrivait autrefois par une prop que App.jsx ne passait pas : le modele
+ * repondait sans rien savoir du client (audit P0-1, 17 octobre 2026).
+ * Chaque reponse est en plus relue pour y reperer un allergene declare.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { computeRemainingToday } from "../lib/nutrition.js";
 import { genererTexte, messageErreur } from "../lib/ia.js";
+import { TEXTES_GARDE_FOU, conseilsAlimentairesSurs, construireConsigneCoach, lireContraintes, verifierReponse } from "../lib/consigne-coach.js";
 import { charger, enregistrer } from "../lib/stockage.js";
 import { Btn, Card, TextInput } from "../ui/primitives.jsx";
 import { Loader2, Sparkles } from "../ui/icones.jsx";
@@ -29,7 +36,7 @@ const MAX_ENVOYES = 12;
 /** Questions proposees tant que la conversation est vide. */
 const AMORCES = ["Idée de dîner ce soir ?", "Une collation protéinée ?", "Par quoi remplacer le riz ?"];
 
-export function CoachIA({ profile, targets, logEntries, construireConsigne }) {
+export function CoachIA({ profile, targets, logEntries }) {
   const [messages, setMessages] = useState([]);
   const [brouillon, setBrouillon] = useState("");
   const [enCours, setEnCours] = useState(false);
@@ -60,7 +67,7 @@ export function CoachIA({ profile, targets, logEntries, construireConsigne }) {
       const restant = computeRemainingToday(logEntries, targets);
       const reponse = await genererTexte({
         history: avecQuestion.slice(-MAX_ENVOYES),
-        systemPrompt: construireConsigne?.(profile, targets, restant),
+        systemPrompt: construireConsigneCoach(profile, targets, restant),
         maxTokens: 700
       });
       const avecReponse = [...avecQuestion, { role: "assistant", text: reponse }];
@@ -91,6 +98,11 @@ export function CoachIA({ profile, targets, logEntries, construireConsigne }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <Card style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10, minHeight: 280 }}>
+        {!conseilsAlimentairesSurs(lireContraintes(profile)) && (
+          <p data-coach-profil-incomplet style={{ fontSize: 12, margin: 0, color: COLORS.warn || COLORS.bad, lineHeight: 1.5 }}>
+            {TEXTES_GARDE_FOU.profilIncomplet}
+          </p>
+        )}
         {messages.length === 0 && (
           <div style={{ textAlign: "center", color: COLORS.textMuted, padding: "18px 8px" }}>
             <Sparkles size={22} color={COLORS.gold} />
@@ -122,6 +134,7 @@ export function CoachIA({ profile, targets, logEntries, construireConsigne }) {
               }}
             >
               {m.text}
+              {m.role !== "user" && <GardeFou texte={m.text} profile={profile} />}
             </div>
           </div>
         ))}
@@ -190,6 +203,29 @@ export function CoachIA({ profile, targets, logEntries, construireConsigne }) {
           Effacer la conversation
         </button>
       )}
+    </div>
+  );
+}
+
+/**
+ * Avertissement sous une reponse qui cite un allergene declare ou un
+ * aliment exclu par le regime. Rien n'est affiche si la reponse est propre
+ * et que toutes les allergies sont verifiables.
+ */
+function GardeFou({ texte, profile }) {
+  const { alertes, nonVerifiables } = verifierReponse(texte, profile);
+  if (!alertes.length && !nonVerifiables.length) return null;
+  return (
+    <div data-coach-garde-fou style={{ marginTop: 8, paddingTop: 7, borderTop: `1px solid ${COLORS.border}`, fontSize: 11.5, lineHeight: 1.45 }}>
+      {alertes.map((a) => (
+        <p key={a.famille} style={{ margin: "0 0 4px", color: COLORS.bad, fontWeight: 600 }}>
+          {TEXTES_GARDE_FOU.alerte(a)}
+        </p>
+      ))}
+      {nonVerifiables.length > 0 && (
+        <p style={{ margin: "0 0 4px", color: COLORS.textMuted }}>{TEXTES_GARDE_FOU.nonVerifiable(nonVerifiables)}</p>
+      )}
+      {alertes.length > 0 && <p style={{ margin: 0, color: COLORS.textMuted }}>{TEXTES_GARDE_FOU.limite}</p>}
     </div>
   );
 }

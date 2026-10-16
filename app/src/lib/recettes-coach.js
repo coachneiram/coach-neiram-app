@@ -114,7 +114,7 @@ const MOTS_ANIMAL = mots(
  * familles viande, volaille et porc portent les regimes (pescetarien, sans
  * porc) ; le miel, lui, est deja controle par la regle vegan.
  */
-const REVELE = {
+export const REVELE = {
   gluten: mots(
     "bl[ée]|farine(?! (?:de |d'|d’)?(?:riz|pois|sarrasin|ma[ïi]s|coco|amande|ch[âa]taigne|lupin))|p[âa]tes|pain|boulgour|semoule|couscous|avoine|orge|seigle|[ée]peautre|tortillas?|chapelure|seitan|biscottes?|biscuits?|nouilles|wraps?|brioche|sauce soja"
   ),
