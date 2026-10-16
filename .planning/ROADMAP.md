@@ -23,6 +23,16 @@ car elles réduisent le risque et donnent un filet de sécurité pour tout ce qu
 - [x] **Phase 8: Bascule définitive** - Faite le 05/09/2026. Le workflow publie `app/dist`. `index.html` reste dans le dépôt, intact, pour un retour en arrière d'un seul commit.
 - [~] **Phase 9: Nettoyage et nouvelles fonctionnalités** - Scripts Python supprimés (CLEAN-01). CLEAN-02 (composants dupliqués dans `index.html`) attend la Phase 8 : `index.html` est l'application que les clients utilisent aujourd'hui.
 
+### Milestone v2 — Audit et évolution (ouvert le 2026-10-16)
+
+Source : `docs/audit-produit.md`. Chaque phase est livrée par tranches testables (PR, tests unitaires, fumées, suites complètes sur Pixel 7 et iPhone 13).
+
+- [ ] **Phase 10: P0 — Fiabilité et fondations** - Consigne du Coach IA, champs du bilan, écran de secours, consentement IA, suppression des données, durcissement du Worker et de l'Apps Script
+- [ ] **Phase 11: P1 — Centralisation et suivi coach** - Socle serveur, bilan hebdo court, espace coach « Dossiers à traiter », validation des propositions IA. **Attend la décision D2.**
+- [ ] **Phase 12: P2 — Personnalisation et valeur visible** - Profil enrichi, variantes, progression, rapport mensuel partageable, parcours Reprise
+- [ ] **Phase 13: P3 — Différenciation** - Assistant IA du coach, vidéos techniques, nutrition famille, accessibilité et performance
+
+
 ## Phase Details
 
 ### Phase 1: Sécurité IA + webhook
@@ -239,10 +249,39 @@ Plans:
 
 **Stratégie de rollback**: Historique Git conservé — tout fichier supprimé reste récupérable via l'historique ou les tags.
 
+### Phase 10: P0 — Fiabilité et fondations
+**Goal**: Corriger ce qui peut nuire à un client aujourd'hui et poser les garde-fous avant toute centralisation.
+**Requirements**: REL-01 à REL-06, RGPD-01, RGPD-02
+**Lots**: P0-A (app, sans dépendance), P0-B (Worker, recollé par Marien), P0-C (gestes de Marien : Apps Script, facturation Gemini, jeton Cloudflare), P0-D (dette : plafond du test de fidélité, documentation périmée)
+**Risques**: Faible ; P0-B et P0-C dépendent de gestes de Marien en production
+**Critères de validation**:
+  1. Le chat reçoit le régime et les allergies (test unitaire, et test que `Repas` transmet la consigne)
+  2. Le bilan contient « séances prévues / faites » et « créneaux manqués » (tests sur de vrais objets)
+  3. Aucune donnée n'est envoyée à l'IA avant consentement (fumée)
+  4. La suppression complète vide `coach_*` et `cn_*` et désabonne du push (fumée)
+  5. Une erreur de rendu affiche l'écran de secours avec export (fumée)
+  6. Toutes les fumées vertes sur les 2 appareils
+**Stratégie de rollback**: Une PR par lot ; revert du commit de fusion, le workflow republie la version précédente.
+
+### Phase 11: P1 — Centralisation et suivi coach
+**Goal**: Que le coach voie en un écran qui a besoin de lui, sans ressaisie, et valide chaque proposition de l'IA.
+**Depends on**: Phase 10 ; décisions D2 (architecture) et D4 (périmètre) de Marien
+**Requirements**: CENT-01 à CENT-05
+**Risques**: Moyen (données de santé côté serveur) ; double écriture, aucune suppression locale avant migration vérifiée
+**Critères de validation**: tests de permissions (un client ne lit jamais un autre client), retour arrière testé, indicateurs mesurés avant/après (bilans reçus, délai de réponse, minutes par client)
+
+### Phase 12: P2 — Personnalisation et valeur visible
+**Depends on**: Phase 10 (Phase 11 pour le rapport mensuel partagé avec le coach) ; décision D1 pour les photos
+**Requirements**: PERSO-01 à PERSO-04
+
+### Phase 13: P3 — Différenciation
+**Depends on**: Phase 11
+**Requirements**: DIFF-01 à DIFF-03
+
 ## Progress
 
 **Execution Order:**
-Phases 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+Phases 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 ; milestone v2 : 10 → 11 → 12 → 13
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -255,3 +294,7 @@ Phases 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 | 7. GitHub Actions + Pages | 1/3 | Préparée, en attente d'activation | - |
 | 8. Bascule définitive | 0/3 | Not started | - |
 | 9. Nettoyage + nouvelles features | 0/3 | Not started | - |
+| 10. P0 Fiabilité et fondations | 0/4 lots | À faire | - |
+| 11. P1 Centralisation | 0/4 lots | Attend D2 | - |
+| 12. P2 Personnalisation | 0/6 | À faire | - |
+| 13. P3 Différenciation | 0/4 | À faire | - |

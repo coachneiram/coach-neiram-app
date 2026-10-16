@@ -1,68 +1,36 @@
 ---
 gsd_state_version: '1.0'
 status: in_progress
+milestone: v2
 progress:
-  total_phases: 9
+  total_phases: 13
   completed_phases: 8
-  total_plans: 27
-  completed_plans: 19
-  percent: 89
+  current_phase: 10
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-01)
+See: .planning/PROJECT.md (updated 2026-09-01) et `docs/audit-produit.md` (2026-10-16).
 
 **Core value:** Permettre à un client de suivre sa nutrition, ses entraînements et sa
 progression au quotidien, et à son coach de recevoir automatiquement les signaux de
 suivi, sans jamais casser l'application en production.
-**Current focus:** Bascule faite le 05/09/2026 : l'application Vite est en production, vérifiée sur téléphone, mode hors ligne compris. Reste la seconde moitié de la Phase 9 (CLEAN-02, suppression des composants dupliqués dans `index.html`), à faire une fois la bascule stable depuis quelques jours.
+**Current focus:** Milestone v2 ouvert le 2026-10-16. Audit livré (`docs/audit-produit.md`). Prochaine tranche : Phase 10, lot P0-A.
 
 ## Current Position
 
-Phases terminées et en production : 1, 2, 3, 4, 5, 6, 7, 8. Phase 9 à moitié faite (CLEAN-01).
-Phase 5 : à mi-parcours
-Restent : 5 (écrans restants), 8 (bascule), 9 (nettoyage)
-Status: In progress
-Last activity: 2026-09-05 — Phase 7 activée : le site est déployé par GitHub Actions, et les tests conditionnent désormais la mise en ligne. Mode hors ligne vérifié en production sur téléphone (mode avion). Phase 5 à mi-parcours.
+- Phases 1 à 8 terminées. L'application Vite est en production depuis le 05/09/2026 (GitHub Pages publie `app/dist`, déploiement par GitHub Actions conditionné aux tests).
+- Phase 9 : CLEAN-01 fait ; CLEAN-02 (nettoyage de l'ancien `index.html`) reste ouvert, sans urgence.
+- Depuis la bascule : écrans enrichis par PR successives (jusqu'à #75 : Mon évolution, diète flexible). 38 scripts de fumée tournent sur Pixel 7 et iPhone 13.
+- Phase 10 (P0) : à démarrer. Quatre problèmes P0 identifiés par l'audit : Coach IA sans consigne système, champs du bilan erronés, `/ai` ouvert sans plafond, `/coach-sync` usurpable.
+- En attente de Marien : décisions D1 à D5 (`docs/audit-produit.md` §9) ; Worker push à recoller (KV `PUSH_KV`, Cron).
+- Branche locale prête, non publiée : bilan mensuel avec photos (attend D1).
 
-### Écrans migrés (4 sur 8)
+Last activity: 2026-10-16 — audit produit et technique, ouverture du milestone v2.
 
-Sommeil, Mensurations, Nutrition, Séances. Rendu validé visuellement par
-l'utilisateur sur une page d'aperçu publiée.
-
-Restent : Journal (le plus gros, ~62 ko), Repas (~31 ko), Entraînements,
-Tendances (~26 ko).
-
-### Logique de calcul portée et vérifiée par parité
-
-Toute la logique risquée est désormais portée hors de index.html, et
-chaque portage est comparé à l'implémentation d'origine sur des centaines
-de situations tirées au sort :
-
-- créneaux d'entraînement (400 situations)
-- filtrage des aliments par régime et allergies (11 000 comparaisons)
-- programme hebdomadaire et semaines difficiles (300 situations)
-- bilan hebdomadaire (250 semaines, champ par champ)
-- bilan mensuel (250 mois, février bissextile et mois en cours inclus)
-- estimation de force 1RM (2 000 comparaisons)
-- lecture des bilans rédigés par l'IA (frontières balayées)
-
-Méthode systématique : chaque portage est ensuite saboté volontairement
-pour vérifier que le test réagit. Cinq angles morts ont ainsi été trouvés
-et comblés — dont un générateur qui ne produisait jamais d'écart horaire
-dans la fenêtre de tolérance, et un test de longueur de titre qui ne
-testait rien.
-
-### Ce qui reste avant la bascule (phase 8)
-
-Migrer les 4 écrans restants, la coque de navigation, et le branchement
-sur les données réelles. La bascule elle-même demandera une session
-dédiée avec l'utilisateur devant l'écran.
-
-Progress: [██████░░░░] 62%
+> Les sections ci-dessous retracent la v1 (septembre 2026). Elles sont conservées pour l'historique ; certaines informations y sont périmées (écrans « restant à migrer », blocage du `git push`).
 
 ## Performance Metrics
 
