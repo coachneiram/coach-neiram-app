@@ -19,7 +19,7 @@ import { descriptionRegime } from "../lib/regimes.js";
 import { objectifFibres, totalFibres } from "../lib/fibres.js";
 import { todayISO } from "../lib/dates.js";
 import { Btn, Card, MacroTarget, SectionTitle } from "../ui/primitives.jsx";
-import { budgetSemaine, messageSemaine } from "../lib/diete-flexible.js";
+import { budgetSemaine, messageSemaine, reglesDieteFlexible } from "../lib/diete-flexible.js";
 
 /** Fenetre d'observation du calibrage, en jours. Valeur d'origine. */
 const FENETRE_CALIBRAGE = 28;
@@ -124,7 +124,7 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
         )}
       </Card>
 
-      <DieteFlexible semaine={semaine} />
+      <DieteFlexible semaine={semaine} regles={reglesDieteFlexible(targets?.calories)} />
 
       {calibration && (
         <Card>
@@ -190,15 +190,10 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
    un ecart se lisse sans jeuner). index.html n'avait rien de tel. */
 const JOURS = ["L", "M", "M", "J", "V", "S", "D"];
 
-const REGLES = [
-  ["Ton total de la journée compte, pas la répartition.", "3 000 kcal en 6 repas de 500 ou en 3 repas de 1 000, c'est pareil. Mange au rythme qui te va."],
-  ["Mieux encore : lisse sur la semaine.", "Un jour un peu au-dessus, un autre un peu en dessous : c'est ta moyenne de la semaine qui fait le résultat."],
-  ["Prévois ton plaisir.", "Garde 200 à 300 kcal par jour pour ce qui te fait envie, par exemple un petit sachet de M&M's (45 g, environ 230 kcal). Un plaisir prévu évite de craquer."],
-  ["Un écart ? Pas de jeûne le lendemain.", "Raclette en famille, resto, anniversaire : répartis le surplus sur les jours suivants. 4 000 kcal au lieu de 3 000, c'est 200 kcal de moins sur les 5 jours d'après, pas une journée sans manger."],
-  ["Garde tes protéines chaque jour,", "même quand tu lisses : ce sont elles qui protègent tes muscles et ta satiété."]
-];
+// Les regles sont chiffrees sur l'objectif du client (lib/diete-flexible.js) :
+// un exemple a 3 000 kcal ne parle pas a une cliente a 1 500.
 
-function DieteFlexible({ semaine }) {
+function DieteFlexible({ semaine, regles }) {
   const couleur = semaine ? (semaine.etat === "surplus" ? COLORS.warn : semaine.etat === "marge" ? COLORS.blue : COLORS.good) : COLORS.textMuted;
   return (
     <Card>
@@ -266,7 +261,7 @@ function DieteFlexible({ semaine }) {
         >
           Les règles de ta diète flexible
         </div>
-        {REGLES.map(([titre, texte], i) => (
+        {regles.map(([titre, texte], i) => (
           <p key={i} style={{ fontSize: 12.5, color: COLORS.textMuted, margin: "0 0 8px", lineHeight: 1.5 }}>
             <b style={{ color: COLORS.text }}>{titre}</b> {texte}
           </p>

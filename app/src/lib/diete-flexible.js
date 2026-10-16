@@ -107,3 +107,71 @@ export function messageSemaine(b) {
   }
   return `Ta semaine est dans les clous : continue autour de ${fr(b.cible)} kcal par jour.`;
 }
+
+/*
+ * Les regles de la diete flexible, chiffrees sur l'objectif du client.
+ *
+ * Retour du coach du 16 octobre 2026 : l'exemple ecrit sur ses 3 000 kcal
+ * (« 6 repas de 500 », « 4 000 au lieu de 3 000 ») ne parlait pas a une
+ * cliente a 1 500 kcal. Les proportions sont celles de l'exemple du coach :
+ * - un ecart de fete d'environ un tiers de la journee (1 000 sur 3 000),
+ *   lisse sur les 5 jours suivants ;
+ * - un plaisir prevu de 7 a 10 % de la journee (200 a 300 sur 3 000) ;
+ * - environ 5 kcal par gramme de M&M's (480 a 500 kcal pour 100 g).
+ */
+
+/** Objectif pris pour les exemples quand le profil n'en donne pas. */
+export const OBJECTIF_EXEMPLE = 3000;
+export const PART_ECART = 1 / 3;
+export const PART_PLAISIR = [0.07, 0.1];
+const KCAL_PAR_G_MMS = 5;
+
+const arrondi = (v, pas) => Math.round(v / pas) * pas;
+
+/** Les chiffres des exemples, pour un objectif donne. */
+export function chiffresExemples(objectif) {
+  const cible = arrondi(num(objectif) > 0 ? num(objectif) : OBJECTIF_EXEMPLE, 10);
+  const ecart = Math.max(100, arrondi(cible * PART_ECART, 100));
+  const plaisirMin = Math.max(50, arrondi(cible * PART_PLAISIR[0], 50));
+  const plaisirMax = Math.max(plaisirMin, arrondi(cible * PART_PLAISIR[1], 50));
+  const plaisirMilieu = (plaisirMin + plaisirMax) / 2;
+  return {
+    cible,
+    sixRepas: arrondi(cible / 6, 10),
+    troisRepas: arrondi(cible / 3, 10),
+    ecart,
+    ecartParJour: arrondi(ecart / 5, 10),
+    plaisirMin,
+    plaisirMax,
+    mmsGrammes: Math.max(10, arrondi(plaisirMilieu / KCAL_PAR_G_MMS, 5)),
+    mmsKcal: arrondi(Math.max(10, arrondi(plaisirMilieu / KCAL_PAR_G_MMS, 5)) * KCAL_PAR_G_MMS, 10)
+  };
+}
+
+/** Les 5 regles, [titre, texte], avec les chiffres du client. */
+export function reglesDieteFlexible(objectif) {
+  const c = chiffresExemples(objectif);
+  const plaisir = c.plaisirMin === c.plaisirMax ? `environ ${fr(c.plaisirMin)} kcal` : `${fr(c.plaisirMin)} à ${fr(c.plaisirMax)} kcal`;
+  return [
+    [
+      "Ton total de la journée compte, pas la répartition.",
+      `Tes ${fr(c.cible)} kcal en 6 repas de ${fr(c.sixRepas)} ou en 3 repas de ${fr(c.troisRepas)}, c'est pareil. Mange au rythme qui te va.`
+    ],
+    [
+      "Mieux encore : lisse sur la semaine.",
+      "Un jour un peu au-dessus, un autre un peu en dessous : c'est ta moyenne de la semaine qui fait le résultat."
+    ],
+    [
+      "Prévois ton plaisir.",
+      `Garde ${plaisir} par jour pour ce qui te fait envie, par exemple ${fr(c.mmsGrammes)} g de M&M's (environ ${fr(c.mmsKcal)} kcal). Un plaisir prévu évite de craquer.`
+    ],
+    [
+      "Un écart ? Pas de jeûne le lendemain.",
+      `Raclette en famille, resto, anniversaire : répartis le surplus sur les jours suivants. ${fr(c.cible + c.ecart)} kcal au lieu de ${fr(c.cible)}, c'est ${fr(c.ecartParJour)} kcal de moins sur les 5 jours d'après, pas une journée sans manger.`
+    ],
+    [
+      "Garde tes protéines chaque jour,",
+      "même quand tu lisses : ce sont elles qui protègent tes muscles et ta satiété."
+    ]
+  ];
+}
