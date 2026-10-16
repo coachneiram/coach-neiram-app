@@ -24,6 +24,8 @@ import { ALLERGENS } from "./catalogues.js";
 import { resumeRegime } from "./regimes.js";
 import { GOALS } from "./nutrition.js";
 import { genererTexte } from "./ia.js";
+import { conseilsAlimentairesSurs, lireContraintes } from "./consigne-coach.js";
+import { creneauxManques, texteCreneaux, texteProgramme } from "./resumes-bilan.js";
 
 /** « septembre 2026 », pour l'en-tete du bilan mensuel. */
 export const moisLong = (cleMois) =>
@@ -43,32 +45,35 @@ export function ligneRegime(profile) {
   return parts.length ? ", " + parts.join(", ") : "";
 }
 
+/**
+ * Regle alimentaire des bilans.
+ *
+ * Allergies illisibles ou absentes du profil : les bilans ne proposent
+ * aucun aliment precis (meme regle que le Coach IA, voir
+ * consigne-coach.js). Sinon, la phrase d'origine, inchangee.
+ */
+export function regleAlimentaire(profile) {
+  return conseilsAlimentairesSurs(lireContraintes(profile))
+    ? "Toute suggestion alimentaire doit respecter le régime et les allergies/intolérances indiqués."
+    : "Les allergies et intolérances du client ne sont pas connues de façon fiable : ne propose aucun aliment, repas ni recette précis ; invite-le plutôt à compléter ses allergies dans son profil.";
+}
+
 /** Les chiffres d'une semaine, mis en phrases pour le modele. */
 function chiffresSemaine(s, profile) {
   if (!s) return "non disponible";
   return [
+    // Programme et creneaux : lus par resumes-bilan.js (audit P0-2). Les
+    // noms lus ici autrefois (planned, done, honored) n'existaient pas
+    // dans les resumes produits par bilan.js : ces deux lignes etaient
+    // toujours vides.
     "Séances : " +
       s.workoutsCount +
-      (s.planSummary && s.planSummary.planned
-        ? " (programme : " +
-          s.planSummary.done +
-          "/" +
-          s.planSummary.planned +
-          " respectées" +
-          (s.planSummary.missed
-            ? ", " + s.planSummary.missed + " manquée" + (s.planSummary.missed > 1 ? "s" : "")
-            : "") +
-          ")"
-        : "") +
+      (texteProgramme(s.planSummary) ? " (programme : " + texteProgramme(s.planSummary) + ")" : "") +
       (s.deloadCount ? ", dont " + s.deloadCount + " en déload" : ""),
-    s.slotSummary && s.slotSummary.planned
-      ? "Créneaux du profil : " +
-        s.slotSummary.honored +
-        "/" +
-        s.slotSummary.planned +
-        " tenus" +
-        (s.slotSummary.missed ? ", " + s.slotSummary.missed + " manqué(s)" : "")
+    s.planSummary === null || s.planSummary === undefined
+      ? "Programme de la semaine : aucun programme planifié (aucune séance ne compte comme manquée)"
       : null,
+    texteCreneaux(s.slotSummary) ? "Créneaux du profil : " + texteCreneaux(s.slotSummary) : null,
     s.hardWeek
       ? "Semaine déclarée difficile par le client (motif : " +
         (s.hardWeekReason || "non précisé") +
@@ -163,7 +168,7 @@ ${
     ? "Le client a déclaré cette semaine comme difficile et basculé en format maintien : n'augmente ni le volume ni les charges, valorise explicitement le fait d'avoir tenu le créneau plutôt que d'avoir tout arrêté, et propose une reprise progressive la semaine suivante.\n"
     : ""
 }${
-    weekStats.slotSummary && weekStats.slotSummary.missed
+    creneauxManques(weekStats.slotSummary)
       ? "Des créneaux ont été manqués : traite la cause (organisation, fatigue, négociation du créneau) dans A_CORRIGER, sans culpabiliser le client.\n"
       : ""
   }${
@@ -183,7 +188,7 @@ ${
     : ""
 }
 
-Toute suggestion alimentaire doit respecter le régime et les allergies/intolérances indiqués.
+${regleAlimentaire(profile)}
 
 Réponds UNIQUEMENT dans ce format exact, texte simple sans markdown (remplace les <...>, omets une section si elle n'a rien de pertinent sauf RÉSUMÉ, ÉVOLUTION et ACTIONS qui sont obligatoires) :
 
@@ -294,7 +299,7 @@ ${chiffresMois(prevMonthStats, profile)}
 ACTIONS RECOMMANDÉES AU DERNIER BILAN MENSUEL (évalue si elles ont été suivies) :
 ${lastActionsText || "aucune"}
 
-Toute suggestion alimentaire doit respecter le régime et les allergies/intolérances indiqués.
+${regleAlimentaire(profile)}
 
 Réponds UNIQUEMENT dans ce format exact, texte simple sans markdown (remplace les <...>, omets une section si rien de pertinent sauf RÉSUMÉ, ÉVOLUTION et ACTIONS qui sont obligatoires) :
 

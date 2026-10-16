@@ -6,7 +6,7 @@
  *   2. un ecart de 1 000 kcal la veille donne le conseil des jours restants,
  *      le meme que la bibliotheque, sans jeune, et l'explication de la
  *      balance (eau et sel, grammes de graisse au plus) ;
- *   3. l'Aide repond a « J'ai fait un écart ».
+ *   3. l'Aide repond a « J'ai fait un écart », avec l'objectif du client.
  *
  * Un lundi, il n'y a pas encore de veille dans la semaine : le controle 2
  * verifie alors le message « dans les clous ».
@@ -21,7 +21,7 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { budgetSemaine, messageSemaine } from "../app/src/lib/diete-flexible.js";
+import { budgetSemaine, messageSemaine, reglesDieteFlexible } from "../app/src/lib/diete-flexible.js";
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "app", "dist");
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml" };
@@ -68,8 +68,10 @@ try {
   const regles = ["Ton total de la journée compte", "lisse sur la semaine", "Prévois ton plaisir", "Pas de jeûne le lendemain", "Garde tes protéines"].filter((r) => t1.includes(r)).length;
   console.log(
     "1. BUDGET ET RÈGLES     :",
-    cible && Number(m[1].replace(/ /g, "")) === cible * 7 && regles === 5 && /M&M's \(45 g, environ 230 kcal\)/.test(t1)
-      ? `${(cible * 7).toLocaleString("fr-FR")} kcal (${cible} × 7), 5 règles, plaisir de 200 à 300 kcal`
+    // Les regles sont chiffrees sur l'objectif du client (16 octobre 2026).
+    cible && Number(m[1].replace(/ /g, "")) === cible * 7 && regles === 5 &&
+      reglesDieteFlexible(cible).every(([t, x]) => t1.includes(net(`${t} ${x}`)))
+      ? `${(cible * 7).toLocaleString("fr-FR")} kcal (${cible} × 7), 5 règles chiffrées sur ${cible} kcal`
       : `*** ${t1.slice(0, 200)} ***`
   );
 
@@ -107,8 +109,18 @@ try {
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: /Aide/ }).first().click();
   await page.waitForTimeout(500);
+  // Les reponses sont repliees : on ouvre la question.
+  await page.locator(".modal-panel").last().getByText(/J'ai fait un écart/).first().click();
+  await page.waitForTimeout(300);
   const aide = net(await page.locator(".modal-panel").last().innerText());
-  console.log("3. AIDE                 :", /J'ai fait un écart/.test(aide) ? "« J'ai fait un écart (raclette, resto) : je fais quoi ? »" : "*** question absente ***");
+  // La reponse prend l'objectif du client (16 octobre 2026).
+  const pourToi = `Pour toi, avec ${cible.toLocaleString("fr-FR").replace(/[\u202f\u00a0]/g, " ")} kcal par jour`;
+  console.log(
+    "3. AIDE                 :",
+    /J'ai fait un écart/.test(aide) && aide.includes(pourToi)
+      ? `« J'ai fait un écart » répond avec ses ${cible} kcal`
+      : `*** « ${pourToi} » absent ***`
+  );
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
 }

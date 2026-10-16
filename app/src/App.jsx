@@ -491,12 +491,18 @@ export default function App() {
 
   const weekStats = useMemo(
     () => (profile && targets ? bilanHebdomadaire(getWeekKey(todayISO()), donneesCompletes, profile, targets) : null),
-    [profile, targets, sessions, dailyForm, bodyLogs, logEntries, measurements]
+    // planSemaine, routines et semainesDifficiles entrent dans le bilan
+    // (programme, semaine difficile) : sans eux, le resume du programme
+    // restait celui d'avant la derniere modification (audit P0-10).
+    [profile, targets, sessions, dailyForm, bodyLogs, logEntries, measurements, planSemaine, routines, semainesDifficiles]
   );
 
   const monthStats = useMemo(
     () => (profile && targets ? bilanMensuel(getMonthKey(todayISO()), donneesCompletes, profile, targets) : null),
-    [profile, targets, sessions, dailyForm, bodyLogs, logEntries, measurements]
+    // planSemaine, routines et semainesDifficiles entrent dans le bilan
+    // (programme, semaine difficile) : sans eux, le resume du programme
+    // restait celui d'avant la derniere modification (audit P0-10).
+    [profile, targets, sessions, dailyForm, bodyLogs, logEntries, measurements, planSemaine, routines, semainesDifficiles]
   );
 
   const definirRaisonCreneau = (cle, entree) => {
@@ -763,7 +769,7 @@ export default function App() {
         }}
       />
 
-      <Aide open={aideOuverte} onClose={() => setAideOuverte(false)} />
+      <Aide open={aideOuverte} onClose={() => setAideOuverte(false)} objectifCalories={targets?.calories} />
     </>
   );
 }

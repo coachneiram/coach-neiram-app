@@ -14,6 +14,7 @@
 
 import { PARRAINAGE } from "./carte-progres.js";
 import { PALIERS_SERIE } from "./resume-semaine.js";
+import { chiffresExemples } from "./diete-flexible.js";
 
 const listePaliers = (p) => `${p.slice(0, -1).join(", ")} et ${p[p.length - 1]}`;
 
@@ -132,8 +133,8 @@ export const AIDE = [
         question: "J'ai fait un écart (raclette, resto) : je fais quoi ?",
         reponse: [
           "Rien de grave, et surtout pas de jeûne le lendemain. Ce qui compte, c'est ton total de la semaine, pas une journée. Onglet Nutrition, carte « Ta semaine compte plus que ta journée » : l'appli te dit combien viser chaque jour qui reste pour lisser l'écart, sans jamais descendre sous 80 % de ton objectif.",
-          "Exemple : 4 000 kcal au lieu de 3 000, c'est 200 kcal de moins sur les 5 jours suivants. La balance qui monte le lendemain, c'est surtout de l'eau et du sel.",
-          "Ton total de la journée compte plus que la répartition par repas, et un plaisir prévu de 200 à 300 kcal par jour aide à ne pas craquer."
+          "Exemple : un repas de fête qui ajoute un tiers de ta journée (1 000 kcal pour un objectif de 3 000) se lisse avec environ 7 % de moins sur les 5 jours suivants (200 kcal). La carte fait le calcul avec ton objectif. La balance qui monte le lendemain, c'est surtout de l'eau et du sel.",
+          "Ton total de la journée compte plus que la répartition par repas, et un plaisir prévu de 7 à 10 % de tes calories (200 à 300 kcal pour 3 000) aide à ne pas craquer."
         ],
         libelles: ["Ta semaine compte plus que ta journée"]
       },
@@ -286,3 +287,28 @@ export const AIDE = [
 
 /** Toutes les questions, a plat. */
 export const toutesLesQuestions = () => AIDE.flatMap((s) => s.questions);
+
+/**
+ * L'Aide avec les chiffres du client.
+ *
+ * Retour du coach du 16 octobre 2026 : chaque client doit lire ses propres
+ * chiffres, pas l'exemple a 3 000 kcal. Seules les reponses qui citent un
+ * objectif changent ; sans objectif calorique, l'Aide reste celle ci-dessus.
+ */
+export function aidePersonnalisee({ objectifCalories } = {}) {
+  if (!(Number(objectifCalories) > 0)) return AIDE;
+  const c = chiffresExemples(objectifCalories);
+  const fr = (n) => Math.round(n).toLocaleString("fr-FR");
+  const plaisir = c.plaisirMin === c.plaisirMax ? `d'environ ${fr(c.plaisirMin)} kcal` : `de ${fr(c.plaisirMin)} à ${fr(c.plaisirMax)} kcal`;
+  const personnalisees = {
+    ecart: (q) => [
+      q.reponse[0],
+      `Pour toi, avec ${fr(c.cible)} kcal par jour : un repas de fête à ${fr(c.cible + c.ecart)} kcal se lisse avec environ ${fr(c.ecartParJour)} kcal de moins sur les 5 jours suivants. La balance qui monte le lendemain, c'est surtout de l'eau et du sel.`,
+      `Ton total de la journée compte plus que la répartition par repas, et un plaisir prévu ${plaisir} par jour aide à ne pas craquer.`
+    ]
+  };
+  return AIDE.map((section) => ({
+    ...section,
+    questions: section.questions.map((q) => (personnalisees[q.id] ? { ...q, reponse: personnalisees[q.id](q) } : q))
+  }));
+}

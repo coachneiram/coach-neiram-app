@@ -23,7 +23,7 @@ const SOUS_ONGLETS = [
   { id: "coach", label: "Coach IA", requiertIA: true }
 ];
 
-export function Repas({ api, profile, targets, logEntries, iaDisponible = true, construireConsigne }) {
+export function Repas({ api, profile, targets, logEntries, iaDisponible = true }) {
   const [sousOnglet, setSousOnglet] = useState("plats");
 
   const onglets = SOUS_ONGLETS.filter((o) => !o.requiertIA || iaDisponible);
@@ -59,12 +59,7 @@ export function Repas({ api, profile, targets, logEntries, iaDisponible = true, 
         <Aliments profile={profile} targets={targets} logEntries={logEntries} />
       )}
       {sousOnglet === "coach" && (
-        <CoachIA
-          profile={profile}
-          targets={targets}
-          logEntries={logEntries}
-          construireConsigne={construireConsigne}
-        />
+        <CoachIA profile={profile} targets={targets} logEntries={logEntries} />
       )}
     </div>
   );

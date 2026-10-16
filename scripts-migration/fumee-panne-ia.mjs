@@ -58,10 +58,31 @@ const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH })
  */
 const PANNES = [
   {
+    // Quota Gemini du jour : code du proxy du 17/10/2026 (« quota-fournisseur »).
     nom: "quota atteint (429)",
-    reponse: { statut: 429, corps: { ok: false, error: "trop-de-requetes" } },
+    reponse: { statut: 429, corps: { ok: false, error: "quota-fournisseur" } },
     attendu: /quota/i,
     pourquoi: "elle doit comprendre qu'il faut revenir demain, pas réessayer en boucle"
+  },
+  /* Refus du proxy du 17 octobre 2026 (audit P0-3) : chacun appelle un
+     geste different, et aucun ne doit passer pour une cle morte. */
+  {
+    nom: "quota du client (429)",
+    reponse: { statut: 429, corps: { ok: false, error: "quota-client" } },
+    attendu: /revient demain/i,
+    pourquoi: "sa part du jour est utilisee : demain, pas en boucle"
+  },
+  {
+    nom: "trop vite (429)",
+    reponse: { statut: 429, corps: { ok: false, error: "trop-de-requetes" } },
+    attendu: /patiente une minute/i,
+    pourquoi: "une minute suffit, inutile d'attendre demain"
+  },
+  {
+    nom: "code non activé (401)",
+    reponse: { statut: 401, corps: { ok: false, error: "acces-requis" } },
+    attendu: /code d'accès donné par ton coach/i,
+    pourquoi: "elle doit saisir le code de son coach dans les Réglages"
   },
   {
     nom: "clé refusée (403)",

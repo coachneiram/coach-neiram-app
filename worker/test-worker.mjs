@@ -1,4 +1,5 @@
 import worker from "./coach-neiram-proxy.js";
+import { fauxD1 } from "../tests/faux-d1.mjs";
 
 let echecs = 0;
 function verifie(nom, condition, detail) {
@@ -14,8 +15,15 @@ const env = {
   GEMINI_API_KEY: "cle-secrete-de-test",
   COACH_SYNC_URL: "https://script.google.com/macros/s/FAUX/exec",
   COACH_SYNC_SECRET: "secret-de-test",
-  ALLOWED_ORIGINS: ""
+  ALLOWED_ORIGINS: "",
+  ADMIN_SECRET: "secret-admin-de-test-0123456789abcdef",
+  DB: fauxD1()
 };
+
+// Depuis le 17/10/2026, /ai et /coach-sync exigent un jeton client : on en
+// obtient un comme le ferait un client, avec un code d'invitation du coach.
+// (Les cas d'acces refuse sont dans tests/worker-acces.test.mjs.)
+let jeton = "";
 
 // Capture les appels sortants au lieu de les envoyer reellement.
 let appelsSortants = [];
@@ -29,9 +37,20 @@ function stubFetch(reponse) {
 function req(chemin, corps, methode = "POST") {
   return new Request("https://proxy.test" + chemin, {
     method: methode,
-    headers: { "Content-Type": "application/json", "Origin": "https://coachneiram.github.io" },
+    headers: { "Content-Type": "application/json", "Origin": "https://coachneiram.github.io", ...(jeton ? { Authorization: "Bearer " + jeton } : {}) },
     body: methode === "POST" ? (typeof corps === "string" ? corps : JSON.stringify(corps)) : undefined
   });
+}
+
+{
+  const inv = await (await worker.fetch(new Request("https://proxy.test/admin/invitations", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + env.ADMIN_SECRET },
+    body: JSON.stringify({ libelle: "Marien" })
+  }), env)).json();
+  const act = await (await worker.fetch(req("/auth/activer", { code: inv.code }), env)).json();
+  jeton = act.jeton || "";
+  verifie("jeton client obtenu par code d'invitation", jeton.length > 20);
 }
 
 console.log("\n--- Requetes preliminaires et methodes ---");
@@ -86,6 +105,7 @@ console.log("\n--- Route /ai ---");
     model: "gemini-3.6-flash", messages: [{ role: "user", parts: [{ text: "x" }] }]
   }), env);
   verifie("statut 429 (quota) transmis tel quel", r.status === 429, "statut " + r.status);
+  verifie("corps de Google non transmis", (await r.json()).error === "quota-fournisseur");
 }
 
 console.log("\n--- Route /coach-sync ---");
@@ -110,8 +130,10 @@ console.log("\n--- Route /coach-sync ---");
     retard: "oui"
   }), env);
   verifie("pointage valide accepte (200)", r.status === 200, "statut " + r.status);
-  const envoye = JSON.parse(appelsSortants[0].init.body);
-  verifie("secret ajoute cote serveur", envoye.secret === "secret-de-test");
+  const enveloppe = JSON.parse(appelsSortants[0].init.body);
+  verifie("evenement signe (v2), secret absent du corps", enveloppe.v === 2 && /^[0-9a-f]{64}$/.test(enveloppe.sig) && !appelsSortants[0].init.body.includes("secret-de-test"));
+  const envoye = JSON.parse(enveloppe.charge);
+  verifie("prenom pris sur la fiche client", envoye.client === "Marien");
   verifie("cible = script Apps Script", appelsSortants[0].url === env.COACH_SYNC_URL);
   verifie("champ inattendu supprime", envoye.champInattendu === undefined);
   verifie("texte plafonne a 500 caracteres", envoye.note.length === 500, "longueur " + envoye.note.length);

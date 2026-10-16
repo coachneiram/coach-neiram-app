@@ -284,6 +284,8 @@ describe("les ecrans sont branches", () => {
   test("le bilan de la semaine se recalcule quand une mesure change", () => {
     const app = lire("app/src/App.jsx");
     const bloc = app.slice(app.indexOf("const weekStats = useMemo"), app.indexOf("const monthStats"));
-    assert.match(bloc, /measurements\]/);
+    assert.match(bloc, /measurements[,\]]/);
+    // Le programme et les semaines difficiles aussi (audit P0-10).
+    assert.match(bloc, /planSemaine, routines, semainesDifficiles\]/);
   });
 });

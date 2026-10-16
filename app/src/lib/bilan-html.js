@@ -15,6 +15,7 @@
  */
 
 import { fmtDateLong } from "./dates.js";
+import { lireResumeCreneaux, lireResumeProgramme } from "./resumes-bilan.js";
 import { fmtL } from "./score-jour.js";
 import { GOALS } from "./nutrition.js";
 import { slugNom } from "./sauvegarde.js";
@@ -34,6 +35,8 @@ export function echapperHtml(s) {
 export function construireBilanHTML({ profile, weekStats, report, photos, targets }) {
   const e = echapperHtml;
   const s = weekStats;
+  const programme = lireResumeProgramme(s.planSummary);
+  const creneaux = lireResumeCreneaux(s.slotSummary);
 
   const stat = (label, value) =>
     value == null || value === ""
@@ -43,11 +46,24 @@ export function construireBilanHTML({ profile, weekStats, report, photos, target
         )}</div><div style="font-size:10px;color:#9C9C94;margin-top:2px">${e(label)}</div></div>`;
 
   const stats = [
+    // Lus par resumes-bilan.js (audit P0-2) : `planned` et `done`
+    // n'existaient pas dans le resume produit par bilan.js, la colonne
+    // « programmées » n'apparaissait donc jamais chez le coach.
     stat(
       "Séances",
-      s.planSummary && s.planSummary.planned
-        ? s.workoutsCount + " (" + s.planSummary.done + "/" + s.planSummary.planned + " programmées)"
+      programme && programme.prevus && programme.faits !== null
+        ? s.workoutsCount + " (" + programme.faits + "/" + programme.prevus + " programmées)"
         : s.workoutsCount
+    ),
+    stat(
+      "Créneaux tenus",
+      creneaux && creneaux.prevus && creneaux.honores !== null
+        ? creneaux.honores +
+            "/" +
+            creneaux.prevus +
+            (creneaux.manques ? " · " + creneaux.manques + " manqué" + (creneaux.manques > 1 ? "s" : "") : "") +
+            (creneaux.decales ? " · " + creneaux.decales + " décalé" + (creneaux.decales > 1 ? "s" : "") : "")
+        : null
     ),
     stat("Sommeil moy.", s.avgSleepH != null ? s.avgSleepH + " h" : null),
     stat(

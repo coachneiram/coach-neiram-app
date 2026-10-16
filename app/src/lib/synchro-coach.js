@@ -11,6 +11,7 @@
  */
 
 import { PROXY_BASE_URL } from "./config.js";
+import { enTetesAcces } from "./acces.js";
 import { CLES_ANNEXES, charger, enregistrer } from "./stockage.js";
 import { creneauPourDate, enLigne, slotDayLabel } from "./semaine.js";
 
@@ -156,7 +157,9 @@ async function remettre(evenement) {
   try {
     const reponse = await fetch(PROXY_BASE_URL + "/coach-sync", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // Jeton du client (17 octobre 2026) : sans lui, le proxy refuse (401)
+      // et l'evenement reste en file jusqu'a l'activation du code.
+      headers: { "Content-Type": "application/json", ...enTetesAcces() },
       body: JSON.stringify(evenement)
     });
     if (!reponse.ok) return false;

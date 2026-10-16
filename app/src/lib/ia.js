@@ -11,6 +11,7 @@
  */
 
 import { GEMINI_MODELS, PROXY_BASE_URL } from "./config.js";
+import { enTetesAcces } from "./acces.js";
 
 export const MSG_ERREUR = {
   quota: "Quota IA gratuit du jour atteint — les fonctions IA reviennent après 9 h du matin (réinitialisation quotidienne).",
@@ -24,7 +25,11 @@ export const MSG_ERREUR = {
   reseau: "Pas de connexion — l'analyse a besoin d'internet. Réessaie une fois le réseau revenu.",
   // Delai depasse (option delaiMs) : sans lui, un reseau qui ne repond pas
   // laissait l'ecran bloque sur « Estimation... » indefiniment.
-  delai: "L'IA met trop de temps à répondre. Vérifie ta connexion, puis réessaie."
+  delai: "L'IA met trop de temps à répondre. Vérifie ta connexion, puis réessaie.",
+  // Acces par jeton client (17 octobre 2026, audit P0-3).
+  acces: "L'assistant IA n'est pas activé sur ce téléphone : entre le code d'accès donné par ton coach dans les Réglages.",
+  "quota-client": "Tu as utilisé toute ton IA du jour. Elle revient demain.",
+  frequence: "Beaucoup de demandes d'affilée : patiente une minute, puis réessaie."
   /* FIN-TEXTE-NOUVEAU */
 };
 
@@ -47,7 +52,7 @@ async function appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs
   try {
     reponse = await fetch(PROXY_BASE_URL + "/ai", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...enTetesAcces() },
       body: JSON.stringify({ model, systemPrompt, messages, maxTokens }),
       ...(annulation ? { signal: annulation.signal } : {})
     });
@@ -56,6 +61,27 @@ async function appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs
   } finally {
     if (minuterie) clearTimeout(minuterie);
   }
+
+  /*
+   * Le proxy du 17 octobre 2026 nomme ses refus (`error` : acces-requis,
+   * quota-client...). L'ancien proxy renvoyait le corps de Google, ou
+   * `error` est un objet : son interpretation, par statut, est conservee
+   * a l'identique pour la periode ou les deux coexistent.
+   */
+  let code = null;
+  if (!reponse.ok) {
+    try {
+      const d = await reponse.json();
+      code = d && typeof d.error === "string" ? d.error : null;
+    } catch (e) {
+      code = null;
+    }
+  }
+  if (reponse.status === 401 && (code === "acces-requis" || code === "jeton-invalide")) throw new Error("acces");
+  if (reponse.status === 503 && code === "acces-non-configure") throw new Error("indisponible");
+  if (reponse.status === 503 && code === "fournisseur-refus") throw new Error("bad-key");
+  if (reponse.status === 429 && code === "quota-client") throw new Error("quota-client");
+  if (reponse.status === 429 && code === "trop-de-requetes") throw new Error("frequence");
 
   // Statuts conserves a l'identique : l'interface s'appuie dessus.
   if (reponse.status === 429) throw new Error("quota");
@@ -106,7 +132,7 @@ export async function genererTexte({ prompt, images, history, systemPrompt, maxT
       derniereErreur = e;
       // Un delai depasse ne se rattrape pas en essayant le modele suivant :
       // l'attente s'additionnerait, et c'est justement ce qu'on veut borner.
-      if (e.message === "bad-key" || e.message === "delai") throw e;
+      if (["bad-key", "delai", "acces", "quota-client", "frequence"].includes(e.message)) throw e;
       if (e.message === "quota") {
         await new Promise((r) => setTimeout(r, 1600));
         try {
