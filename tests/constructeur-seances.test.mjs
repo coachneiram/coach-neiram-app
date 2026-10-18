@@ -400,3 +400,35 @@ describe("videos de demonstration", () => {
     assert.equal(videoExercice(avecVideo.name.toUpperCase()), videoExercice(avecVideo.name));
   });
 });
+
+describe("type de serie en mode Force (retour client du 18 octobre 2026)", () => {
+  test("un exercice de la bibliotheque arrive sans type de serie", async () => {
+    const { EXERCISE_LIBRARY } = await import("../app/src/lib/catalogues.js");
+    const comp = EXERCISE_LIBRARY.flatMap((g) => g.items).find((it) => it.defaults && it.defaults.setType === "top");
+    assert.ok(comp, "le catalogue porte encore des types par defaut");
+    const e = exerciceDepuisBibliotheque(comp);
+    assert.equal(e.setType, undefined);
+    assert.equal(e.sets, comp.defaults.sets, "les autres valeurs par defaut restent");
+    assert.equal(resumeExercice(e).startsWith("Top set"), false);
+  });
+
+  test("le menu propose « Aucun type » en tete, puis les types d'origine", async () => {
+    const { CHOIX_TYPE_SERIE } = await import("../app/src/lib/constructeur-seances.js");
+    assert.deepEqual(CHOIX_TYPE_SERIE[0], { id: "", label: "Aucun type" });
+    assert.deepEqual(CHOIX_TYPE_SERIE.slice(1).map((t) => t.label), ["Montée", "Top set", "Back-off", "Travail", "Accessoire"]);
+  });
+
+  test("type retire : le resume ne l'affiche plus", () => {
+    const avec = { mode: "powerlifting", setType: "backoff", sets: 1, reps: 1 };
+    assert.match(resumeExercice(avec), /^Back-off — 1×1/);
+    assert.equal(resumeExercice({ ...avec, setType: undefined }), "1×1");
+  });
+
+  test("l'ecran de la seance propose le menu en mode Force", async () => {
+    const { readFileSync } = await import("node:fs");
+    const ecran = readFileSync(new URL("../app/src/ecrans/ConstructeurSeances.jsx", import.meta.url), "utf8");
+    assert.match(ecran, /mode === "powerlifting" && \(/);
+    assert.match(ecran, /CHOIX_TYPE_SERIE\.map/);
+    assert.match(ecran, /setType: e\.target\.value \|\| undefined/);
+  });
+});
