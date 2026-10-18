@@ -307,8 +307,26 @@ export function preparerSeance(routine, seances, dateImposee) {
   };
 }
 
-/** Exercice cree en le choisissant dans la bibliotheque. */
+/**
+ * Types de serie proposes en mode Force, « Aucun type » en tete.
+ *
+ * Retour d'une cliente du 18 octobre 2026 : « Top set » et « Back-off »
+ * s'affichaient sur ses exercices sans qu'elle les ait choisis, et rien ne
+ * permettait de les retirer. L'ancienne application avait un menu « Type de
+ * série » que la migration n'avait pas repris. Le menu revient, avec un
+ * choix vide.
+ */
+export const CHOIX_TYPE_SERIE = [{ id: "", label: "Aucun type" }, ...PL_SET_TYPES];
+
+/**
+ * Exercice cree en le choisissant dans la bibliotheque.
+ *
+ * Le type de serie de la bibliotheque n'est PAS repris (decision du coach,
+ * 18 octobre 2026) : un « Top set » pose d'office se lisait comme un choix
+ * du client. Il le choisit lui-meme, dans le menu « Type de série ».
+ */
 export function exerciceDepuisBibliotheque(item) {
+  const { setType, ...defauts } = item.defaults || {};
   return {
     id: uid(),
     name: item.name,
@@ -317,7 +335,7 @@ export function exerciceDepuisBibliotheque(item) {
     reps: "",
     weight: "",
     ...(item.fields ? { fields: item.fields } : {}),
-    ...(item.defaults || {})
+    ...defauts
   };
 }
 

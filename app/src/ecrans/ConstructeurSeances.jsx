@@ -27,6 +27,7 @@ import {
 } from "../lib/catalogues.js";
 import {
   ajouterDepuisBibliotheque,
+  CHOIX_TYPE_SERIE,
   cleExercice,
   DEGRESSIVE_PAR_DEFAUT,
   exerciceTape,
@@ -616,6 +617,23 @@ export function ConstructeurSeances({
                             ))}
                           </div>
                         ) : (
+                          <>
+                          {mode === "powerlifting" && (
+                            <div style={{ marginBottom: 6 }}>
+                              <div style={styleEtiquette}>Type de série</div>
+                              <select
+                                value={ex.setType || ""}
+                                onChange={(e) => modifierExercice(i, { setType: e.target.value || undefined })}
+                                style={{ ...champCompact, padding: "8px 4px", width: "100%" }}
+                              >
+                                {CHOIX_TYPE_SERIE.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                           <div
                             style={{
                               display: "grid",
@@ -687,6 +705,7 @@ export function ConstructeurSeances({
                               </div>
                             )}
                           </div>
+                          </>
                         )}
                       </div>
 
