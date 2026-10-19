@@ -15,6 +15,844 @@
 
 export const RECETTES_COACH = [
   {
+    "id": "2026-10-19-porridge-chaud-pomme-cannelle-noix",
+    "semaine": "2026-10-19",
+    "nom": "Porridge chaud pomme-cannelle et noix",
+    "description": "Un porridge d'avoine mijoté au lait avec des dés de pomme, de la cannelle et des noix. Chaud, rassasiant, prêt en 10 minutes.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "lactose",
+      "fruits-a-coque"
+    ],
+    "portions": 2,
+    "preparationMin": 5,
+    "cuissonMin": 8,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "80 g"
+      },
+      {
+        "nom": "Lait demi-écrémé",
+        "quantite": "400 ml"
+      },
+      {
+        "nom": "Pommes",
+        "quantite": "250 g (2 pommes)"
+      },
+      {
+        "nom": "Noix",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Cannelle",
+        "quantite": "1 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Coupe les pommes en petits dés. Verse l'avoine, le lait et la cannelle dans une casserole.",
+      "Fais chauffer 6 à 8 minutes à feu doux en remuant, jusqu'à ce que le porridge épaississe.",
+      "Ajoute les pommes les 3 dernières minutes, puis répartis dans deux bols et parsème de noix concassées."
+    ],
+    "parPortion": {
+      "kcal": 400,
+      "p": 15,
+      "c": 49,
+      "f": 16,
+      "fibres": 8
+    },
+    "moment": "quotidien",
+    "adaptations": "Remise en forme : garde les quantités indiquées. Maintien : ajoute une banane en rondelles par portion si tu as faim avant midi.",
+    "tags": [
+      "rapide",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-19-wraps-falafel-houmous-crudites",
+    "semaine": "2026-10-19",
+    "nom": "Wraps falafel au four, houmous et crudités",
+    "description": "Des falafels de pois chiches dorés au four, roulés dans une tortilla avec houmous, concombre et tomate. Végétal, riche en protéines et en glucides.",
+    "categorie": "dejeuner",
+    "profils": [
+      "hyrox",
+      "prise"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 20,
+    "cuissonMin": 20,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Farine de pois chiche",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "60 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Tortillas de blé",
+        "quantite": "4 grandes (200 g)"
+      },
+      {
+        "nom": "Houmous",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Concombre",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Tomate",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Cumin, persil, ail, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 200 °C. Mixe grossièrement les pois chiches avec l'oignon, la farine, le cumin, le persil, l'ail et le sel.",
+      "Forme 12 petites boulettes aplaties, dépose-les sur une plaque huilée et enfourne 20 minutes en les retournant à mi-cuisson.",
+      "Tartine les tortillas de houmous, ajoute les falafels, le concombre et la tomate en dés, puis roule serré."
+    ],
+    "parPortion": {
+      "kcal": 686,
+      "p": 27,
+      "c": 86,
+      "f": 26,
+      "fibres": 16
+    },
+    "moment": "avant-entrainement",
+    "adaptations": "Hyrox : ajoute une cuillère de houmous par wrap et mange-le 2 à 3 heures avant la séance. Prise de masse : passe à 3 wraps par portion.",
+    "tags": [
+      "meal-prep",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-19-veloute-potiron-pois-chiches-rotis",
+    "semaine": "2026-10-19",
+    "nom": "Velouté de potiron et pois chiches rôtis",
+    "description": "Un velouté de potiron au lait de coco, relevé au curry et garni de pois chiches croustillants. Léger, chaud et rassasiant.",
+    "categorie": "diner",
+    "profils": [
+      "perte",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [],
+    "portions": 3,
+    "preparationMin": 15,
+    "cuissonMin": 30,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Potiron (ou butternut)",
+        "quantite": "700 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Lait de coco",
+        "quantite": "150 ml"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Bouillon de légumes",
+        "quantite": "500 ml"
+      },
+      {
+        "nom": "Curry, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 200 °C. Sèche les pois chiches, mélange-les avec la moitié de l'huile et un peu de curry, et fais-les rôtir 20 minutes sur une plaque.",
+      "Fais revenir l'oignon dans le reste d'huile, ajoute le potiron en cubes et le bouillon, et laisse cuire 20 minutes.",
+      "Mixe avec le lait de coco jusqu'à obtenir une texture lisse, rectifie l'assaisonnement et sers avec les pois chiches croustillants."
+    ],
+    "parPortion": {
+      "kcal": 278,
+      "p": 10,
+      "c": 28,
+      "f": 14,
+      "fibres": 8
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : sers avec une grande salade verte. Remise en forme : ajoute une tranche de pain complet par portion.",
+    "tags": [
+      "economique",
+      "meal-prep",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-10-19-nouilles-riz-sautees-tofu-legumes",
+    "semaine": "2026-10-19",
+    "nom": "Nouilles de riz sautées au tofu et légumes",
+    "description": "Des nouilles de riz sautées avec du tofu doré, du brocoli, du poivron et de la carotte, parfumées à la sauce soja et au gingembre.",
+    "categorie": "diner",
+    "profils": [
+      "bodybuilding",
+      "perte"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "soja",
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 15,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Tofu ferme",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Nouilles de riz (sèches)",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Brocoli",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Carotte",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Sauce soja",
+        "quantite": "3 cuillères à soupe (45 g)"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Gingembre, ail",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais tremper les nouilles dans l'eau très chaude selon le paquet, puis égoutte-les. Coupe le tofu en cubes et sèche-le dans un torchon.",
+      "Fais dorer le tofu 6 minutes dans l'huile, réserve-le, puis fais sauter le brocoli, le poivron et la carotte 6 minutes avec le gingembre et l'ail.",
+      "Ajoute les nouilles, le tofu et la sauce soja, mélange 2 minutes à feu vif et sers aussitôt."
+    ],
+    "parPortion": {
+      "kcal": 465,
+      "p": 25,
+      "c": 53,
+      "f": 17,
+      "fibres": 7
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Perte : réduis les nouilles à 70 g secs et double les légumes. Bodybuilding : ajoute 100 g de tofu en prise de masse.",
+    "tags": [
+      "rapide",
+      "vegetal"
+    ]
+  },
+  {
+    "id": "2026-10-19-hachis-parmentier-dinde",
+    "semaine": "2026-10-19",
+    "nom": "Hachis parmentier de dinde",
+    "description": "Un parmentier allégé : dinde hachée aux oignons et aux carottes sous une purée au lait gratinée. Dense en protéines, parfait en meal-prep.",
+    "categorie": "diner",
+    "profils": [
+      "force",
+      "prise"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille",
+      "lactose"
+    ],
+    "portions": 4,
+    "preparationMin": 25,
+    "cuissonMin": 35,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Haché de dinde",
+        "quantite": "500 g"
+      },
+      {
+        "nom": "Pommes de terre",
+        "quantite": "800 g"
+      },
+      {
+        "nom": "Lait demi-écrémé",
+        "quantite": "150 ml"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Emmental râpé",
+        "quantite": "40 g"
+      }
+    ],
+    "etapes": [
+      "Fais cuire les pommes de terre épluchées 20 minutes à l'eau, écrase-les avec le lait et un peu de sel pour obtenir une purée.",
+      "Pendant ce temps, fais revenir l'oignon et la carotte râpée dans l'huile, ajoute la dinde et fais cuire 8 minutes, puis les tomates et laisse mijoter 5 minutes.",
+      "Préchauffe le four à 200 °C. Étale la viande dans un plat, recouvre de purée, parsème d'emmental et enfourne 15 minutes."
+    ],
+    "parPortion": {
+      "kcal": 434,
+      "p": 34,
+      "c": 43,
+      "f": 14,
+      "fibres": 6
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Force : ajoute 100 g de purée par portion les jours de grosse séance. Prise de masse : ajoute 100 g de dinde hachée et un filet d'huile d'olive.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-19-truite-four-grenailles-haricots-verts",
+    "semaine": "2026-10-19",
+    "nom": "Truite au four, pommes de terre grenaille et haricots verts",
+    "description": "Des filets de truite rôtis au citron et à l'aneth, avec des pommes de terre grenaille et des haricots verts. Oméga-3 et glucides, un seul plat au four.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "maintien"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "poisson"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Filets de truite",
+        "quantite": "280 g (2 filets)"
+      },
+      {
+        "nom": "Pommes de terre grenaille",
+        "quantite": "450 g"
+      },
+      {
+        "nom": "Haricots verts cuits",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Citron, aneth, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 200 °C. Coupe les pommes de terre en deux, mélange-les avec la moitié de l'huile et enfourne 15 minutes.",
+      "Dépose les filets de truite sur la plaque avec le reste d'huile, le jus de citron et l'aneth, puis poursuis 10 minutes.",
+      "Réchauffe les haricots verts à la poêle ou au micro-ondes et sers le tout."
+    ],
+    "parPortion": {
+      "kcal": 443,
+      "p": 34,
+      "c": 43,
+      "f": 15,
+      "fibres": 8
+    },
+    "moment": "veille-de-course",
+    "adaptations": "Veille de sortie longue : ajoute 100 g de pommes de terre par portion. Maintien : garde les quantités indiquées.",
+    "tags": [
+      "rapide",
+      "sans-friture"
+    ]
+  },
+  {
+    "id": "2026-10-19-galettes-sarrasin-oeuf-champignons-emmental",
+    "semaine": "2026-10-19",
+    "nom": "Galettes de sarrasin, œuf, champignons et emmental",
+    "description": "Des galettes de sarrasin maison garnies d'un œuf, de champignons poêlés et d'emmental. Un repas du soir complet, prêt en 25 minutes.",
+    "categorie": "diner",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "oeufs",
+      "lactose"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 20,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Farine de sarrasin",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Eau",
+        "quantite": "200 ml"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "2 (110 g)"
+      },
+      {
+        "nom": "Champignons de Paris",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Emmental râpé",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Mélange la farine, l'eau et une pincée de sel pour obtenir une pâte fluide, puis laisse reposer 10 minutes.",
+      "Fais cuire 4 galettes dans une poêle huilée, 2 minutes par face. Fais dorer les champignons émincés dans une autre poêle 6 minutes.",
+      "Garnis chaque galette de champignons et d'emmental, casse un œuf au centre sur deux d'entre elles, replie les bords et laisse cuire 3 minutes."
+    ],
+    "parPortion": {
+      "kcal": 421,
+      "p": 21,
+      "c": 37,
+      "f": 21,
+      "fibres": 5
+    },
+    "moment": "quotidien",
+    "adaptations": "Remise en forme : garde 2 galettes par portion avec une salade verte. Maintien : ajoute un fruit en dessert.",
+    "tags": [
+      "rapide",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-19-barres-avoine-dattes-cacahuete",
+    "semaine": "2026-10-19",
+    "nom": "Barres d'avoine, dattes et cacahuète",
+    "description": "Des barres maison sans cuisson : avoine, dattes mixées et beurre de cacahuète. Faciles à emporter pour les sorties longues et les séances d'endurance.",
+    "categorie": "collation",
+    "profils": [
+      "marathon",
+      "ironman",
+      "hyrox"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "arachides"
+    ],
+    "portions": 6,
+    "preparationMin": 15,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Dattes dénoyautées",
+        "quantite": "180 g"
+      },
+      {
+        "nom": "Beurre de cacahuète",
+        "quantite": "60 g"
+      },
+      {
+        "nom": "Raisins secs",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Eau",
+        "quantite": "2 cuillères à soupe"
+      }
+    ],
+    "etapes": [
+      "Mixe les dattes avec le beurre de cacahuète et l'eau jusqu'à obtenir une pâte collante.",
+      "Mélange cette pâte avec l'avoine et les raisins secs dans un saladier, puis tasse le tout dans un moule tapissé de papier cuisson.",
+      "Place 1 heure au frais, puis coupe en 6 barres. Emballe-les une à une."
+    ],
+    "parPortion": {
+      "kcal": 251,
+      "p": 7,
+      "c": 40,
+      "f": 7,
+      "fibres": 6
+    },
+    "moment": "pendant-effort",
+    "adaptations": "Sortie longue : 1 barre par heure d'effort au-delà de la première heure, avec de l'eau. Hyrox : 1 barre 45 minutes avant la séance.",
+    "tags": [
+      "sans-cuisson",
+      "meal-prep",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-10-19-paella-poulet-crevettes",
+    "semaine": "2026-10-19",
+    "nom": "Paella au poulet et aux crevettes",
+    "description": "Une paella sans chorizo : riz safrané, poulet, crevettes, petits pois et poivron. Un plat d'énergie pour les semaines de grosse charge d'endurance.",
+    "categorie": "diner",
+    "profils": [
+      "ironman",
+      "marathon"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille",
+      "crustaces"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 30,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Riz rond (sec)",
+        "quantite": "280 g"
+      },
+      {
+        "nom": "Blanc de poulet",
+        "quantite": "360 g"
+      },
+      {
+        "nom": "Crevettes décortiquées cuites",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Petits pois surgelés",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "2 cuillères à soupe (30 g)"
+      },
+      {
+        "nom": "Bouillon de volaille chaud",
+        "quantite": "700 ml"
+      },
+      {
+        "nom": "Safran ou paprika, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais dorer le poulet en dés dans l'huile 5 minutes dans une grande poêle, puis réserve-le.",
+      "Fais revenir l'oignon et le poivron 4 minutes, ajoute le riz et le safran, remue 1 minute puis verse le bouillon chaud.",
+      "Laisse cuire 15 minutes sans remuer, ajoute le poulet et les petits pois, poursuis 8 minutes puis dépose les crevettes sur le dessus 2 minutes avant la fin."
+    ],
+    "parPortion": {
+      "kcal": 507,
+      "p": 40,
+      "c": 62,
+      "f": 11,
+      "fibres": 4
+    },
+    "moment": "veille-de-course",
+    "adaptations": "Ironman : ajoute 50 g de riz sec par portion et un filet d'huile d'olive. Marathon, veille de sortie longue : garde les quantités et évite le poivron si ta digestion est sensible.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-10-19-creme-chocolat-tofu-soyeux-banane",
+    "semaine": "2026-10-19",
+    "nom": "Crème au chocolat, tofu soyeux et banane",
+    "description": "Une crème dessert onctueuse au cacao, mixée avec du tofu soyeux et une banane. Végétale, riche en protéines et sans cuisson.",
+    "categorie": "dessert",
+    "profils": [
+      "perte",
+      "bodybuilding"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "soja"
+    ],
+    "portions": 3,
+    "preparationMin": 10,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Tofu soyeux",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Banane mûre",
+        "quantite": "150 g (1)"
+      },
+      {
+        "nom": "Cacao en poudre non sucré",
+        "quantite": "25 g"
+      },
+      {
+        "nom": "Sirop d'érable",
+        "quantite": "20 g"
+      },
+      {
+        "nom": "Fruits rouges surgelés",
+        "quantite": "120 g"
+      }
+    ],
+    "etapes": [
+      "Mixe le tofu soyeux avec la banane, le cacao et le sirop d'érable jusqu'à obtenir une crème bien lisse.",
+      "Répartis dans trois verrines et place au frais au moins 1 heure.",
+      "Ajoute les fruits rouges décongelés au moment de servir."
+    ],
+    "parPortion": {
+      "kcal": 152,
+      "p": 8,
+      "c": 21,
+      "f": 4,
+      "fibres": 5
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : supprime le sirop d'érable et garde la banane. Bodybuilding : prends 2 verrines en prise de masse.",
+    "tags": [
+      "sans-cuisson",
+      "rapide"
+    ]
+  },
+  {
+    "id": "2026-10-19-tortilla-pommes-de-terre-oignons",
+    "semaine": "2026-10-19",
+    "nom": "Tortilla espagnole aux pommes de terre et oignons",
+    "description": "Une omelette épaisse aux pommes de terre et aux oignons, cuite à la poêle. Économique, rassasiante, bonne chaude comme froide.",
+    "categorie": "dejeuner",
+    "profils": [
+      "force",
+      "maintien"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "oeufs"
+    ],
+    "portions": 3,
+    "preparationMin": 15,
+    "cuissonMin": 25,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Œufs",
+        "quantite": "6 (330 g)"
+      },
+      {
+        "nom": "Pommes de terre",
+        "quantite": "450 g"
+      },
+      {
+        "nom": "Oignons",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "2 cuillères à soupe (30 g)"
+      },
+      {
+        "nom": "Sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Épluche les pommes de terre et coupe-les en fines rondelles. Fais-les cuire à feu doux avec les oignons émincés dans l'huile, 15 minutes, en remuant.",
+      "Bats les œufs avec le sel, ajoute-y les pommes de terre et les oignons égouttés, et mélange.",
+      "Verse dans la poêle huilée, cuis 5 minutes, retourne à l'aide d'une assiette et poursuis 4 minutes."
+    ],
+    "parPortion": {
+      "kcal": 381,
+      "p": 18,
+      "c": 30,
+      "f": 21,
+      "fibres": 4
+    },
+    "moment": "quotidien",
+    "adaptations": "Force : accompagne d'une tranche de pain complet et d'un fruit. Maintien : sers avec une salade verte.",
+    "tags": [
+      "economique",
+      "meal-prep",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-10-19-kefta-boeuf-four-taboule-yaourt",
+    "semaine": "2026-10-19",
+    "nom": "Kefta de bœuf au four, taboulé et sauce yaourt",
+    "description": "Des kefta de bœuf maigre aux épices, cuites au four, avec un taboulé de boulgour et une sauce au yaourt. Protéines et glucides pour les séances intenses.",
+    "categorie": "dejeuner",
+    "profils": [
+      "hyrox",
+      "bodybuilding"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "viande",
+      "gluten",
+      "lactose"
+    ],
+    "portions": 3,
+    "preparationMin": 20,
+    "cuissonMin": 15,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Bœuf haché 5 % de matière grasse",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Boulgour (sec)",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Tomates",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Concombre",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Yaourt nature",
+        "quantite": "125 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "1 cuillère à soupe (15 g)"
+      },
+      {
+        "nom": "Persil, menthe, cumin, paprika, citron, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 220 °C. Mélange le bœuf avec le cumin, le paprika, le persil et le sel, forme 12 kefta allongées et enfourne 12 à 15 minutes.",
+      "Verse de l'eau bouillante sur le boulgour (même volume) et laisse gonfler 10 minutes. Mélange avec les tomates et le concombre en dés, l'huile, le citron et la menthe.",
+      "Mélange le yaourt avec du persil et du sel, puis sers les kefta avec le taboulé et la sauce."
+    ],
+    "parPortion": {
+      "kcal": 389,
+      "p": 36,
+      "c": 32,
+      "f": 13,
+      "fibres": 5
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Hyrox : ajoute 40 g de boulgour sec par portion avant une séance longue. Bodybuilding : garde les quantités, remplace le yaourt par du fromage blanc 0 % en sèche.",
+    "tags": [
+      "meal-prep",
+      "repas-d-effort"
+    ]
+  },
+  {
     "id": "2026-10-05-tofu-brouille-legumes-pain-complet",
     "semaine": "2026-10-05",
     "nom": "Tofu brouillé aux légumes et pain complet",
