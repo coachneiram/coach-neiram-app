@@ -7,7 +7,13 @@
 
 import { COLORS } from "../tokens.js";
 import { fmtDateShort, todayISO } from "../lib/dates.js";
-import { apercuExercices, exercicesAnnonces, seanceDuJour, TEXTES_DEBUTANT as T } from "../lib/seance-du-jour.js";
+import {
+  apercuExercices,
+  exercicesAnnonces,
+  seanceDuJour,
+  TEXTES_DEBUTANT as T,
+  TEXTES_PROGRAMME
+} from "../lib/seance-du-jour.js";
 import { Btn, Card } from "../ui/primitives.jsx";
 import { Dumbbell, Plus } from "../ui/icones.jsx";
 
@@ -35,7 +41,7 @@ const styleDetail = { fontSize: 12.5, color: COLORS.textMuted, lineHeight: 1.5, 
 
 const pastille = (couleur) => ({ width: 12, height: 12, borderRadius: 4, background: couleur, flexShrink: 0 });
 
-export function SeanceDuJour({ routines, sessions, plan, onDemarrer, onCreer, onVoirSeances }) {
+export function SeanceDuJour({ routines, sessions, plan, onDemarrer, onCreer, onVoirSeances, onPrendreProgramme }) {
   const jour = seanceDuJour(routines, sessions, plan, todayISO());
 
   if (jour.etat === "vide") {
@@ -43,8 +49,12 @@ export function SeanceDuJour({ routines, sessions, plan, onDemarrer, onCreer, on
       <Card style={{ marginBottom: 20, borderColor: COLORS.gold }}>
         <div style={styleSurtitre}>{T.titre}</div>
         <p style={{ ...styleDetail, color: COLORS.text, fontSize: 14 }}>{T.vide}</p>
-        <Btn icon={Plus} style={{ width: "100%", marginTop: 12 }} onClick={onCreer}>
-          {T.creer}
+        <Btn icon={Dumbbell} style={{ width: "100%", marginTop: 12 }} onClick={onPrendreProgramme}>
+          {TEXTES_PROGRAMME.prendre}
+        </Btn>
+        <p style={{ ...styleDetail, fontSize: 11.5, color: COLORS.textFaint }}>{TEXTES_PROGRAMME.detail}</p>
+        <Btn variant="ghost" icon={Plus} style={{ width: "100%", marginTop: 10 }} onClick={onCreer}>
+          {TEXTES_PROGRAMME.creerMienne}
         </Btn>
       </Card>
     );

@@ -114,7 +114,7 @@ export const TEXTES_DEBUTANT = {
   repos: "Repos aujourd'hui",
   prochaine: "Prochaine séance",
   quandMeme: "M'entraîner quand même",
-  vide: "Commence ici : crée ta première séance en choisissant tes exercices. Tu les retrouveras prêts à chaque entraînement.",
+  vide: "Commence ici : prends le programme débutant du coach, ou crée ta propre séance en choisissant tes exercices.",
   creer: "Créer ma première séance",
   // Séance type programmée.
   exercicesRoutine: "Exercices de la séance",
@@ -132,4 +132,90 @@ export const TEXTES_DEBUTANT = {
   details: "Détails de la séance",
   chercher: "Cherche ou tape ton exercice",
   rienTrouve: "Aucun exercice de la liste ne correspond : appuie sur Ajouter pour le créer."
+};
+
+/**
+ * Programme débutant en salle, validé par le coach le 22 octobre 2026.
+ *
+ * Deux séances full body en alternance : A puis B à deux séances par
+ * semaine, A-B-A puis B-A-B à trois. La rotation de « Ta séance du jour »
+ * fait l'alternance sans que le client ait à la retenir.
+ *
+ * Repos : 1 min 30 sur les exercices polyarticulaires, 1 min sur le reste.
+ * RPE 7 maximum les 4 premières semaines (règle du coach).
+ *
+ * Les noms sont ceux de la bibliothèque, à l'identique : c'est ce qui relie
+ * la charge d'une séance à la suivante. tests/seance-du-jour.test.mjs le
+ * vérifie.
+ */
+export const PROGRAMME_DEBUTANT_SALLE = [
+  {
+    id: "salle-debutant-a",
+    name: "Full body A",
+    color: "#2DD4BF",
+    description: "Débutant salle · RPE 7 max les 4 premières semaines",
+    exercises: [
+      { name: "Presse à cuisses", sets: 3, reps: 10, repos: 90 },
+      { name: "Développé poitrine machine", sets: 3, reps: 10, repos: 90 },
+      { name: "Tirage vertical poitrine", sets: 3, reps: 10, repos: 90 },
+      { name: "Leg curl assis", sets: 2, reps: 12, repos: 60 },
+      { name: "Élévations latérales machine", sets: 2, reps: 12, repos: 60 },
+      { name: "Gainage planche", sets: 3, reps: 30, repUnit: "sec", repos: 60 }
+    ]
+  },
+  {
+    id: "salle-debutant-b",
+    name: "Full body B",
+    color: "#F0A050",
+    description: "Débutant salle · RPE 7 max les 4 premières semaines",
+    exercises: [
+      { name: "Squat goblet", sets: 3, reps: 10, repos: 90 },
+      { name: "Tirage horizontal assis", sets: 3, reps: 10, repos: 90 },
+      { name: "Développé épaules machine", sets: 3, reps: 10, repos: 90 },
+      { name: "Hip thrust machine", sets: 3, reps: 10, repos: 90 },
+      { name: "Crunch machine", sets: 2, reps: 15, repos: 60 },
+      { name: "Gainage latéral", sets: 2, reps: 20, repUnit: "sec", repos: 60 }
+    ]
+  }
+];
+
+/**
+ * Séances types du programme débutant pas encore ajoutées, prêtes à
+ * enregistrer. Reconnues par leur `templateId` : appuyer deux fois ne crée
+ * pas de doublon. Le type d'exercice vient de la bibliothèque.
+ */
+export function seancesProgrammeDebutant(routines, bibliotheque, uid) {
+  const deja = new Set((routines || []).map((r) => r.templateId).filter(Boolean));
+  const modeDe = (nom) => {
+    for (const g of bibliotheque || []) {
+      const it = g.items.find((x) => x.name === nom);
+      if (it) return it.mode || "muscu";
+    }
+    return "muscu";
+  };
+  return PROGRAMME_DEBUTANT_SALLE.filter((p) => !deja.has(p.id)).map((p) => ({
+    name: p.name,
+    description: p.description,
+    color: p.color,
+    templateId: p.id,
+    programme: true,
+    exercises: p.exercises.map((e) => ({
+      id: uid(),
+      name: e.name,
+      mode: modeDe(e.name),
+      sets: e.sets,
+      reps: e.reps,
+      ...(e.repUnit ? { repUnit: e.repUnit } : {}),
+      repos: e.repos
+    }))
+  }));
+}
+
+/** Textes de l'offre du programme débutant. */
+export const TEXTES_PROGRAMME = {
+  prendre: "Prendre le programme débutant du coach",
+  detail: "2 séances en salle (Full body A et B) à faire en alternance, prêtes avec séries, répétitions et repos.",
+  creerMienne: "Créer ma propre séance",
+  ajoute: "Programme ajouté : ta séance du jour est prête.",
+  bouton: "Programme débutant du coach"
 };

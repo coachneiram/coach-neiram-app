@@ -164,3 +164,46 @@ describe("recherche dans la bibliothèque", () => {
     assert.deepEqual(filtrerBibliotheque(EXERCISE_LIBRARY, "zzzz"), []);
   });
 });
+
+describe("programme débutant du coach (validé le 22 octobre 2026)", async () => {
+  const { PROGRAMME_DEBUTANT_SALLE, seancesProgrammeDebutant } = await import("../app/src/lib/seance-du-jour.js");
+  let n = 0;
+  const uid = () => "id" + n++;
+  const noms = new Map(EXERCISE_LIBRARY.flatMap((g) => g.items.map((i) => [i.name, i])));
+
+  test("chaque exercice existe tel quel dans la bibliothèque", () => {
+    for (const p of PROGRAMME_DEBUTANT_SALLE) for (const e of p.exercises) assert.ok(noms.has(e.name), e.name);
+  });
+
+  test("deux séances types programmées, type d'exercice repris de la bibliothèque", () => {
+    const r = seancesProgrammeDebutant([], EXERCISE_LIBRARY, uid);
+    assert.deepEqual(r.map((x) => x.name), ["Full body A", "Full body B"]);
+    assert.ok(r.every((x) => x.programme === true && x.exercises.length === 6));
+    const planche = r[0].exercises.find((e) => e.name === "Gainage planche");
+    assert.deepEqual([planche.mode, planche.repUnit, planche.reps, planche.repos], ["pdc", "sec", 30, 60]);
+    assert.equal(r[0].exercises[0].repos, 90);
+  });
+
+  test("déjà ajoutées : pas de doublon", () => {
+    const r = seancesProgrammeDebutant([{ templateId: "salle-debutant-a" }], EXERCISE_LIBRARY, uid);
+    assert.deepEqual(r.map((x) => x.name), ["Full body B"]);
+  });
+
+  test("alternance : A puis B, puis A", () => {
+    const [a, b] = seancesProgrammeDebutant([], EXERCISE_LIBRARY, uid).map((x, k) => ({ ...x, id: "r" + k }));
+    assert.equal(seanceDuJour([a, b], [], {}, AUJ).routine.name, "Full body A");
+    assert.equal(seanceDuJour([a, b], [{ date: "2026-10-20", routineId: a.id }], {}, AUJ).routine.name, "Full body B");
+    assert.equal(
+      seanceDuJour([a, b], [{ date: "2026-10-18", routineId: a.id }, { date: "2026-10-20", routineId: b.id }], {}, AUJ).routine.name,
+      "Full body A"
+    );
+  });
+
+  test("démarrée, la séance A arrive prête : 6 exercices, séries du programme", () => {
+    const [a] = seancesProgrammeDebutant([], EXERCISE_LIBRARY, uid).map((x) => ({ ...x, id: "ra" }));
+    const s = preparerSeance(a, [], AUJ);
+    assert.equal(s.exercises.length, 6);
+    assert.equal(s.exercises[0].name, "Presse à cuisses");
+    assert.equal(s.exercises[0].sets, 3);
+  });
+});

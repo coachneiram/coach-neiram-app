@@ -61,7 +61,7 @@ import {
   TEXTES_SERIES
 } from "../lib/series.js";
 import { MinuteurRepos, preparerSon } from "../ui/MinuteurRepos.jsx";
-import { TEXTES_DEBUTANT } from "../lib/seance-du-jour.js";
+import { seancesProgrammeDebutant, TEXTES_DEBUTANT, TEXTES_PROGRAMME } from "../lib/seance-du-jour.js";
 import { SeanceDuJour } from "./SeanceDuJour.jsx";
 import { ForceAthletique } from "./ForceAthletique.jsx";
 import { ZoneDictee } from "../ui/Dictee.jsx";
@@ -262,6 +262,13 @@ export function ConstructeurSeances({
     setModaleRoutine(false);
   };
 
+  // Programme debutant du coach (valide le 22 octobre 2026) : ajoute les
+  // seances types manquantes, deja programmees.
+  const programmeManquant = seancesProgrammeDebutant(routinesApi.items, EXERCISE_LIBRARY, uid);
+  const prendreProgramme = async () => {
+    if (programmeManquant.length) await routinesApi.addMany(programmeManquant);
+  };
+
   const supprimerRoutine = async () => {
     if (!routineEditee?.id || !window.confirm(TEXTES_DEBUTANT.confirmerSuppression)) return;
     await routinesApi.remove(routineEditee.id);
@@ -459,6 +466,7 @@ export function ConstructeurSeances({
           onDemarrer={(r) => demarrerSeance(r)}
           onCreer={nouvelleRoutine}
           onVoirSeances={voirSeancesTypes}
+          onPrendreProgramme={prendreProgramme}
         />
       )}
       {children}
@@ -506,7 +514,7 @@ export function ConstructeurSeances({
           }}
         >
           {routinesApi.items.map((r) => (
-            <Card key={r.id} style={{ padding: 14, cursor: "pointer" }} onClick={() => demarrerSeance(r)}>
+            <Card key={r.id} data-seance-type={r.id} style={{ padding: 14, cursor: "pointer" }} onClick={() => demarrerSeance(r)}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ width: 14, height: 14, borderRadius: 4, background: r.color }} />
                 <button
@@ -537,6 +545,14 @@ export function ConstructeurSeances({
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Programme debutant du coach, propose aux clients qui ont deja une
+          ou deux seances types a eux mais ne l'ont pas encore pris. */}
+      {routinesApi.items.length > 0 && routinesApi.items.length < 3 && programmeManquant.length === 2 && (
+        <Btn variant="ghost" icon={Plus} style={{ width: "100%", marginBottom: 26 }} onClick={prendreProgramme}>
+          {TEXTES_PROGRAMME.bouton}
+        </Btn>
       )}
 
       <SectionTitle>Historique des séances</SectionTitle>

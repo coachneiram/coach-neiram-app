@@ -10,7 +10,9 @@
  *      du programme prêtes, le type d'exercice replié dans « Options », la
  *      date sous les exercices ;
  *   5. enregistrée, la carte passe à « Séance faite aujourd'hui » ;
- *   6. la séance type se supprime (après confirmation).
+ *   6. la séance type se supprime (après confirmation) ;
+ *   7. sur un téléphone neuf, « Prendre le programme débutant du coach »
+ *      ajoute Full body A et B et propose A, prête à démarrer.
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-debutant.mjs
@@ -66,11 +68,11 @@ try {
   // 1. Carte en tête.
   const yCarte = await haut("Ta séance du jour");
   const yTrophees = await haut("Mes trophées");
-  const creer = page.getByRole("button", { name: "Créer ma première séance" });
+  const creer = page.getByRole("button", { name: "Créer ma propre séance" });
   console.log(
     "1. SÉANCE DU JOUR       :",
     yCarte >= 0 && yTrophees > yCarte && (await creer.count()) === 1
-      ? "en tête, avant les trophées, « Créer ma première séance »"
+      ? "en tête, avant les trophées, « Créer ma propre séance »"
       : `*** carte ${yCarte}, trophées ${yTrophees}, bouton ${await creer.count()} ***`
   );
 
@@ -161,6 +163,39 @@ try {
     "6. SUPPRESSION          :",
     restantes === 0 && seances === 1 ? "séance type supprimée, la séance faite reste" : `*** ${restantes} séance(s) type, ${seances} séance(s) ***`
   );
+
+  // 7. Programme débutant du coach, sur un téléphone neuf.
+  const ctx2 = await nav.newContext(appareil());
+  const p2 = await ctx2.newPage();
+  p2.on("pageerror", (e) => erreurs.push(e.message));
+  await p2.addInitScript(() => {
+    if (localStorage.getItem("coach_profile")) return;
+    localStorage.setItem("coach_profile", JSON.stringify({
+      firstName: "Tom", name: "Tom", sex: "homme", age: 35, heightCm: 178, startWeightKg: 80,
+      activityLevel: "modere", goal: "perte", sessionsPerWeek: 2,
+      trainingMode: "app", coachingMode: "presentiel", dietType: "aucun", allergies: []
+    }));
+  });
+  await p2.goto("http://localhost:4716/", { waitUntil: "domcontentloaded" });
+  await p2.waitForTimeout(900);
+  await p2.getByRole("button", { name: /^(Séances|Entraînements)$/ }).last().click();
+  await p2.waitForTimeout(500);
+  await p2.getByRole("button", { name: "Prendre le programme débutant du coach" }).click();
+  await p2.waitForTimeout(500);
+  const t7 = net(await p2.locator("body").innerText());
+  const r7 = await p2.evaluate(() => JSON.parse(localStorage.getItem("coach_routines") || "[]"));
+  await p2.getByRole("button", { name: "Démarrer" }).click();
+  await p2.waitForTimeout(500);
+  const exos = await p2.locator(".modal-panel [data-exercice]").count();
+  console.log(
+    "7. PROGRAMME DU COACH   :",
+    r7.map((r) => r.name).join(",") === "Full body A,Full body B" &&
+      /À faire aujourd'hui Full body A Presse à cuisses · Développé poitrine machine · Tirage vertical poitrine · \+3/i.test(t7) &&
+      exos === 6
+      ? "Full body A et B ajoutées, A proposée, 6 exercices prêts au démarrage"
+      : `*** ${r7.map((r) => r.name)} · ${exos} exercices · ${t7.slice(0, 220)} ***`
+  );
+  await ctx2.close();
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
 }
