@@ -14,6 +14,40 @@
 
 import { num, round } from "./dates.js";
 import { est1RMFromSet } from "./force.js";
+import { meilleureEstimation, seriesPourCalcul } from "./series.js";
+
+/**
+ * Chiffres d'un exercice dans une seance : charge de reference,
+ * repetitions a cette charge, volume, 1RM estime.
+ *
+ * Series notees une a une : la charge est la plus lourde, le volume la
+ * somme charge x repetitions de chaque serie, le 1RM le meilleur des
+ * series. Ancien format : le calcul d'avant, inchange.
+ */
+function chiffresExercice(ex, { seriesObligatoires }) {
+  const series = seriesPourCalcul(ex);
+  if (series) {
+    const lourde = series.reduce((a, s) => (num(s.weight) >= num(a.weight) ? s : a), series[0]);
+    const meilleure = meilleureEstimation(series, ex.rir);
+    return {
+      charge: num(lourde.weight),
+      reps: num(lourde.reps),
+      volume: round(series.reduce((t, s) => t + num(s.weight) * num(s.reps), 0)),
+      estimation: meilleure ? meilleure.estimation : null
+    };
+  }
+  const charge = num(ex.weight);
+  const nb = num(ex.sets);
+  const reps = num(ex.reps);
+  if (!(charge > 0) || !(reps > 0)) return null;
+  if (seriesObligatoires && !(nb > 0)) return null;
+  return {
+    charge,
+    reps,
+    volume: nb > 0 ? round(charge * nb * reps) : round(charge * reps),
+    estimation: est1RMFromSet(ex.weight, ex.reps, ex.rpe, ex.rir)
+  };
+}
 
 /** Cle de regroupement : le nom, insensible a la casse et aux espaces. */
 const cleExercice = (nom) => nom.trim().toLocaleLowerCase("fr");
@@ -34,14 +68,11 @@ export function construireRecords(seances) {
       (seance.exercises || []).forEach((ex) => {
         if (!ex.name || ex.mode === "cardio") return;
 
-        const charge = num(ex.weight);
-        const series = num(ex.sets);
-        const reps = num(ex.reps);
-        if (!(charge > 0) || !(reps > 0)) return;
+        const chiffres = chiffresExercice(ex, { seriesObligatoires: false });
+        if (!chiffres) return;
+        const { charge, reps, volume, estimation } = chiffres;
 
         const cle = cleExercice(ex.name);
-        const estimation = est1RMFromSet(ex.weight, ex.reps, ex.rpe, ex.rir);
-        const volume = series > 0 ? round(charge * series * reps) : round(charge * reps);
 
         const r =
           par[cle] ||
@@ -87,17 +118,15 @@ export function progressionParExercice(seances) {
       (seance.exercises || []).forEach((ex) => {
         if (!ex.name || ex.mode === "cardio") return;
 
-        const charge = num(ex.weight);
-        const series = num(ex.sets);
-        const reps = num(ex.reps);
-        if (!(charge > 0) || !(series > 0) || !(reps > 0)) return;
+        const chiffres = chiffresExercice(ex, { seriesObligatoires: true });
+        if (!chiffres) return;
 
         const cle = cleExercice(ex.name);
         (par[cle] = par[cle] || []).push({
           name: ex.name.trim(),
           date: seance.date,
-          weight: charge,
-          volume: round(charge * series * reps)
+          weight: chiffres.charge,
+          volume: chiffres.volume
         });
       });
     });

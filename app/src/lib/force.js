@@ -182,16 +182,21 @@ export function meilleursMaxis(seances) {
       if ((ex.mode || "") !== "powerlifting") continue;
       const mouvement = mouvementForce(ex.name);
       if (!mouvement) continue;
-      const estimation = est1RMFromSet(ex.weight, ex.reps, ex.rpe, ex.rir);
-      if (estimation == null) continue;
-      if (!sortie[mouvement] || estimation.value > sortie[mouvement].est) {
-        sortie[mouvement] = {
-          est: estimation.value,
-          method: estimation.method,
-          date: s.date,
-          weight: num(ex.weight),
-          reps: num(ex.reps)
-        };
+      // Series notees une a une : chacune est une candidate. Sinon, la
+      // ligne de l'exercice, comme avant.
+      const candidates = Array.isArray(ex.series) && ex.series.length ? ex.series.map((x) => ({ ...x, rir: "" })) : [ex];
+      for (const serie of candidates) {
+        const estimation = est1RMFromSet(serie.weight, serie.reps, serie.rpe, serie.rir);
+        if (estimation == null) continue;
+        if (!sortie[mouvement] || estimation.value > sortie[mouvement].est) {
+          sortie[mouvement] = {
+            est: estimation.value,
+            method: estimation.method,
+            date: s.date,
+            weight: num(serie.weight),
+            reps: num(serie.reps)
+          };
+        }
       }
     }
   }
