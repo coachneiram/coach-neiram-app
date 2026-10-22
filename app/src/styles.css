@@ -15,6 +15,38 @@ body {
   margin: 0;
   padding: 0;
   background: #0b0b0c;
+  /* Les fenetres modales (Reglages...) sont rendues hors de la coque :
+     sans police ici, leurs boutons simples prenaient celle du navigateur. */
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* Repris de GLOBAL_CSS (index.html, l. 171-174), oublie a la migration :
+   calendrier et horloge natifs en theme sombre, textes d'exemple dans la
+   couleur discrete (COLORS.textFaint), police heritee par les champs, et
+   contour dore au focus clavier (COLORS.gold). */
+input[type="date"],
+input[type="time"] {
+  color-scheme: dark;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #63635c;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #f8d040;
+  outline-offset: 2px;
 }
 
 #root {

@@ -37,7 +37,11 @@
  * declencher l'installation, la purge de l'ancien cache, et le retour a
  * une page fraiche.
  */
-const VERSION = "v3";
+/*
+ * v4 : food-etats.js (mention « pesé cru / pesé cuit ») rejoint la liste
+ * des ressources hors ligne.
+ */
+const VERSION = "v4";
 const CACHE = "coach-neiram-" + VERSION;
 
 /**
@@ -59,6 +63,7 @@ const RESSOURCES_LOCALES = [
   "./manifest.json",
   "./food-basic-catalog.js",
   "./food-fibres.js",
+  "./food-etats.js",
   "./food-bruts-catalog.js",
   "./food-extended-catalog.js",
   "./food-staples-catalog.js",

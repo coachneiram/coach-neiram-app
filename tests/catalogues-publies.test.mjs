@@ -38,8 +38,14 @@ const CATALOGUES = [
   "food-bruts-catalog.js",
   "food-basic-catalog.js",
   // Charge apres les catalogues : il complete leurs entrees en fibres.
-  "food-fibres.js"
+  "food-fibres.js",
+  // Charge apres les catalogues : il note l'etat (cru / cuit) de leurs
+  // entrees. Absent de l'ancien index.html, qui ne l'a jamais charge.
+  "food-etats.js"
 ];
+
+/** Ce que charge l'ancien index.html, fige : il ne connaissait pas food-etats.js. */
+const CATALOGUES_LEGACY = CATALOGUES.filter((nom) => nom !== "food-etats.js");
 
 const lire = (...morceaux) => readFileSync(join(RACINE, ...morceaux), "utf8");
 
@@ -95,7 +101,7 @@ describe("catalogues servis aux deux versions", () => {
     const legacy = ordreDe(lire("index.html"));
     const vite = ordreDe(lire("app", "index.html"));
 
-    assert.deepEqual(legacy, CATALOGUES, "index.html ne charge plus les catalogues attendus");
+    assert.deepEqual(legacy, CATALOGUES_LEGACY, "index.html ne charge plus les catalogues attendus");
     assert.deepEqual(vite, CATALOGUES, "app/index.html ne charge pas les catalogues dans le bon ordre");
   });
 

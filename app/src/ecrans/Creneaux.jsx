@@ -44,7 +44,7 @@ import {
   SelectInput,
   TextArea
 } from "../ui/primitives.jsx";
-import { Send } from "../ui/icones.jsx";
+import { Flame, Send } from "../ui/icones.jsx";
 
 /** Duree d'affichage d'un message de confirmation, en millisecondes. */
 const DUREE_MESSAGE = 2600;
@@ -229,7 +229,7 @@ export function Creneaux({ profile, sessionsApi, raisons, onDefinirRaison }) {
 
   return (
     <Card>
-      <MotivationCard text={motivation} />
+      <MotivationCard text={motivation} icone={Flame} />
 
       <div
         style={{

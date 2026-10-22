@@ -200,7 +200,11 @@ describe("les ajouts posterieurs a la bascule restent visibles", () => {
     // ou d'une seance (12 octobre 2026). Puis a 38 pour « Mon évolution »,
     // chaque donnee au jour, a la semaine, au mois et a l'annee (14 octobre
     // 2026). Puis a 39 pour la diete flexible dans Nutrition (meme jour).
-    assert.ok(blocs < 39, `${blocs} blocs de texte nouveau : la couverture se dilue`);
+    // Puis a 40 pour les deux libelles d'accessibilite du calcul de charge
+    // en mode Force (CalculCharge.jsx, 22 octobre 2026) : la fonction est
+    // rebranchee depuis index.html, mais ses champs n'y avaient aucun
+    // libelle pour lecteur d'ecran.
+    assert.ok(blocs < 40, `${blocs} blocs de texte nouveau : la couverture se dilue`);
   });
 });
 
