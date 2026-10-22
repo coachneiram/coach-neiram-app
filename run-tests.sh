@@ -10,7 +10,20 @@ set -e
 cd "$(dirname "$0")"
 
 echo "── Application (index.html) ─────────────────────────────"
-node --test tests/*.test.mjs
+# Un bloc qui plante au chargement affiche « not ok » sans faire echouer
+# node --test (code 0, « fail 0 ») : on echoue aussi sur la sortie.
+SORTIE=$(mktemp)
+set +e
+node --test tests/*.test.mjs > "$SORTIE" 2>&1
+CODE=$?
+set -e
+grep -E "^# (tests|pass|fail)" "$SORTIE"
+if [ "$CODE" -ne 0 ] || grep -qE "^\s*not ok" "$SORTIE"; then
+  grep -E "^\s*not ok" "$SORTIE" || tail -50 "$SORTIE"
+  rm -f "$SORTIE"
+  exit 1
+fi
+rm -f "$SORTIE"
 
 echo ""
 echo "── Proxy Cloudflare ─────────────────────────────────────"

@@ -364,7 +364,7 @@ export function Journal({
       date,
       mealType: ajoutPour.mealType,
       dishId: plat.id,
-      name: plat.name + (facteur === 1 ? "" : ` (×${facteur})`),
+      name: plat.name + (facteur === 1 ? "" : ` (×${fmtPortion(facteur)})`),
       calories: t.kcal,
       protein: t.p,
       carbs: t.c,

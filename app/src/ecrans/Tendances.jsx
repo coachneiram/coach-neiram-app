@@ -14,7 +14,9 @@
 
 import { useMemo } from "react";
 import { COLORS } from "../tokens.js";
-import { fmtDateShort, todayISO } from "../lib/dates.js";
+import { addDays, fmtDateShort, todayISO } from "../lib/dates.js";
+import { moisLong } from "../lib/bilan-ia.js";
+import { historiqueHebdo, historiqueMensuel } from "../lib/historique-bilans.js";
 import { resumeNutritionSemaine } from "../lib/resume-semaine.js";
 import { CarteProgres, Parrainage } from "./CarteProgres.jsx";
 import { fmtL } from "../lib/score-jour.js";
@@ -22,6 +24,7 @@ import { serieCorporelle, serieHebdomadaire } from "../lib/tendances.js";
 import { Btn, Card, ProgressRing, SectionTitle, StatChip } from "../ui/primitives.jsx";
 import { Courbe, Histogramme } from "../ui/Courbe.jsx";
 import { BilanSections } from "../ui/BilanSections.jsx";
+import { HistoriqueBilans } from "../ui/HistoriqueBilans.jsx";
 import { EvolutionDuMois, ProgressionCorps } from "../ui/ProgressionCorps.jsx";
 import { progressionCorps } from "../lib/progression-corps.js";
 import { MonEvolution } from "../ui/Explorateur.jsx";
@@ -139,6 +142,30 @@ function CarteGraphique({ titre, children }) {
   );
 }
 
+/**
+ * « Généré le … » sous un bilan IA (index.html, TendancesTab). Un bilan
+ * enregistre sans date de generation n'affiche simplement rien.
+ */
+function GenereLe({ bilan }) {
+  if (!bilan || typeof bilan.generatedAt !== "string") return null;
+  return (
+    <div style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 10 }}>
+      Généré le {fmtDateShort(bilan.generatedAt.slice(0, 10))}
+    </div>
+  );
+}
+
+/** Libelle d'un bilan hebdomadaire passe : ses dates, comme dans index.html. */
+const periodeSemaine = (r) => `${fmtDateShort(r.start || r.weekKey)} — ${fmtDateShort(r.end || addDays(r.weekKey, 6))}`;
+
+const styleEnTeteMois = {
+  fontSize: 11.5,
+  fontWeight: 600,
+  color: COLORS.textMuted,
+  textTransform: "uppercase",
+  letterSpacing: 0.5
+};
+
 export function Tendances({
   allData,
   profile,
@@ -154,6 +181,8 @@ export function Tendances({
   onPartager,
   bilanCourant,
   bilanMensuelCourant,
+  bilans,
+  bilansMensuels,
   enGeneration,
   enGenerationMensuelle,
   erreurGeneration,
@@ -185,6 +214,11 @@ export function Tendances({
       }),
     [allData.logEntries, allData.dailyForm, targets]
   );
+
+  // Bilans passes (rebranches le 22 octobre 2026) : ils restaient
+  // enregistres mais n'etaient plus affiches. Tout l'historique est visible.
+  const historique = historiqueHebdo(bilans, { aujourdhui: todayISO() });
+  const historiqueDuMois = historiqueMensuel(bilansMensuels, { aujourdhui: todayISO() });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -286,6 +320,7 @@ export function Tendances({
                 bilanCourant && (
                   <div style={{ marginBottom: 16, textAlign: "left" }}>
                     <BilanSections sections={bilanCourant.sections} />
+                    <GenereLe bilan={bilanCourant} />
                   </div>
                 )
               )}
@@ -311,6 +346,17 @@ export function Tendances({
         </div>
       </Card>
 
+      {historique.visibles.length > 0 && (
+        <Card>
+          <HistoriqueBilans
+            titre="hebdo"
+            historique={historique}
+            libelle={periodeSemaine}
+            enTete={<SectionTitle>Historique des bilans</SectionTitle>}
+          />
+        </Card>
+      )}
+
       {monthStats && (
         <Card>
           <div
@@ -323,7 +369,7 @@ export function Tendances({
               flexWrap: "wrap"
             }}
           >
-            <SectionTitle>Bilan mensuel — {monthStats.monthKey}</SectionTitle>
+            <SectionTitle>Bilan mensuel — {moisLong(monthStats.monthKey)}</SectionTitle>
             <span style={{ fontSize: 11, color: COLORS.textFaint }}>
               {monthStats.workoutsCount} séance{monthStats.workoutsCount > 1 ? "s" : ""}
             </span>
@@ -337,17 +383,37 @@ export function Tendances({
             bilanMensuelCourant && (
               <div style={{ marginBottom: 16 }}>
                 <BilanSections sections={bilanMensuelCourant.sections} />
+                <GenereLe bilan={bilanMensuelCourant} />
               </div>
             )
           )}
 
           {erreurGenerationMensuelle && <p style={styleErreur}>{erreurGenerationMensuelle}</p>}
 
-          {iaDisponible && (
+          {/* Sans donnees du mois et sans bilan, pas de bouton : le texte
+              d'origine (index.html) explique comment debloquer le bilan. */}
+          {iaDisponible && (bilanMensuelCourant || monthStats.hasAnyData) && (
             <div style={{ textAlign: "center" }}>
               <Btn icon={Sparkles} onClick={onGenerateMonthly} disabled={enGenerationMensuelle}>
                 {bilanMensuelCourant ? "Régénérer" : "Générer le bilan mensuel"}
               </Btn>
+            </div>
+          )}
+          {iaDisponible && !bilanMensuelCourant && !monthStats.hasAnyData && (
+            <p style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", margin: 0 }}>
+              Ajoute des données ce mois-ci (mensurations comprises) pour débloquer le bilan mensuel.
+            </p>
+          )}
+
+          {historiqueDuMois.visibles.length > 0 && (
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${COLORS.border}` }}>
+              <HistoriqueBilans
+                titre="mensuel"
+                historique={historiqueDuMois}
+                libelle={(r) => moisLong(r.monthKey)}
+                tailleChevron={16}
+                enTete={<span style={styleEnTeteMois}>Bilans mensuels précédents</span>}
+              />
             </div>
           )}
         </Card>

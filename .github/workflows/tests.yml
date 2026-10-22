@@ -38,8 +38,20 @@ jobs:
       - name: Installer la table des appareils (sans navigateur)
         run: npm i --no-save playwright-core@1.63.0
 
+      # node --test peut afficher « not ok » sur un bloc describe qui plante
+      # au chargement (fichier absent, import casse) et terminer quand meme
+      # avec le code 0 et « fail 0 » : des tests cessent de tourner sans
+      # que la chaine ne devienne rouge. On echoue donc aussi sur la sortie.
       - name: Tests de l'application
-        run: node --test tests/*.test.mjs
+        run: |
+          SORTIE=$(mktemp); set +e
+          node --test tests/*.test.mjs > "$SORTIE" 2>&1; CODE=$?
+          set -e
+          grep -E "^# (tests|pass|fail)" "$SORTIE"
+          if [ "$CODE" -ne 0 ] || grep -qE "^\s*not ok" "$SORTIE"; then
+            grep -E "^\s*not ok" "$SORTIE" || tail -50 "$SORTIE"
+            exit 1
+          fi
 
       - name: Tests du proxy Cloudflare
         run: node worker/test-worker.mjs
