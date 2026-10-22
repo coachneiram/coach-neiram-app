@@ -221,6 +221,22 @@ export function exerciceTape(nom, perso = []) {
   return { name: propre, mode: "muscu", defaults: {} };
 }
 
+/**
+ * Bibliotheque filtree par ce que le client tape (22 octobre 2026).
+ *
+ * Dix-huit groupes a faire defiler au telephone : le champ « Nom de ton
+ * exercice » sert aussi de recherche. Chaque mot tape doit apparaitre dans
+ * le nom, accents et majuscules ignores (« dev couche » trouve « Développé
+ * couché barre »). Les groupes vides disparaissent.
+ */
+export function filtrerBibliotheque(groupes, recherche) {
+  const mots = cleExercice(recherche).split(" ").filter(Boolean);
+  if (!mots.length) return groupes;
+  return groupes
+    .map((g) => ({ ...g, items: g.items.filter((it) => mots.every((m) => cleExercice(it.name).includes(m))) }))
+    .filter((g) => g.items.length);
+}
+
 /** Fusionne les nouveaux exercices personnels avec ceux deja enregistres. */
 export function fusionnerExercicesPerso(precedents, exercices) {
   const ajouts = exercicesARetenir(exercices, precedents);
@@ -259,8 +275,14 @@ export function preparerSeance(routine, seances, dateImposee) {
       ? SEANCE_TEMPLATES.find((t) => t.id === routine.templateId)
       : null;
 
+  const date = typeof dateImposee === "string" ? dateImposee : todayISO();
+
   let exercices;
-  if (precedente?.exercises?.length) {
+  if (routine.programme && routine.exercises?.length) {
+    // Seance type programmee par le client (22 octobre 2026) : la liste
+    // d'exercices est celle du programme, pas celle de la derniere fois.
+    exercices = routine.exercises.map((p) => exerciceProgramme(p, seances, date));
+  } else if (precedente?.exercises?.length) {
     exercices = precedente.exercises.map((ex) => {
       // Une suggestion de charge n'a pas de sens en cardio.
       const sug = ex.mode === "cardio" ? null : chargeSuivante(ex.weight, ex.rpe, ex.rir);
@@ -307,7 +329,7 @@ export function preparerSeance(routine, seances, dateImposee) {
 
   return {
     id: null,
-    date: typeof dateImposee === "string" ? dateImposee : todayISO(),
+    date,
     routineId: routine.id,
     durationMin: modele ? modele.durationMin : "",
     rpe: "",
@@ -315,6 +337,45 @@ export function preparerSeance(routine, seances, dateImposee) {
     pains: [],
     exercises: exercices
   };
+}
+
+/**
+ * Exercice d'une seance type programmee, pret a faire.
+ *
+ * Series et repetitions viennent du programme. La charge vient de la
+ * derniere fois que l'exercice a ete fait, quelle que soit la seance type
+ * (un squat reste un squat), ajustee selon le ressenti : c'est la meme
+ * progression que pour une seance reprise. Jamais fait : la charge du
+ * programme s'il en porte une (import du coach), sinon rien.
+ */
+export function exerciceProgramme(p, seances, date) {
+  const { series, ...prog } = p;
+  const base = { ...prog, id: uid(), rpe: "", rir: "", suggested: null };
+  if ((p.mode || "muscu") === "cardio") return base;
+  const precedent = derniereFois(seances, p.name, { date });
+  if (!precedent) return base;
+  const ex = precedent.exercice;
+  const sug = chargeSuivante(ex.weight, ex.rpe, ex.rir);
+  if (sug) {
+    return { ...base, weight: String(sug.weight), suggested: { from: num(ex.weight), delta: sug.delta, reason: sug.reason } };
+  }
+  return num(ex.weight) > 0 ? { ...base, weight: String(ex.weight) } : base;
+}
+
+/**
+ * Exercice tel qu'il se range dans le programme d'une seance type : ce qui
+ * se prevoit (nom, type, series, repetitions, repos), rien de ce qui se
+ * mesure pendant la seance.
+ */
+export function exercicePourProgramme(item) {
+  const ex = exerciceDepuisBibliotheque(item);
+  const garde = { id: ex.id, name: ex.name, mode: ex.mode || "muscu", sets: ex.sets || "", reps: ex.reps || "" };
+  if (ex.repUnit) garde.repUnit = ex.repUnit;
+  if (ex.fields) garde.fields = ex.fields;
+  if (ex.mode === "cardio") {
+    for (const f of ex.fields || DEFAULT_CARDIO_FIELDS) if (ex[f] != null && ex[f] !== "") garde[f] = ex[f];
+  }
+  return garde;
 }
 
 /**

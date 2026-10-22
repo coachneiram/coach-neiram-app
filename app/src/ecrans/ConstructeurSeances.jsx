@@ -14,7 +14,7 @@
  * lib/constructeur-seances.js et y est testee.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { fmtDateShort, num, todayISO } from "../lib/dates.js";
 import { uid } from "../lib/semaine.js";
@@ -31,6 +31,8 @@ import {
   cleExercice,
   DEGRESSIVE_PAR_DEFAUT,
   derniereFois,
+  exercicePourProgramme,
+  filtrerBibliotheque,
   exerciceTape,
   exerciceVide,
   fusionnerExercicesPerso,
@@ -59,6 +61,8 @@ import {
   TEXTES_SERIES
 } from "../lib/series.js";
 import { MinuteurRepos, preparerSon } from "../ui/MinuteurRepos.jsx";
+import { TEXTES_DEBUTANT } from "../lib/seance-du-jour.js";
+import { SeanceDuJour } from "./SeanceDuJour.jsx";
 import { ForceAthletique } from "./ForceAthletique.jsx";
 import { ZoneDictee } from "../ui/Dictee.jsx";
 import { completerSeance } from "../lib/dictee-saisie.js";
@@ -120,6 +124,16 @@ const styleEtiquette = {
   letterSpacing: 0.4
 };
 
+const styleLienOptions = {
+  background: "none",
+  border: "none",
+  padding: "8px 0 0",
+  color: COLORS.textFaint,
+  fontSize: 11.5,
+  cursor: "pointer",
+  textDecoration: "underline"
+};
+
 const styleLigneBoutonsSeries = { display: "flex", alignItems: "center", gap: 6, marginTop: 6 };
 
 const styleBoutonPointille = {
@@ -172,7 +186,9 @@ export function ConstructeurSeances({
   planSemaine,
   onAssignerJour,
   maxisForce,
-  onDefinirMaxiForce
+  onDefinirMaxiForce,
+  avecSeanceDuJour = true,
+  children
 }) {
   const exercicesPerso = useExercicesPerso();
   const [modaleRoutine, setModaleRoutine] = useState(false);
@@ -182,6 +198,12 @@ export function ConstructeurSeances({
   const [bibliothequeOuverte, setBibliothequeOuverte] = useState(false);
   const [exerciceLibre, setExerciceLibre] = useState("");
   const [minuteur, setMinuteur] = useState(null);
+  // Ou va l'exercice choisi dans la bibliotheque : la seance en cours, ou
+  // le programme de la seance type en cours d'edition.
+  const [cibleBibliotheque, setCibleBibliotheque] = useState("seance");
+  // Exercices dont le client a deplie les options (type, technique).
+  const [optionsOuvertes, setOptionsOuvertes] = useState(() => new Set());
+  const refSeancesTypes = useRef(null);
 
   // Une seance laissee ouverte (application rechargee) se rouvre telle quelle.
   useEffect(() => {
@@ -217,17 +239,67 @@ export function ConstructeurSeances({
   };
 
   const nouvelleRoutine = () => {
-    setRoutineEditee({ id: null, name: "", description: "", color: ROUTINE_COLORS[0] });
+    setRoutineEditee({ id: null, name: "", description: "", color: ROUTINE_COLORS[0], exercises: [] });
     setModaleRoutine(true);
   };
 
   const enregistrerRoutine = async () => {
     const donnees = { ...routineEditee };
     delete donnees.id;
+    // Une seance type qui porte des exercices est programmee : a chaque
+    // demarrage, la liste vient du programme (et la charge, de la derniere
+    // fois). Sans exercice, elle reprend la derniere seance, comme avant.
+    const exercices = (donnees.exercises || []).filter((e) => String(e.name || "").trim());
+    if (exercices.length) {
+      donnees.exercises = exercices;
+      donnees.programme = true;
+    } else {
+      delete donnees.exercises;
+      delete donnees.programme;
+    }
     if (routineEditee.id) await routinesApi.update(routineEditee.id, donnees);
     else await routinesApi.add(donnees);
     setModaleRoutine(false);
   };
+
+  const supprimerRoutine = async () => {
+    if (!routineEditee?.id || !window.confirm(TEXTES_DEBUTANT.confirmerSuppression)) return;
+    await routinesApi.remove(routineEditee.id);
+    setModaleRoutine(false);
+  };
+
+  const modifierExerciceProgramme = (k, correctif) =>
+    setRoutineEditee((r) => ({
+      ...r,
+      exercises: (r.exercises || []).map((e, j) => (j === k ? { ...e, ...correctif } : e))
+    }));
+
+  const retirerExerciceProgramme = (k) =>
+    setRoutineEditee((r) => ({ ...r, exercises: (r.exercises || []).filter((_, j) => j !== k) }));
+
+  const monterExerciceProgramme = (k) =>
+    setRoutineEditee((r) => {
+      const liste = [...(r.exercises || [])];
+      if (k > 0) [liste[k - 1], liste[k]] = [liste[k], liste[k - 1]];
+      return { ...r, exercises: liste };
+    });
+
+  const ouvrirBibliotheque = (cible) => {
+    setCibleBibliotheque(cible);
+    setBibliothequeOuverte(true);
+  };
+
+  const voirSeancesTypes = () => {
+    if (refSeancesTypes.current) refSeancesTypes.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const basculerOptions = (id) =>
+    setOptionsOuvertes((o) => {
+      const n = new Set(o);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   const demarrerSeance = (routine, dateImposee) => {
     setSeanceEditee(preparerSeance(routine, sessionsApi.items, dateImposee));
@@ -336,6 +408,13 @@ export function ConstructeurSeances({
   };
 
   const ajouterDeLaBibliotheque = (item) => {
+    // La recherche ne doit pas filtrer la bibliotheque a sa prochaine ouverture.
+    setExerciceLibre("");
+    if (cibleBibliotheque === "routine") {
+      setRoutineEditee((r) => ({ ...r, exercises: [...(r.exercises || []), exercicePourProgramme(item)] }));
+      setBibliothequeOuverte(false);
+      return;
+    }
     setSeanceEditee({
       ...seanceEditee,
       exercises: ajouterDepuisBibliotheque(seanceEditee.exercises, item)
@@ -372,6 +451,18 @@ export function ConstructeurSeances({
 
   return (
     <div>
+      {avecSeanceDuJour && (
+        <SeanceDuJour
+          routines={routinesApi.items}
+          sessions={sessionsApi.items}
+          plan={planSemaine}
+          onDemarrer={(r) => demarrerSeance(r)}
+          onCreer={nouvelleRoutine}
+          onVoirSeances={voirSeancesTypes}
+        />
+      )}
+      {children}
+
       <PlanSemaine
         plan={planSemaine}
         onAssigner={onAssignerJour}
@@ -388,7 +479,10 @@ export function ConstructeurSeances({
         />
       )}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+      <div
+        ref={refSeancesTypes}
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, scrollMarginTop: 80 }}
+      >
         <SectionTitle>Séances types</SectionTitle>
         <Btn variant="ghost" icon={Plus} onClick={nouvelleRoutine}>
           Nouvelle séance type
@@ -582,25 +676,123 @@ export function ConstructeurSeances({
                 ))}
               </div>
             </Field>
+            <Field label={TEXTES_DEBUTANT.exercicesRoutine}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {(routineEditee.exercises || []).length === 0 && (
+                  <p style={{ ...styleNoteTechnique, marginTop: 0 }}>{TEXTES_DEBUTANT.routineSansExercice}</p>
+                )}
+                {(routineEditee.exercises || []).map((ex, k) => (
+                  <div
+                    key={ex.id || k}
+                    style={{
+                      background: COLORS.bgAlt,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: 10,
+                      padding: 8
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontFamily: "IBM Plex Mono", fontSize: 11, color: COLORS.textFaint, width: 16 }}>
+                        {k + 1}
+                      </span>
+                      <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: COLORS.text, minWidth: 0 }}>
+                        {ex.name}
+                      </span>
+                      {k > 0 && (
+                        <button
+                          aria-label={TEXTES_DEBUTANT.monter}
+                          onClick={() => monterExerciceProgramme(k)}
+                          style={{ background: "none", border: "none", color: COLORS.textFaint, cursor: "pointer", fontSize: 14 }}
+                        >
+                          ↑
+                        </button>
+                      )}
+                      <button
+                        aria-label={TEXTES_DEBUTANT.retirer}
+                        onClick={() => retirerExerciceProgramme(k)}
+                        style={{ background: "none", border: "none", color: COLORS.textFaint, cursor: "pointer", display: "flex" }}
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                    {(ex.mode || "muscu") !== "cardio" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, paddingLeft: 22 }}>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          aria-label="Séries"
+                          value={ex.sets ?? ""}
+                          onChange={(e) => modifierExerciceProgramme(k, { sets: e.target.value })}
+                          style={{ ...champCompact, width: 48, textAlign: "center" }}
+                        />
+                        <span style={{ fontSize: 12, color: COLORS.textMuted }}>{TEXTES_DEBUTANT.seriesReps}</span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          aria-label={(ex.repUnit || "reps") === "sec" ? "Secondes" : "Répétitions"}
+                          value={ex.reps ?? ""}
+                          onChange={(e) => modifierExerciceProgramme(k, { reps: e.target.value })}
+                          style={{ ...champCompact, width: 48, textAlign: "center" }}
+                        />
+                        <span style={{ fontSize: 12, color: COLORS.textMuted, flex: 1 }}>
+                          {(ex.repUnit || "reps") === "sec" ? "s" : "reps"}
+                        </span>
+                        <select
+                          aria-label={TEXTES_SERIES.ariaRepos}
+                          value={reposDe(ex)}
+                          onChange={(e) => modifierExerciceProgramme(k, { repos: Number(e.target.value) })}
+                          style={{ ...champCompact, width: 100, padding: "7px 4px", flexShrink: 0 }}
+                        >
+                          {CHOIX_REPOS.map((d) => (
+                            <option key={d} value={d}>
+                              {fmtDuree(d)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => ouvrirBibliotheque("routine")} style={styleBoutonPointille}>
+                  <Plus size={14} /> {TEXTES_DEBUTANT.ajouterExercice}
+                </button>
+              </div>
+            </Field>
             <Btn onClick={enregistrerRoutine} style={{ width: "100%", marginTop: 8 }}>
               Enregistrer
             </Btn>
+            {routineEditee.id && (
+              <button
+                onClick={supprimerRoutine}
+                style={{
+                  width: "100%",
+                  marginTop: 10,
+                  background: "none",
+                  border: "none",
+                  color: COLORS.bad,
+                  fontSize: 12.5,
+                  cursor: "pointer",
+                  padding: 8
+                }}
+              >
+                {TEXTES_DEBUTANT.supprimerRoutine}
+              </button>
+            )}
           </div>
         )}
       </Modal>
 
-      <Modal open={modaleSeance} onClose={fermerSeance} title="Séance">
+      <Modal
+        open={modaleSeance}
+        onClose={fermerSeance}
+        title={routinesApi.items.find((r) => r.id === seanceEditee?.routineId)?.name || "Séance"}
+      >
         {seanceEditee && (
           <div>
-            <Field label="Date">
-              <TextInput
-                type="date"
-                value={seanceEditee.date}
-                onChange={(e) => setSeanceEditee({ ...seanceEditee, date: e.target.value })}
-              />
-            </Field>
-
             <Field label="Exercices">
+              <p style={{ fontSize: 11.5, color: COLORS.textFaint, lineHeight: 1.45, margin: "0 0 8px" }}>
+                {TEXTES_DEBUTANT.aideRpe}
+              </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {seanceEditee.exercises.map((ex, i) => {
                   const mode = ex.mode || "muscu";
@@ -612,11 +804,17 @@ export function ConstructeurSeances({
                   const seriesPrecedentes = precedent ? seriesDe(precedent.exercice) : [];
                   const resumePrecedent = precedent ? resumeDerniereFois(precedent.exercice) : "";
                   const avecCharge = mode !== "pdc" && mode !== "warmup";
+                  // Mode simple : type d'exercice et technique restent replies
+                  // tant que le client ne s'en sert pas. Ouverts d'office en
+                  // mode Force ou quand une technique est deja posee.
+                  const optionsForcees = mode === "powerlifting" || !!ex.technique;
+                  const optionsVisibles = optionsForcees || optionsOuvertes.has(ex.id);
                   const colonnes = avecCharge ? "20px 1fr 1fr 0.8fr 40px" : "20px 1fr 0.8fr 40px";
 
                   return (
                     <div
                       key={ex.id}
+                      data-exercice={i}
                       style={{
                         background: COLORS.bgAlt,
                         border: `1px solid ${COLORS.border}`,
@@ -659,42 +857,27 @@ export function ConstructeurSeances({
                         </div>
                       )}
 
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                         <input
                           placeholder="Exercice"
                           value={ex.name}
                           onChange={(e) => modifierExercice(i, { name: e.target.value })}
-                          style={{ ...champCompact, width: "100%" }}
+                          style={{ ...champCompact, flex: 1, minWidth: 0 }}
                         />
-                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <select
-                            value={mode}
-                            onChange={(e) => modifierExercice(i, { mode: e.target.value })}
-                            style={{ ...champCompact, padding: "8px 4px", flex: 1 }}
-                          >
-                            <option value="muscu">Muscu</option>
-                            <option value="pdc">PDC</option>
-                            <option value="cardio">Cardio</option>
-                            <option value="warmup">Warm-up</option>
-                            {/* Force proposee a tous (coach, 3 octobre 2026) : elle
-                                n'apparaissait qu'avec l'objectif « performance ». */}
-                            <option value="powerlifting">Force</option>
-                          </select>
-                          <button
-                            onClick={() => retirerExercice(i)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              color: COLORS.textFaint,
-                              cursor: "pointer",
-                              display: "flex",
-                              justifyContent: "center",
-                              flexShrink: 0
-                            }}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => retirerExercice(i)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: COLORS.textFaint,
+                            cursor: "pointer",
+                            display: "flex",
+                            justifyContent: "center",
+                            flexShrink: 0
+                          }}
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
 
                       <div style={{ marginTop: 8 }}>
@@ -726,22 +909,6 @@ export function ConstructeurSeances({
                           </div>
                         ) : (
                           <>
-                          {mode === "powerlifting" && (
-                            <div style={{ marginBottom: 6 }}>
-                              <div style={styleEtiquette}>Type de série</div>
-                              <select
-                                value={ex.setType || ""}
-                                onChange={(e) => modifierExercice(i, { setType: e.target.value || undefined })}
-                                style={{ ...champCompact, padding: "8px 4px", width: "100%" }}
-                              >
-                                {CHOIX_TYPE_SERIE.map((t) => (
-                                  <option key={t.id} value={t.id}>
-                                    {t.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
                           {resumePrecedent && (
                             <div
                               style={{
@@ -890,6 +1057,42 @@ export function ConstructeurSeances({
                         )}
                       </div>
 
+                      {!optionsForcees && (
+                        <button onClick={() => basculerOptions(ex.id)} style={styleLienOptions}>
+                          {optionsVisibles ? TEXTES_DEBUTANT.masquerOptions : TEXTES_DEBUTANT.options}
+                        </button>
+                      )}
+                      {optionsVisibles && (
+                        <div style={{ marginTop: 8 }}>
+                          <select
+                            value={mode}
+                            onChange={(e) => modifierExercice(i, { mode: e.target.value })}
+                            style={{ ...champCompact, padding: "8px 4px", width: "100%" }}
+                          >
+                            <option value="muscu">Muscu</option>
+                            <option value="pdc">PDC</option>
+                            <option value="cardio">Cardio</option>
+                            <option value="warmup">Warm-up</option>
+                            {/* Force proposee a tous (coach, 3 octobre 2026) : elle
+                                n'apparaissait qu'avec l'objectif « performance ». */}
+                            <option value="powerlifting">Force</option>
+                          </select>
+                          {mode === "powerlifting" && (
+                            <div style={{ marginTop: 8 }}>
+                              <div style={styleEtiquette}>Type de série</div>
+                              <select
+                                value={ex.setType || ""}
+                                onChange={(e) => modifierExercice(i, { setType: e.target.value || undefined })}
+                                style={{ ...champCompact, padding: "8px 4px", width: "100%" }}
+                              >
+                                {CHOIX_TYPE_SERIE.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                       {/* TEXTE-NOUVEAU
                           Superset et dégressive n'existaient nulle part dans
                           l'application : ils ne pouvaient s'écrire que dans les
@@ -984,6 +1187,8 @@ export function ConstructeurSeances({
                         </div>
                       )}
                       {/* FIN-TEXTE-NOUVEAU */}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1001,8 +1206,8 @@ export function ConstructeurSeances({
                 >
                   <Plus size={14} /> Exercice libre
                 </button>
-                <button onClick={() => setBibliothequeOuverte(true)} style={styleBoutonPointille}>
-                  <Search size={14} /> Bibliothèque
+                <button onClick={() => ouvrirBibliotheque("seance")} style={styleBoutonPointille}>
+                  <Search size={14} /> {TEXTES_DEBUTANT.ajouterExercice}
                 </button>
               </div>
               <div style={{ marginTop: 10 }}>
@@ -1014,6 +1219,14 @@ export function ConstructeurSeances({
               </div>
             </Field>
 
+            <div style={{ ...styleEtiquette, fontSize: 11, margin: "6px 0 10px" }}>{TEXTES_DEBUTANT.details}</div>
+            <Field label="Date">
+              <TextInput
+                type="date"
+                value={seanceEditee.date}
+                onChange={(e) => setSeanceEditee({ ...seanceEditee, date: e.target.value })}
+              />
+            </Field>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Field label="Durée (min)">
                 <NumberInput
@@ -1213,7 +1426,7 @@ export function ConstructeurSeances({
             <div style={{ display: "flex", gap: 8 }}>
               <TextInput
                 aria-label="Nom de ton exercice"
-                placeholder="Nom de ton exercice"
+                placeholder={TEXTES_DEBUTANT.chercher}
                 value={exerciceLibre}
                 maxLength={80}
                 onChange={(e) => setExerciceLibre(e.target.value)}
@@ -1228,7 +1441,10 @@ export function ConstructeurSeances({
             </p>
           </form>
           {/* FIN-TEXTE-NOUVEAU */}
-          {groupesBibliotheque.map((groupe) => (
+          {exerciceLibre.trim() && !filtrerBibliotheque(groupesBibliotheque, exerciceLibre).length && (
+            <p style={{ ...styleNoteTechnique, margin: 0 }}>{TEXTES_DEBUTANT.rienTrouve}</p>
+          )}
+          {filtrerBibliotheque(groupesBibliotheque, exerciceLibre).map((groupe) => (
             <div key={groupe.group}>
               <div
                 style={{
