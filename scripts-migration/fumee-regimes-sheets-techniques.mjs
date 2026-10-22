@@ -304,6 +304,9 @@ try {
   await page.getByText("Test", { exact: true }).last().click();
   await page.waitForTimeout(600);
 
+  // Mode simple (22 octobre 2026) : la technique est dans « Options ».
+  await page.getByRole("button", { name: "Options", exact: true }).first().click();
+  await page.waitForTimeout(200);
   texte = await corps(page);
   verifier("le champ Technique est proposé", /technique/i.test(texte));
 

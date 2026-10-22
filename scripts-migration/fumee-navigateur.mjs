@@ -83,7 +83,7 @@ await page.waitForTimeout(300);
 console.log("MODALE SEANCE", (await page.locator("body").innerText()).includes("Enregistrer la séance") ? "ouverte" : "ABSENTE");
 const bandeau = await page.locator("body").innerText();
 console.log("SUGGESTION", /→ .* kg \(/.test(bandeau) ? bandeau.match(/[↑↓=] [^\n]*kg \([^)]*\)/)?.[0] : "absente");
-await page.getByRole("button", { name: /Bibliothèque/ }).first().click();
+await page.getByRole("button", { name: /Bibliothèque|Ajouter un exercice/ }).first().click();
 await page.waitForTimeout(400);
 const apres = await page.locator("body").innerText();
 console.log("BIBLIOTHEQUE", apres.includes("MACHINES GUIDÉES") ? "ouverte" : "ABSENTE");

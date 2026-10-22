@@ -14,9 +14,10 @@
 import { COLORS, POLICES } from "../tokens.js";
 import { addDays, clamp, fmtDateLong, todayISO } from "../lib/dates.js";
 
-export function Card({ children, style, onClick }) {
+export function Card({ children, style, onClick, ...attributs }) {
   return (
     <div
+      {...attributs}
       onClick={onClick}
       style={{
         background: COLORS.surface,

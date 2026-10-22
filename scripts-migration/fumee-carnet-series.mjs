@@ -70,7 +70,7 @@ await page.addInitScript(() => {
 const lignesSquat = () =>
   page.evaluate(() => {
     const champ = [...document.querySelectorAll('input[placeholder="Exercice"]')].find((x) => x.value === "Squat");
-    const carte = champ && champ.parentElement.parentElement;
+    const carte = champ && champ.closest("[data-exercice]");
     if (!carte) return null;
     const charges = [...carte.querySelectorAll('input[type="number"][step="0.5"]:not([max])')].map((x) => x.value);
     const reps = [...carte.querySelectorAll('input[inputmode="numeric"]')].map((x) => x.value);

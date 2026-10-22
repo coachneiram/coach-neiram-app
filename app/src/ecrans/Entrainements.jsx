@@ -118,6 +118,7 @@ export function Entrainements({
               onAssignerJour={onAssignerJour}
               maxisForce={maxisForce}
               onDefinirMaxiForce={onDefinirMaxiForce}
+              avecSeanceDuJour={false}
             />
           </div>
         )}
@@ -125,21 +126,23 @@ export function Entrainements({
     );
   }
 
+  // « Ta séance du jour » en tete (demande du coach, 22 octobre 2026) : le
+  // constructeur l'affiche d'abord, puis ce qui etait avant lui (creneaux,
+  // trophees, progression, records), puis le reste de l'ecran.
   return (
-    <>
+    <ConstructeurSeances
+      routinesApi={routinesApi}
+      sessionsApi={sessionsApi}
+      profile={profile}
+      plOn={profile?.goal === "performance"}
+      planSemaine={planSemaine}
+      onAssignerJour={onAssignerJour}
+      maxisForce={maxisForce}
+      onDefinirMaxiForce={onDefinirMaxiForce}
+    >
       {enTete}
       <ProgressionCharges sessions={sessionsApi.items} />
       <Records sessions={sessionsApi.items} />
-      <ConstructeurSeances
-        routinesApi={routinesApi}
-        sessionsApi={sessionsApi}
-        profile={profile}
-        plOn={profile?.goal === "performance"}
-        planSemaine={planSemaine}
-        onAssignerJour={onAssignerJour}
-        maxisForce={maxisForce}
-        onDefinirMaxiForce={onDefinirMaxiForce}
-      />
-    </>
+    </ConstructeurSeances>
   );
 }

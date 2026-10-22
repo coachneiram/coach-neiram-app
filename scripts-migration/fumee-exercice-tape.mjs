@@ -54,7 +54,7 @@ const perso = () => page.evaluate(() => JSON.parse(localStorage.getItem("cn_cust
 const valeurs = () => page.$$eval("input", (els) => els.map((e) => e.value));
 const formulaire = () => page.locator("[data-exercice-tape]");
 async function ouvrirBibliotheque() {
-  await page.getByRole("button", { name: /Bibliothèque/ }).first().click();
+  await page.getByRole("button", { name: /Bibliothèque|Ajouter un exercice/ }).first().click();
   await page.waitForTimeout(400);
 }
 
@@ -111,6 +111,9 @@ try {
   // Mode Force sans objectif « performance » (retour du coach du 3 octobre
   // 2026 : absent sur un telephone Android dont le profil n'etait pas en
   // performance).
+  // Mode simple (22 octobre 2026) : le type d'exercice est dans « Options ».
+  await page.getByRole("button", { name: "Options", exact: true }).first().click();
+  await page.waitForTimeout(200);
   const modes = page.locator("select").filter({ has: page.locator("option[value='warmup']") });
   const options = await modes.first().locator("option").allInnerTexts();
   await modes.first().selectOption("powerlifting");

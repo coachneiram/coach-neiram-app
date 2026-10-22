@@ -228,15 +228,15 @@ await exercer("Nutrition", "Objectifs calculés", async () => {
 // ── SEANCES ──────────────────────────────────────────────────────────
 await onglet("Séances");
 await exercer("Séances", "Ouvrir une séance type", async () => {
-  await page.getByText("Haut du corps").first().click();
+  await page.locator("[data-seance-type]").filter({ hasText: "Haut du corps" }).first().click();
   await page.waitForTimeout(600);
   const t = await page.locator("body").innerText();
   return /Enregistrer la séance/.test(t) ? "constructeur ouvert" : false;
 });
 await exercer("Séances", "Bibliothèque d'exercices", async () => {
-  await page.getByText("Haut du corps").first().click();
+  await page.locator("[data-seance-type]").filter({ hasText: "Haut du corps" }).first().click();
   await page.waitForTimeout(500);
-  const b = page.getByRole("button", { name: /Bibliothèque/ }).first();
+  const b = page.getByRole("button", { name: /Bibliothèque|Ajouter un exercice/ }).first();
   if (!(await b.count())) return false;
   await b.click();
   await page.waitForTimeout(700);

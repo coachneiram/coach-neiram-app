@@ -28,6 +28,16 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    // Texte valide par le coach le 22 octobre 2026.
+    id: "2026-10-22-carnet-series",
+    date: "2026-10-22",
+    titre: "Ton carnet d'entraînement",
+    texte:
+      "Note tes séries une par une : charge, reps, RPE. Tu vois ce que tu as fait la dernière fois, et le repos se lance tout seul quand tu coches une série.",
+    onglet: "entrainements",
+    bouton: "Ouvrir mes séances"
+  },
+  {
     id: "2026-10-14-diete-flexible",
     date: "2026-10-14",
     titre: "Ta semaine compte plus que ta journée",
