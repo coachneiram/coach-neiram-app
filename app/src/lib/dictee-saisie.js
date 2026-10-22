@@ -272,7 +272,11 @@ export function completerSeance(seance, dictee) {
     // La charge proposee d'apres la derniere seance n'a plus lieu d'etre
     // affichee quand le client dit celle qu'il a vraiment faite.
     if (dits.weight) dits.suggested = null;
+    // Series, repetitions ou charge dites : elles remplacent les series
+    // notees une a une, qui ne correspondraient plus a ce qui a ete fait.
+    if (dits.sets || dits.reps || dits.weight) dits.series = undefined;
     exercices[i] = { ...exercices[i], ...dits };
+    if (exercices[i].series === undefined) delete exercices[i].series;
   }
   const notes = [String(seance.notes || "").trim(), dictee.notes].filter(Boolean).join("\n");
   return {

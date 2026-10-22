@@ -13,6 +13,7 @@
 import { num, round, todayISO } from "./dates.js";
 import { uid } from "./semaine.js";
 import { fmtRPE, rpeFromRIR } from "./force.js";
+import { aSeriesSaisies, appliquerCharge, avecSeries, resumeSeries, serieRemplie } from "./series.js";
 import {
   DEFAULT_CARDIO_FIELDS,
   EXERCISE_LIBRARY,
@@ -263,7 +264,7 @@ export function preparerSeance(routine, seances, dateImposee) {
     exercices = precedente.exercises.map((ex) => {
       // Une suggestion de charge n'a pas de sens en cardio.
       const sug = ex.mode === "cardio" ? null : chargeSuivante(ex.weight, ex.rpe, ex.rir);
-      return {
+      const repris = {
         ...ex,
         id: uid(),
         // Le ressenti se resaisit a chaque seance : le reprendre reviendrait
@@ -275,6 +276,15 @@ export function preparerSeance(routine, seances, dateImposee) {
           ? { weight: String(sug.weight), suggested: { from: num(ex.weight), delta: sug.delta, reason: sug.reason } }
           : {})
       };
+      if (!aSeriesSaisies(ex)) return repris;
+      // Series reprises une a une, a refaire : non cochees, sans ressenti,
+      // et la charge proposee posee sur les series faites a la charge de
+      // reference. Les champs agreges suivent, sauf le ressenti (vide).
+      const series = ex.series
+        .filter(serieRemplie)
+        .map((s) => ({ weight: s.weight ?? "", reps: s.reps ?? "", rpe: "", fait: false }));
+      const ajustees = sug ? appliquerCharge(series, ex.weight, sug.weight) : series;
+      return { ...repris, ...avecSeries(ajustees), rpe: "" };
     });
   } else if (modele) {
     exercices = modele.exercises.map((ex) => ({
@@ -383,6 +393,15 @@ export function resumeExercice(ex) {
   // qu'aucune technique n'est posee : les resumes existants ne bougent pas.
   const technique = resumeTechnique(ex);
 
+  // Series notees une a une et differentes entre elles : elles s'ecrivent
+  // une a une. Identiques, ou a l'ancien format, le resume reste « 3×8 ».
+  const series = resumeSeries(ex);
+  if (series) {
+    const type = mode === "powerlifting" ? (PL_SET_TYPES.find((t) => t.id === ex.setType) || {}).label : "";
+    const pct = mode === "powerlifting" && ex.pct1rm ? ` · ${ex.pct1rm}% 1RM` : "";
+    return `${type ? type + " — " : ""}${series}${pct}${rpe}${technique}`;
+  }
+
   if (mode === "powerlifting") {
     const type = (PL_SET_TYPES.find((t) => t.id === ex.setType) || {}).label;
     const pct = ex.pct1rm ? ` · ${ex.pct1rm}% 1RM` : "";
@@ -395,6 +414,28 @@ export function resumeExercice(ex) {
   }
 
   return `${ex.sets || "—"}×${ex.reps || "—"}${unite}${ex.weight ? ` @ ${ex.weight} kg` : ""}${rpe}${technique}`;
+}
+
+/**
+ * « Dernière fois » : le meme exercice dans la seance la plus recente qui
+ * le contient, hors seance en cours et hors seances posterieures.
+ *
+ * Toutes les seances comptent, pas seulement la meme seance type : un
+ * squat fait le lundi en « Bas du corps » est la reference du squat du
+ * jeudi en « Full body ». Rend null quand l'exercice n'a jamais ete fait.
+ */
+export function derniereFois(seances, nom, seanceCourante = {}) {
+  const k = cleExercice(nom);
+  if (!k) return null;
+  const date = seanceCourante.date || "9999-12-31";
+  const candidates = (seances || [])
+    .filter((s) => s && s.id !== seanceCourante.id && s.date && s.date <= date)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  for (const s of candidates) {
+    const ex = (s.exercises || []).find((e) => e && e.mode !== "cardio" && cleExercice(e.name) === k);
+    if (ex) return { date: s.date, exercice: ex };
+  }
+  return null;
 }
 
 /** Video de demonstration d'un exercice, s'il en a une. */

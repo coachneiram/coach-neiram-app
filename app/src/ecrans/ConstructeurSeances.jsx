@@ -30,6 +30,7 @@ import {
   CHOIX_TYPE_SERIE,
   cleExercice,
   DEGRESSIVE_PAR_DEFAUT,
+  derniereFois,
   exerciceTape,
   exerciceVide,
   fusionnerExercicesPerso,
@@ -43,6 +44,21 @@ import {
 import { charger, enregistrer } from "../lib/stockage.js";
 import { envoyerEvenement, pointageDepuisSeance } from "../lib/synchro-coach.js";
 import { CHAMP_RPE } from "../lib/force.js";
+import {
+  aDesSeries,
+  avecSeries,
+  CHOIX_REPOS,
+  finaliserSeries,
+  fmtDuree,
+  garderCharge,
+  MAX_SERIES,
+  reposDe,
+  resumeDerniereFois,
+  seriesDe,
+  serieSuivante,
+  TEXTES_SERIES
+} from "../lib/series.js";
+import { MinuteurRepos, preparerSon } from "../ui/MinuteurRepos.jsx";
 import { ForceAthletique } from "./ForceAthletique.jsx";
 import { ZoneDictee } from "../ui/Dictee.jsx";
 import { completerSeance } from "../lib/dictee-saisie.js";
@@ -62,6 +78,17 @@ import {
 import { Dumbbell, Pencil, Plus, Search, Trash2, X } from "../ui/icones.jsx";
 
 const CLE_EXERCICES_PERSO = "cn_custom_exercises";
+
+/**
+ * Seance en cours de saisie, gardee a chaque frappe.
+ *
+ * Avec la saisie serie par serie, la fenetre de seance reste ouverte toute
+ * la duree de l'entrainement. Un telephone qui recharge l'application apres
+ * une longue veille (iOS le fait) aurait tout efface. Hors prefixes
+ * « coach_ » et « cn_ » expres : un brouillon n'a rien a faire dans la
+ * sauvegarde du client.
+ */
+const CLE_BROUILLON_SEANCE = "brouillon_seance_neiram";
 
 /** Champ compact : la saisie se fait au telephone, entre deux series. */
 const champCompact = {
@@ -92,6 +119,8 @@ const styleEtiquette = {
   textTransform: "uppercase",
   letterSpacing: 0.4
 };
+
+const styleLigneBoutonsSeries = { display: "flex", alignItems: "center", gap: 6, marginTop: 6 };
 
 const styleBoutonPointille = {
   flex: 1,
@@ -152,6 +181,40 @@ export function ConstructeurSeances({
   const [seanceEditee, setSeanceEditee] = useState(null);
   const [bibliothequeOuverte, setBibliothequeOuverte] = useState(false);
   const [exerciceLibre, setExerciceLibre] = useState("");
+  const [minuteur, setMinuteur] = useState(null);
+
+  // Une seance laissee ouverte (application rechargee) se rouvre telle quelle.
+  useEffect(() => {
+    const brouillon = charger(CLE_BROUILLON_SEANCE, null);
+    if (brouillon && Array.isArray(brouillon.exercises)) {
+      setSeanceEditee(brouillon);
+      setModaleSeance(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (modaleSeance && seanceEditee) enregistrer(CLE_BROUILLON_SEANCE, seanceEditee);
+  }, [modaleSeance, seanceEditee]);
+
+  const oublierBrouillon = () => {
+    try {
+      localStorage.removeItem(CLE_BROUILLON_SEANCE);
+    } catch (e) {
+      // Stockage indisponible : rien a oublier.
+    }
+  };
+
+  /**
+   * Fermer sans enregistrer. Un geste a cote de la fenetre la fermait sans
+   * prevenir ; avec des series deja cochees, on demande d'abord.
+   */
+  const fermerSeance = () => {
+    const cochees = (seanceEditee?.exercises || []).some((e) => (e.series || []).some((x) => x.fait));
+    if (cochees && !window.confirm(TEXTES_SERIES.quitter)) return;
+    oublierBrouillon();
+    setMinuteur(null);
+    setModaleSeance(false);
+  };
 
   const nouvelleRoutine = () => {
     setRoutineEditee({ id: null, name: "", description: "", color: ROUTINE_COLORS[0] });
@@ -179,7 +242,10 @@ export function ConstructeurSeances({
   const enregistrerSeance = async () => {
     // Un exercice sans nom est une ligne que le client n'a pas remplie :
     // l'enregistrer polluerait son historique.
-    const donnees = { ...seanceEditee, exercises: seanceEditee.exercises.filter((e) => e.name.trim()) };
+    const donnees = {
+      ...seanceEditee,
+      exercises: seanceEditee.exercises.filter((e) => e.name.trim()).map(finaliserSeries)
+    };
     delete donnees.id;
     exercicesPerso.retenir(donnees.exercises);
     if (seanceEditee.id) await sessionsApi.update(seanceEditee.id, donnees);
@@ -194,6 +260,8 @@ export function ConstructeurSeances({
       });
       if (pointage) envoyerEvenement(profile, pointage);
     }
+    oublierBrouillon();
+    setMinuteur(null);
     setModaleSeance(false);
   };
 
@@ -225,6 +293,40 @@ export function ConstructeurSeances({
       modifierExercice(i, { technique: "" });
     }
   };
+
+  /** Change une serie ; les champs agreges de l'exercice suivent. */
+  const modifierSerie = (i, k, correctif) => {
+    const series = seriesDe(seanceEditee.exercises[i]);
+    series[k] = { ...series[k], ...correctif };
+    modifierExercice(i, avecSeries(series));
+  };
+
+  const ajouterSerie = (i) => {
+    const series = seriesDe(seanceEditee.exercises[i]);
+    if (series.length >= MAX_SERIES) return;
+    modifierExercice(i, avecSeries([...series, serieSuivante(series)]));
+  };
+
+  const retirerSerie = (i) => {
+    const series = seriesDe(seanceEditee.exercises[i]);
+    if (series.length <= 1) return;
+    modifierExercice(i, avecSeries(series.slice(0, -1)));
+  };
+
+  /** Cocher une serie lance le repos de l'exercice. */
+  const cocherSerie = (i, k) => {
+    const ex = seanceEditee.exercises[i];
+    const fait = !seriesDe(ex)[k].fait;
+    modifierSerie(i, k, { fait });
+    if (fait) {
+      preparerSon();
+      const duree = reposDe(ex);
+      setMinuteur({ fin: Date.now() + duree * 1000, duree });
+    }
+  };
+
+  const ajusterMinuteur = (secondes) =>
+    setMinuteur((m) => (m ? { ...m, fin: m.fin + secondes * 1000, duree: Math.max(1, m.duree + secondes) } : m));
 
   const retirerExercice = (i) => {
     const restants = seanceEditee.exercises.filter((_, k) => k !== i);
@@ -487,7 +589,7 @@ export function ConstructeurSeances({
         )}
       </Modal>
 
-      <Modal open={modaleSeance} onClose={() => setModaleSeance(false)} title="Séance">
+      <Modal open={modaleSeance} onClose={fermerSeance} title="Séance">
         {seanceEditee && (
           <div>
             <Field label="Date">
@@ -505,6 +607,12 @@ export function ConstructeurSeances({
                   const champsCardio =
                     mode === "cardio" ? (ex.fields?.length ? ex.fields : DEFAULT_CARDIO_FIELDS) : [];
                   const sug = ex.suggested;
+                  const series = aDesSeries(ex) ? seriesDe(ex) : [];
+                  const precedent = aDesSeries(ex) ? derniereFois(sessionsApi.items, ex.name, seanceEditee) : null;
+                  const seriesPrecedentes = precedent ? seriesDe(precedent.exercice) : [];
+                  const resumePrecedent = precedent ? resumeDerniereFois(precedent.exercice) : "";
+                  const avecCharge = mode !== "pdc" && mode !== "warmup";
+                  const colonnes = avecCharge ? "20px 1fr 1fr 0.8fr 40px" : "20px 1fr 0.8fr 40px";
 
                   return (
                     <div
@@ -535,7 +643,7 @@ export function ConstructeurSeances({
                             {sug.from} → {ex.weight} kg ({sug.reason})
                           </span>
                           <button
-                            onClick={() => modifierExercice(i, { weight: String(sug.from), suggested: null })}
+                            onClick={() => modifierExercice(i, garderCharge(ex))}
                             style={{
                               background: "none",
                               border: "none",
@@ -634,23 +742,29 @@ export function ConstructeurSeances({
                               </select>
                             </div>
                           )}
+                          {resumePrecedent && (
+                            <div
+                              style={{
+                                fontSize: 10.5,
+                                color: COLORS.textFaint,
+                                fontFamily: "IBM Plex Mono",
+                                marginBottom: 6,
+                                lineHeight: 1.4
+                              }}
+                            >
+                              {`${TEXTES_SERIES.derniereFois} (${fmtDateShort(precedent.date)}) : ${resumePrecedent}`}
+                            </div>
+                          )}
                           <div
                             style={{
                               display: "grid",
-                              gridTemplateColumns:
-                                mode === "pdc" || mode === "warmup" ? "1fr 1fr 1fr" : "1fr 1fr 0.8fr 1fr",
-                              gap: 6
+                              gridTemplateColumns: colonnes,
+                              gap: 6,
+                              alignItems: "end"
                             }}
                           >
-                            <div>
-                              <div style={styleEtiquette}>Séries</div>
-                              <input
-                                type="number"
-                                value={ex.sets ?? ""}
-                                onChange={(e) => modifierExercice(i, { sets: e.target.value })}
-                                style={champCompact}
-                              />
-                            </div>
+                            <div style={styleEtiquette}>{TEXTES_SERIES.colonneNumero}</div>
+                            {avecCharge && <div style={styleEtiquette}>Charge (kg)</div>}
                             <div>
                               {/* L'etiquette est un bouton : certains exercices se comptent
                                   en secondes (gainage), et basculer doit se faire d'un geste. */}
@@ -676,34 +790,101 @@ export function ConstructeurSeances({
                               >
                                 {(ex.repUnit || "reps") === "sec" ? "Secondes ⇄" : "Répétitions ⇄"}
                               </button>
-                              <input
-                                type="number"
-                                value={ex.reps ?? ""}
-                                onChange={(e) => modifierExercice(i, { reps: e.target.value })}
-                                style={champCompact}
-                              />
                             </div>
-                            <div>
-                              <div style={styleEtiquette}>RPE</div>
-                              <input
-                                {...CHAMP_RPE}
-                                value={ex.rpe ?? ""}
-                                onChange={(e) => modifierExercice(i, { rpe: e.target.value })}
-                                style={champCompact}
-                              />
-                            </div>
-                            {mode !== "pdc" && mode !== "warmup" && (
-                              <div>
-                                <div style={styleEtiquette}>Charge (kg)</div>
+                            <div style={styleEtiquette}>RPE</div>
+                            <div style={{ ...styleEtiquette, textAlign: "center" }}>{TEXTES_SERIES.colonneFait}</div>
+
+                            {series.map((serie, k) => {
+                              const avant = seriesPrecedentes[k] || {};
+                              return [
+                                <div
+                                  key={`n${k}`}
+                                  style={{
+                                    fontFamily: "IBM Plex Mono",
+                                    fontSize: 12,
+                                    color: serie.fait ? COLORS.good : COLORS.textFaint,
+                                    alignSelf: "center"
+                                  }}
+                                >
+                                  {k + 1}
+                                </div>,
+                                avecCharge && (
+                                  <input
+                                    key={`w${k}`}
+                                    aria-label="Charge (kg)"
+                                    type="number"
+                                    step="0.5"
+                                    inputMode="decimal"
+                                    placeholder={avant.weight ? String(avant.weight) : ""}
+                                    value={serie.weight ?? ""}
+                                    onChange={(e) => modifierSerie(i, k, { weight: e.target.value })}
+                                    style={champCompact}
+                                  />
+                                ),
                                 <input
+                                  key={`r${k}`}
                                   type="number"
-                                  step="0.5"
-                                  value={ex.weight ?? ""}
-                                  onChange={(e) => modifierExercice(i, { weight: e.target.value })}
+                                  inputMode="numeric"
+                                  placeholder={avant.reps ? String(avant.reps) : ""}
+                                  value={serie.reps ?? ""}
+                                  onChange={(e) => modifierSerie(i, k, { reps: e.target.value })}
                                   style={champCompact}
-                                />
-                              </div>
+                                />,
+                                <input
+                                  key={`p${k}`}
+                                  {...CHAMP_RPE}
+                                  inputMode="decimal"
+                                  value={serie.rpe ?? ""}
+                                  onChange={(e) => modifierSerie(i, k, { rpe: e.target.value })}
+                                  style={champCompact}
+                                />,
+                                <button
+                                  key={`f${k}`}
+                                  aria-label={TEXTES_SERIES.ariaFait}
+                                  aria-pressed={!!serie.fait}
+                                  onClick={() => cocherSerie(i, k)}
+                                  style={{
+                                    height: 34,
+                                    borderRadius: 9,
+                                    border: `1px solid ${serie.fait ? COLORS.good : COLORS.border}`,
+                                    background: serie.fait ? `${COLORS.good}22` : "none",
+                                    color: serie.fait ? COLORS.good : COLORS.textFaint,
+                                    fontSize: 15,
+                                    fontWeight: 700,
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  ✓
+                                </button>
+                              ];
+                            })}
+                          </div>
+                          <div style={styleLigneBoutonsSeries}>
+                            <button onClick={() => ajouterSerie(i)} style={{ ...styleBoutonPointille, flex: "none", padding: "7px 10px" }}>
+                              {TEXTES_SERIES.ajouter}
+                            </button>
+                            {series.length > 1 && (
+                              <button
+                                onClick={() => retirerSerie(i)}
+                                style={{ ...styleBoutonPointille, flex: "none", padding: "7px 10px", color: COLORS.textFaint }}
+                              >
+                                {TEXTES_SERIES.retirer}
+                              </button>
                             )}
+                            <div style={{ flex: 1 }} />
+                            <span style={{ ...styleEtiquette, marginBottom: 0 }}>{TEXTES_SERIES.repos}</span>
+                            <select
+                              aria-label={TEXTES_SERIES.ariaRepos}
+                              value={reposDe(ex)}
+                              onChange={(e) => modifierExercice(i, { repos: Number(e.target.value) })}
+                              style={{ ...champCompact, width: 92, padding: "7px 4px", flexShrink: 0 }}
+                            >
+                              {(CHOIX_REPOS.includes(reposDe(ex)) ? CHOIX_REPOS : [...CHOIX_REPOS, reposDe(ex)].sort((a, b) => a - b)).map((d) => (
+                                <option key={d} value={d}>
+                                  {fmtDuree(d)}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                           </>
                         )}
@@ -997,6 +1178,15 @@ export function ConstructeurSeances({
           </div>
         )}
       </Modal>
+
+      {modaleSeance && minuteur && (
+        <MinuteurRepos
+          fin={minuteur.fin}
+          duree={minuteur.duree}
+          onAjuster={ajusterMinuteur}
+          onFermer={() => setMinuteur(null)}
+        />
+      )}
 
       <Modal
         open={bibliothequeOuverte}
