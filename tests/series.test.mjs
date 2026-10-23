@@ -284,3 +284,48 @@ describe("repos", () => {
     assert.equal(fmtChrono(-3), "0:00");
   });
 });
+
+describe("repos au-delà de 5 min, durée libre, chronomètre (23 octobre 2026)", async () => {
+  const m = await import("../app/src/lib/series.js");
+
+  test("le menu va jusqu'à 10 min", () => {
+    assert.ok(m.CHOIX_REPOS.includes(360) && m.CHOIX_REPOS.includes(480) && m.CHOIX_REPOS.includes(600));
+    assert.equal(m.fmtDuree(480), "8 min");
+    assert.equal(m.fmtDuree(3900), "1 h 05");
+  });
+
+  test("« Autre durée… » : la durée en cours est gardée, puis n'importe quelle durée en minutes", () => {
+    const c = m.choisirRepos({ repos: 120 }, m.CHOIX_AUTRE);
+    assert.deepEqual(c, { repos: 120, reposLibre: true });
+    assert.equal(m.valeurMenuRepos(c), "autre");
+    assert.equal(m.reposDepuisMinutes("7"), 420);
+    assert.equal(m.reposDepuisMinutes("6,5"), 390);
+    assert.equal(m.reposDepuisMinutes("20"), 1200, "pas de plafond");
+    assert.equal(m.reposDepuisMinutes(""), null);
+    assert.equal(m.reposDepuisMinutes("0"), null);
+    assert.equal(m.minutesDeRepos({ repos: 390 }), "6.5");
+  });
+
+  test("« Chronomètre » : repérable, et le repos chiffré retombe sur 90 s s'il le faut", () => {
+    const c = m.choisirRepos({ repos: 120 }, m.REPOS_CHRONO);
+    assert.deepEqual(c, { repos: "chrono", reposLibre: false });
+    assert.equal(m.estChrono(c), true);
+    assert.equal(m.valeurMenuRepos(c), "chrono");
+    assert.equal(m.reposDe(c), 90);
+    assert.equal(m.estChrono({ repos: 90 }), false);
+  });
+
+  test("revenir à une durée du menu efface la durée libre", () => {
+    assert.deepEqual(m.choisirRepos({ repos: 420, reposLibre: true }, "180"), { repos: 180, reposLibre: false });
+  });
+
+  test("une durée hors menu (ancienne saisie) reste affichée dans le menu", () => {
+    assert.ok(m.dureesMenuRepos({ repos: 200 }).includes(200));
+    assert.equal(m.valeurMenuRepos({ repos: 200 }), "200");
+  });
+
+  test("affichage du chronomètre et des longs comptes à rebours", () => {
+    assert.equal(m.fmtEcoule(65.9), "1:05");
+    assert.equal(m.fmtChrono(3725), "1:02:05");
+  });
+});

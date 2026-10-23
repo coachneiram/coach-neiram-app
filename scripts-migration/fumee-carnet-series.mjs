@@ -7,6 +7,8 @@
  *   2. « + Série » ajoute une ligne, pre-remplie ;
  *   3. cocher une serie lance le repos (90 s par defaut), -15 s / +15 s /
  *      Passer marchent, et le repos regle a 30 s arrive a « Repos terminé » ;
+ *   3c. repos libre de 7 min (au-dela du menu), puis chronometre qui
+ *      compte a partir de 0 et s'arrete sur « Arrêter » (23 octobre 2026) ;
  *   4. l'application rechargee en pleine seance la rouvre telle quelle ;
  *   5. a l'enregistrement, l'historique ecrit les series une a une, et
  *      l'exercice a l'ancien format reste a l'ancien format.
@@ -61,7 +63,8 @@ await page.addInitScript(() => {
           { weight: "62.5", reps: "6", rpe: "7" }
         ]
       },
-      { id: "e2", name: "Fentes", mode: "muscu", sets: "3", reps: "10", weight: "20", rpe: "" }
+      { id: "e2", name: "Fentes", mode: "muscu", sets: "3", reps: "10", weight: "20", rpe: "" },
+      { id: "e3", name: "Gainage planche", mode: "pdc", sets: "2", reps: "45", repUnit: "sec", weight: "" }
     ]
   }]));
 });
@@ -147,6 +150,30 @@ try {
       : `*** « ${c3} » puis « ${c4} » ***`
   );
 
+  // 3c. Gainage : repos libre de 7 min, puis chronometre.
+  const gainage = page.locator('[data-exercice="2"]');
+  await gainage.getByLabel("Temps de repos entre les séries").selectOption("autre");
+  await page.waitForTimeout(200);
+  await gainage.getByLabel("Durée du repos en minutes").fill("7");
+  await page.waitForTimeout(200);
+  await gainage.locator('[aria-label="Série faite"]').first().click();
+  await page.waitForTimeout(300);
+  const c5 = net(await minuteur.innerText().catch(() => ""));
+  await gainage.getByLabel("Temps de repos entre les séries").selectOption("chrono");
+  await page.waitForTimeout(200);
+  await gainage.locator('[aria-label="Série faite"]').nth(1).click();
+  await page.waitForTimeout(2300);
+  const c6 = net(await minuteur.innerText().catch(() => ""));
+  await page.getByRole("button", { name: "Arrêter" }).click();
+  await page.waitForTimeout(300);
+  const arrete = (await minuteur.count()) === 0;
+  console.log(
+    "3c. 7 MIN PUIS CHRONO   :",
+    chrono(c5) >= 418 && chrono(c5) <= 420 && /^chrono\b/i.test(c6) && chrono(c6) >= 2 && chrono(c6) <= 3 && arrete
+      ? `repos libre démarré à ${c5.match(/\d+:\d\d/)[0]}, chronomètre à ${c6.match(/\d+:\d\d/)[0]} puis arrêté`
+      : `*** « ${c5} » puis « ${c6} », arrêté : ${arrete} ***`
+  );
+
   // 4. Application rechargee en pleine seance.
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
@@ -169,6 +196,7 @@ try {
   const nouvelle = stockees.find((s) => s.id !== "s1") || {};
   const squat = (nouvelle.exercises || []).find((e) => e.name === "Squat") || {};
   const fentes = (nouvelle.exercises || []).find((e) => e.name === "Fentes") || {};
+  const planche = (nouvelle.exercises || []).find((e) => e.name === "Gainage planche") || {};
   console.log(
     "5. HISTORIQUE           :",
     /60×8 · 65×8 · 65×6 · 65×4 kg/.test(t5) &&
@@ -177,8 +205,9 @@ try {
       squat.weight === "65" &&
       (squat.series || []).every((x) => !("fait" in x)) &&
       !("series" in fentes) &&
+      planche.repos === "chrono" &&
       brouillon === null
-      ? "séries écrites une à une, Fentes à l'ancien format, coches et brouillon effacés"
+      ? "séries écrites une à une, Fentes à l'ancien format, chronomètre gardé sur le gainage, coches et brouillon effacés"
       : `*** ${JSON.stringify({ squat, fentes, brouillon })} ${t5.slice(0, 200)} ***`
   );
 } catch (e) {

@@ -14,7 +14,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { COLORS } from "../tokens.js";
-import { fmtChrono, PAS_MINUTEUR, TEXTES_SERIES } from "../lib/series.js";
+import { fmtChrono, fmtEcoule, PAS_MINUTEUR, TEXTES_SERIES } from "../lib/series.js";
 
 let contexteAudio = null;
 
@@ -74,7 +74,12 @@ const styleBouton = {
   flexShrink: 0
 };
 
-export function MinuteurRepos({ fin, duree, onAjuster, onFermer }) {
+/**
+ * `chrono` : chronometre (23 octobre 2026). Il compte a partir de `debut`,
+ * sans fin ni signal, jusqu'a ce que le client l'arrete ou coche la serie
+ * suivante.
+ */
+export function MinuteurRepos({ chrono = false, debut, fin, duree, onAjuster, onFermer }) {
   const [maintenant, setMaintenant] = useState(() => Date.now());
   const signale = useRef(false);
 
@@ -87,8 +92,8 @@ export function MinuteurRepos({ fin, duree, onAjuster, onFermer }) {
     return () => clearInterval(t);
   }, []);
 
-  const resteMs = fin - maintenant;
-  const termine = resteMs <= 0;
+  const resteMs = chrono ? Infinity : fin - maintenant;
+  const termine = !chrono && resteMs <= 0;
 
   useEffect(() => {
     if (!termine || signale.current) return;
@@ -98,7 +103,8 @@ export function MinuteurRepos({ fin, duree, onAjuster, onFermer }) {
     return () => clearTimeout(t);
   }, [termine]);
 
-  const part = duree > 0 ? Math.min(1, Math.max(0, resteMs / (duree * 1000))) : 0;
+  const part = chrono ? 1 : duree > 0 ? Math.min(1, Math.max(0, resteMs / (duree * 1000))) : 0;
+  const affiche = chrono ? fmtEcoule((maintenant - debut) / 1000) : fmtChrono(resteMs / 1000);
 
   return (
     <div
@@ -129,7 +135,7 @@ export function MinuteurRepos({ fin, duree, onAjuster, onFermer }) {
               letterSpacing: 0.5
             }}
           >
-            {termine ? TEXTES_SERIES.minuteurFini : TEXTES_SERIES.minuteur}
+            {chrono ? TEXTES_SERIES.chrono : termine ? TEXTES_SERIES.minuteurFini : TEXTES_SERIES.minuteur}
           </div>
           <div
             style={{
@@ -140,10 +146,10 @@ export function MinuteurRepos({ fin, duree, onAjuster, onFermer }) {
               lineHeight: 1.1
             }}
           >
-            {fmtChrono(resteMs / 1000)}
+            {affiche}
           </div>
         </div>
-        {!termine && (
+        {!termine && !chrono && (
           <>
             <button onClick={() => onAjuster(-PAS_MINUTEUR)} style={styleBouton}>
               {TEXTES_SERIES.moins}
@@ -154,7 +160,7 @@ export function MinuteurRepos({ fin, duree, onAjuster, onFermer }) {
           </>
         )}
         <button onClick={onFermer} style={{ ...styleBouton, color: COLORS.gold, borderColor: COLORS.gold }}>
-          {TEXTES_SERIES.passer}
+          {chrono ? TEXTES_SERIES.arreter : TEXTES_SERIES.passer}
         </button>
       </div>
       <div style={{ height: 3, background: COLORS.border, borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
