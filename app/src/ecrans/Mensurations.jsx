@@ -95,6 +95,7 @@ export function Mensurations({ api, bodyApi, objectif }) {
           message="Aucune mensuration enregistrée. Prends tes mesures (poitrine, taille, hanches, bras, cuisses, mollets) et suis leur évolution mois après mois."
           ctaLabel="Première prise de mesures"
           onCta={nouvelleP}
+          iconeCta={Plus}
         />
       ) : (
         <>

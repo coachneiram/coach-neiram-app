@@ -12,7 +12,7 @@
  * tests/stockage-compat.test.mjs.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { COLORS } from "./tokens.js";
 import { todayISO } from "./lib/dates.js";
 import { cleMoisPrecedent, getMonthKey, getWeekKey, uid } from "./lib/semaine.js";
@@ -60,7 +60,7 @@ import { CLE_INSTALLATION, bandeauInstallationVisible, estInstallee, finMasquage
 import { NOUVEAUTES_MAX, annoncesAutorisees, lireVues, marquerToutVu, nouveautesAMontrer, nouveautesPour } from "./lib/nouveautes.js";
 
 /** Duree d'affichage d'une notification passagere, en millisecondes. */
-const DUREE_TOAST = 5200;
+const DUREE_TOAST = 8000;
 
 /**
  * Charge une liste depuis le stockage.
@@ -145,9 +145,13 @@ export default function App() {
     setPret(true);
   }, []);
 
+  // Une seconde notification annule le minuteur de la premiere : sans
+  // cela, elle se refermait des que la premiere arrivait a echeance.
+  const minuteurToast = useRef(null);
   const afficherToast = (message) => {
     setToast(message);
-    window.setTimeout(() => setToast(null), DUREE_TOAST);
+    window.clearTimeout(minuteurToast.current);
+    minuteurToast.current = window.setTimeout(() => setToast(null), DUREE_TOAST);
   };
 
   /**
@@ -655,6 +659,8 @@ export default function App() {
         onGenerateMonthly={genererBilanDuMois}
         bilanCourant={bilanCourant}
         bilanMensuelCourant={bilanMensuelCourant}
+        bilans={reports}
+        bilansMensuels={monthlyReports}
         enGeneration={enGeneration}
         enGenerationMensuelle={enGenerationMensuelle}
         erreurGeneration={erreurGeneration}

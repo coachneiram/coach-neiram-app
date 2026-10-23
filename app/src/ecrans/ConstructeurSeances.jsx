@@ -64,6 +64,7 @@ import { ChoixRepos } from "../ui/ChoixRepos.jsx";
 import { seancesProgrammeDebutant, TEXTES_DEBUTANT, TEXTES_PROGRAMME } from "../lib/seance-du-jour.js";
 import { SeanceDuJour } from "./SeanceDuJour.jsx";
 import { ForceAthletique } from "./ForceAthletique.jsx";
+import { CalculCharge } from "./CalculCharge.jsx";
 import { ZoneDictee } from "../ui/Dictee.jsx";
 import { completerSeance } from "../lib/dictee-saisie.js";
 import { PlanSemaine } from "./PlanSemaine.jsx";
@@ -507,6 +508,7 @@ export function ConstructeurSeances({
           message="Crée tes séances types (ex. Haut du corps, Circuit cardio) pour les réutiliser à chaque entraînement."
           ctaLabel="Nouvelle séance type"
           onCta={nouvelleRoutine}
+          iconeCta={Plus}
         />
       ) : (
         <div
@@ -1092,6 +1094,20 @@ export function ConstructeurSeances({
                                   </option>
                                 ))}
                               </select>
+                            </div>
+                          )}
+                          {/* Rebranche le 22 octobre 2026 (index.html, PowerliftingFields) :
+                              les maxis de « Force athletique » servent de nouveau a
+                              calculer la charge. Sans restriction dans l'app coach. */}
+                          {mode === "powerlifting" && (
+                            <div style={{ marginTop: 8 }}>
+                              <CalculCharge
+                                ex={ex}
+                                maxis={maxisForce}
+                                onModifier={(correctif) => modifierExercice(i, correctif)}
+                                champ={champCompact}
+                                etiquette={styleEtiquette}
+                              />
                             </div>
                           )}
                       {/* TEXTE-NOUVEAU
