@@ -49,9 +49,8 @@ import { CHAMP_RPE } from "../lib/force.js";
 import {
   aDesSeries,
   avecSeries,
-  CHOIX_REPOS,
+  estChrono,
   finaliserSeries,
-  fmtDuree,
   garderCharge,
   MAX_SERIES,
   reposDe,
@@ -61,6 +60,7 @@ import {
   TEXTES_SERIES
 } from "../lib/series.js";
 import { MinuteurRepos, preparerSon } from "../ui/MinuteurRepos.jsx";
+import { ChoixRepos } from "../ui/ChoixRepos.jsx";
 import { seancesProgrammeDebutant, TEXTES_DEBUTANT, TEXTES_PROGRAMME } from "../lib/seance-du-jour.js";
 import { SeanceDuJour } from "./SeanceDuJour.jsx";
 import { ForceAthletique } from "./ForceAthletique.jsx";
@@ -135,7 +135,7 @@ const styleLienOptions = {
   textDecoration: "underline"
 };
 
-const styleLigneBoutonsSeries = { display: "flex", alignItems: "center", gap: 6, marginTop: 6 };
+const styleLigneBoutonsSeries = { display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 6 };
 
 const styleBoutonPointille = {
   flex: 1,
@@ -400,8 +400,12 @@ export function ConstructeurSeances({
     modifierSerie(i, k, { fait });
     if (fait) {
       preparerSon();
-      const duree = reposDe(ex);
-      setMinuteur({ fin: Date.now() + duree * 1000, duree });
+      if (estChrono(ex)) {
+        setMinuteur({ chrono: true, debut: Date.now() });
+      } else {
+        const duree = reposDe(ex);
+        setMinuteur({ fin: Date.now() + duree * 1000, duree });
+      }
     }
   };
 
@@ -734,7 +738,7 @@ export function ConstructeurSeances({
                       </button>
                     </div>
                     {(ex.mode || "muscu") !== "cardio" && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, paddingLeft: 22 }}>
+                      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 6, paddingLeft: 22 }}>
                         <input
                           type="number"
                           inputMode="numeric"
@@ -755,18 +759,10 @@ export function ConstructeurSeances({
                         <span style={{ fontSize: 12, color: COLORS.textMuted, flex: 1 }}>
                           {(ex.repUnit || "reps") === "sec" ? "s" : "reps"}
                         </span>
-                        <select
-                          aria-label={TEXTES_SERIES.ariaRepos}
-                          value={reposDe(ex)}
-                          onChange={(e) => modifierExerciceProgramme(k, { repos: Number(e.target.value) })}
-                          style={{ ...champCompact, width: 100, padding: "7px 4px", flexShrink: 0 }}
-                        >
-                          {CHOIX_REPOS.map((d) => (
-                            <option key={d} value={d}>
-                              {fmtDuree(d)}
-                            </option>
-                          ))}
-                        </select>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ ...styleEtiquette, marginBottom: 0 }}>{TEXTES_SERIES.repos}</span>
+                          <ChoixRepos ex={ex} onChange={(c) => modifierExerciceProgramme(k, c)} largeur={124} />
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1058,18 +1054,7 @@ export function ConstructeurSeances({
                             )}
                             <div style={{ flex: 1 }} />
                             <span style={{ ...styleEtiquette, marginBottom: 0 }}>{TEXTES_SERIES.repos}</span>
-                            <select
-                              aria-label={TEXTES_SERIES.ariaRepos}
-                              value={reposDe(ex)}
-                              onChange={(e) => modifierExercice(i, { repos: Number(e.target.value) })}
-                              style={{ ...champCompact, width: 92, padding: "7px 4px", flexShrink: 0 }}
-                            >
-                              {(CHOIX_REPOS.includes(reposDe(ex)) ? CHOIX_REPOS : [...CHOIX_REPOS, reposDe(ex)].sort((a, b) => a - b)).map((d) => (
-                                <option key={d} value={d}>
-                                  {fmtDuree(d)}
-                                </option>
-                              ))}
-                            </select>
+                            <ChoixRepos ex={ex} onChange={(c) => modifierExercice(i, c)} />
                           </div>
                           </>
                         )}
@@ -1426,6 +1411,8 @@ export function ConstructeurSeances({
 
       {modaleSeance && minuteur && (
         <MinuteurRepos
+          chrono={!!minuteur.chrono}
+          debut={minuteur.debut}
           fin={minuteur.fin}
           duree={minuteur.duree}
           onAjuster={ajusterMinuteur}

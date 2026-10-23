@@ -24,8 +24,20 @@ import { est1RMFromSet, fmtRPE } from "./force.js";
 /** Repos entre deux series quand le client n'a rien regle, en secondes. */
 export const REPOS_PAR_DEFAUT = 90;
 
-/** Durees de repos proposees, en secondes. */
-export const CHOIX_REPOS = [30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
+/**
+ * Durees de repos proposees, en secondes.
+ *
+ * Jusqu'a 10 min depuis le 23 octobre 2026 (demande du coach : 5 min ne
+ * suffisaient pas en force). Au-dela, « Autre durée… » accepte n'importe
+ * quelle duree, et « Chronomètre » compte sans limite.
+ */
+export const CHOIX_REPOS = [30, 45, 60, 75, 90, 120, 150, 180, 240, 300, 360, 480, 600];
+
+/** Valeur de `repos` qui demande un chronometre (compte a partir de 0, sans fin). */
+export const REPOS_CHRONO = "chrono";
+
+/** Valeurs speciales du menu de repos. */
+export const CHOIX_AUTRE = "autre";
 
 /** Au-dela, une ligne de series n'est plus lisible au telephone. */
 export const MAX_SERIES = 20;
@@ -54,7 +66,13 @@ export const TEXTES_SERIES = {
   passer: "Passer",
   quitter: "Quitter la séance sans l'enregistrer ? Les séries cochées seront perdues.",
   ariaFait: "Série faite",
-  ariaRepos: "Temps de repos entre les séries"
+  ariaRepos: "Temps de repos entre les séries",
+  autreDuree: "Autre durée",
+  chronometre: "Chronomètre",
+  minutes: "min",
+  ariaMinutes: "Durée du repos en minutes",
+  chrono: "Chrono",
+  arreter: "Arrêter"
 };
 
 /** Duree lisible : « 45 s », « 1 min », « 1 min 30 ». */
@@ -63,17 +81,67 @@ export function fmtDuree(secondes) {
   if (s < 60) return `${s} s`;
   const m = Math.floor(s / 60);
   const r = s % 60;
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+    return `${h} h${mm ? " " + String(mm).padStart(2, "0") : ""}`;
+  }
   return r ? `${m} min ${String(r).padStart(2, "0")}` : `${m} min`;
 }
 
-/** Compte a rebours : « 1:05 ». */
+/** Compte a rebours : « 1:05 » ; au-dela d'une heure « 1:02:05 ». */
 export function fmtChrono(secondes) {
   const s = Math.max(0, Math.ceil(num(secondes)));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${r}` : `${m}:${r}`;
 }
 
-/** Repos de l'exercice, ou celui par defaut. */
+/** Chronometre : temps ecoule, arrondi a la seconde inferieure. */
+export const fmtEcoule = (secondes) => fmtChrono(Math.floor(Math.max(0, num(secondes))));
+
+/** Repos de l'exercice en secondes, ou celui par defaut (chronometre compris). */
 export const reposDe = (ex) => (num(ex && ex.repos) > 0 ? num(ex.repos) : REPOS_PAR_DEFAUT);
+
+/** Le repos de cet exercice se compte-t-il au chronometre ? */
+export const estChrono = (ex) => !!ex && ex.repos === REPOS_CHRONO;
+
+/**
+ * Valeur affichee par le menu de repos : une duree, « autre » quand le
+ * client a tape sa propre duree, ou « chrono ».
+ */
+export function valeurMenuRepos(ex) {
+  if (estChrono(ex)) return REPOS_CHRONO;
+  if (ex && ex.reposLibre) return CHOIX_AUTRE;
+  return String(reposDe(ex));
+}
+
+/** Durees du menu, avec celle de l'exercice si elle n'y est pas. */
+export function dureesMenuRepos(ex) {
+  const d = reposDe(ex);
+  return CHOIX_REPOS.includes(d) || (ex && ex.reposLibre) ? CHOIX_REPOS : [...CHOIX_REPOS, d].sort((a, b) => a - b);
+}
+
+/** Correctif a appliquer quand le client choisit dans le menu de repos. */
+export function choisirRepos(ex, valeur) {
+  if (valeur === REPOS_CHRONO) return { repos: REPOS_CHRONO, reposLibre: false };
+  if (valeur === CHOIX_AUTRE) return { repos: reposDe(ex), reposLibre: true };
+  return { repos: num(valeur) > 0 ? num(valeur) : REPOS_PAR_DEFAUT, reposLibre: false };
+}
+
+/**
+ * Duree tapee en minutes (« 7 », « 6,5 ») convertie en secondes. Sans
+ * plafond : un repos de 15 min se respecte. Rend null pour une saisie vide
+ * ou nulle, que l'ecran ignore.
+ */
+export function reposDepuisMinutes(texte) {
+  const m = num(String(texte ?? "").replace(",", "."));
+  return m > 0 ? Math.max(1, Math.round(m * 60)) : null;
+}
+
+/** Minutes affichees dans le champ « Autre durée… » (« 7 », « 6.5 »). */
+export const minutesDeRepos = (ex) => String(Math.round((reposDe(ex) / 60) * 100) / 100);
 
 /** Le cardio n'a pas de series : il se note en duree et en distance. */
 export const aDesSeries = (ex) => !!ex && (ex.mode || "muscu") !== "cardio";
