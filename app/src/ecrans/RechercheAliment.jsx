@@ -28,8 +28,15 @@ import { redimensionnerPhoto } from "../lib/images.js";
 import { analyserDescriptionRepas, analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
 import { useDictee } from "../ui/Dictee.jsx";
 import { messageErreur } from "../lib/ia.js";
-import { Btn, Field, NumberInput, TextArea, TextInput } from "../ui/primitives.jsx";
+import { Btn, Field, LienTuto, NumberInput, TextArea, TextInput } from "../ui/primitives.jsx";
 import { Barcode, Camera, Loader2, Search, Sparkles, Star } from "../ui/icones.jsx";
+
+/** Tuto de chaque mode d'ajout (bouton « ? » a droite des modes). */
+const TUTO_DU_MODE = { search: "ajouter-aliment", photo: "photo-ia", scan: "code-barres", texte: "decrire" };
+const styleLienMode = {
+  marginLeft: "auto",
+  alignSelf: "center"
+};
 
 const CLE_FAVORIS = "cn_food_favorites";
 
@@ -611,6 +618,7 @@ export function RechercheAliment({ onChoisir, habitudePesee }) {
         {puce("photo", "Photo IA", Camera)}
         {puce("scan", "Code-barres", Barcode)}
         {puce("texte", LIBELLE_DECRIRE, Sparkles)}
+        <LienTuto id={TUTO_DU_MODE[mode]} style={styleLienMode} />
       </div>
 
       {mode === "search" && (

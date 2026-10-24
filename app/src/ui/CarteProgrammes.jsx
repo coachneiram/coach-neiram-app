@@ -21,7 +21,7 @@ export function CarteProgrammes({ etat, onDemarrer, onArreter, onNoter }) {
     return (
       <Card>
         <div data-programmes>
-          <SectionTitle>{T.programmes}</SectionTitle>
+          <SectionTitle tuto="programmes-guides">{T.programmes}</SectionTitle>
           <p style={{ fontSize: 12, color: COLORS.textMuted, margin: "4px 0 10px", lineHeight: 1.5 }}>{T.programmesIntro}</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {PROGRAMMES_SPORT.map((p) => (
@@ -46,7 +46,7 @@ export function CarteProgrammes({ etat, onDemarrer, onArreter, onNoter }) {
     <Card>
       <div data-programme-actif={p.id}>
         <div style={enTete}>
-          <SectionTitle>
+          <SectionTitle tuto="programmes-guides">
             {p.emoji} {p.titre}
           </SectionTitle>
           <button onClick={() => window.confirm(T.confirmerArret) && onArreter()} style={lienArreter}>

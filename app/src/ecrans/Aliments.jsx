@@ -14,8 +14,14 @@ import { COLORS, POLICES } from "../tokens.js";
 import { computeRemainingToday } from "../lib/nutrition.js";
 import { ordreRecommandation, regimeOk, trierPourObjectif } from "../lib/aliments.js";
 import { EQUIV_FRUITS, EQUIV_GLUCIDES, EQUIV_LIPIDES, EQUIV_PROTEINES, FOOD_CATS, FOOD_DB, GOAL_FOOD_NOTES } from "../lib/catalogues.js";
-import { Card } from "../ui/primitives.jsx";
+import { Card, LienTuto } from "../ui/primitives.jsx";
 import { ChevronDown, ChevronUp } from "../ui/icones.jsx";
+
+const styleLienIdees = {
+  display: "flex",
+  justifyContent: "flex-end",
+  marginBottom: -8
+};
 
 /** Nombre d'aliments proposes par famille. Au-dela, la liste n'est plus lue. */
 const PAR_FAMILLE = 6;
@@ -93,6 +99,9 @@ export function Aliments({ profile, targets, logEntries }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={styleLienIdees}>
+        <LienTuto id="idees-aliments" />
+      </div>
       {(accroche || conseilObjectif) && (
         <Card style={{ padding: 14, borderColor: COLORS.gold + "55" }}>
           {accroche && <p style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.gold, margin: 0 }}>{accroche}</p>}

@@ -101,7 +101,7 @@ try {
   // 3. Photos de progression.
   await page.getByRole("button", { name: "Tendances", exact: true }).first().click();
   await page.waitForTimeout(600);
-  const pose = page.locator("text=Photos de progression").locator("xpath=following::button[1]");
+  const pose = page.locator("text=Photos de progression").locator("xpath=following::button[not(@data-lien-tuto-carte)][1]");
   await pose.click({ timeout: 4000 }).catch(() => {});
   await page.waitForTimeout(600);
   await verifier("Tendances → photo de pose");

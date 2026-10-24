@@ -118,7 +118,8 @@ try {
   console.log("── PROFIL EN SALLE (présentiel, prise de masse) ──");
   let page = await ouvrir(profil("presentiel", "prise"));
 
-  const rec = await section(page, "Records", 8);
+  // 10 lignes : le bouton « ? » du titre en prend une (tutos sur chaque carte).
+  const rec = await section(page, "Records", 10);
   console.log("  Records            :", rec ? rec.slice(0, 120) : "*** SECTION ABSENTE ***");
   console.log("   charge max 65 kg  :", /65/.test(rec || "") ? "présente" : "*** ABSENTE ***");
 

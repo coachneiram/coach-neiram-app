@@ -21,7 +21,7 @@ import { resumeNutritionSemaine } from "../lib/resume-semaine.js";
 import { CarteProgres, Parrainage } from "./CarteProgres.jsx";
 import { fmtL } from "../lib/score-jour.js";
 import { serieCorporelle, serieHebdomadaire } from "../lib/tendances.js";
-import { Btn, Card, ProgressRing, SectionTitle, StatChip } from "../ui/primitives.jsx";
+import { Btn, Card, LienTuto, ProgressRing, STYLE_ENTETE_TUTO, SectionTitle, StatChip } from "../ui/primitives.jsx";
 import { Courbe, Histogramme } from "../ui/Courbe.jsx";
 import { BilanSections } from "../ui/BilanSections.jsx";
 import { HistoriqueBilans } from "../ui/HistoriqueBilans.jsx";
@@ -250,7 +250,7 @@ export function Tendances({
 
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <SectionTitle>Bilan de la semaine</SectionTitle>
+          <SectionTitle tuto="bilan-ia">Bilan de la semaine</SectionTitle>
           <span style={{ fontSize: 11, color: COLORS.textFaint }}>
             {fmtDateShort(weekStats.start)} — {fmtDateShort(weekStats.end)}
           </span>
@@ -285,7 +285,10 @@ export function Tendances({
         </div>
 
         <div style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${COLORS.border}` }}>
-          <div style={styleEnTete}>Photos de progression</div>
+          <div style={STYLE_ENTETE_TUTO}>
+            <div style={styleEnTete}>Photos de progression</div>
+            <LienTuto id="photos-progression" />
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
             {POSES.map((pose) => (
               <div key={pose.id}>
@@ -360,6 +363,7 @@ export function Tendances({
             historique={historique}
             libelle={periodeSemaine}
             enTete={<SectionTitle>Historique des bilans</SectionTitle>}
+            tuto="historique-bilans"
           />
         </Card>
       )}
@@ -376,7 +380,7 @@ export function Tendances({
               flexWrap: "wrap"
             }}
           >
-            <SectionTitle>Bilan mensuel — {moisLong(monthStats.monthKey)}</SectionTitle>
+            <SectionTitle tuto="bilan-mensuel">Bilan mensuel — {moisLong(monthStats.monthKey)}</SectionTitle>
             <span style={{ fontSize: 11, color: COLORS.textFaint }}>
               {monthStats.workoutsCount} séance{monthStats.workoutsCount > 1 ? "s" : ""}
             </span>

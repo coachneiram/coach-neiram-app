@@ -33,12 +33,19 @@ import { enLigne } from "../lib/semaine.js";
 import { messageErreurRestauration, restaurerDepuisFichier } from "../lib/sauvegarde-fichier.js";
 import { ChampsProfil } from "./ChampsProfil.jsx";
 import { avecAllergiesDeclarees } from "../lib/consigne-coach.js";
-import { Btn, Field, Modal, SelectInput, TextInput } from "../ui/primitives.jsx";
+import { Btn, Field, LienTuto, Modal, STYLE_ENTETE_TUTO, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { MSG_ACTIVATION, TEXTES_ACCES, accesActuel, activerCode, oublierAcces } from "../lib/acces.js";
 import { LienAide, LienNouveautes, RappelsAppFermee, TestNotifications } from "../ui/Annonces.jsx";
 import { TEXTES_TUTOS } from "../lib/tutos.js";
 import { accordDonne, enregistrerAccord, TEXTES_ACCORD } from "../lib/consentement.js";
 import { Download, Upload, X } from "../ui/icones.jsx";
+
+/** Bouton « ? » d'un bloc des Reglages, aligne a droite. */
+const styleLienTutoReglages = {
+  display: "flex",
+  justifyContent: "flex-end",
+  marginBottom: 6
+};
 
 /** Reglages des rappels, avec leurs valeurs par defaut d'origine. */
 const RAPPELS = {
@@ -267,7 +274,10 @@ function BlocAccordIa() {
   if (!accord) return null;
   return (
     <div style={styleSection} data-bloc-accord-ia>
-      <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>{TEXTES_ACCORD.blocTitre}</div>
+      <div style={{ ...STYLE_ENTETE_TUTO, marginBottom: 4 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text }}>{TEXTES_ACCORD.blocTitre}</div>
+        <LienTuto id="donnees-ia" />
+      </div>
       <p style={{ ...styleAide, margin: "0 0 8px" }}>{TEXTES_ACCORD.blocTexte(new Date(accord.le).toLocaleDateString("fr-FR"))}</p>
       <Btn
         variant="ghost"
@@ -373,6 +383,9 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
             </Btn>
           )}
           {PROXY_BASE_URL && <CarteAcces />}
+          <div style={styleLienTutoReglages}>
+            <LienTuto id="profil-objectifs" />
+          </div>
           <ChampsProfil value={value} onChange={setValue} />
 
           <BlocRappel reglage={RAPPELS.hydratation} value={value} set={set} />
@@ -394,6 +407,9 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
           )}
 
           <div style={styleSection}>
+            <div style={styleLienTutoReglages}>
+              <LienTuto id="rappels" />
+            </div>
             <TestNotifications />
             {open && <RappelsAppFermee profil={value} seances={seances} enLigne={enLigne(value)} />}
           </div>
@@ -417,8 +433,11 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
           )}
 
           <div style={styleSection}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>
-              Sauvegarde des données
+            <div style={{ ...STYLE_ENTETE_TUTO, marginBottom: 4 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text }}>
+                Sauvegarde des données
+              </div>
+              <LienTuto id="sauvegarde" />
             </div>
             <p style={{ ...styleAide, margin: "0 0 10px" }}>
               Le fichier contient tout ton suivi, photos comprises. Exporte régulièrement, et avant de changer de

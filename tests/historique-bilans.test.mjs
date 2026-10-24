@@ -108,9 +108,10 @@ describe("branchement a l'ecran", () => {
 
   test("la carte « Historique des bilans » suit « Bilan de la semaine »", () => {
     const t = lire("app/src/ecrans/Tendances.jsx");
-    const semaine = t.indexOf("<SectionTitle>Bilan de la semaine</SectionTitle>");
+    // `tuto="…"` : bouton « ? » du titre (tutos des cartes, 24/10/2026).
+    const semaine = t.search(/<SectionTitle(?: tuto="[\w-]+")?>Bilan de la semaine<\/SectionTitle>/);
     const historique = t.indexOf("<SectionTitle>Historique des bilans</SectionTitle>");
-    const mensuel = t.indexOf("<SectionTitle>Bilan mensuel");
+    const mensuel = t.search(/<SectionTitle(?: tuto="[\w-]+")?>Bilan mensuel/);
     assert.ok(semaine !== -1 && semaine < historique && historique < mensuel);
   });
 

@@ -36,7 +36,7 @@ export function SeancesCoach({ routinesApi, modeles }) {
 
   return (
     <Card>
-      <SectionTitle>Bibliothèque de séances (sans matériel)</SectionTitle>
+      <SectionTitle tuto="seances-sans-materiel">Bibliothèque de séances (sans matériel)</SectionTitle>
       <p style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.55, margin: "10px 0 12px" }}>
         7 séances prêtes à l'emploi (45, 30 ou 15 min), conçues par ton coach pour t'entraîner à la maison sans
         matériel.

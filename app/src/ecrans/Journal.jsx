@@ -54,12 +54,14 @@ import {
   DateNav,
   Field,
   IconBtn,
+  LienTuto,
   MiniBar,
   Modal,
   MotivationCard,
   NumberInput,
   ProgressRing,
   ScaleField,
+  STYLE_LIGNE_TUTO,
   SectionTitle,
   TextArea,
   TextInput
@@ -108,9 +110,12 @@ const styleSousTitre = {
 function RepriseVeille({ journee = false, resume, deLaVeille, onReprendre }) {
   const detail = `${resume.aliments} aliment${resume.aliments > 1 ? "s" : ""} · ${resume.kcal} kcal`;
   return journee ? (
-    <Btn variant="ghost" icon={Plus} onClick={onReprendre} style={{ width: "100%", marginBottom: 14 }}>
-      Reprendre toute la journée {deLaVeille} · {detail}
-    </Btn>
+    <div style={{ ...STYLE_LIGNE_TUTO, marginBottom: 14 }}>
+      <Btn variant="ghost" icon={Plus} onClick={onReprendre} style={{ flex: 1 }}>
+        Reprendre toute la journée {deLaVeille} · {detail}
+      </Btn>
+      <LienTuto id="reprendre" />
+    </div>
   ) : (
     <button
       onClick={onReprendre}
@@ -167,7 +172,7 @@ function PortionsDuJour({ form, onChanger }) {
   };
   return (
     <Card style={{ marginBottom: 16 }}>
-      <SectionTitle>Portions du jour</SectionTitle>
+      <SectionTitle tuto="portions">Portions du jour</SectionTitle>
       <p style={{ fontSize: 11, color: COLORS.textFaint, margin: "6px 0 12px", lineHeight: 1.45 }}>
         Un fruit, une poignée de légumes, une paume de viande, poisson, œufs ou tofu = 1 portion.
       </p>

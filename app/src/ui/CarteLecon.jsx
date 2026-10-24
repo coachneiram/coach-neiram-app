@@ -99,7 +99,7 @@ export function CarteLecon() {
     return (
       <Card style={CARTE}>
         <div data-lecon-fin>
-          <SectionTitle>{T.titreFin}</SectionTitle>
+          <SectionTitle tuto="lecons">{T.titreFin}</SectionTitle>
           <p style={BRAVO}>{T.bravo(LECONS.length)}</p>
         </div>
       </Card>
@@ -117,7 +117,7 @@ export function CarteLecon() {
     <Card style={CARTE}>
       <div data-lecon={lecon.id} data-lecon-faite={faite ? "oui" : "non"}>
         <div style={EN_TETE}>
-          <SectionTitle>{T.titre}</SectionTitle>
+          <SectionTitle tuto="lecons">{T.titre}</SectionTitle>
           <span style={POSITION}>{T.position(lecon.jour, LECONS.length, T.themes[lecon.theme] || lecon.theme)}</span>
         </div>
         <div style={TITRE}>{T.titreLecon(lecon.titre, faite)}</div>

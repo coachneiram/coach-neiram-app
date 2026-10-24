@@ -29,7 +29,7 @@ export function CarteActivite({ seances, journal, onAjouter }) {
     <Card>
       <div data-semaine-active={bilan.equivalent}>
         <div style={enTete}>
-          <SectionTitle>{T.semaineActive}</SectionTitle>
+          <SectionTitle tuto="semaine-active">{T.semaineActive}</SectionTitle>
           <Btn variant="ghost" icon={Plus} onClick={onAjouter}>
             {T.boutonActivite}
           </Btn>

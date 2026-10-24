@@ -148,7 +148,7 @@ export function ForceAthletique({ maxis, onDefinirMaxi, sessions, profil, poidsK
       <div
         style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}
       >
-        <SectionTitle>Force athlétique — maxis & progression</SectionTitle>
+        <SectionTitle tuto="force-athletique">Force athlétique — maxis & progression</SectionTitle>
         {total > 0 && (
           <span style={{ fontFamily: "IBM Plex Mono", fontSize: 12, fontWeight: 700, color: COLORS.gold }}>
             Total {round(total, 1)} kg

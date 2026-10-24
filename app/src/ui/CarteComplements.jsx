@@ -105,7 +105,7 @@ export function CarteComplements({ profile, seances, reglages }) {
   return (
     <Card>
       <div data-complements={r.bloque ? "bloque" : r.liste.length}>
-        <SectionTitle>{T.titre}</SectionTitle>
+        <SectionTitle tuto="complements">{T.titre}</SectionTitle>
         <p style={styleIntro}>
           {T.intro}
           {r.discipline ? T.selection(LIBELLES_DISCIPLINE[r.discipline]) : ""}

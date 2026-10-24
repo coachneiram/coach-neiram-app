@@ -118,7 +118,7 @@ export function CarteCalendrier({ seances, objectifParSemaine, onAjouter, onReti
     <Card>
       <div data-calendrier>
         <div style={enTete}>
-          <SectionTitle>{T.monAnnee(anneeCourante)}</SectionTitle>
+          <SectionTitle tuto="calendrier-annee">{T.monAnnee(anneeCourante)}</SectionTitle>
           <Btn variant="ghost" onClick={() => setOuvert(true)}>
             {T.voirAnnee}
           </Btn>

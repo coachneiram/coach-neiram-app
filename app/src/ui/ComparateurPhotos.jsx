@@ -10,6 +10,7 @@ import { COLORS } from "../tokens.js";
 import { fmtDateShort } from "../lib/dates.js";
 import { semainesAvecPhoto } from "../lib/comparateur-photos.js";
 import { TEXTES_COMPARATEUR as T } from "../lib/textes-performances.js";
+import { LienTuto, STYLE_ENTETE_TUTO } from "./primitives.jsx";
 
 const choix = { background: COLORS.bgAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 12, padding: "6px 8px", fontFamily: "inherit" };
 const cadre = {
@@ -71,7 +72,10 @@ export function ComparateurPhotos({ version = "" }) {
   const b = semaines.find((s) => s.semaine === apres) || semaines[semaines.length - 1];
   return (
     <div data-comparateur key={version} style={{ marginTop: 14 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.gold, marginBottom: 6 }}>{T.titre}</div>
+      <div style={{ ...STYLE_ENTETE_TUTO, marginBottom: 6 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.gold }}>{T.titre}</div>
+        <LienTuto id="comparateur" />
+      </div>
       <div style={ligneChoix}>
         <select aria-label={T.pose} value={pose} onChange={(e) => setPose(e.target.value)} style={choix}>
           {T.poses.map((p) => (

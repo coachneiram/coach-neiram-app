@@ -25,7 +25,7 @@ export function CarteMesSports({ seances }) {
   return (
     <Card>
       <div data-mes-sports>
-        <SectionTitle>{T.mesSports}</SectionTitle>
+        <SectionTitle tuto="mes-sports">{T.mesSports}</SectionTitle>
         {repartition.length > 0 && (
           <>
             <div style={{ fontSize: 11.5, color: COLORS.textMuted, margin: "4px 0 8px" }}>{T.trenteJours}</div>

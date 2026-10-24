@@ -11,6 +11,7 @@ import { useState } from "react";
 import { COLORS } from "../tokens.js";
 import { charger, enregistrer } from "../lib/stockage.js";
 import { BARRES, disquesParCote, fmtKg, regrouper, seriesEchauffement, TEXTES_BARRE as T } from "../lib/outils-barre.js";
+import { LienTuto, STYLE_LIEN_TUTO_PETIT, STYLE_LIGNE_TUTO } from "./primitives.jsx";
 
 const CLE_BARRE = "cn_barre";
 const COULEURS_DISQUES = { 25: "#E63E11", 20: "#2F6FDB", 15: "#F5B942", 10: "#4ADE80", 5: "#F5F5F2", 2.5: "#9C9C94", 1.25: "#9C9C94" };
@@ -31,9 +32,12 @@ export function OutilsBarre({ charge }) {
   const echauffement = seriesEchauffement(c, barre);
   return (
     <div data-outils-barre style={{ marginBottom: 6 }}>
-      <button type="button" onClick={() => setOuvert(!ouvert)} style={styleBouton}>
-        {`${T.ouvrir} ${fmtKg(c)} ${ouvert ? "▲" : "▼"}`}
-      </button>
+      <div style={STYLE_LIGNE_TUTO}>
+        <button type="button" onClick={() => setOuvert(!ouvert)} style={styleBouton}>
+          {`${T.ouvrir} ${fmtKg(c)} ${ouvert ? "▲" : "▼"}`}
+        </button>
+        <LienTuto id="outils-barre" style={STYLE_LIEN_TUTO_PETIT} />
+      </div>
       {ouvert && (
         <div style={{ marginTop: 6, padding: "8px 10px", borderRadius: 10, border: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
           <select

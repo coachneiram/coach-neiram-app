@@ -20,7 +20,7 @@ export function CarteForme({ form, seances, date }) {
   return (
     <Card style={{ marginBottom: 20 }}>
       <div data-forme={r.niveau}>
-        <SectionTitle>{TEXTES_FORME.titre}</SectionTitle>
+        <SectionTitle tuto="forme-du-jour">{TEXTES_FORME.titre}</SectionTitle>
         <div style={LIGNE_SCORE}>
           <div style={{ fontFamily: POLICES.chiffres, fontSize: 34, fontWeight: 700, color: COLORS[COULEUR[r.niveau]] }}>{r.score}</div>
           <div>

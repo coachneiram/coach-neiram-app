@@ -33,7 +33,7 @@ export function ProgressionCharges({ sessions }) {
   if (!progression.length) {
     return (
       <Card style={{ marginBottom: 22 }}>
-        <SectionTitle>Progression des charges</SectionTitle>
+        <SectionTitle tuto="progression-records">Progression des charges</SectionTitle>
         <p style={{ fontSize: 12.5, color: COLORS.textMuted, margin: "9px 0 0", lineHeight: 1.45 }}>
           Enregistre séries, répétitions et charge dans tes séances : tes records et ta progression
           apparaîtront ici.
@@ -53,7 +53,7 @@ export function ProgressionCharges({ sessions }) {
           flexWrap: "wrap"
         }}
       >
-        <SectionTitle>Progression des charges</SectionTitle>
+        <SectionTitle tuto="progression-records">Progression des charges</SectionTitle>
         <span style={{ fontSize: 10.5, color: COLORS.textFaint }}>5 derniers exercices enregistrés</span>
       </div>
 

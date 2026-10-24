@@ -117,7 +117,7 @@ try {
         : `*** ${t2} ***`
     );
     await page.keyboard.press("Escape");
-    await page.locator(".modal-panel button[aria-label]").last().click().catch(() => {});
+    await page.locator('.modal-panel button[aria-label="Fermer"]').last().click().catch(() => {});
     await page.waitForTimeout(400);
 
     await ouvrirCoachIA(page);

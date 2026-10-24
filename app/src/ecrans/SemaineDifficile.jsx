@@ -129,7 +129,7 @@ export function SemaineDifficile({
   if (!active) {
     return (
       <Card>
-        <SectionTitle>Semaine difficile ?</SectionTitle>
+        <SectionTitle tuto="semaine-difficile">Semaine difficile ?</SectionTitle>
         <p style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.55, margin: "10px 0 14px" }}>
           Nuit courte, semaine chargée, enfant malade : bascule ton programme en format maintien de 15 à 20 min
           plutôt que de sauter la semaine. Une séance maintien compte comme un créneau tenu.
@@ -160,7 +160,7 @@ export function SemaineDifficile({
           flexWrap: "wrap"
         }}
       >
-        <SectionTitle>Mode maintien activé</SectionTitle>
+        <SectionTitle tuto="semaine-difficile">Mode maintien activé</SectionTitle>
         <span style={{ fontSize: 11.5, color: COLORS.textFaint }}>
           {(RAISONS_SEMAINE_DIFFICILE.find((r) => r.id === (entree.reason || motif)) || {}).label || ""}
         </span>

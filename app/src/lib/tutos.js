@@ -14,6 +14,11 @@
  * Repris de l'app Neiram le 24 octobre 2026. Dans l'app coach, aucune
  * fonction n'est reservee : pas de mention d'abonnement.
  *
+ * Tutos des fonctions (repris de l'app Neiram, PR #55) : chaque carte a un
+ * bouton « ? » dans son titre (<SectionTitle tuto="…"> ou
+ * <LienTuto id="…" />, ui/primitives.jsx) qui envoie l'evenement de
+ * ui/ouvrir-tuto.js ; App.jsx ouvre alors le tuto par-dessus l'ecran.
+ *
  * Cle « neiram_ » : etat de l'app sur ce telephone, hors sauvegarde.
  */
 
@@ -107,5 +112,6 @@ export const TEXTES_TUTOS = {
   guide: "Guide d'utilisation",
   lienGuide: "Guide d'utilisation (tutos)",
   introGuide: "Chaque écran a son tuto. Tu peux aussi le rouvrir à tout moment avec le bouton du livre, en haut de l'écran.",
-  aria: "Tuto de cet écran"
+  aria: "Tuto de cet écran",
+  lienCarte: "Comment ça marche ?"
 };
