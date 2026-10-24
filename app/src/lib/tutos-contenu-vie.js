@@ -9,8 +9,8 @@
  * Écartés : la communauté (classements, mur des transformations, défis
  * entre amis, stories, parrainage, récompenses, code secret des stories,
  * idées), les badges, Apple Santé et Health Connect, Siri et le widget,
- * l'abonnement. Les raccourcis de l'app sont portés dans une autre
- * branche : leur tuto (onglet « reglages ») s'ajoutera ici à la fusion.
+ * l'abonnement. Raccourcis : seulement la partie web (appui long sur
+ * l'icône Android, adresse en favori), sans Siri ni widget.
  */
 
 export const TUTOS_VIE = [
@@ -192,5 +192,18 @@ export const TUTOS_VIE = [
       { titre: "Retire ton accord", texte: "Réglages → « Fonctions IA » → « Retirer mon accord ». Il te sera redemandé à la prochaine utilisation." }
     ],
     libelles: ["Exporter mes données", "Fonctions IA", "Retirer mon accord"]
+  },
+  {
+    id: "raccourcis",
+    onglet: "reglages",
+    emoji: "⚡",
+    titre: "Raccourcis de l'app",
+    resume: "Note de l'eau, lance ta séance ou ouvre un repas en un geste.",
+    etapes: [
+      { titre: "Sur Android", texte: "Installe l'app sur l'écran d'accueil, puis garde le doigt sur son icône : « Ajouter un verre d'eau », « Lancer ma séance », « Noter un repas », « Noter mon poids » ou « Noter mon sommeil »." },
+      { titre: "Ce que fait chaque raccourci", texte: "« Ajouter un verre d'eau » ajoute 250 ml au jour même. « Lancer ma séance » ouvre ta séance du jour (programme de la semaine, sinon la suivante de ta rotation). Les autres ouvrent le bon écran." },
+      { titre: "Sur iPhone", texte: "L'appui long sur l'icône d'une app web ne propose pas de raccourcis : demande à ton coach le lien d'un raccourci et garde-le en favori." }
+    ],
+    libelles: ["Ajouter un verre d'eau", "Lancer ma séance", "Noter un repas", "Noter mon poids", "Noter mon sommeil"]
   }
 ];

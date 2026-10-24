@@ -15,11 +15,13 @@ import { CarteDefi } from "../ui/CarteDefi.jsx";
 import { CarteHabitudes } from "../ui/CarteHabitudes.jsx";
 import { CarteLecon } from "../ui/CarteLecon.jsx";
 import { premierJourSuivi } from "../lib/rappel-sauvegarde.js";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { COLORS, POLICES } from "../tokens.js";
 import { num, todayISO } from "../lib/dates.js";
 import { getMonday } from "../lib/semaine.js";
 import { SECTIONS_REPAS } from "../lib/onglets.js";
+import { repasDeLHeure } from "../lib/raccourcis.js";
+import { EVENEMENT_INTENTION, prendreIntention } from "../lib/reception-raccourcis.js";
 import { composantesDuScore, fmtL, libelleDuScore, scoreDuJour, totauxDuJour } from "../lib/score-jour.js";
 import { choisirSuggestions } from "../lib/suggestions.js";
 import { basisMacros, fmtPortion } from "../lib/portions.js";
@@ -272,6 +274,20 @@ export function Journal({
 }) {
   const [date, setDate] = useState(todayISO());
   const [ajoutPour, setAjoutPour] = useState(null);
+  // Raccourci « Noter un repas » (lib/raccourcis.js) : l'ajout s'ouvre sur
+  // le repas de l'heure, aujourd'hui.
+  useEffect(() => {
+    const ouvrir = () => {
+      if (!prendreIntention("repas")) return;
+      const section = SECTIONS_REPAS.find((x) => x.id === repasDeLHeure()) || SECTIONS_REPAS[0];
+      setDate(todayISO());
+      setAjoutPour({ mealType: section.id, label: section.label });
+    };
+    ouvrir();
+    const surIntention = (e) => e.detail === "repas" && ouvrir();
+    window.addEventListener(EVENEMENT_INTENTION, surIntention);
+    return () => window.removeEventListener(EVENEMENT_INTENTION, surIntention);
+  }, []);
   /*
    * L'aliment en cours de correction, et la saisie du formulaire.
    *

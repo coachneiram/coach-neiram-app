@@ -76,7 +76,8 @@ import {
   progressionSeance,
   TEXTES_GUIDE
 } from "../lib/guide-seance.js";
-import { seancesProgrammeDebutant, TEXTES_DEBUTANT, TEXTES_PROGRAMME } from "../lib/seance-du-jour.js";
+import { seanceDuJour, seancesProgrammeDebutant, TEXTES_DEBUTANT, TEXTES_PROGRAMME } from "../lib/seance-du-jour.js";
+import { EVENEMENT_INTENTION, prendreIntention } from "../lib/reception-raccourcis.js";
 import { SeanceDuJour } from "./SeanceDuJour.jsx";
 import { ForceAthletique } from "./ForceAthletique.jsx";
 import { CalculCharge } from "./CalculCharge.jsx";
@@ -379,6 +380,23 @@ export function ConstructeurSeances({
     setSeanceEditee(seance.date === todayISO() ? { ...seance, debutLe: Date.now() } : seance);
     setModaleSeance(true);
   };
+
+  // Raccourci « Lancer ma séance » (lib/raccourcis.js) : la séance du jour
+  // (prévue, ou la suivante de la rotation) s'ouvre. Séance déjà faite ou
+  // jour de repos : l'onglet s'ouvre sur « Ta séance du jour », sans en
+  // lancer une autre. Une séance déjà ouverte (brouillon) reste telle quelle.
+  const refRaccourciSeance = useRef(null);
+  refRaccourciSeance.current = () => {
+    if (!prendreIntention("seance") || modaleSeance || charger(CLE_BROUILLON_SEANCE, null)) return;
+    const jour = seanceDuJour(routinesApi.items, sessionsApi.items, planSemaine, todayISO());
+    if ((jour.etat === "prevue" || jour.etat === "rotation") && jour.routine) demarrerSeance(jour.routine);
+  };
+  useEffect(() => {
+    refRaccourciSeance.current();
+    const surIntention = (e) => e.detail === "seance" && refRaccourciSeance.current();
+    window.addEventListener(EVENEMENT_INTENTION, surIntention);
+    return () => window.removeEventListener(EVENEMENT_INTENTION, surIntention);
+  }, []);
 
   const modifierSeance = (s) => {
     setSeanceEditee({ ...s, exercises: s.exercises?.length ? s.exercises : [exerciceVide()] });

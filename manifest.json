@@ -8,5 +8,12 @@
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "shortcuts": [
+    { "name": "Ajouter un verre d'eau", "short_name": "Eau", "url": "./?raccourci=eau&ml=250", "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Lancer ma séance", "short_name": "Séance", "url": "./?raccourci=seance", "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Noter un repas", "short_name": "Repas", "url": "./?raccourci=repas", "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Noter mon poids", "short_name": "Poids", "url": "./?raccourci=poids", "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Noter mon sommeil", "short_name": "Sommeil", "url": "./?raccourci=sommeil", "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }] }
   ]
 }
