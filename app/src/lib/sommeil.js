@@ -2,42 +2,42 @@
  * Sommeil et stress : conseils et moyennes.
  *
  * Le calcul est sorti du composant d'affichage pour pouvoir etre teste
- * directement. Les textes et les seuils sont repris a l'identique de
- * index.html (lignes 2783-2830) : ce sont les conseils que le coach donne
- * a ses clients, ils ne se reecrivent pas au passage d'une migration.
+ * directement. Les seuils viennent de index.html (lignes 2783-2830) ; les
+ * textes ont ete revus le 24/10/2026 d'apres les meilleures preuves
+ * disponibles (lib/sommeil-preuves.js donne la source de chacun).
  */
 
 import { addDays, avg, round, todayISO } from "./dates.js";
 
 export const CONSEILS_SOMMEIL = {
   duree: [
-    "Couche-toi et lève-toi à heures fixes, même le week-end — la régularité prime sur tout le reste.",
-    "Coupe les écrans 45-60 min avant le coucher, lumière tamisée dans le logement.",
+    "Lève-toi à la même heure chaque jour, week-end compris : un sommeil régulier est associé à une meilleure santé, presque autant que sa durée.",
+    "Vise au moins 7 h par nuit (8 à 10 h entre 16 et 17 ans) : c'est le repère des sociétés savantes du sommeil.",
     "Avance ton coucher par paliers de 15 min, pas d'un coup."
   ],
   qualite: [
-    "Dernier café avant 14 h : la caféine a une demi-vie de 5-6 heures.",
-    "Chambre fraîche (18-19 °C), noire et silencieuse — investis dans des rideaux occultants si besoin.",
-    "Évite l'alcool le soir : il endort vite mais fragmente le sommeil profond.",
-    "Séance intense terminée au moins 3 h avant le coucher."
+    "Dernier café au moins 8 à 9 h avant le coucher (13 h pour un pré-workout très dosé) : plus tard, il te coûte environ 45 min de sommeil.",
+    "Le soir, lumière tamisée et moins d'écrans les 2 à 3 dernières heures ; une chambre la plus noire possible.",
+    "Évite l'alcool le soir : dès 2 verres, il perturbe le sommeil paradoxal.",
+    "Séance très intense : termine-la au moins 4 h avant de dormir. Une séance modérée le soir ne gêne pas le sommeil."
   ],
   general: [
-    "Routine fixe de 20 min avant de dormir : lecture, étirements légers, respiration.",
-    "Expose-toi à la lumière du jour dans l'heure qui suit le lever — ça cale ton horloge interne.",
-    "Le lit sert à dormir : pas de travail ni de scroll au lit."
+    "Prends la lumière du jour le matin et dans la journée : elle cale ton horloge interne et t'aide à t'endormir le soir.",
+    "Le lit sert à dormir : si le sommeil ne vient pas au bout d'environ 20 min, lève-toi, fais quelque chose de calme sous une lumière douce, et reviens quand il arrive.",
+    "Un bain ou une douche chaude 1 à 2 h avant le coucher aide à s'endormir plus vite (environ 10 min de gagnées)."
   ]
 };
 
 export const CONSEILS_STRESS = {
   eleve: [
-    "Cohérence cardiaque : 5 min, inspire 5 s / expire 5 s, 3 fois par jour — effet mesurable sur le cortisol.",
-    "10-15 min de marche dehors à la pause : coupe le stress et ajoute des pas.",
-    "Le soir, note ce qui te stresse sur papier : sortir de la tête avant de dormir."
+    "Respiration lente 5 min par jour, par exemple le soupir cyclique : deux inspirations par le nez, une longue expiration par la bouche.",
+    "Bouge : 150 min d'activité par semaine réduisent nettement stress, anxiété et déprime ; même 10 à 15 min de marche dehors aident.",
+    "Protège ton sommeil : mieux dormir fait partie des leviers les plus solides contre le stress et l'anxiété."
   ],
   general: [
-    "Une seule tâche à la fois, 3 priorités max par jour.",
-    "Réduis la caféine les journées tendues — elle amplifie la réponse au stress.",
-    "Le stress se gère d'abord par le sommeil : protège tes heures cibles."
+    "Essaie la pleine conscience (programme type MBSR, cours ou appli) : elle réduit la détresse chez les adultes en bonne santé.",
+    "Passe environ 2 h par semaine dans la nature, en une ou plusieurs fois.",
+    "Garde du temps pour tes proches : les liens sociaux sont associés à une meilleure santé et à une vie plus longue."
   ]
 };
 
@@ -108,4 +108,42 @@ export function dureeDeSommeil(coucher, lever) {
   if (minutes === 1440) return null;
 
   return round(minutes / 60, 1);
+}
+
+const enMinutes = (h) => {
+  const [a, b] = String(h || "").split(":").map(Number);
+  return Number.isFinite(a) && Number.isFinite(b) ? a * 60 + b : null;
+};
+
+/**
+ * Régularité de l'heure de lever sur 14 jours : écart-type en minutes
+ * (Windred 2024 ; Phillips 2017 : la régularité compte presque autant que
+ * la durée). Rend { ecartMin, nuits } ou null (moins de 5 levers notés).
+ */
+export function regulariteLever(entrees, aujourdhui = todayISO(), jours = 14) {
+  const debut = addDays(aujourdhui, -(jours - 1));
+  const levers = (entrees || []).filter((f) => f && f.date >= debut && f.date <= aujourdhui).map((f) => enMinutes(f.wakeTime)).filter((m) => m != null);
+  if (levers.length < 5) return null;
+  const moyenne = avg(levers);
+  const variance = avg(levers.map((m) => (m - moyenne) ** 2));
+  return { ecartMin: Math.round(Math.sqrt(variance)), nuits: levers.length };
+}
+
+/**
+ * Signaux qui justifient d'en parler à un médecin (lib/sommeil-preuves.js,
+ * R01 à R04) :
+ *  - « nuitsDifficiles » : au moins 12 nuits de qualité 1 ou 2 sur les 28
+ *    derniers jours (3 par semaine) — l'insomnie chronique se définit sur
+ *    3 mois, mais mieux vaut en parler tôt ;
+ *  - « stressDurable » : stress moyen d'au moins 8/10 sur 14 jours, avec
+ *    au moins 7 jours notés.
+ */
+export function signauxAlerte(entrees, aujourdhui = todayISO()) {
+  const depuis28 = addDays(aujourdhui, -27);
+  const depuis14 = addDays(aujourdhui, -13);
+  const l = (entrees || []).filter((f) => f && f.date <= aujourdhui);
+  const nuitsDifficiles = l.filter((f) => f.date >= depuis28 && f.sleepQuality != null && f.sleepQuality <= 2).length >= 12;
+  const stress14 = l.filter((f) => f.date >= depuis14 && f.stress != null).map((f) => f.stress);
+  const stressDurable = stress14.length >= 7 && avg(stress14) >= 8;
+  return { nuitsDifficiles, stressDurable };
 }

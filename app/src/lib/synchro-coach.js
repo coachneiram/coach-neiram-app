@@ -26,7 +26,8 @@ export const TYPES_EVENEMENTS = [
   "alerte_semaines_difficiles",
   "alerte_seances_manquees",
   "alerte_decalages",
-  "resume_hebdo"
+  "resume_hebdo",
+  "alerte_sommeil_stress"
 ];
 
 /**
@@ -40,7 +41,8 @@ const REMPLACABLES = [
   "alerte_semaines_difficiles",
   "alerte_seances_manquees",
   "alerte_decalages",
-  "resume_hebdo"
+  "resume_hebdo",
+  "alerte_sommeil_stress"
 ];
 
 /**

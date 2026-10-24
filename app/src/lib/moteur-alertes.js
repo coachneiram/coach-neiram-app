@@ -15,13 +15,17 @@ import { envoyerEvenement, synchroActive } from "./synchro-coach.js";
 import { decalagesRecents, manquesRecents, tauxRespect } from "./creneaux.js";
 import { getWeekKey, normaliserCreneaux, slotDayLabel } from "./semaine.js";
 import { todayISO } from "./dates.js";
+import { signauxAlerte } from "./sommeil.js";
 import {
   TOAST_ALERTE_DECALAGES,
   TOAST_ALERTE_MANQUES,
   decisionAlerteDecalages,
   decisionAlerteManques,
+  decisionAlerteSommeilStress,
   decisionResumeHebdo,
   manquesAvecMotifs,
+  messageAlerteSommeilStress,
+  TOAST_ALERTE_SOMMEIL,
   messageAlerteDecalages,
   messageAlerteManques,
   messageResumeHebdo
@@ -54,6 +58,7 @@ async function evaluerAlertes({
   profile,
   seances,
   justifications,
+  journal,
   afficherToast,
   maintenant = new Date(),
   aujourdhui = todayISO(),
@@ -61,10 +66,32 @@ async function evaluerAlertes({
 }) {
   if (!synchroActive(profile)) return { alertes: [], raison: "synchro coach inactive" };
 
-  const creneaux = normaliserCreneaux(profile);
-  if (!creneaux.length) return { alertes: [], raison: "aucun creneau au profil" };
-
   const resultats = [];
+
+  // 0. Sommeil et stress (24 octobre 2026) : ne depend pas des creneaux.
+  if (Array.isArray(journal)) {
+    const signaux = signauxAlerte(journal, aujourdhui);
+    const etatSommeil = charger(CLES_ANNEXES.alerteSommeil, {});
+    const dSommeil = decisionAlerteSommeilStress({ maintenant, signaux, etat: etatSommeil });
+    if (dSommeil.reinitialiser) enregistrer(CLES_ANNEXES.alerteSommeil, {});
+    if (dSommeil.alerter) {
+      const remis = await envoyer(profile, {
+        type: "alerte_sommeil_stress",
+        weekKey: getWeekKey(aujourdhui),
+        message: messageAlerteSommeilStress(signaux)
+      });
+      enregistrer(CLES_ANNEXES.alerteSommeil, {
+        signature: dSommeil.signature,
+        lastAt: maintenant.toISOString(),
+        delivered: remis
+      });
+      if (remis && afficherToast) afficherToast(TOAST_ALERTE_SOMMEIL);
+      resultats.push({ type: "alerte_sommeil_stress", remis });
+    }
+  }
+
+  const creneaux = normaliserCreneaux(profile);
+  if (!creneaux.length) return { alertes: resultats, raison: "aucun creneau au profil" };
 
   // 1. Creneaux manques sur 14 jours.
   const manques = manquesRecents(creneaux, seances, aujourdhui);

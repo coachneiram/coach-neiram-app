@@ -342,9 +342,11 @@ describe("branchement", () => {
     assert.match(app, /window\.setInterval\(verifier, PERIODE_VERIFICATION_MS\)/);
   });
 
-  test("les alertes coach sont reevaluees quand les seances changent", () => {
+  test("les alertes coach sont reevaluees quand les seances ou le journal changent", () => {
     assert.match(app, /verifierAlertesCoach\(\{/);
-    assert.match(app, /\}, \[pret, profile, sessions, raisonsCreneaux\]\);/);
+    // Le journal (sommeil, stress) s'ajoute le 24 octobre 2026 : alerte sommeil et stress.
+    assert.match(app, /journal: dailyForm,/);
+    assert.match(app, /\}, \[pret, profile, sessions, raisonsCreneaux, dailyForm\]\);/);
   });
 
   test("le proxy accepte enfin les deux types qu'il rejetait", () => {

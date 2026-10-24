@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-24-sommeil-stress",
+    date: "2026-10-24",
+    titre: "Sommeil et stress d'après les études",
+    texte:
+      "Conseils revus d'après les études, 5 minutes de respiration guidée, la régularité de ton lever et « Quand en parler à un médecin ». Chaque conseil a sa source.",
+    onglet: "sommeil",
+    bouton: "Voir le sommeil"
+  },
+  {
     id: "2026-10-24-seance-guidee",
     date: "2026-10-24",
     titre: "Une séance plus facile à suivre",

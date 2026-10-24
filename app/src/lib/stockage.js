@@ -39,7 +39,8 @@ export const CLES_ANNEXES = {
   semainesDifficiles: "cn_hard_weeks",
   planSemaine: "cn_weekly_plan",
   maxisForce: "cn_pl_1rm",
-  bilanHebdo: "cn_coach_weekly_state"
+  bilanHebdo: "cn_coach_weekly_state",
+  alerteSommeil: "cn_coach_sleep_alert_state"
 };
 
 /** Prefixe historique des donnees de suivi. */

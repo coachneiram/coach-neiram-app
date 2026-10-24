@@ -674,7 +674,9 @@ const TYPES_AUTORISES = [
   "alerte_semaines_difficiles",
   "alerte_seances_manquees",
   "alerte_decalages",
-  "resume_hebdo"
+  "resume_hebdo",
+  // Sommeil et stress (24 octobre 2026) : le detail tient dans « message ».
+  "alerte_sommeil_stress"
 ];
 
 const LONGUEUR_MAX_TEXTE = 500;

@@ -1,5 +1,13 @@
 /**
  * Coach Neiram — synchro et alertes du coaching en ligne
+ * Version 2.3 (24 octobre 2026) — alerte sommeil et stress.
+ *
+ * La v2.3 ajoute le type « alerte_sommeil_stress » (nuits difficiles ou
+ * stress très élevé pendant 2 semaines, détail dans « message ») : une
+ * ligne dans Alertes et un mail. Mise en place : coller ce fichier,
+ * ENREGISTRER, puis Gérer les déploiements > Modifier > Nouvelle version
+ * (même adresse /exec). Rien d'autre ne change.
+ *
  * Version 2.2 (17 octobre 2026) — événements signés par le proxy.
  *
  * La v2.2 (audit P0-4) : le proxy ne transmet plus le secret. Il signe
@@ -93,7 +101,8 @@ var TYPES_AUTORISES = [
   'alerte_semaines_difficiles',
   'alerte_seances_manquees',
   'alerte_decalages',
-  'resume_hebdo'
+  'resume_hebdo',
+  'alerte_sommeil_stress'
 ];
 
 /** Heures pendant lesquelles on n'envoie pas deux fois la même alerte
@@ -606,6 +615,13 @@ function composerMail(d) {
       d.honored + ' tenus sur ' + d.resolved + ' tranchés, ' + d.missed + ' manqués, ' +
       d.shifted + ' décalés).\n\n' +
       'Sous ' + SEUIL_RESPECT_MAIL_PCT + ' %, le créneau lui-même est en cause plus souvent que la motivation.';
+
+  } else if (t === 'alerte_sommeil_stress') {
+    sujet = '[Coach] ' + client + ' : sommeil ou stress à surveiller';
+    corps = client + ' : signal d\'alerte dans son suivi sommeil et stress.\n\n' +
+      (detail ? detail + '\n\n' : '') +
+      'L\'appli lui a conseillé d\'en parler à son médecin si ça continue. ' +
+      'De ton côté : un message bienveillant, et une charge allégée cette semaine si besoin.';
 
   } else if (t === 'alerte_semaines_difficiles') {
     sujet = '[Coach] ' + client + ' : 2 semaines maintien d\'affilée';
