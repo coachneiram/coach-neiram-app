@@ -34,7 +34,7 @@
  */
 
 import { chromium } from "playwright";
-import { appareil, nomAppareil } from "./appareil.mjs";
+import { appareil, nomAppareil, sansAides } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -90,7 +90,9 @@ async function section(page, titre, lignes = 6) {
 
 /** Ouvre l'application avec un profil donne, sur l'onglet entrainement. */
 async function ouvrir(unProfil) {
-  const page = await (await nav.newContext(appareil())).newPage();
+  const contexte = await nav.newContext(appareil());
+  await contexte.addInitScript(sansAides);
+  const page = await contexte.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
   await page.addInitScript((d) => {
     localStorage.clear();
@@ -99,6 +101,8 @@ async function ouvrir(unProfil) {
     localStorage.setItem("coach_sessions", JSON.stringify(d.seances));
     localStorage.setItem("coach_body_logs", JSON.stringify([{ id: "b1", date: d.auj, weightKg: 70.4 }]));
   }, { profil: unProfil, seances: SEANCES, auj: AUJ });
+  // Apres le localStorage.clear() ci-dessus : sinon les aides reviennent.
+  await page.addInitScript(sansAides);
   await page.goto("http://localhost:4680/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(900);
   await page.getByRole("button", { name: "Séances", exact: true }).first().click();

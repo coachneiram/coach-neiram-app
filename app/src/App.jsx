@@ -12,6 +12,11 @@
  * tests/stockage-compat.test.mjs.
  */
 
+import { Tutos } from "./ui/Tutos.jsx";
+import { EcranConsentementIa } from "./ui/EcranConsentementIa.jsx";
+import { DELAI_TUTO_MS, initialiserTutos, marquerTutoVu, tutoAProposer, tutoPrincipal } from "./lib/tutos.js";
+import { reparerCollection } from "./lib/reparer-donnees.js";
+import { FiletEcran } from "./ui/FiletErreur.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { COLORS } from "./tokens.js";
 import { todayISO } from "./lib/dates.js";
@@ -70,8 +75,10 @@ const DUREE_TOAST = 8000;
  * et les autres donnees restent accessibles.
  */
 function listeStockee(cle) {
-  const valeur = charger(cle, []);
-  return Array.isArray(valeur) ? valeur : [];
+  // Remise en forme des elements abimes (lib/reparer-donnees.js, repris de
+  // l'app Neiram le 24 octobre 2026) : rien d'utilisable n'est jete.
+  const nom = Object.keys(STORAGE_KEYS).find((k) => STORAGE_KEYS[k] === cle);
+  return reparerCollection(nom, charger(cle, []));
 }
 
 export default function App() {
@@ -484,6 +491,36 @@ export default function App() {
     marquerToutVu();
     setNouveautes([]);
   };
+  // Tutos (lib/tutos.js, repris de l'app Neiram le 24 octobre 2026) : celui
+  // de l'onglet s'ouvre a sa premiere visite, une fois, quand aucune autre
+  // fenetre n'est ouverte. Le bouton « ? » le rouvre a tout moment.
+  const [vueTutos, setVueTutos] = useState(null);
+  const dejaInstalle = useRef(null);
+  useEffect(() => {
+    if (!pret || dejaInstalle.current !== null) return;
+    dejaInstalle.current = !!profile;
+    initialiserTutos(localStorage, { dejaInstalle: !!profile });
+  }, [pret, profile]);
+  const autreFenetre =
+    nouveautes.length > 0 || reglagesOuverts || aideOuverte || !!invitationInstall || !!poseAPhotographier || !!vueTutos;
+  useEffect(() => {
+    if (!pret || !profile || autreFenetre) return undefined;
+    const id = tutoAProposer({ onglet: ongletActif, stockage: localStorage });
+    if (!id) return undefined;
+    const minuteur = setTimeout(() => {
+      marquerTutoVu(localStorage, id);
+      setVueTutos({ tuto: id });
+    }, DELAI_TUTO_MS);
+    return () => clearTimeout(minuteur);
+  }, [pret, profile, ongletActif, autreFenetre]);
+  const ouvrirTutoOnglet = () => {
+    const t = tutoPrincipal(ongletActif);
+    if (t) {
+      marquerTutoVu(localStorage, t.id);
+      setVueTutos({ tuto: t.id });
+    }
+  };
+
 
   // Rappels push (7 octobre 2026) : a chaque ouverture et a chaque seance
   // notee, le planning des 7 prochains jours repart au serveur s'il a change
@@ -641,6 +678,7 @@ export default function App() {
         onDebutCoaching={definirDebutCoaching}
         onSeancesAvantApp={definirSeancesAvantApp}
         onContrat={definirContrat}
+        formDuJour={dailyForm.find((f) => f.date === todayISO())}
       />
     ),
     tendances: weekStats ? (
@@ -704,6 +742,7 @@ export default function App() {
         ongletActif={ongletActif}
         onChangerOnglet={setOngletActif}
         onOuvrirReglages={() => setReglagesOuverts(true)}
+        onOuvrirTuto={ouvrirTutoOnglet}
         toast={toast}
         onFermerToast={() => setToast(null)}
         iconeToast={Droplet}
@@ -716,7 +755,10 @@ export default function App() {
             onMasquer={masquerInstallation}
           />
         )}
-        {ecrans[ongletActif]}
+        {/* Un ecran qui plante n'emporte pas l'app (ui/FiletErreur.jsx). */}
+        <FiletEcran key={ongletActif} ecran={ongletActif} onRetourJournal={() => setOngletActif("journal")}>
+          {ecrans[ongletActif]}
+        </FiletEcran>
       </Coque>
 
       <Modal
@@ -759,6 +801,10 @@ export default function App() {
           setReglagesOuverts(false);
           setAideOuverte(true);
         }}
+        onOuvrirGuide={() => {
+          setReglagesOuverts(false);
+          setVueTutos({ guide: true });
+        }}
         onVoirNouveautes={() => {
           setReglagesOuverts(false);
           setNouveautes(nouveautesPour(profil).slice(0, NOUVEAUTES_MAX));
@@ -771,10 +817,13 @@ export default function App() {
         onVoir={(n) => {
           fermerNouveautes();
           if (n.ouvre === "aide") setAideOuverte(true);
+          else if (n.ouvre === "guide") setVueTutos({ guide: true });
           else setOngletActif(n.onglet);
         }}
       />
 
+      <Tutos vue={vueTutos} onClose={() => setVueTutos(null)} />
+      <EcranConsentementIa />
       <Aide open={aideOuverte} onClose={() => setAideOuverte(false)} objectifCalories={targets?.calories} />
     </>
   );

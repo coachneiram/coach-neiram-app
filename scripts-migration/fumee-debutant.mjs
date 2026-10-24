@@ -19,7 +19,7 @@
  */
 
 import { chromium } from "playwright";
-import { appareil } from "./appareil.mjs";
+import { appareil, sansAides } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -37,6 +37,7 @@ await new Promise((r) => serveur.listen(4716, r));
 
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 const ctx = await nav.newContext(appareil());
+await ctx.addInitScript(sansAides);
 const page = await ctx.newPage();
 const erreurs = [];
 page.on("pageerror", (e) => erreurs.push(e.message));
@@ -166,6 +167,7 @@ try {
 
   // 7. Programme débutant du coach, sur un téléphone neuf.
   const ctx2 = await nav.newContext(appareil());
+  await ctx2.addInitScript(sansAides);
   const p2 = await ctx2.newPage();
   p2.on("pageerror", (e) => erreurs.push(e.message));
   await p2.addInitScript(() => {

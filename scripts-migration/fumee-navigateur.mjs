@@ -19,6 +19,7 @@
  */
 
 import { chromium } from "playwright";
+import { sansAides } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -37,6 +38,7 @@ await new Promise((r) => serveur.listen(4599, r));
 
 const navigateur = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const page = await navigateur.newPage();
+await page.addInitScript(sansAides);
 const erreurs = [];
 page.on("pageerror", (e) => erreurs.push("pageerror: " + e.message));
 page.on("requestfailed", (r) => erreurs.push("echec: " + r.url()));

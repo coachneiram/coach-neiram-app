@@ -12,7 +12,7 @@
  */
 
 import { chromium } from "playwright";
-import { appareil, nomAppareil } from "./appareil.mjs";
+import { appareil, nomAppareil, sansAides } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -29,7 +29,9 @@ const serveur = createServer((req, res) => {
 await new Promise((r) => serveur.listen(4630, r));
 
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
-const page = await (await nav.newContext(appareil())).newPage();
+const contexte = await nav.newContext(appareil());
+await contexte.addInitScript(sansAides);
+const page = await contexte.newPage();
 const erreurs = [];
 page.on("pageerror", (e) => erreurs.push("pageerror: " + e.message));
 

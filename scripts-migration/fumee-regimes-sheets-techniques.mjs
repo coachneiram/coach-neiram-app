@@ -27,7 +27,7 @@
  */
 
 import { chromium } from "playwright";
-import { appareil } from "./appareil.mjs";
+import { appareil, sansAides } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -96,12 +96,16 @@ const TABLEAU_COLLE = [
 ].join("\n");
 
 async function ouvrir(profil, onglet) {
-  const page = await (await nav.newContext(appareil())).newPage();
+  const contexte = await nav.newContext(appareil());
+  await contexte.addInitScript(sansAides);
+  const page = await contexte.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
   await page.addInitScript((p) => {
     localStorage.clear();
     localStorage.setItem("coach_profile", JSON.stringify(p));
   }, profil);
+  // Apres le localStorage.clear() ci-dessus : sinon les aides reviennent.
+  await page.addInitScript(sansAides);
   await page.goto("http://localhost:4684/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(900);
   if (onglet) {

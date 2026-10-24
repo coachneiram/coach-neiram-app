@@ -49,3 +49,26 @@ export function appareil(defaut = "iPhone 13") {
 
 /** Nom de l'appareil reellement emule, pour l'afficher dans les sorties. */
 export const nomAppareil = (defaut = "iPhone 13") => process.env.APPAREIL || defaut;
+
+/**
+ * Aides deja vues (24 octobre 2026) : tutos des onglets et accord pour
+ * l'IA. A passer a `contexte.addInitScript` dans les scripts qui testent
+ * autre chose : sans elles, le tuto de Séances ou la fenetre d'accord
+ * s'ouvrent par-dessus l'ecran teste. fumee-reprises-neiram.mjs, lui, teste
+ * ces aides et ne l'utilise pas.
+ */
+export function sansAides() {
+  try {
+    if (localStorage.getItem("neiram_tutos_vus") === null) {
+      localStorage.setItem(
+        "neiram_tutos_vus",
+        JSON.stringify(["journal", "repas", "nutrition", "sommeil", "mensurations", "entrainements", "tendances"])
+      );
+    }
+    if (localStorage.getItem("cn_consentement_ia") === null) {
+      localStorage.setItem("cn_consentement_ia", JSON.stringify({ accepte: true, version: 1, le: "2026-10-24T00:00:00.000Z" }));
+    }
+  } catch (e) {
+    // Page sans stockage : rien a preparer.
+  }
+}

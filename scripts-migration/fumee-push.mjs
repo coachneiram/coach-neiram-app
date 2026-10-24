@@ -140,7 +140,8 @@ const reglages = async (page) => {
 };
 
 try {
-  const env = { PUSH_KV: kvFactice() };
+  // ANNONCES_TEST vide : l'annonce de nouveautes en cours ne doit pas s'ajouter aux rappels testes.
+  const env = { PUSH_KV: kvFactice(), ANNONCES_TEST: [] };
   const { ctx, page } = await ouvrir({ env });
 
   // 1. L'option apparait.
@@ -148,7 +149,8 @@ try {
   const option = page.getByRole("checkbox", { name: /Recevoir mes rappels même appli fermée/ });
   console.log("1. OPTION PROPOSÉE      :", (await option.count()) === 1 ? "serveur prêt, l'option est dans Réglages" : "*** OPTION ABSENTE ***");
 
-  // 2. Activation.
+  // 2. Activation. Le prenom se cherche dans les rappels seulement : la cle
+  // de chiffrement, tiree au hasard, peut contenir « Tom » par hasard.
   await option.check();
   await page.waitForTimeout(1500);
   const resultat = await page.locator("[data-resultat-push]").getAttribute("data-resultat-push").catch(() => null);
@@ -159,7 +161,7 @@ try {
   console.log(
     "2. ACTIVATION           :",
     resultat === "actif" && fiche && fiche.abonnement.endpoint === ABONNEMENT.endpoint && h && h.getHours() === 17 && h.getMinutes() === 30 &&
-      fiche.rappels.some((r) => r.tag === "coach-report") && !JSON.stringify(fiche).includes("Tom")
+      fiche.rappels.some((r) => r.tag === "coach-report") && !JSON.stringify(fiche.rappels).includes("Tom")
       ? `abonné, ${fiche.rappels.length} rappels enregistrés (créneau de demain à 17:30, dimanche), sans le prénom`
       : `*** ${resultat} ${JSON.stringify(fiche)} ***`
   );
@@ -179,10 +181,14 @@ try {
     globalThis.fetch = fetchOrigine;
     Date.now = nowOrigine;
   }
-  const recu = envois[0] ? dechiffrer(envois[0].init.body) : null;
+  // Le rappel du dimanche part aussi quand demain est un dimanche : on
+  // cherche l'envoi du creneau parmi les envois, pas le premier.
+  const dechiffres = envois.map((e) => ({ url: e.url, recu: dechiffrer(e.init.body) }));
+  const duCreneau = dechiffres.find((e) => e.recu && e.recu.titre === "Coach Neiram ⏰") || dechiffres[0] || {};
+  const recu = duCreneau.recu || null;
   console.log(
     "3. ENVOI À L'HEURE      :",
-    envois.length >= 1 && envois[0].url === ABONNEMENT.endpoint && recu && recu.titre === "Coach Neiram ⏰" && /Ton créneau de .+ à 18:30 approche\./.test(recu.texte)
+    envois.length >= 1 && duCreneau.url === ABONNEMENT.endpoint && recu && recu.titre === "Coach Neiram ⏰" && /Ton créneau de .+ à 18:30 approche\./.test(recu.texte)
       ? `message chiffré reçu et déchiffré : « ${recu.titre} — ${recu.texte} »`
       : `*** ${envois.length} envoi(s), ${JSON.stringify(recu)} ***`
   );

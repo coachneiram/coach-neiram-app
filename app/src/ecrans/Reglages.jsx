@@ -27,6 +27,8 @@ import {
   supprimerPhotos
 } from "../lib/stockage.js";
 import { exporterSauvegarde } from "../lib/sauvegarde.js";
+import { todayISO } from "../lib/dates.js";
+import { exportReussi, marquerSauvegarde } from "../lib/rappel-sauvegarde.js";
 import { enLigne } from "../lib/semaine.js";
 import { messageErreurRestauration, restaurerDepuisFichier } from "../lib/sauvegarde-fichier.js";
 import { ChampsProfil } from "./ChampsProfil.jsx";
@@ -34,6 +36,8 @@ import { avecAllergiesDeclarees } from "../lib/consigne-coach.js";
 import { Btn, Field, Modal, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { MSG_ACTIVATION, TEXTES_ACCES, accesActuel, activerCode, oublierAcces } from "../lib/acces.js";
 import { LienAide, LienNouveautes, RappelsAppFermee, TestNotifications } from "../ui/Annonces.jsx";
+import { TEXTES_TUTOS } from "../lib/tutos.js";
+import { accordDonne, enregistrerAccord, TEXTES_ACCORD } from "../lib/consentement.js";
 import { Download, Upload, X } from "../ui/icones.jsx";
 
 /** Reglages des rappels, avec leurs valeurs par defaut d'origine. */
@@ -257,7 +261,28 @@ function CarteAcces() {
   );
 }
 
-export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNouveautes, onOuvrirAide, seances }) {
+/** Accord pour l'IA : date, et retrait possible (lib/consentement.js). */
+function BlocAccordIa() {
+  const [accord, setAccord] = useState(() => accordDonne());
+  if (!accord) return null;
+  return (
+    <div style={styleSection} data-bloc-accord-ia>
+      <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>{TEXTES_ACCORD.blocTitre}</div>
+      <p style={{ ...styleAide, margin: "0 0 8px" }}>{TEXTES_ACCORD.blocTexte(new Date(accord.le).toLocaleDateString("fr-FR"))}</p>
+      <Btn
+        variant="ghost"
+        onClick={() => {
+          enregistrerAccord(false);
+          setAccord(null);
+        }}
+      >
+        {TEXTES_ACCORD.retirer}
+      </Btn>
+    </div>
+  );
+}
+
+export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNouveautes, onOuvrirAide, onOuvrirGuide, seances }) {
   const [occupation, setOccupation] = useState(mesurerOccupation);
   const [messageStockage, setMessageStockage] = useState(null);
 
@@ -275,6 +300,8 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
   const exporter = async () => {
     try {
       const resultat = await exporterSauvegarde(construireSauvegarde(), value.name);
+      // Le rappel de sauvegarde du Journal repart de zero (lib/rappel-sauvegarde.js).
+      if (exportReussi(resultat)) marquerSauvegarde(localStorage, todayISO());
       setMessage(
         resultat === "downloaded"
           ? "Sauvegarde téléchargée — garde ce fichier en lieu sûr (Drive, mail...)."
@@ -340,6 +367,11 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
       {value && (
         <>
           {onOuvrirAide && <LienAide onOuvrir={onOuvrirAide} />}
+          {onOuvrirGuide && (
+            <Btn variant="ghost" onClick={onOuvrirGuide} style={{ width: "100%", marginBottom: 14 }}>
+              {TEXTES_TUTOS.lienGuide}
+            </Btn>
+          )}
           {PROXY_BASE_URL && <CarteAcces />}
           <ChampsProfil value={value} onChange={setValue} />
 
@@ -372,6 +404,7 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
            * champ inviterait le client a coller une cle personnelle dans
            * son navigateur, ce que la phase 1 a precisement supprime.
            */}
+          {open && <BlocAccordIa />}
           {!PROXY_BASE_URL && (
             <div style={styleSection}>
               <Field label="Clé IA (fournie par ton coach)">

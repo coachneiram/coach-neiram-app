@@ -23,10 +23,55 @@ export const NOUVEAUTES_MAX = 5;
 
 /**
  * Les plus recentes d'abord. `onglet` : ecran ouvert par le bouton ;
- * `ouvre: "aide"` : le bouton ouvre l'Aide.
+ * `ouvre: "aide"` : le bouton ouvre l'Aide ; `ouvre: "guide"` : le guide des tutos.
  * `pour: "enligne"` : annonce reservee aux clients du coaching en ligne.
  */
 export const NOUVEAUTES = [
+  {
+    id: "2026-10-24-seance-guidee",
+    date: "2026-10-24",
+    titre: "Une séance plus facile à suivre",
+    texte:
+      "Chaque exercice est numéroté et passe au vert quand il est fini. La charge proposée est expliquée, tes séries faites et « Enregistrer » restent en bas de l'écran, et la durée se calcule toute seule.",
+    onglet: "entrainements",
+    bouton: "Voir mes séances"
+  },
+  {
+    id: "2026-10-24-forme-consignes",
+    date: "2026-10-24",
+    titre: "Ta forme du jour et les consignes",
+    texte:
+      "Note ton sommeil, ton énergie et ton stress dans le Journal : l'onglet Séances te dit comment aborder ta séance du jour. Les consignes de ton coach s'affichent sous chaque exercice.",
+    onglet: "entrainements",
+    bouton: "Voir mes séances"
+  },
+  {
+    id: "2026-10-24-defis",
+    date: "2026-10-24",
+    titre: "Un défi de 30 jours",
+    texte:
+      "Dans le Journal, relève un défi : bouger chaque jour, 2 L d'eau, 7 h de sommeil, noter tes repas… Il se valide tout seul avec ce que tu notes déjà.",
+    onglet: "journal",
+    bouton: "Voir le défi"
+  },
+  {
+    id: "2026-10-24-tutos",
+    date: "2026-10-24",
+    titre: "Un tuto pour chaque écran",
+    texte:
+      "Touche le livre en haut de l'écran : un tuto pas à pas t'explique l'écran où tu es. Tous les tutos sont aussi dans Réglages → « Guide d'utilisation (tutos) ».",
+    ouvre: "guide",
+    bouton: "Voir le guide"
+  },
+  {
+    id: "2026-10-24-repos-barre",
+    date: "2026-10-24",
+    titre: "Repos libre, disques et échauffement",
+    texte:
+      "Dans tes séances : un repos jusqu'à 10 min, en durée libre ou en chronomètre. Sous chaque exercice, « Disques & échauffement » te dit quoi mettre sur la barre et comment t'échauffer. Et 17 techniques dans « Options ».",
+    onglet: "entrainements",
+    bouton: "Voir mes séances"
+  },
   {
     // Texte valide par le coach le 22 octobre 2026.
     id: "2026-10-22-carnet-series",

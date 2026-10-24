@@ -23,7 +23,7 @@
  */
 
 import { chromium } from "playwright";
-import { appareil, nomAppareil } from "./appareil.mjs";
+import { appareil, nomAppareil, sansAides } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -115,7 +115,9 @@ let echecs = 0;
 console.log("Appareil émulé :", nomAppareil(), "\n");
 
 for (const panne of PANNES) {
-  const page = await (await nav.newContext({ ...appareil() })).newPage();
+  const contexte = await nav.newContext({ ...appareil() });
+  await contexte.addInitScript(sansAides);
+  const page = await contexte.newPage();
   page.on("pageerror", (e) => erreurs.push(panne.nom + " : " + e.message));
 
   await page.addInitScript(() => {

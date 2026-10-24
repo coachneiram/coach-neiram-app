@@ -25,13 +25,39 @@ import {
   preparerSeance,
   resumeExercice,
   resumeTechnique,
-  TECHNIQUES_SERIE
+  TECHNIQUES_SERIE,
+  FAMILLES_TECHNIQUE,
+  parametresParDefaut,
+  chargeBackoff
 } from "../app/src/lib/constructeur-seances.js";
 
 describe("catalogue des techniques", () => {
-  test("les deux techniques programmées par le coach sont proposées", () => {
-    assert.deepEqual(TECHNIQUES_SERIE.map((t) => t.id).sort(), ["degressive", "superset"]);
-    for (const t of TECHNIQUES_SERIE) assert.ok(t.label, `technique sans libellé : ${t.id}`);
+  test("superset et dégressive restent proposées, avec les autres techniques reconnues", () => {
+    const ids = TECHNIQUES_SERIE.map((t) => t.id);
+    for (const id of ["superset", "degressive", "rest-pause", "myo-reps", "cluster", "top-set", "tempo", "isometrie", "bfr", "emom", "amrap"]) {
+      assert.ok(ids.includes(id), `technique absente : ${id}`);
+    }
+    assert.equal(new Set(ids).size, ids.length, "identifiants uniques");
+  });
+
+  test("chaque technique a un libellé, une famille connue, une définition et l'état des preuves", () => {
+    const familles = FAMILLES_TECHNIQUE.map((f) => f.id);
+    for (const t of TECHNIQUES_SERIE) {
+      assert.ok(t.label, `technique sans libellé : ${t.id}`);
+      assert.ok(familles.includes(t.famille), `famille inconnue : ${t.id}`);
+      assert.ok(t.description && t.description.length > 20, `définition manquante : ${t.id}`);
+      assert.match(t.preuve, /^[ABC]\b/, `niveau de preuve manquant : ${t.id}`);
+    }
+  });
+
+  test("les réglages par défaut sont dans leurs bornes", () => {
+    for (const t of TECHNIQUES_SERIE) {
+      const p = parametresParDefaut(t.id);
+      for (const r of t.params || []) {
+        if (r.type) continue;
+        assert.ok(p[r.cle] >= r.min && p[r.cle] <= r.max, `${t.id}.${r.cle} hors bornes`);
+      }
+    }
   });
 
   test("les groupes de superset sont des lettres distinctes", () => {
@@ -116,7 +142,7 @@ describe("résumé d'un exercice", () => {
   });
 
   test("une technique inconnue n'affiche rien plutôt qu'un identifiant brut", () => {
-    assert.equal(resumeTechnique({ technique: "cluster" }), "");
+    assert.equal(resumeTechnique({ technique: "inexistante" }), "");
   });
 });
 
@@ -167,5 +193,29 @@ describe("séance démarrée depuis une séance type importée", () => {
     const s = preparerSeance({ id: "r2", name: "Libre" }, [], "2026-03-10");
     assert.equal(s.exercises.length, 1);
     assert.equal(s.exercises[0].name, "");
+  });
+});
+
+describe("techniques avancées dans le résumé", () => {
+  test("rest-pause, cluster, tempo, isométrie, BFR s'écrivent avec leurs réglages", () => {
+    assert.equal(resumeTechnique({ technique: "rest-pause", techniqueParams: { miniSeries: 2, pauseS: 15 } }), " · rest-pause +2 (15 s)");
+    assert.equal(resumeTechnique({ technique: "cluster", techniqueParams: { repsBloc: 2, pauseS: 20 } }), " · cluster 2 rép. / 20 s");
+    assert.equal(resumeTechnique({ technique: "tempo", techniqueParams: { tempo: "3-1-1-0" } }), " · tempo 3-1-1-0");
+    assert.equal(resumeTechnique({ technique: "tempo", techniqueParams: { tempo: "n'importe" } }), " · tempo");
+    assert.equal(resumeTechnique({ technique: "isometrie", techniqueParams: { tenueS: 30 } }), " · isométrie 30 s");
+    assert.equal(resumeTechnique({ technique: "bfr", techniqueParams: { pression: 50 } }), " · BFR 50 %");
+    assert.equal(resumeTechnique({ technique: "triset", supersetGroupe: "B" }), " · tri-set B");
+  });
+
+  test("top set : la charge des back-off est calculée et arrondie à 2,5 kg", () => {
+    assert.equal(chargeBackoff(100, 10), 90);
+    assert.equal(chargeBackoff(83, 12), 72.5);
+    assert.equal(chargeBackoff(0, 10), null);
+    assert.equal(chargeBackoff(100, 100), null);
+    assert.equal(resumeTechnique({ technique: "top-set", weight: 100, techniqueParams: { backoff: 3, baissePct: 10 } }), " · top set + 3 back-off @ 90 kg");
+  });
+
+  test("un cardio n'affiche jamais de technique", () => {
+    assert.equal(resumeTechnique({ mode: "cardio", technique: "emom", techniqueParams: { minutes: 10 } }), "");
   });
 });

@@ -28,6 +28,8 @@ import { SemaineDifficile } from "./SemaineDifficile.jsx";
 import { SeancesCoach } from "./SeancesCoach.jsx";
 import { ProgressionCharges } from "./ProgressionCharges.jsx";
 import { Records } from "./Records.jsx";
+import { CarteForme } from "../ui/CarteForme.jsx";
+import { todayISO } from "../lib/dates.js";
 
 export function Entrainements({
   routinesApi,
@@ -44,8 +46,13 @@ export function Entrainements({
   onEnregistrerLienSheets,
   onDebutCoaching,
   onSeancesAvantApp,
-  onContrat
+  onContrat,
+  formDuJour
 }) {
+  // Forme du jour (reprise de l'app Neiram, 24 octobre 2026) : sous « Ta
+  // séance du jour », seulement si le client a note sa forme aujourd'hui.
+  const forme = <CarteForme form={formDuJour} seances={sessionsApi.items} date={todayISO()} />;
+
   // Trophees et serie de semaines : ajout posterieur a la bascule, affiche
   // dans les deux modes. En ligne, juste apres les creneaux ; sinon, en tete.
   const trophees = (
@@ -96,6 +103,7 @@ export function Entrainements({
     const importees = routinesApi.items.some((r) => r.source === "sheets");
     return (
       <>
+        {forme}
         {enTete}
         <Seances sessionsApi={sessionsApi} profile={profile} />
         <div style={{ marginTop: 20 }}>
@@ -140,6 +148,7 @@ export function Entrainements({
       maxisForce={maxisForce}
       onDefinirMaxiForce={onDefinirMaxiForce}
     >
+      {forme}
       {enTete}
       <ProgressionCharges sessions={sessionsApi.items} />
       <Records sessions={sessionsApi.items} />
