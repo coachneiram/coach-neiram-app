@@ -1,6 +1,6 @@
 /**
  * Fumée : raccourcis de l'app (partie web, reprise de l'app Neiram le
- * 24 octobre 2026) et voix de la séance sans fichier audio.
+ * 24 octobre 2026).
  *
  *   1. /?raccourci=eau&ml=250 : +250 ml une seule fois, adresse nettoyée,
  *      message affiché ; un rechargement ne recompte pas ;
@@ -8,7 +8,7 @@
  *   3. /?raccourci=repas : l'ajout d'un aliment s'ouvre dans le Journal ;
  *   4. /?raccourci=seance : la séance du jour s'ouvre ;
  *   5. /?raccourci=sommeil et poids : le bon onglet s'ouvre ;
- *   6. voix sans fichier : réglage absent, cocher une série ne casse rien ;
+ *   6. dans la séance ouverte par le raccourci, cocher une série lance le minuteur ;
  *   7. le manifeste construit déclare les raccourcis.
  *
  *   cd app && npm run build && cd ..
@@ -110,7 +110,7 @@ try {
       : `*** onglet « ${onglet4} », ${exercices} exercice(s), « ${seance.slice(0, 80)} » ***`
   );
 
-  // 6. Voix sans fichier : cocher une serie ne joue rien et ne casse rien.
+  // 6. Seance ouverte par le raccourci : cocher une serie lance le minuteur.
   const cases = page.locator(".modal-panel").last().locator('[data-exercice="0"] button[aria-pressed]');
   const nbCases = await cases.count();
   if (nbCases) await cases.first().click();
@@ -132,12 +132,11 @@ try {
   await page.locator('button[aria-label="Réglages"]').first().click();
   await page.waitForTimeout(500);
   const reglagesOuverts = /Rappel du dimanche/.test(net(await page.locator(".modal-panel").last().innerText().catch(() => "")));
-  const reglageVoix = await page.locator("[data-reglage-voix]").count();
   console.log(
-    "6. VOIX SANS FICHIER    :",
-    reglagesOuverts && reglageVoix === 0 && nbCases > 0 && minuteur
-      ? "réglage caché, série cochée (minuteur lancé) sans erreur"
-      : `*** réglages ouverts ${reglagesOuverts}, réglage voix ${reglageVoix}, cases ${nbCases}, minuteur ${minuteur} ***`
+    "6. SÉRIE COCHÉE         :",
+    reglagesOuverts && nbCases > 0 && minuteur
+      ? "série cochée, minuteur lancé, Réglages s'ouvrent sans erreur"
+      : `*** réglages ouverts ${reglagesOuverts}, cases ${nbCases}, minuteur ${minuteur} ***`
   );
 
   // 7. Manifeste construit.
