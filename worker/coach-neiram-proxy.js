@@ -1109,9 +1109,9 @@ const ANNONCES = [
   {
     id: "2026-10-24-nouveautes",
     debut: Date.parse("2026-10-24T07:00:00Z"),
-    fin: Date.parse("2026-10-28T19:00:00Z"),
+    fin: Date.parse("2026-10-31T19:00:00Z"),
     titre: "Coach Neiram — du nouveau 💪",
-    texte: "Chronomètre de repos, disques et échauffement sous chaque exercice, et un tuto pour chaque écran. Ouvre l'appli pour découvrir.",
+    texte: "Chrono de repos, disques et échauffement, ta forme du jour, les consignes du coach sous chaque exercice, un défi de 30 jours et un tuto par écran. Ouvre l'appli pour découvrir.",
     tag: "nouveautes-2026-10-24"
   }
 ];

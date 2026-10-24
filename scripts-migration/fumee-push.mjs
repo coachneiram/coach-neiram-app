@@ -149,7 +149,8 @@ try {
   const option = page.getByRole("checkbox", { name: /Recevoir mes rappels même appli fermée/ });
   console.log("1. OPTION PROPOSÉE      :", (await option.count()) === 1 ? "serveur prêt, l'option est dans Réglages" : "*** OPTION ABSENTE ***");
 
-  // 2. Activation.
+  // 2. Activation. Le prenom se cherche dans les rappels seulement : la cle
+  // de chiffrement, tiree au hasard, peut contenir « Tom » par hasard.
   await option.check();
   await page.waitForTimeout(1500);
   const resultat = await page.locator("[data-resultat-push]").getAttribute("data-resultat-push").catch(() => null);
@@ -160,7 +161,7 @@ try {
   console.log(
     "2. ACTIVATION           :",
     resultat === "actif" && fiche && fiche.abonnement.endpoint === ABONNEMENT.endpoint && h && h.getHours() === 17 && h.getMinutes() === 30 &&
-      fiche.rappels.some((r) => r.tag === "coach-report") && !JSON.stringify(fiche).includes("Tom")
+      fiche.rappels.some((r) => r.tag === "coach-report") && !JSON.stringify(fiche.rappels).includes("Tom")
       ? `abonné, ${fiche.rappels.length} rappels enregistrés (créneau de demain à 17:30, dimanche), sans le prénom`
       : `*** ${resultat} ${JSON.stringify(fiche)} ***`
   );
