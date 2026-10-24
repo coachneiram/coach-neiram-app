@@ -8,15 +8,28 @@
  *
  * Écartés : étiquette et carte du restaurant photographiées par l'IA,
  * additifs et meilleure alternative, cycle, jeûne intermittent et suivi
- * GLP-1 (absents de l'app coach). Le menu de la semaine est porté dans une
- * autre branche : son tuto (« menu-semaine », onglet Repas) s'ajoutera ici
- * à la fusion.
+ * GLP-1 (absents de l'app coach).
  */
 
 export const TUTOS_ALIMENTATION = [
   /* ---------------------------------------------------------------- */
   /* Repas                                                              */
   /* ---------------------------------------------------------------- */
+  {
+    id: "menu-semaine",
+    onglet: "repas",
+    emoji: "🗓️",
+    titre: "Menu de la semaine",
+    resume: "7 jours de repas calés sur les objectifs fixés avec ton coach, avec la liste de courses.",
+    etapes: [
+      { titre: "Ouvre le menu", texte: "Repas → « Menu ». Coche « Cuisiner une fois, manger deux fois » si tu veux que le dîner serve aussi de déjeuner le lendemain, puis touche « Créer mon menu »." },
+      { titre: "Parcours ta semaine", texte: "Touche un jour en haut : tu vois ses 4 repas, la portion à manger, les calories et les protéines. Les recettes respectent ton régime, tes allergies et tes contraintes (halal, casher, sans alcool)." },
+      { titre: "Cuisine", texte: "« Voir la recette » donne les ingrédients pour la quantité à cuisiner, restes du lendemain compris, puis « Ajouter à mes recettes » pour la noter ensuite dans le Journal." },
+      { titre: "Change ce qui ne te plaît pas", texte: "« 🔄 Changer » remplace un seul repas. « Nouveau menu » refait toute la semaine, par exemple quand ton coach change tes objectifs." },
+      { titre: "Fais tes courses", texte: "« 🛒 Mes courses » additionne les ingrédients de la semaine. « Ajouter à ma liste » les range dans Courses, « Partager » les envoie où tu veux." }
+    ],
+    libelles: ["Menu", "Cuisiner une fois, manger deux fois", "Créer mon menu", "Voir la recette", "Ajouter à mes recettes", "🔄 Changer", "Nouveau menu", "🛒 Mes courses", "Ajouter à ma liste", "Partager"]
+  },
   {
     id: "idees-aliments",
     onglet: "repas",

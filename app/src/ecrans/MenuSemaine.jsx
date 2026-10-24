@@ -323,7 +323,7 @@ export function MenuSemaine({ profile, targets, catalogue = RECETTES_COACH }) {
     return (
       <Card>
         <div data-menu-semaine>
-          <SectionTitle>{T.titre}</SectionTitle>
+          <SectionTitle tuto="menu-semaine">{T.titre}</SectionTitle>
           {aDesObjectifs ? (
             <>
               <p style={texteDoux}>{T.intro(targets)}</p>
@@ -353,7 +353,7 @@ export function MenuSemaine({ profile, targets, catalogue = RECETTES_COACH }) {
     <div style={colonne}>
       <Card>
         <div data-menu-semaine>
-          <SectionTitle>{T.titre}</SectionTitle>
+          <SectionTitle tuto="menu-semaine">{T.titre}</SectionTitle>
           <div data-bilan-menu style={texteDoux}>
             <strong style={fort}>{T.moyenne(bilan)}</strong>
             {bilan.libresKcal > 0 && <div>{T.libres(bilan.libresKcal)}</div>}
