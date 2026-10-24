@@ -4,7 +4,7 @@
  *   1. client deja installe : la fenetre s'ouvre, l'aide puis la
  *      progression du corps en tete ; l'annonce de la synchro est reservee
  *      au coaching en ligne ;
- *   2. « Ouvrir mes séances » (annonce la plus recente) ferme la fenetre et ouvre Séances ;
+ *   2. « Voir mes séances » (annonce la plus recente) ferme la fenetre et ouvre Séances ;
  *   3. a la reouverture, plus de fenetre ;
  *   4. Reglages → « Revoir les nouveautes » la rouvre ;
  *   5. client en ligne : l'annonce de la synchro est presente ;
@@ -115,8 +115,8 @@ try {
         : `*** ${JSON.stringify(ids)} ***`
     );
 
-    // Bouton de la plus recente (le carnet d'entrainement, 22 octobre 2026).
-    await page.getByRole("button", { name: "Ouvrir mes séances" }).click();
+    // Bouton de la plus recente (la seance guidee, 24 octobre 2026).
+    await page.getByRole("button", { name: "Voir mes séances" }).first().click();
     await page.waitForTimeout(600);
     const apres = (await page.locator("body").innerText()).replace(/\s+/g, " ");
     const fermee = (await page.locator("[data-quoi-de-neuf]").count()) === 0;
