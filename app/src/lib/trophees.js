@@ -203,7 +203,7 @@ export const FAMILLES_MODE_DE_VIE = [
   { id: "duels", titre: "Défis entre amis", icone: "⚔️", unite: (n) => `${pluriel(n, "défi")} gagné${n > 1 ? "s" : ""} entre amis`, paliers: [1, 3, 10, 25] },
   // Communaute Team Neiram (24 octobre 2026) : memes paliers que les
   // badges de l'app Neiram (lib/badges.js). « Classements » : top 50 % a
-  // top 1 % d'un classement d'au moins 10 clients (lib/palmares.js).
+  // top 1 % d'un classement d'au moins 5 clients (lib/palmares.js).
   { id: "topClassement", titre: "Classements", icone: "📊", unite: (n) => `Top ${100 - n} % d'un classement`, paliers: [50, 75, 90, 95, 99] },
   { id: "podiums", titre: "Podiums du mois", icone: "🥉", unite: (n) => `${pluriel(n, "podium")} du mois`, paliers: [1, 3, 6, 12] },
   { id: "athleteMois", titre: "Athlète du mois", icone: "👑", unite: (n) => `${pluriel(n, "titre")} d'athlète du mois`, paliers: [1, 2, 3, 6, 12] },

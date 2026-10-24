@@ -15,8 +15,12 @@ import { num } from "./dates.js";
 
 export const CLE_PALMARES = "cn_palmares";
 
-/** En dessous de ce nombre de classés, un rang ne dit rien (seul = 1er). */
-export const CLASSES_MINIMUM_TOP = 10;
+/**
+ * En dessous de ce nombre de classés, un rang ne dit rien (seul = 1er).
+ * 10 dans l'app publique ; 5 ici (decision du coach du 24/10/2026 : la
+ * Team Neiram compte une quinzaine de clients).
+ */
+export const CLASSES_MINIMUM_TOP = 5;
 
 export function lirePalmares() {
   const v = charger(CLE_PALMARES, null);

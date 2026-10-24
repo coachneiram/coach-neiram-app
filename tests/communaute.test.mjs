@@ -228,9 +228,12 @@ describe("appels au Worker du coach", () => {
 });
 
 describe("palmarès et trophées", () => {
-  test("rang noté à partir de 10 classés ; titres ajoutés, jamais perdus", () => {
-    palmares.noterRang(1, 5);
-    assert.equal(palmares.lirePalmares().meilleurTop, 0, "moins de 10 classés : rien");
+  test("rang noté à partir de 5 classés (groupe d'une quinzaine) ; titres ajoutés, jamais perdus", () => {
+    assert.equal(palmares.CLASSES_MINIMUM_TOP, 5);
+    palmares.noterRang(1, 4);
+    assert.equal(palmares.lirePalmares().meilleurTop, 0, "moins de 5 classés : rien");
+    palmares.noterRang(2, 5);
+    assert.equal(palmares.lirePalmares().meilleurTop, 60, "2e sur 5 : top 40 %");
     palmares.noterRang(3, 40);
     assert.equal(palmares.lirePalmares().meilleurTop, 92, "top 8 %");
     palmares.noterRang(30, 40);
