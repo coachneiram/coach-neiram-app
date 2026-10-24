@@ -20,7 +20,7 @@ import { FiletEcran } from "./ui/FiletErreur.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { COLORS } from "./tokens.js";
 import { todayISO } from "./lib/dates.js";
-import { cleMoisPrecedent, getMonthKey, getWeekKey, uid } from "./lib/semaine.js";
+import { cleMoisPrecedent, dayIdOf, getMonthKey, getWeekKey, uid } from "./lib/semaine.js";
 import { addDays } from "./lib/dates.js";
 import { CLES_ANNEXES, STORAGE_KEYS, charger, enregistrer, surEchecEcriture } from "./lib/stockage.js";
 import { collectionApi, journalDuJourApi } from "./lib/collections.js";
@@ -662,6 +662,8 @@ export default function App() {
         currentWeight={poidsCourant}
         bodyLogs={bodyLogs}
         logEntries={logEntries}
+        seances={sessions}
+        seancePrevue={!!(planSemaine && planSemaine[dayIdOf(todayISO())])}
         onApplyCalibration={(kcal, couverture) =>
           enregistrerProfil({
             ...profil,

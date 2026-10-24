@@ -75,7 +75,7 @@ export const PERFORMANCE_DIRECTIONS = [
  * d'aujourd'hui : aucun client deja en performance ne voit ses chiffres
  * bouger.
  */
-const PERFORMANCE_CAL_ADJUST = { maintien: 0.05, prise: 0.12, perte: -0.12 };
+export const PERFORMANCE_CAL_ADJUST = { maintien: 0.05, prise: 0.12, perte: -0.12 };
 
 /** Proteines, en g/kg du poids de reference. */
 const PROTEINES_PAR_KG = 2;
