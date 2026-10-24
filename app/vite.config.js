@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -60,6 +61,15 @@ export default defineConfig({
   plugins: [react(), manifesteDesAssets()],
   build: {
     outDir: "dist",
+    // Deux pages : l'application des clients et l'Espace coach (24 octobre
+    // 2026), construite a part pour que le code d'administration ne soit
+    // jamais charge par index.html.
+    rollupOptions: {
+      input: {
+        index: fileURLToPath(new URL("./index.html", import.meta.url)),
+        "espace-coach": fileURLToPath(new URL("./espace-coach.html", import.meta.url))
+      }
+    },
     // Un rapport clair sur ce qui pese lourd, utile quand on migrera les
     // ecrans un par un depuis un fichier de 450 Ko.
     reportCompressedSize: true

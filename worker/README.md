@@ -258,7 +258,14 @@ CREATE TABLE IF NOT EXISTS communaute_signalements (id INTEGER PRIMARY KEY AUTOI
   180 jours.
 - Tests : `node --test tests/worker-communaute.test.mjs`.
 
-### Modérer avec `ADMIN_SECRET`
+### Modérer depuis l'Espace coach
+
+Le plus simple : la page **Espace coach** (`espace-coach.html` à côté de l'app,
+voir `SECURITE.md`, « L'Espace coach »), section « Modération de la
+communauté ». Elle appelle les routes ci-dessous avec le secret tapé à
+l'ouverture, jamais enregistré.
+
+### Modérer avec `ADMIN_SECRET` (requêtes)
 
 ```
 POST /admin/communaute   Authorization: Bearer <ADMIN_SECRET>

@@ -344,6 +344,9 @@ try {
       ? "plus rien de Marc sur le serveur (profil, scores, publication, bravos, signalements) ; le formulaire de pseudo revient"
       : `*** formulaire ${formulaire}, base ${reste.slice(0, 200)} ***`
   );
+  // Aucun lien vers l'Espace coach (page du coach, espace-coach.html).
+  const lienCoach = /espace-coach|Espace coach|\/admin\//i.test(await A.page.content());
+  console.log("8b. ESPACE COACH        :", lienCoach ? "*** lien vers l'Espace coach visible ***" : "aucun lien vers l'Espace coach dans l'app du client");
   await A.ctx.close();
   await B.ctx.close();
   await C.ctx.close();
