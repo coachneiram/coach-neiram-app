@@ -18,9 +18,10 @@ import { serieCorporelle } from "../lib/tendances.js";
 import { Btn, Card, EmptyState, Field, IconBtn, Modal, NumberInput, SectionTitle, TextInput } from "../ui/primitives.jsx";
 import { MonEvolution } from "../ui/Explorateur.jsx";
 import { ProgressionCorps } from "../ui/ProgressionCorps.jsx";
+import { CarteTransformation } from "../ui/CarteTransformation.jsx";
 import { Pencil, Plus, Ruler, Trash2, X } from "../ui/icones.jsx";
 
-export function Mensurations({ api, bodyApi, objectif }) {
+export function Mensurations({ api, bodyApi, objectif, profil }) {
   const [modalOuverte, setModalOuverte] = useState(false);
   const [edition, setEdition] = useState(null);
   const [champCourbe, setChampCourbe] = useState("taille");
@@ -88,6 +89,9 @@ export function Mensurations({ api, bodyApi, objectif }) {
           Nouvelle prise
         </Btn>
       </div>
+
+      {/* Ma transformation (reprise de l'app Neiram, 24/10/2026) : d'apres les pesees. */}
+      <CarteTransformation bodyLogs={bodyApi.items} profil={profil} date={todayISO()} />
 
       {!derniere ? (
         <EmptyState

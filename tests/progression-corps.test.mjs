@@ -269,7 +269,7 @@ describe("la progression arrive dans le bilan envoye au coach", async () => {
 describe("les ecrans sont branches", () => {
   const lire = (c) => readFileSync(new URL("../" + c, import.meta.url), "utf8");
   test("Mensurations recoit l'objectif et montre la progression, le poids compris", () => {
-    assert.match(lire("app/src/App.jsx"), /<Mensurations api=\{measurementsApi\} bodyApi=\{bodyApi\} objectif=\{profil\?\.goal\} \/>/);
+    assert.match(lire("app/src/App.jsx"), /<Mensurations api=\{measurementsApi\} bodyApi=\{bodyApi\} objectif=\{profil\?\.goal\}( profil=\{profil\})? \/>/);
     const ecran = lire("app/src/ecrans/Mensurations.jsx");
     assert.match(ecran, /<ProgressionCorps progression=\{progression\}/);
     // Depuis le 14 octobre 2026, la courbe d'une mesure passe par « Mon évolution »,

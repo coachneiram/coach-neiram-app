@@ -244,6 +244,7 @@ export function ConstructeurSeances({
   maxisForce,
   onDefinirMaxiForce,
   avecSeanceDuJour = true,
+  poidsKg,
   children
 }) {
   const exercicesPerso = useExercicesPerso();
@@ -561,6 +562,8 @@ export function ConstructeurSeances({
           maxis={maxisForce}
           onDefinirMaxi={onDefinirMaxiForce}
           sessions={sessionsApi.items}
+          profil={profile}
+          poidsKg={poidsKg}
         />
       )}
 
