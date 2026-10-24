@@ -65,6 +65,7 @@ import { Aide, BandeauInstallation, QuoiDeNeuf } from "./ui/Annonces.jsx";
 import { synchroniserPush } from "./lib/push.js";
 import { CLE_INSTALLATION, bandeauInstallationVisible, estInstallee, finMasquage, plateformeInstallation } from "./lib/installation.js";
 import { NOUVEAUTES_MAX, annoncesAutorisees, lireVues, marquerToutVu, nouveautesAMontrer, nouveautesPour } from "./lib/nouveautes.js";
+import { CLE_SPORTS_PERSO, definirSportsPerso } from "./lib/activites.js";
 
 /** Duree d'affichage d'une notification passagere, en millisecondes. */
 const DUREE_TOAST = 8000;
@@ -151,6 +152,8 @@ export default function App() {
     setSemainesDifficiles(charger(CLES_ANNEXES.semainesDifficiles, {}) || {});
     setPlanSemaine(charger(CLES_ANNEXES.planSemaine, {}) || {});
     setMaxisForce(charger(CLES_ANNEXES.maxisForce, {}) || {});
+    // Sports crees par le client (autres sports, 24/10/2026).
+    definirSportsPerso(charger(CLE_SPORTS_PERSO, []));
     setPret(true);
   }, []);
 
@@ -693,6 +696,7 @@ export default function App() {
         onContrat={definirContrat}
         formDuJour={dailyForm.find((f) => f.date === todayISO())}
         poidsKg={poidsCourant}
+        journal={dailyForm}
       />
     ),
     tendances: weekStats ? (

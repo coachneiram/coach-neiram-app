@@ -66,6 +66,8 @@ import {
 import { MinuteurRepos, preparerSon } from "../ui/MinuteurRepos.jsx";
 import { ChoixRepos } from "../ui/ChoixRepos.jsx";
 import { OutilsBarre } from "../ui/OutilsBarre.jsx";
+import { resumeActivite, resumeDetails } from "../lib/activites.js";
+import { TEXTES_SPORTS } from "../lib/textes-sports.js";
 import {
   afficherGuide,
   dureeAuto,
@@ -245,6 +247,8 @@ export function ConstructeurSeances({
   onDefinirMaxiForce,
   avecSeanceDuJour = true,
   poidsKg,
+  onModifierActivite,
+  onRefaireActivite,
   children
 }) {
   const exercicesPerso = useExercicesPerso();
@@ -663,12 +667,19 @@ export function ConstructeurSeances({
                           textTransform: "uppercase"
                         }}
                       >
-                        {routine?.name || "Séance"}
+                        {s.activite
+                          ? `${s.activite.emoji || ""} ${s.activite.label}`.trim()
+                          : routine?.name || (s.pointage ? TEXTES_SPORTS.nomSeance(s) : "Séance")}
                       </span>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <IconBtn onClick={() => modifierSeance(s)}>
+                    {s.activite && onRefaireActivite && (
+                      <IconBtn libelle={TEXTES_SPORTS.refaire} onClick={() => onRefaireActivite(s)}>
+                        <Plus size={14} />
+                      </IconBtn>
+                    )}
+                    <IconBtn onClick={() => (s.activite && onModifierActivite ? onModifierActivite(s) : modifierSeance(s))}>
                       <Pencil size={14} />
                     </IconBtn>
                     <IconBtn danger onClick={() => sessionsApi.remove(s.id)}>
@@ -677,6 +688,12 @@ export function ConstructeurSeances({
                   </div>
                 </div>
 
+                {s.activite && (
+                  <div data-resume-activite style={{ marginTop: 8, fontSize: 12.5, color: COLORS.text, fontFamily: "IBM Plex Mono" }}>
+                    {resumeActivite(s.activite)}
+                    {resumeDetails(s.activite) ? ` · ${resumeDetails(s.activite)}` : ""}
+                  </div>
+                )}
                 {s.exercises?.length > 0 && (
                   <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
                     {s.exercises.map((ex) => (

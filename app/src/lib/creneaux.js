@@ -18,6 +18,7 @@
 
 import { addDays, fmtDateShort } from "./dates.js";
 import { getWeekKey, minutesOf, slotDayIndex, slotDayLabel } from "./semaine.js";
+import { seancesPourCreneaux } from "./textes-sports.js";
 
 /** Ecart tolere entre l'heure prevue et l'heure reelle, en minutes. */
 export const TOLERANCE_HORAIRE_MIN = 60;
@@ -65,7 +66,9 @@ export function semaineCreneaux(creneaux, seances, cleSemaine, aujourdhui) {
     .map((r) => (r.slot.createdAt && r.date < r.slot.createdAt ? { ...r, avantCreation: true } : r))
     .sort((a, b) => a.date.localeCompare(b.date) || String(a.slot.time).localeCompare(String(b.slot.time)));
 
-  const seancesSemaine = (seances || []).filter((x) => x.date && getWeekKey(x.date) === cleSemaine);
+  // Autres sports (24/10/2026) : ils ne tiennent pas un creneau de coaching
+  // (lib/textes-sports.js, ACTIVITES_COMPTENT_POUR_CRENEAUX).
+  const seancesSemaine = seancesPourCreneaux(seances).filter((x) => x.date && getWeekKey(x.date) === cleSemaine);
 
   // Passe 1 : rattachement explicite.
   lignes.forEach((r) => {
