@@ -70,3 +70,21 @@ export const TEXTES_TRANSFORMATION = {
   periode: (debut, fin, jours) => `Du ${debut} au ${fin} (${jours} jours).`,
   precision: "Pèse-toi dans les mêmes conditions : le matin, à jeun, après être allé aux toilettes. Une balance à impédance varie de plusieurs points d'une mesure à l'autre."
 };
+
+export const TEXTES_COMPARATEUR = {
+  vide: "Ajoute une photo chaque semaine (même pose, même lumière, même tenue) : dès la 2e, tu pourras comparer avant et après.",
+  titre: "Avant / après",
+  pose: "Pose",
+  avant: "Avant",
+  apres: "Après",
+  avantLe: (d) => `Avant : ${d}`,
+  apresLe: (d) => `Après : ${d}`,
+  etiquetteAvant: "AVANT",
+  etiquetteApres: "APRÈS",
+  curseur: "Glisser entre avant et après",
+  poses: [
+    { id: "face", label: "Face" },
+    { id: "profil", label: "Profil" },
+    { id: "dos", label: "Dos" }
+  ]
+};

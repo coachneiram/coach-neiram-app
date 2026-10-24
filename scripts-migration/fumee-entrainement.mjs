@@ -132,7 +132,9 @@ try {
   let t = await corps(page);
   console.log("  Créneaux           :", marque(/mes créneaux/i.test(t), false));
   console.log("  Semaine difficile  :", marque(/semaine difficile/i.test(t), false));
-  console.log("  Force athlétique   :", marque(/force athlétique/i.test(t), false));
+  // La carte « Force athlétique — maxis & progression » (objectif performance) ;
+  // « Mes performances » (24/10/2026) nomme aussi la discipline, pour tous.
+  console.log("  Force athlétique   :", marque(/force athlétique — maxis/i.test(t), false));
   await page.context().close();
 
   // ══ PASSE 2 : cliente a distance, objectif performance ════════════
@@ -146,7 +148,7 @@ try {
   t = await corps(page);
   console.log("  Créneaux           :", marque(/mes créneaux/i.test(t), true));
   console.log("  Semaine difficile  :", marque(/semaine difficile/i.test(t), true));
-  console.log("  Force athlétique   :", marque(/force athlétique/i.test(t), true));
+  console.log("  Force athlétique   :", marque(/force athlétique — maxis/i.test(t), true));
 
   // ── Force athletique : saisir un maxi, verifier qu'il est retenu ──
   const champMaxi = page.getByPlaceholder("1RM kg").first();

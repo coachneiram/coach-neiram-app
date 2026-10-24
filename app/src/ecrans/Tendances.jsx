@@ -29,6 +29,7 @@ import { EvolutionDuMois, ProgressionCorps } from "../ui/ProgressionCorps.jsx";
 import { progressionCorps } from "../lib/progression-corps.js";
 import { MonEvolution } from "../ui/Explorateur.jsx";
 import { Camera, Droplet, Dumbbell, Flame, Footprints, Loader2, Moon, Scale, Share, Sparkles } from "../ui/icones.jsx";
+import { ComparateurPhotos } from "../ui/ComparateurPhotos.jsx";
 
 /** Attente et erreur de generation, communes aux deux bilans. */
 const styleAttente = {
@@ -307,6 +308,8 @@ export function Tendances({
               </div>
             ))}
           </div>
+          {/* Comparateur avant / apres (repris de l'app Neiram, 24/10/2026). */}
+          <ComparateurPhotos version={JSON.stringify(Object.keys(photos || {}))} />
         </div>
 
         <div style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${COLORS.border}` }}>
