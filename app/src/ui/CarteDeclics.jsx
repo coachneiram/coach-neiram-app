@@ -48,7 +48,7 @@ export function CarteDeclics({ journal, seances }) {
   return (
     <Card>
       <div data-declics={liste.length}>
-        <SectionTitle>{T.titre}</SectionTitle>
+        <SectionTitle tuto="declics">{T.titre}</SectionTitle>
         {!liste.length ? (
           <p style={TEXTE_VIDE}>{T.vide}</p>
         ) : (

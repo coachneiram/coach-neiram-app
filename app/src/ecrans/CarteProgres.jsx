@@ -235,7 +235,7 @@ export function CarteProgres({ allData, profile, onDebutCoaching, onSeancesAvant
 
   return (
     <Card>
-      <SectionTitle>Partager mes progrès</SectionTitle>
+      <SectionTitle tuto="partager">Partager mes progrès</SectionTitle>
       <p style={{ fontSize: 12.5, color: COLORS.textMuted, margin: "8px 0 12px", lineHeight: 1.5 }}>
         Une image prête pour ta story Instagram ou WhatsApp, avec tes chiffres. Ton poids n'y apparaît que si tu le
         choisis.

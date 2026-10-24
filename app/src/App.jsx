@@ -15,6 +15,7 @@
 import { Tutos } from "./ui/Tutos.jsx";
 import { EcranConsentementIa } from "./ui/EcranConsentementIa.jsx";
 import { DELAI_TUTO_MS, initialiserTutos, marquerTutoVu, tutoAProposer, tutoPrincipal } from "./lib/tutos.js";
+import { EVENEMENT_TUTO } from "./ui/ouvrir-tuto.js";
 import { reparerCollection } from "./lib/reparer-donnees.js";
 import { FiletEcran } from "./ui/FiletErreur.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -520,6 +521,12 @@ export default function App() {
   // de l'onglet s'ouvre a sa premiere visite, une fois, quand aucune autre
   // fenetre n'est ouverte. Le bouton « ? » le rouvre a tout moment.
   const [vueTutos, setVueTutos] = useState(null);
+  // Bouton « ? » d'une carte (ui/ouvrir-tuto.js) : ouvre le tuto de la fonction.
+  useEffect(() => {
+    const surTuto = (e) => e.detail && setVueTutos({ tuto: e.detail });
+    window.addEventListener(EVENEMENT_TUTO, surTuto);
+    return () => window.removeEventListener(EVENEMENT_TUTO, surTuto);
+  }, []);
   const dejaInstalle = useRef(null);
   useEffect(() => {
     if (!pret || dejaInstalle.current !== null) return;

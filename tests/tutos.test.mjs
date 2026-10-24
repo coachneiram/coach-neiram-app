@@ -28,7 +28,7 @@ function sourcesApp(dossier = SRC) {
   for (const nom of readdirSync(dossier)) {
     const chemin = join(dossier, nom);
     if (statSync(chemin).isDirectory()) texte += sourcesApp(chemin);
-    else if (/\.(jsx?|mjs)$/.test(nom) && !/tutos-contenu\.js$/.test(nom)) texte += readFileSync(chemin, "utf8");
+    else if (/\.(jsx?|mjs)$/.test(nom) && !/tutos-contenu[\w-]*\.js$/.test(nom)) texte += readFileSync(chemin, "utf8");
   }
   return texte;
 }
@@ -77,6 +77,40 @@ describe("contenu des tutos", () => {
     for (const interdit of ["maigrir", "kg en", "garanti", "résultats assurés", "perdre du poids rapidement"]) {
       assert.ok(!tout.includes(interdit), interdit);
     }
+  });
+
+  test("chaque tuto de fonction s'ouvre depuis sa carte (bouton « ? »)", () => {
+    const sources = sourcesApp();
+    // Les tutos d'onglet s'ouvrent par le bouton de l'en-tete ; ceux du
+    // groupe Reglages sont dans le guide (et, pour certains, a cote de
+    // leur bloc des Reglages).
+    const sansCarte = new Set(["reprendre", "dictee", "ajouter-aliment", "code-barres", "photo-ia", "decrire"]);
+    const relies = new Set([...sources.matchAll(/(?:tuto|LienTuto id)="([\w-]+)"/g)].map((m) => m[1]));
+    for (const t of TUTOS) {
+      if (t.principal || sansCarte.has(t.id) || t.onglet === "reglages") continue;
+      assert.ok(relies.has(t.id), `${t.id} : aucun bouton « ? » ne l'ouvre`);
+    }
+    for (const id of relies) assert.ok(trouverTuto(id), `bouton « ? » vers un tuto inconnu : ${id}`);
+  });
+
+  test("tout est inclus pour les clients du coach : ni Premium ni abonnement", () => {
+    for (const t of TUTOS) {
+      assert.ok(!("premium" in t), t.id + " : champ premium");
+      for (const e of t.etapes) assert.ok(!("premium" in e), t.id + " : etape premium");
+    }
+    const tout = JSON.stringify(TUTOS);
+    for (const interdit of ["Premium", "abonnement", "abonné", "offert", "gratuit", "Neiram Premium", "Health Connect", "Apple Santé", "Siri", "widget"]) {
+      assert.ok(!tout.includes(interdit), interdit);
+    }
+  });
+
+  test("le bouton « ? » des cartes est branche sur la fenetre des tutos", () => {
+    const app = lire("App.jsx");
+    assert.match(app, /addEventListener\(EVENEMENT_TUTO, surTuto\)/);
+    assert.match(app, /removeEventListener\(EVENEMENT_TUTO, surTuto\)/);
+    assert.match(lire("ui/primitives.jsx"), /export function LienTuto\(/);
+    assert.match(lire("ui/primitives.jsx"), /export function SectionTitle\(\{ children, tuto \}\)/);
+    assert.match(lire("ui/ouvrir-tuto.js"), /new CustomEvent\(EVENEMENT_TUTO, \{ detail: id \}\)/);
   });
 
   test("le guide contient tous les tutos, le principal en tete de chaque onglet", () => {

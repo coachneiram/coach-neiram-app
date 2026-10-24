@@ -67,7 +67,7 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card data-objectifs-coach>
-        <SectionTitle>Objectifs journaliers</SectionTitle>
+        <SectionTitle tuto="regimes-allergies">Objectifs journaliers</SectionTitle>
         {targets?.calories ? (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginTop: 12 }}>
@@ -218,7 +218,7 @@ function DieteFlexible({ semaine, regles }) {
   const couleur = semaine ? (semaine.etat === "surplus" ? COLORS.warn : semaine.etat === "marge" ? COLORS.blue : COLORS.good) : COLORS.textMuted;
   return (
     <Card>
-      <SectionTitle>Ta semaine compte plus que ta journée</SectionTitle>
+      <SectionTitle tuto="diete-flexible">Ta semaine compte plus que ta journée</SectionTitle>
       {semaine && (
         <div data-diete-flexible style={{ marginTop: 12 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>

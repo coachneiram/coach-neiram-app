@@ -104,7 +104,7 @@ export function CartePerformances({ profil = {}, poidsKg, maxisForce, onDefinirM
   return (
     <Card style={{ marginBottom: 20 }}>
       <div data-carte-performances>
-        <SectionTitle>{T.titre}</SectionTitle>
+        <SectionTitle tuto="performances">{T.titre}</SectionTitle>
         <p style={{ fontSize: 12.5, color: COLORS.textMuted, margin: "4px 0 10px", lineHeight: 1.5 }}>{T.intro}</p>
         <div style={{ display: "flex", overflowX: "auto", paddingBottom: 6, marginBottom: 8, gap: 6 }}>
           {DISCIPLINES_PERF.map((d) => (

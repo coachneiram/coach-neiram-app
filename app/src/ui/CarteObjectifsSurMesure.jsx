@@ -21,7 +21,7 @@ import { todayISO } from "../lib/dates.js";
 import { CONTRAINTES_SANTE, ciblesPersonnalisees, explicationCibles, profilPourRepere, RYTHMES, SITUATIONS } from "../lib/nutrition-perso.js";
 import { apresPesee, categoriesPour, FEDERATIONS, PESEES } from "../lib/categorie-poids.js";
 import { TEXTES_NUTRITION_PERSO as T } from "../lib/textes-nutrition-perso.js";
-import { Btn, Card, Field, NumberInput, SectionTitle, SelectInput, TextInput } from "./primitives.jsx";
+import { Btn, Card, Field, LienTuto, NumberInput, STYLE_ENTETE_TUTO, SectionTitle, SelectInput, TextInput } from "./primitives.jsx";
 
 const styleCase = {
   width: 17,
@@ -297,7 +297,7 @@ export function CarteObjectifsSurMesure({ profile, targets, currentWeight, bodyL
     <Card>
       <div data-objectifs-sur-mesure data-repere>
         <div style={styleEntete}>
-          <SectionTitle>{T.titre}</SectionTitle>
+          <SectionTitle tuto="objectifs-sur-mesure">{T.titre}</SectionTitle>
           <Btn variant="ghost" onClick={() => setOuvert(!ouvert)}>
             {ouvert ? T.fermer : T.personnaliser}
           </Btn>
@@ -364,7 +364,10 @@ export function CarteObjectifsSurMesure({ profile, targets, currentWeight, bodyL
             ))}
             <p style={styleNote}>{T.noteMasseGrasse}</p>
 
-            <div style={styleIntertitre}>{T.titreCategorie}</div>
+            <div style={STYLE_ENTETE_TUTO}>
+              <div style={styleIntertitre}>{T.titreCategorie}</div>
+              <LienTuto id="categorie-poids" />
+            </div>
             <BlocCategorie reglages={{ ...reglages, sexe: profile.sex }} plan={repere?.details?.categorie} maj={maj} />
 
             <div style={styleIntertitre}>{T.titreMacros}</div>

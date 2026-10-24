@@ -107,7 +107,8 @@ try {
   await page.getByRole("button", { name: "Démarrer" }).click();
   await page.waitForTimeout(500);
   const outil = page.locator("[data-outils-barre]").first();
-  const libelle = net(await outil.innerText().catch(() => ""));
+  // Le bouton lui-meme : le « ? » du tuto (24/10/2026) est a cote.
+  const libelle = net(await outil.locator("button").first().innerText().catch(() => ""));
   await outil.locator("button").first().click();
   await page.waitForTimeout(200);
   const disques = net(await outil.locator("[data-disques]").innerText().catch(() => ""));

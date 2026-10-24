@@ -32,7 +32,7 @@ export function CarteTransformation({ bodyLogs, profil, date }) {
   return (
     <Card style={{ padding: 14 }}>
       <div data-carte-transformation>
-        <SectionTitle>{T.titre}</SectionTitle>
+        <SectionTitle tuto="transformations">{T.titre}</SectionTitle>
         <div style={stylePeriodes}>
           {Object.entries(T.periodes).map(([id, label]) => (
             <button key={id} type="button" data-periode-transformation={id} aria-pressed={cle === id} onClick={() => setCle(id)} style={puce(cle === id)}>

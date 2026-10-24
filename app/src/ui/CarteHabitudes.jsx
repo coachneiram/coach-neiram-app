@@ -148,7 +148,7 @@ export function CarteHabitudes({ date = todayISO() }) {
     <Card style={CARTE}>
       <div data-habitudes={actives.length}>
         <div style={EN_TETE}>
-          <SectionTitle>{T.titre}</SectionTitle>
+          <SectionTitle tuto="habitudes">{T.titre}</SectionTitle>
           <Btn variant="ghost" onClick={() => setChoix(true)}>
             {actives.length ? T.modifier : T.choisir}
           </Btn>

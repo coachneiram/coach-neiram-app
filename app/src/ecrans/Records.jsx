@@ -44,7 +44,7 @@ export function Records({ sessions }) {
           marginBottom: 4
         }}
       >
-        <SectionTitle>Records</SectionTitle>
+        <SectionTitle tuto="progression-records">Records</SectionTitle>
         {recents.length > 0 && (
           <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.good }}>
             {recents.length} nouveau{recents.length > 1 ? "x" : ""} record{recents.length > 1 ? "s" : ""}

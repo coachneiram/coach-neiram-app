@@ -9,9 +9,18 @@
  * Ecriture : « tu », une action par etape, les boutons entre « » tels
  * qu'ils apparaissent (verifies par tests/tutos.test.mjs) ; les exemples de
  * saisie entre “ ”. Aucune promesse de resultat.
+ *
+ * Champs : id, onglet (onglet ou groupe du guide), principal (le tuto
+ * ouvert a la premiere visite de l'onglet), emoji, titre, resume,
+ * etapes [{ titre, texte }], libelles (textes de l'app cites). Pas de
+ * champ `premium` : tout est inclus pour les clients du coach.
  */
 
-export const TUTOS = [
+import { TUTOS_SEANCES } from "./tutos-contenu-seances.js";
+import { TUTOS_ALIMENTATION } from "./tutos-contenu-alimentation.js";
+import { TUTOS_VIE } from "./tutos-contenu-vie.js";
+
+const TUTOS_BASE = [
   {
     id: "journal",
     onglet: "journal",
@@ -779,3 +788,15 @@ export const TUTOS = [
     ]
   }
 ];
+
+/**
+ * Tutos des fonctions, un fichier par grand domaine (meme format), repris
+ * de l'app Neiram (PR #55) le 24 octobre 2026. Chaque tuto de fonction est
+ * relie a sa carte par un bouton « ? » (<SectionTitle tuto="…"> ou
+ * <LienTuto id="…" />), verifie par tests/tutos.test.mjs.
+ *
+ * A la fusion des branches paralleles : « menu-semaine » (Repas),
+ * l'etape « voix » de « minuteur-repos » (Séances) et les raccourcis
+ * (Réglages) viendront s'ajouter dans les fichiers de leur domaine.
+ */
+export const TUTOS = [...TUTOS_BASE, ...TUTOS_SEANCES, ...TUTOS_ALIMENTATION, ...TUTOS_VIE];

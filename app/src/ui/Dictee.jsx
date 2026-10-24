@@ -16,7 +16,7 @@ import { completerTexte, demarrerDictee, moteurDictee } from "../lib/dictee.js";
 import { analyserDescriptionRepas } from "../lib/photo-aliment.js";
 import { analyserRecetteDictee, analyserSeanceDictee } from "../lib/dictee-saisie.js";
 import { messageErreur } from "../lib/ia.js";
-import { Btn, TextArea } from "./primitives.jsx";
+import { Btn, LienTuto, STYLE_LIGNE_TUTO, TextArea } from "./primitives.jsx";
 import { Loader2, Sparkles } from "./icones.jsx";
 
 /**
@@ -116,13 +116,12 @@ export function ZoneDictee({ type, onResultat, exercicesPerso = [], ouverte = fa
 
   if (!depliee) {
     return (
-      <Btn
-        variant="ghost"
-        onClick={() => setDepliee(true)}
-        style={{ width: "100%", marginBottom: 12 }}
-      >
-        {t.ouvrir}
-      </Btn>
+      <div style={{ ...STYLE_LIGNE_TUTO, marginBottom: 12 }}>
+        <Btn variant="ghost" onClick={() => setDepliee(true)} style={{ flex: 1 }}>
+          {t.ouvrir}
+        </Btn>
+        <LienTuto id="dictee" />
+      </div>
     );
   }
 

@@ -89,8 +89,12 @@ import {
   EmptyState,
   Field,
   IconBtn,
+  LienTuto,
   Modal,
   NumberInput,
+  STYLE_ENTETE_TUTO,
+  STYLE_LIEN_TUTO_PETIT,
+  STYLE_LIGNE_TUTO,
   SectionTitle,
   TextArea,
   TextInput
@@ -575,7 +579,7 @@ export function ConstructeurSeances({
         ref={refSeancesTypes}
         style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, scrollMarginTop: 80 }}
       >
-        <SectionTitle>Séances types</SectionTitle>
+        <SectionTitle tuto="noter-seance">Séances types</SectionTitle>
         <Btn variant="ghost" icon={Plus} onClick={nouvelleRoutine}>
           Nouvelle séance type
         </Btn>
@@ -640,7 +644,7 @@ export function ConstructeurSeances({
         </Btn>
       )}
 
-      <SectionTitle>Historique des séances</SectionTitle>
+      <SectionTitle tuto="autres-sports">Historique des séances</SectionTitle>
       {seancesTriees.length === 0 ? (
         <p style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 10 }}>
           Aucune séance loguée. Choisis une séance type ci-dessus pour démarrer.
@@ -1141,6 +1145,7 @@ export function ConstructeurSeances({
                             <div style={{ flex: 1 }} />
                             <span style={{ ...styleEtiquette, marginBottom: 0 }}>{TEXTES_SERIES.repos}</span>
                             <ChoixRepos ex={ex} onChange={(c) => modifierExercice(i, c)} />
+                            <LienTuto id="minuteur-repos" style={STYLE_LIEN_TUTO_PETIT} />
                           </div>
                           </>
                         )}
@@ -1220,7 +1225,9 @@ export function ConstructeurSeances({
                       */}
                       {mode !== "cardio" && (
                         <div style={{ marginTop: 8 }}>
-                          <div style={styleEtiquette}>Technique</div>
+                          <div style={{ ...styleEtiquette, ...STYLE_LIGNE_TUTO }}>
+                            Technique <LienTuto id="techniques-serie" style={STYLE_LIEN_TUTO_PETIT} />
+                          </div>
                           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                             <select
                               value={ex.technique || ""}
@@ -1611,8 +1618,9 @@ export function ConstructeurSeances({
             }}
             style={{ border: `1px dashed ${COLORS.border}`, borderRadius: 10, padding: 11 }}
           >
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>
+            <div style={{ ...STYLE_ENTETE_TUTO, fontSize: 12.5, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>
               Ton exercice n'est pas dans la liste ?
+              <LienTuto id="bibliotheque-exercices" />
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <TextInput

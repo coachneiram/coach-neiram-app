@@ -62,7 +62,7 @@ export function RespirationGuidee() {
   return (
     <Card style={{ padding: 14 }}>
       <div data-respiration>
-        <SectionTitle>{T.respirationTitre}</SectionTitle>
+        <SectionTitle tuto="sommeil-stress">{T.respirationTitre}</SectionTitle>
         <p style={{ ...texteDoux, margin: "6px 0 10px" }}>{T.respirationIntro}</p>
         {actif && (
           <div style={{ textAlign: "center", margin: "8px 0 12px" }}>
@@ -109,7 +109,7 @@ export function AlertesSommeilStress({ entrees, coachPrevenu = false }) {
   return (
     <Card style={alerte ? { padding: 14, borderColor: COLORS.warn } : { padding: 14 }}>
       <div data-alertes-sommeil-stress>
-        <SectionTitle>{T.alertesTitre}</SectionTitle>
+        <SectionTitle tuto="sommeil-stress">{T.alertesTitre}</SectionTitle>
         {s.nuitsDifficiles && <Alerte id="R01">{T.alerteNuits}</Alerte>}
         {s.stressDurable && <Alerte id="R03">{T.alerteStress}</Alerte>}
         {alerte && coachPrevenu && <p style={{ ...texteDoux, margin: "6px 0 0" }}>{T.alerteCoach}</p>}
@@ -130,7 +130,7 @@ export function RegulariteSommeil({ entrees }) {
   return (
     <Card style={{ padding: 14 }}>
       <div data-regularite-sommeil>
-        <SectionTitle>{T.regulariteTitre}</SectionTitle>
+        <SectionTitle tuto="sommeil-stress">{T.regulariteTitre}</SectionTitle>
         {!r ? (
           <p style={{ fontSize: 12.5, color: COLORS.textMuted, margin: "6px 0 0", lineHeight: 1.5 }}>{T.regulariteVide}</p>
         ) : (
@@ -155,7 +155,7 @@ export function BibliothequePreuves() {
   return (
     <Card style={{ padding: 14 }}>
       <div data-bibliotheque-preuves>
-        <SectionTitle>{T.bibliothequeTitre}</SectionTitle>
+        <SectionTitle tuto="sommeil-stress">{T.bibliothequeTitre}</SectionTitle>
         <div style={styleThemes}>
           {THEMES_PREUVES.map((th) => (
             <button

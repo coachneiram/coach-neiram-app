@@ -20,7 +20,7 @@ import { analyserPhotoRepas, lireCodeBarres } from "../lib/photo-aliment.js";
 import { chercherParCodeBarres } from "../lib/recherche-aliments.js";
 import { messageErreur } from "../lib/ia.js";
 import { charger, enregistrer } from "../lib/stockage.js";
-import { Btn, Card, Field, IconBtn, Modal, NumberInput, TextInput } from "../ui/primitives.jsx";
+import { Btn, Card, Field, IconBtn, LienTuto, Modal, NumberInput, TextInput } from "../ui/primitives.jsx";
 import { Loader2, Pencil, X } from "../ui/icones.jsx";
 import {
   entreeCorrigee,
@@ -410,6 +410,7 @@ export function Courses({ profile }) {
           <Btn variant="ghost" onClick={toutDecocher} style={{ padding: "7px 12px", fontSize: 12 }}>
             Réinitialiser
           </Btn>
+          <LienTuto id="courses" />
         </div>
       </div>
 

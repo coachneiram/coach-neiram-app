@@ -101,7 +101,7 @@ export function ProgressionCorps({ progression, choisie, onChoisir }) {
   return (
     <Card>
       <div data-progression-corps>
-        <SectionTitle>Ma progression</SectionTitle>
+        <SectionTitle tuto="progression-mesures">Ma progression</SectionTitle>
         <div
           data-titre-progression
           style={{

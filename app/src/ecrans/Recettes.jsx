@@ -29,7 +29,7 @@ import {
   totauxParPortion,
   totauxRepasType
 } from "../lib/repas-types.js";
-import { Btn, Card, Field, IconBtn, Modal, NumberInput, TextInput } from "../ui/primitives.jsx";
+import { Btn, Card, Field, IconBtn, LienTuto, Modal, NumberInput, STYLE_LIGNE_TUTO, TextInput } from "../ui/primitives.jsx";
 import { BookOpen, Pencil, Plus, Trash2, X } from "../ui/icones.jsx";
 import { RechercheAliment } from "./RechercheAliment.jsx";
 import { ZoneDictee } from "../ui/Dictee.jsx";
@@ -152,9 +152,12 @@ export function Recettes({ habitudePesee }) {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <Btn variant="ghost" icon={BookOpen} onClick={() => ouvrir(null)} style={{ width: "100%" }}>
-        Nouvelle recette — ingrédients et nombre de parts
-      </Btn>
+      <div style={STYLE_LIGNE_TUTO}>
+        <Btn variant="ghost" icon={BookOpen} onClick={() => ouvrir(null)} style={{ flex: 1 }}>
+          Nouvelle recette — ingrédients et nombre de parts
+        </Btn>
+        <LienTuto id="recette-maison" />
+      </div>
 
       {recettes.length > 0 && (
         <div style={{ marginTop: 12 }}>

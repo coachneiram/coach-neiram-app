@@ -78,7 +78,7 @@ export function CarteDefi({ journal, repas, seances, objectifs }) {
     <Card style={{ marginBottom: 16 }}>
       <div data-carte-defi>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-          <SectionTitle>{TEXTES_DEFIS.titre}</SectionTitle>
+          <SectionTitle tuto="defis">{TEXTES_DEFIS.titre}</SectionTitle>
           {reussis > 0 && (
             <span style={{ fontSize: 12, color: COLORS.textMuted }}>
               🏆 {reussis} {TEXTES_DEFIS.reussis}

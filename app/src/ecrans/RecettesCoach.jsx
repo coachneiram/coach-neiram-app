@@ -70,7 +70,7 @@ export function RecettesCoach({ profile, onAjoutee, catalogue = RECETTES_COACH }
   return (
     <Card style={{ marginBottom: 16 }}>
       <div data-recettes-coach="">
-        <SectionTitle>Recettes du coach</SectionTitle>
+        <SectionTitle tuto="idees-recettes">Recettes du coach</SectionTitle>
         <p style={{ fontSize: 12.5, color: COLORS.textMuted, margin: "8px 0 12px", lineHeight: 1.5 }}>
           De nouvelles recettes chaque semaine, triées pour ton objectif et ton régime.
         </p>

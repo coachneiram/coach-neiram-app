@@ -54,7 +54,7 @@ export function PlanSemaine({ plan, onAssigner, routines, sessions, onDemarrer }
           marginBottom: 4
         }}
       >
-        <SectionTitle>Programme de la semaine</SectionTitle>
+        <SectionTitle tuto="programme-semaine">Programme de la semaine</SectionTitle>
         <button
           onClick={() => setModification(!modification)}
           style={{

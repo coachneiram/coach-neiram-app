@@ -12,6 +12,7 @@ import { charger, enregistrer } from "../lib/stockage.js";
 import { chartScale } from "../lib/mensurations.js";
 import { CLE_EXPLORATEUR, explorer, fmtNombre, GROUPES, PERIODES } from "../lib/explorateur.js";
 import { ChevronLeft, ChevronRight } from "./icones.jsx";
+import { LienTuto, STYLE_ENTETE_TUTO } from "./primitives.jsx";
 
 const W = 340;
 const H = 170;
@@ -227,19 +228,22 @@ export function MonEvolution({
         padding: 18
       }}
     >
-      <h3
-        style={{
-          fontFamily: POLICES.titre,
-          fontSize: 13.5,
-          fontWeight: 600,
-          color: COLORS.gold,
-          textTransform: "uppercase",
-          letterSpacing: 1,
-          margin: "0 0 12px"
-        }}
-      >
-        Mon évolution
-      </h3>
+      <div style={{ ...STYLE_ENTETE_TUTO, margin: "0 0 12px" }}>
+        <h3
+          style={{
+            fontFamily: POLICES.titre,
+            fontSize: 13.5,
+            fontWeight: 600,
+            color: COLORS.gold,
+            textTransform: "uppercase",
+            letterSpacing: 1,
+            margin: 0
+          }}
+        >
+          Mon évolution
+        </h3>
+        <LienTuto id="evolution" />
+      </div>
 
       <select
         aria-label="Donnée à afficher"

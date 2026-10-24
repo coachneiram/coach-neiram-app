@@ -106,7 +106,7 @@ export function CarteBilanAnnee({ seances, journal, corps, profil, maxis }) {
   return (
     <Card style={saison ? BORDURE_SAISON : undefined}>
       <div data-bilan-annee={annee} data-saison={saison ? "oui" : "non"}>
-        <SectionTitle>{T.titre(annee)}</SectionTitle>
+        <SectionTitle tuto="mon-annee">{T.titre(annee)}</SectionTitle>
         <p style={INTRO}>{saison ? T.saison(annee) : T.horsSaison}</p>
         <Btn
           onClick={() => {

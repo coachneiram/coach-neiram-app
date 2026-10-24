@@ -24,8 +24,13 @@ import { computeRemainingToday } from "../lib/nutrition.js";
 import { genererTexte, messageErreur } from "../lib/ia.js";
 import { TEXTES_GARDE_FOU, conseilsAlimentairesSurs, construireConsigneCoach, lireContraintes, verifierReponse } from "../lib/consigne-coach.js";
 import { charger, enregistrer } from "../lib/stockage.js";
-import { Btn, Card, TextInput } from "../ui/primitives.jsx";
+import { Btn, Card, LienTuto, TextInput } from "../ui/primitives.jsx";
 import { Loader2, Sparkles } from "../ui/icones.jsx";
+
+const styleLienAssistant = {
+  display: "flex",
+  justifyContent: "flex-end"
+};
 
 const CLE_CONVERSATION = "coach_chat";
 
@@ -98,6 +103,9 @@ export function CoachIA({ profile, targets, logEntries }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <Card style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10, minHeight: 280 }}>
+        <div style={styleLienAssistant}>
+          <LienTuto id="assistant" />
+        </div>
         {!conseilsAlimentairesSurs(lireContraintes(profile)) && (
           <p data-coach-profil-incomplet style={{ fontSize: 12, margin: 0, color: COLORS.warn || COLORS.bad, lineHeight: 1.5 }}>
             {TEXTES_GARDE_FOU.profilIncomplet}

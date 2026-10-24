@@ -13,6 +13,8 @@
 
 import { COLORS, POLICES } from "../tokens.js";
 import { addDays, clamp, fmtDateLong, todayISO } from "../lib/dates.js";
+import { TEXTES_TUTOS } from "../lib/tutos.js";
+import { ouvrirTuto } from "./ouvrir-tuto.js";
 
 export function Card({ children, style, onClick, ...attributs }) {
   return (
@@ -32,8 +34,47 @@ export function Card({ children, style, onClick, ...attributs }) {
   );
 }
 
-export function SectionTitle({ children }) {
-  return (
+const styleTitreAvecTuto = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8
+};
+
+const styleLienTuto = {
+  flexShrink: 0,
+  width: 24,
+  height: 24,
+  borderRadius: 999,
+  background: "transparent",
+  fontSize: 12.5,
+  fontWeight: 700,
+  lineHeight: "22px",
+  padding: 0,
+  cursor: "pointer",
+  fontFamily: "inherit"
+};
+
+/** Ligne « bouton ou etiquette + ? » : le « ? » colle a droite. */
+export const STYLE_LIGNE_TUTO = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8
+};
+
+/** En-tete « titre a gauche, ? a droite ». */
+export const STYLE_ENTETE_TUTO = styleTitreAvecTuto;
+
+/** Variante compacte du « ? », a cote d'une etiquette ou d'un petit bouton. */
+export const STYLE_LIEN_TUTO_PETIT = {
+  width: 20,
+  height: 20,
+  lineHeight: "18px",
+  fontSize: 11
+};
+
+export function SectionTitle({ children, tuto }) {
+  const titre = (
     <h3
       style={{
         fontFamily: POLICES.titre,
@@ -47,6 +88,34 @@ export function SectionTitle({ children }) {
     >
       {children}
     </h3>
+  );
+  if (!tuto) return titre;
+  // `tuto` : identifiant du tuto de la fonction (lib/tutos-contenu*.js),
+  // ouvert par le bouton « ? » a droite du titre (repris de l'app Neiram).
+  return (
+    <div style={styleTitreAvecTuto}>
+      {titre}
+      <LienTuto id={tuto} />
+    </div>
+  );
+}
+
+/** Petit bouton « ? » qui ouvre le tuto d'une fonction (ui/ouvrir-tuto.js). */
+export function LienTuto({ id, style }) {
+  return (
+    <button
+      type="button"
+      data-lien-tuto-carte={id}
+      aria-label={TEXTES_TUTOS.lienCarte}
+      title={TEXTES_TUTOS.lienCarte}
+      onClick={(e) => {
+        e.stopPropagation();
+        ouvrirTuto(id);
+      }}
+      style={{ ...styleLienTuto, border: `1px solid ${COLORS.border}`, color: COLORS.textMuted, ...style }}
+    >
+      ?
+    </button>
   );
 }
 
