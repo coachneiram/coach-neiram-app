@@ -55,7 +55,7 @@ describe("les annonces", () => {
   });
 
   test("les defis entre amis (25 octobre 2026) en tete, dans le Journal", () => {
-    assert.equal(NOUVEAUTES[0].id, "2026-10-25-defis-amis");
+    assert.equal(NOUVEAUTES[0].id, "2026-10-24-defis-amis");
     assert.equal(NOUVEAUTES[0].onglet, "journal");
     assert.equal(NOUVEAUTES[0].titre, "Défis entre amis");
   });
