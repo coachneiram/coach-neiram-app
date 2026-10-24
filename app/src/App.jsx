@@ -69,6 +69,8 @@ import { synchroniserPush } from "./lib/push.js";
 import { CLE_INSTALLATION, bandeauInstallationVisible, estInstallee, finMasquage, plateformeInstallation } from "./lib/installation.js";
 import { NOUVEAUTES_MAX, annoncesAutorisees, lireVues, marquerToutVu, nouveautesAMontrer, nouveautesPour } from "./lib/nouveautes.js";
 import { CLE_SPORTS_PERSO, definirSportsPerso } from "./lib/activites.js";
+import { messageEau } from "./lib/raccourcis.js";
+import { brancherRaccourcis, ecouterRaccourcis, poserIntention } from "./lib/reception-raccourcis.js";
 
 /** Duree d'affichage d'une notification passagere, en millisecondes. */
 const DUREE_TOAST = 8000;
@@ -362,6 +364,30 @@ export default function App() {
   const routinesApi = collectionApi(STORAGE_KEYS.routines, routines, setRoutines);
   const bodyApi = journalDuJourApi(STORAGE_KEYS.bodyLogs, bodyLogs, setBodyLogs);
   const formApi = journalDuJourApi(STORAGE_KEYS.dailyForm, dailyForm, setDailyForm);
+
+  // Raccourcis (appui long sur l'icone, adresse ?raccourci=...) : voir
+  // lib/raccourcis.js. Le traitement lit toujours l'etat le plus recent.
+  const gererRaccourci = useRef(null);
+  gererRaccourci.current = async (action) => {
+    setReglagesOuverts(false);
+    if (action.id === "eau") {
+      const date = todayISO();
+      const avant = Number((formApi.getForDate(date) || {}).waterMl) || 0;
+      await formApi.upsert(date, { waterMl: avant + action.ml });
+      setOngletActif("journal");
+      afficherToast(messageEau(action.ml, avant + action.ml));
+      return;
+    }
+    if (action.id === "seance" || action.id === "repas") poserIntention(action.id);
+    setOngletActif(action.onglet);
+  };
+  useEffect(() => {
+    brancherRaccourcis();
+  }, []);
+  useEffect(() => {
+    if (!pret || !profile) return undefined;
+    return ecouterRaccourcis((a) => gererRaccourci.current(a));
+  }, [pret, Boolean(profile)]);
 
   /**
    * Poids courant : la derniere pesee, a defaut le poids de depart du
