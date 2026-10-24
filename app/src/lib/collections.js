@@ -38,6 +38,13 @@ export function collectionApi(cle, items, setItems) {
 
     add: async (entree) => ecrire([{ ...entree, id: uid() }, ...items]),
 
+    /** Retire plusieurs entrees en UNE ecriture (calendrier « Mon année », 24/10/2026). */
+    removeMany: async (ids) => {
+      const a = new Set(ids || []);
+      if (!a.size) return items;
+      return ecrire(items.filter((it) => !a.has(it.id)));
+    },
+
     addMany: async (entrees) => {
       const nouvelles = (entrees || []).map((e) => ({ ...e, id: uid() }));
       if (!nouvelles.length) return items;

@@ -31,7 +31,8 @@ export function seanceDuJour(routines, seances, plan, aujourdhui) {
   const parId = (id) => liste.find((r) => r.id === id) || null;
 
   const prevue = parId((plan || {})[dayIdOf(aujourdhui)]);
-  const faitesAujourdhui = toutes.filter((s) => s.date === aujourdhui);
+  // Un autre sport (course, velo...) ne remplace pas la seance du coach.
+  const faitesAujourdhui = toutes.filter((s) => s.date === aujourdhui && !s.activite);
   if (faitesAujourdhui.length) {
     const seance = (prevue && faitesAujourdhui.find((s) => s.routineId === prevue.id)) || faitesAujourdhui[0];
     return { etat: "faite", routine: parId(seance.routineId), seance };

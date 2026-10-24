@@ -31,6 +31,26 @@ import { Records } from "./Records.jsx";
 import { CarteForme } from "../ui/CarteForme.jsx";
 import { CartePerformances } from "../ui/CartePerformances.jsx";
 import { todayISO } from "../lib/dates.js";
+import { useState } from "react";
+import { ModaleActivite } from "./ModaleActivite.jsx";
+import { CarteActivite } from "../ui/CarteActivite.jsx";
+import { CarteMesSports } from "../ui/CarteMesSports.jsx";
+import { CarteProgrammes } from "../ui/CarteProgrammes.jsx";
+import { CarteCalendrier } from "../ui/CarteCalendrier.jsx";
+import {
+  activiteDeSeance,
+  ajouterTermine,
+  avancement,
+  CLE_PROGRAMME_SPORT,
+  CLE_PROGRAMMES_TERMINES,
+  demarrer,
+  marquerFaite,
+  normaliserEtat,
+  programmeParId
+} from "../lib/programmes-sport.js";
+import { charger, enregistrer } from "../lib/stockage.js";
+import { envoyerEvenement, pointageDepuisSeance } from "../lib/synchro-coach.js";
+import { evenementActivite, TEXTES_SPORTS } from "../lib/textes-sports.js";
 
 export function Entrainements({
   routinesApi,
@@ -49,8 +69,78 @@ export function Entrainements({
   onSeancesAvantApp,
   onContrat,
   formDuJour,
-  poidsKg
+  poidsKg,
+  journal
 }) {
+  // Autres sports, programmes guides et « Mon annee » (repris de l'app
+  // Neiram, 24/10/2026). Une activite est une seance avec un champ
+  // `activite` ; elle part au Journal du coach (coaching en ligne).
+  const [activite, setActivite] = useState({ ouverte: false, seance: null });
+  const ouvrirActivite = (seance = null) => setActivite({ ouverte: true, seance });
+  const [programme, setProgramme] = useState(() => normaliserEtat(charger(CLE_PROGRAMME_SPORT, null)));
+  const changerProgramme = (suivant) => {
+    setProgramme(suivant);
+    enregistrer(CLE_PROGRAMME_SPORT, suivant);
+  };
+  const enregistrerActivite = async (donnees) => {
+    const cle = activite.seance && activite.seance.programmeCle;
+    if (cle) {
+      const suivant = marquerFaite(programme, cle);
+      changerProgramme(suivant);
+      if (avancement(suivant)?.termine && !avancement(programme)?.termine) {
+        enregistrer(CLE_PROGRAMMES_TERMINES, ajouterTermine(charger(CLE_PROGRAMMES_TERMINES, []), suivant.id));
+      }
+    }
+    if (donnees.id) {
+      const { id, ...reste } = donnees;
+      await sessionsApi.update(id, reste);
+      return;
+    }
+    await sessionsApi.add(donnees);
+    // Nouvelle activite seulement : une modification ne repart pas.
+    const evenement = evenementActivite(profile, donnees);
+    if (evenement) envoyerEvenement(profile, evenement);
+  };
+  // Jour coche dans « Mon annee » : une seance sans detail, comme une seance
+  // notee dans le constructeur (elle part au Journal du coach en ligne).
+  const cocherJour = async (seance) => {
+    await sessionsApi.add(seance);
+    const pointage = pointageDepuisSeance(profile, seance, { aujourdhui: todayISO() });
+    if (pointage) envoyerEvenement(profile, pointage);
+  };
+  const sports = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 20 }}>
+      <ModaleActivite
+        open={activite.ouverte}
+        seance={activite.seance}
+        seances={sessionsApi.items}
+        poidsKg={poidsKg}
+        onClose={() => setActivite({ ouverte: false, seance: null })}
+        onEnregistrer={enregistrerActivite}
+      />
+      <CarteCalendrier
+        seances={sessionsApi.items}
+        objectifParSemaine={Number(profile?.sessionsPerWeek) || 0}
+        onAjouter={cocherJour}
+        onRetirer={(ids) => sessionsApi.removeMany(ids)}
+      />
+      <CarteActivite seances={sessionsApi.items} journal={journal} onAjouter={() => ouvrirActivite()} />
+      <CarteProgrammes
+        etat={programme}
+        onDemarrer={(id) => changerProgramme(demarrer(id))}
+        onArreter={() => changerProgramme(null)}
+        onNoter={(s) => {
+          const p = programmeParId(programme.id);
+          ouvrirActivite({ date: todayISO(), activite: activiteDeSeance(p, s), notes: TEXTES_SPORTS.noteProgramme(p.titre, s), programmeCle: s.cle });
+        }}
+      />
+      {sessionsApi.items.some((s) => s.activite) && <CarteMesSports seances={sessionsApi.items} />}
+    </div>
+  );
+  const actionsActivite = {
+    onModifierActivite: (s) => ouvrirActivite(s),
+    onRefaireActivite: (s) => ouvrirActivite({ date: todayISO(), activite: s.activite, notes: s.notes })
+  };
   // Mes performances et niveau officiel (repris de l'app Neiram, 24/10/2026).
   const performances = (
     <CartePerformances profil={profile} poidsKg={poidsKg} maxisForce={maxisForce} onDefinirMaxiForce={onDefinirMaxiForce} seances={sessionsApi.items} />
@@ -124,7 +214,9 @@ export function Entrainements({
             <ProgressionCharges sessions={sessionsApi.items} />
             <Records sessions={sessionsApi.items} />
             {performances}
+            {sports}
             <ConstructeurSeances
+              {...actionsActivite}
               routinesApi={routinesApi}
               sessionsApi={sessionsApi}
               profile={profile}
@@ -156,9 +248,11 @@ export function Entrainements({
       maxisForce={maxisForce}
       onDefinirMaxiForce={onDefinirMaxiForce}
       poidsKg={poidsKg}
+      {...actionsActivite}
     >
       {forme}
       {enTete}
+      {sports}
       <ProgressionCharges sessions={sessionsApi.items} />
       <Records sessions={sessionsApi.items} />
       {performances}
