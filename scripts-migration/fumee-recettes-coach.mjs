@@ -139,7 +139,7 @@ try {
     const { ctx, page } = await ouvrir({ goal: "maintien", dietType: "aucun" });
     const options = await page.$$eval("option", (os) => os.map((o) => o.textContent));
     // Le profil est dans les reglages : on verifie l'option dans la page des reglages.
-    await page.locator('button[aria-label="Réglages"], header button').last().click().catch(() => {});
+    await page.locator('button[aria-label="Réglages"]').first().click().catch(() => {});
     await page.waitForTimeout(800);
     const options2 = await page.$$eval("option", (os) => os.map((o) => o.textContent));
     const ok = [...options, ...options2].includes("Sans porc");
