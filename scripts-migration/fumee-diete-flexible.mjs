@@ -107,7 +107,7 @@ try {
   // 3. Aide.
   await page.locator('button[aria-label="Réglages"]').first().click();
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: /Aide/ }).first().click();
+  await page.getByRole("button", { name: /Aide et questions fréquentes/ }).first().click();
   await page.waitForTimeout(500);
   // Les reponses sont repliees : on ouvre la question.
   await page.locator(".modal-panel").last().getByText(/J'ai fait un écart/).first().click();
