@@ -11,6 +11,7 @@
  */
 
 import { CarteSauvegarde } from "../ui/CarteSauvegarde.jsx";
+import { CarteDefi } from "../ui/CarteDefi.jsx";
 import { premierJourSuivi } from "../lib/rappel-sauvegarde.js";
 import { useMemo, useState } from "react";
 import { COLORS, POLICES } from "../tokens.js";
@@ -577,6 +578,16 @@ export function Journal({
             </div>
           </div>
         </Card>
+      )}
+
+      {/* Defi 30 jours (repris de l'app Neiram, 24 octobre 2026). */}
+      {date === todayISO() && (
+        <CarteDefi
+          journal={formApi.items}
+          repas={logEntriesApi.items}
+          seances={sessionsApi.items}
+          objectifs={targets}
+        />
       )}
 
       <Card style={{ marginBottom: 16 }}>

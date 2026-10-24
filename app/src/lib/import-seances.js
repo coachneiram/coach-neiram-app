@@ -101,6 +101,40 @@ const ROLES = [
   }
 ];
 
+/** Longueur maximale d'une consigne : une ligne lisible pendant la seance. */
+export const CONSIGNE_MAX = 140;
+
+/** Consigne du coach, nettoyee ; vide si la cellule ne dit rien. */
+export function consigneDepuisTexte(texte) {
+  const t = String(texte ?? "").replace(/\s+/g, " ").trim();
+  if (!t || /^[-–—.]+$/.test(t)) return "";
+  return t.length > CONSIGNE_MAX ? t.slice(0, CONSIGNE_MAX - 1).trimEnd() + "…" : t;
+}
+
+/**
+ * Temps de repos ecrit par le coach, en secondes : « 90 s », « 1 min 30 »,
+ * « 1'30 », « 1min30 », « 2 min », « 2' », « 45" ». Une fourchette
+ * (« 1-2 min ») donne sa borne haute : mieux vaut un peu plus de repos que
+ * pas assez. Un nombre seul se lit en secondes a partir de 15 (« 90 »), en
+ * minutes en dessous (« 2 »). Rend null si rien de lisible.
+ */
+export function reposDepuisTexte(texte) {
+  const t = String(texte ?? "").toLowerCase().replace(",", ".").replace(/\s+/g, " ").trim();
+  if (!t) return null;
+  const minSec = t.match(/(\d+(?:\.\d+)?)\s*(?:min|mn|m|')\s*(\d{1,2})\s*(?:s|sec|"|'')?$/);
+  if (minSec) return Math.round(Number(minSec[1]) * 60 + Number(minSec[2]));
+  const fourchette = t.match(/(\d+(?:\.\d+)?)\s*(?:-|à|a)\s*(\d+(?:\.\d+)?)\s*(min|mn|m\b|'|s\b|sec|")/);
+  if (fourchette) return Math.round(Number(fourchette[2]) * (/^(s|sec|")$/.test(fourchette[3]) ? 1 : 60));
+  const minutes = t.match(/^(\d+(?:\.\d+)?)\s*(?:min|mn|m|')/);
+  if (minutes) return Math.round(Number(minutes[1]) * 60);
+  const secondes = t.match(/^(\d+)\s*(?:s|sec|secondes?|"|'')/);
+  if (secondes) return Number(secondes[1]);
+  // Nombre seul : « 90 » se lit en secondes, « 2 » en minutes.
+  const seul = t.match(/^(\d+(?:\.\d+)?)$/);
+  if (seul) return Number(seul[1]) >= 15 ? Math.round(Number(seul[1])) : Math.round(Number(seul[1]) * 60);
+  return null;
+}
+
 /**
  * Derniere ligne non vide d'une cellule d'en-tete.
  *
@@ -881,6 +915,14 @@ export function seancesDepuisTableau(lignes) {
           repUnit: uniteFinale,
           rpe: nombre(ligne, "rpe", "rpe")
         };
+
+    // Consigne et repos du coach (24 octobre 2026) : la colonne
+    // « Consignes » s'affiche pendant la seance, et « Récupération » regle
+    // le minuteur de repos de l'exercice.
+    const consigne = consigneDepuisTexte(colonne(ligne, "notes"));
+    if (consigne) exercice.consigne = consigne;
+    const repos = cardio ? null : reposDepuisTexte(colonne(ligne, "repos"));
+    if (repos) exercice.repos = repos;
 
     if (technique && technique.technique === "superset") {
       if (technique.supersetGroupe) {

@@ -475,6 +475,23 @@ export function fusionnerExercicesPerso(precedents, exercices) {
  * que sur les seances importees : une seance type creee a la main dans
  * l'application se comporte exactement comme avant.
  */
+/** Consignes du coach par nom d'exercice, ou null si la seance type n'a pas de programme. */
+function consignesDeRoutine(routine) {
+  if (!Array.isArray(routine.exercises) || !routine.exercises.length) return null;
+  const m = new Map();
+  for (const ex of routine.exercises) if (ex && ex.name) m.set(String(ex.name).trim().toLowerCase(), String(ex.consigne || "").trim());
+  return m;
+}
+
+function avecConsigne(ex, consignes) {
+  if (!consignes || !ex || !ex.name) return ex;
+  const cle = String(ex.name).trim().toLowerCase();
+  if (!consignes.has(cle)) return ex;
+  const { consigne, ...reste } = ex;
+  const actuelle = consignes.get(cle);
+  return actuelle ? { ...reste, consigne: actuelle } : reste;
+}
+
 export function preparerSeance(routine, seances, dateImposee) {
   const precedente = (seances || [])
     .filter((s) => s.routineId === routine.id)
@@ -493,7 +510,10 @@ export function preparerSeance(routine, seances, dateImposee) {
     // d'exercices est celle du programme, pas celle de la derniere fois.
     exercices = routine.exercises.map((p) => exerciceProgramme(p, seances, date));
   } else if (precedente?.exercises?.length) {
-    exercices = precedente.exercises.map((ex) => {
+    // Consigne du coach (24 octobre 2026) : celle de la seance type, a jour
+    // du dernier import, plutot que celle recopiee dans la seance d'avant.
+    const consignes = consignesDeRoutine(routine);
+    exercices = precedente.exercises.map((ex) => avecConsigne(ex, consignes)).map((ex) => {
       // Une suggestion de charge n'a pas de sens en cardio.
       const sug = ex.mode === "cardio" ? null : chargeSuivante(ex.weight, ex.rpe, ex.rir);
       const repris = {

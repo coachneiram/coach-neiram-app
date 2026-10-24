@@ -678,6 +678,7 @@ export default function App() {
         onDebutCoaching={definirDebutCoaching}
         onSeancesAvantApp={definirSeancesAvantApp}
         onContrat={definirContrat}
+        formDuJour={dailyForm.find((f) => f.date === todayISO())}
       />
     ),
     tendances: weekStats ? (

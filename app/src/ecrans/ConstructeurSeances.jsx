@@ -130,6 +130,9 @@ const styleEtiquette = {
   letterSpacing: 0.4
 };
 
+/** Consigne du coach sous le nom de l'exercice : elle se lit d'un coup d'oeil. */
+const styleConsigne = { fontSize: 12, color: COLORS.gold, margin: "6px 0 0", lineHeight: 1.4 };
+
 const styleLienOptions = {
   background: "none",
   border: "none",
@@ -772,6 +775,14 @@ export function ConstructeurSeances({
                         </span>
                       </div>
                     )}
+                    <input
+                      aria-label={TEXTES_DEBUTANT.consigne}
+                      placeholder={TEXTES_DEBUTANT.exempleConsigne}
+                      maxLength={140}
+                      value={ex.consigne ?? ""}
+                      onChange={(e) => modifierExerciceProgramme(k, { consigne: e.target.value })}
+                      style={{ ...champCompact, marginTop: 6, marginLeft: 22, width: "calc(100% - 22px)" }}
+                    />
                   </div>
                 ))}
                 <button onClick={() => ouvrirBibliotheque("routine")} style={styleBoutonPointille}>
@@ -900,6 +911,11 @@ export function ConstructeurSeances({
                           <X size={16} />
                         </button>
                       </div>
+                      {String(ex.consigne || "").trim() && (
+                        <p data-consigne style={styleConsigne}>
+                          {`💬 ${ex.consigne}`}
+                        </p>
+                      )}
 
                       <div style={{ marginTop: 8 }}>
                         {mode === "cardio" ? (

@@ -28,6 +28,24 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-24-forme-consignes",
+    date: "2026-10-24",
+    titre: "Ta forme du jour et les consignes",
+    texte:
+      "Note ton sommeil, ton énergie et ton stress dans le Journal : l'onglet Séances te dit comment aborder ta séance du jour. Les consignes de ton coach s'affichent sous chaque exercice.",
+    onglet: "entrainements",
+    bouton: "Voir mes séances"
+  },
+  {
+    id: "2026-10-24-defis",
+    date: "2026-10-24",
+    titre: "Un défi de 30 jours",
+    texte:
+      "Dans le Journal, relève un défi : bouger chaque jour, 2 L d'eau, 7 h de sommeil, noter tes repas… Il se valide tout seul avec ce que tu notes déjà.",
+    onglet: "journal",
+    bouton: "Voir le défi"
+  },
+  {
     id: "2026-10-24-tutos",
     date: "2026-10-24",
     titre: "Un tuto pour chaque écran",

@@ -124,6 +124,8 @@ export const TEXTES_DEBUTANT = {
   supprimerRoutine: "Supprimer cette séance type",
   confirmerSuppression: "Supprimer cette séance type ? Tes séances déjà faites restent dans l'historique.",
   monter: "Monter",
+  consigne: "Consigne du coach (optionnel)",
+  exempleConsigne: "Ex. : dos droit, descends lentement",
   retirer: "Retirer",
   // Mode simple dans la séance.
   options: "Options",
