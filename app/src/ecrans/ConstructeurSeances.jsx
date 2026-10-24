@@ -66,6 +66,14 @@ import {
 import { MinuteurRepos, preparerSon } from "../ui/MinuteurRepos.jsx";
 import { ChoixRepos } from "../ui/ChoixRepos.jsx";
 import { OutilsBarre } from "../ui/OutilsBarre.jsx";
+import {
+  afficherGuide,
+  dureeAuto,
+  exerciceTermine,
+  phraseCharge,
+  progressionSeance,
+  TEXTES_GUIDE
+} from "../lib/guide-seance.js";
 import { seancesProgrammeDebutant, TEXTES_DEBUTANT, TEXTES_PROGRAMME } from "../lib/seance-du-jour.js";
 import { SeanceDuJour } from "./SeanceDuJour.jsx";
 import { ForceAthletique } from "./ForceAthletique.jsx";
@@ -113,6 +121,9 @@ const champCompact = {
   outline: "none"
 };
 
+/** Serie cochee : ses champs passent au vert pale, on voit d'un coup d'oeil ou on en est. */
+const champFait = { ...champCompact, border: `1px solid ${COLORS.good}55`, color: COLORS.textMuted };
+
 /** Note sous les champs de technique : elle explique ce qui va etre fait. */
 const styleNoteTechnique = {
   fontSize: 10.5,
@@ -129,6 +140,42 @@ const styleEtiquette = {
   textTransform: "uppercase",
   letterSpacing: 0.4
 };
+
+/** Guidage pendant la seance (24 octobre 2026), voir lib/guide-seance.js. */
+const styleGuide = {
+  background: `${COLORS.gold}10`,
+  border: `1px solid ${COLORS.gold}44`,
+  borderRadius: 10,
+  padding: "10px 12px",
+  margin: "0 0 10px"
+};
+const styleEtapes = { margin: "6px 0 0", paddingLeft: 18, fontSize: 12.5, color: COLORS.text, lineHeight: 1.5 };
+const styleEnteteExercice = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 };
+const styleLigneUnite = { display: "flex", alignItems: "center", marginBottom: 8, gap: 8 };
+const styleTermine = { fontSize: 11, fontWeight: 700, color: COLORS.good };
+const styleCharge = { display: "flex", alignItems: "center", justifyContent: "space-between", margin: "6px 0 2px", gap: 8, fontSize: 12, lineHeight: 1.4 };
+const styleBoutonGarder = {
+  background: "none",
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: 8,
+  color: COLORS.textMuted,
+  fontSize: 11.5,
+  cursor: "pointer",
+  padding: "4px 8px",
+  flexShrink: 0
+};
+const styleBarreEnregistrer = {
+  position: "sticky",
+  bottom: 0,
+  zIndex: 2,
+  background: COLORS.surface,
+  borderTop: `1px solid ${COLORS.border}`,
+  padding: "10px 0 4px",
+  marginTop: 8,
+  // Couvre la marge du bas de la fenetre : rien ne depasse sous le bouton.
+  boxShadow: `0 40px 0 0 ${COLORS.surface}`
+};
+const styleProgression = { height: 5, borderRadius: 3, background: COLORS.bgAlt, overflow: "hidden", margin: "0 0 8px" };
 
 /** Consigne du coach sous le nom de l'exercice : elle se lit d'un coup d'oeil. */
 const styleConsigne = { fontSize: 12, color: COLORS.gold, margin: "6px 0 0", lineHeight: 1.4 };
@@ -318,7 +365,9 @@ export function ConstructeurSeances({
     });
 
   const demarrerSeance = (routine, dateImposee) => {
-    setSeanceEditee(preparerSeance(routine, sessionsApi.items, dateImposee));
+    const seance = preparerSeance(routine, sessionsApi.items, dateImposee);
+    // Heure de demarrage : la duree se calcule seule si le client la laisse vide.
+    setSeanceEditee(seance.date === todayISO() ? { ...seance, debutLe: Date.now() } : seance);
     setModaleSeance(true);
   };
 
@@ -335,6 +384,9 @@ export function ConstructeurSeances({
       exercises: seanceEditee.exercises.filter((e) => e.name.trim()).map(finaliserSeries)
     };
     delete donnees.id;
+    const auto = donnees.date === todayISO() ? dureeAuto(donnees.debutLe) : null;
+    if (!String(donnees.durationMin ?? "").trim() && auto) donnees.durationMin = auto;
+    delete donnees.debutLe;
     exercicesPerso.retenir(donnees.exercises);
     if (seanceEditee.id) await sessionsApi.update(seanceEditee.id, donnees);
     else {
@@ -408,6 +460,14 @@ export function ConstructeurSeances({
     const ex = seanceEditee.exercises[i];
     const fait = !seriesDe(ex)[k].fait;
     modifierSerie(i, k, { fait });
+    // Derniere serie de l'exercice cochee : l'exercice suivant vient a l'ecran.
+    const toutes = seriesDe(ex).every((x, j) => (j === k ? fait : x.fait));
+    if (fait && toutes && i + 1 < seanceEditee.exercises.length) {
+      setTimeout(() => {
+        const suivant = typeof document !== "undefined" && document.querySelector(`.modal-panel [data-exercice="${i + 1}"]`);
+        if (suivant && suivant.scrollIntoView) suivant.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 400);
+    }
     if (fait) {
       preparerSon();
       if (estChrono(ex)) {
@@ -423,6 +483,8 @@ export function ConstructeurSeances({
     setMinuteur((m) => (m ? { ...m, fin: m.fin + secondes * 1000, duree: Math.max(1, m.duree + secondes) } : m));
 
   const retirerExercice = (i) => {
+    const nom = String(seanceEditee.exercises[i]?.name || "").trim();
+    if (nom && typeof window !== "undefined" && !window.confirm(TEXTES_GUIDE.retirer(nom))) return;
     const restants = seanceEditee.exercises.filter((_, k) => k !== i);
     // La seance garde toujours au moins une ligne : un formulaire vide n'a
     // pas d'endroit ou saisir.
@@ -822,8 +884,18 @@ export function ConstructeurSeances({
         {seanceEditee && (
           <div>
             <Field label="Exercices">
+              {afficherGuide(sessionsApi.items.length) && (
+                <div data-guide-seance style={styleGuide}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: COLORS.gold }}>{TEXTES_GUIDE.titre}</div>
+                  <ol style={styleEtapes}>
+                    {TEXTES_GUIDE.etapes.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
               <p style={{ fontSize: 11.5, color: COLORS.textFaint, lineHeight: 1.45, margin: "0 0 8px" }}>
-                {TEXTES_DEBUTANT.aideRpe}
+                {TEXTES_GUIDE.rpe}
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {seanceEditee.exercises.map((ex, i) => {
@@ -842,52 +914,26 @@ export function ConstructeurSeances({
                   const optionsForcees = mode === "powerlifting" || !!ex.technique;
                   const optionsVisibles = optionsForcees || optionsOuvertes.has(ex.id);
                   const colonnes = avecCharge ? "20px 1fr 1fr 0.8fr 40px" : "20px 1fr 0.8fr 40px";
+                  const termine = exerciceTermine(ex);
 
                   return (
                     <div
                       key={ex.id}
                       data-exercice={i}
+                      data-termine={termine ? "oui" : undefined}
                       style={{
                         background: COLORS.bgAlt,
-                        border: `1px solid ${COLORS.border}`,
+                        border: `1px solid ${termine ? COLORS.good : COLORS.border}`,
                         borderRadius: 10,
                         padding: 10
                       }}
                     >
-                      {sug && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 8,
-                            marginBottom: 8,
-                            fontSize: 10.5,
-                            color:
-                              sug.delta > 0 ? COLORS.good : sug.delta < 0 ? COLORS.warn : COLORS.textFaint,
-                            fontFamily: "IBM Plex Mono"
-                          }}
-                        >
-                          <span>
-                            {sug.delta > 0 ? "↑ " : sug.delta < 0 ? "↓ " : "= "}
-                            {sug.from} → {ex.weight} kg ({sug.reason})
-                          </span>
-                          <button
-                            onClick={() => modifierExercice(i, garderCharge(ex))}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              color: COLORS.textFaint,
-                              fontSize: 10.5,
-                              cursor: "pointer",
-                              padding: 2,
-                              flexShrink: 0
-                            }}
-                          >
-                            Garder {sug.from}
-                          </button>
-                        </div>
-                      )}
+                      <div style={styleEnteteExercice}>
+                        <span style={{ ...styleEtiquette, marginBottom: 0 }}>
+                          {TEXTES_GUIDE.exercice(i + 1, seanceEditee.exercises.length)}
+                        </span>
+                        {termine && <span data-exercice-termine style={styleTermine}>{TEXTES_GUIDE.termine}</span>}
+                      </div>
 
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                         <input
@@ -898,6 +944,7 @@ export function ConstructeurSeances({
                         />
                         <button
                           onClick={() => retirerExercice(i)}
+                          aria-label={TEXTES_GUIDE.ariaRetirer}
                           style={{
                             background: "none",
                             border: "none",
@@ -915,6 +962,18 @@ export function ConstructeurSeances({
                         <p data-consigne style={styleConsigne}>
                           {`💬 ${ex.consigne}`}
                         </p>
+                      )}
+                      {sug && (
+                        <div data-charge-proposee style={styleCharge}>
+                          <span style={{ color: sug.delta > 0 ? COLORS.good : sug.delta < 0 ? COLORS.warn : COLORS.textMuted }}>
+                            {phraseCharge(sug, ex.weight)}
+                          </span>
+                          {num(sug.from) > 0 && num(sug.from) !== num(ex.weight) && (
+                            <button onClick={() => modifierExercice(i, garderCharge(ex))} style={styleBoutonGarder}>
+                              {TEXTES_GUIDE.garder(sug.from)}
+                            </button>
+                          )}
+                        </div>
                       )}
 
                       <div style={{ marginTop: 8 }}>
@@ -948,10 +1007,10 @@ export function ConstructeurSeances({
                           <>
                           {resumePrecedent && (
                             <div
+                              data-derniere-fois
                               style={{
-                                fontSize: 10.5,
-                                color: COLORS.textFaint,
-                                fontFamily: "IBM Plex Mono",
+                                fontSize: 11.5,
+                                color: COLORS.textMuted,
                                 marginBottom: 6,
                                 lineHeight: 1.4
                               }}
@@ -974,31 +1033,10 @@ export function ConstructeurSeances({
                           >
                             <div style={styleEtiquette}>{TEXTES_SERIES.colonneNumero}</div>
                             {avecCharge && <div style={styleEtiquette}>Charge (kg)</div>}
-                            <div>
-                              {/* L'etiquette est un bouton : certains exercices se comptent
-                                  en secondes (gainage), et basculer doit se faire d'un geste. */}
-                              <button
-                                onClick={() =>
-                                  modifierExercice(i, {
-                                    repUnit: (ex.repUnit || "reps") === "sec" ? "reps" : "sec"
-                                  })
-                                }
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  padding: 0,
-                                  marginBottom: 3,
-                                  fontSize: 9,
-                                  color: COLORS.gold,
-                                  textTransform: "uppercase",
-                                  letterSpacing: 0.4,
-                                  cursor: "pointer",
-                                  borderBottom: `1px dotted ${COLORS.gold}66`,
-                                  display: "block"
-                                }}
-                              >
-                                {(ex.repUnit || "reps") === "sec" ? "Secondes ⇄" : "Répétitions ⇄"}
-                              </button>
+                            {/* L'unite (repetitions ou secondes) se change dans « Options » :
+                                l'etiquette-bouton se touchait par erreur (24 octobre 2026). */}
+                            <div style={styleEtiquette}>
+                              {(ex.repUnit || "reps") === "sec" ? TEXTES_GUIDE.colonneSecondes : TEXTES_GUIDE.colonneReps}
                             </div>
                             <div style={styleEtiquette}>RPE</div>
                             <div style={{ ...styleEtiquette, textAlign: "center" }}>{TEXTES_SERIES.colonneFait}</div>
@@ -1027,7 +1065,7 @@ export function ConstructeurSeances({
                                     placeholder={avant.weight ? String(avant.weight) : ""}
                                     value={serie.weight ?? ""}
                                     onChange={(e) => modifierSerie(i, k, { weight: e.target.value })}
-                                    style={champCompact}
+                                    style={serie.fait ? champFait : champCompact}
                                   />
                                 ),
                                 <input
@@ -1037,7 +1075,7 @@ export function ConstructeurSeances({
                                   placeholder={avant.reps ? String(avant.reps) : ""}
                                   value={serie.reps ?? ""}
                                   onChange={(e) => modifierSerie(i, k, { reps: e.target.value })}
-                                  style={champCompact}
+                                  style={serie.fait ? champFait : champCompact}
                                 />,
                                 <input
                                   key={`p${k}`}
@@ -1045,7 +1083,7 @@ export function ConstructeurSeances({
                                   inputMode="decimal"
                                   value={serie.rpe ?? ""}
                                   onChange={(e) => modifierSerie(i, k, { rpe: e.target.value })}
-                                  style={champCompact}
+                                  style={serie.fait ? champFait : champCompact}
                                 />,
                                 <button
                                   key={`f${k}`}
@@ -1095,6 +1133,20 @@ export function ConstructeurSeances({
                       )}
                       {optionsVisibles && (
                         <div style={{ marginTop: 8 }}>
+                          {mode !== "cardio" && (
+                            <label style={styleLigneUnite}>
+                              <span style={{ ...styleEtiquette, marginBottom: 0 }}>{TEXTES_GUIDE.compterEn}</span>
+                              <select
+                                aria-label={TEXTES_GUIDE.compterEn}
+                                value={(ex.repUnit || "reps") === "sec" ? "sec" : "reps"}
+                                onChange={(e) => modifierExercice(i, { repUnit: e.target.value })}
+                                style={{ ...champCompact, padding: "8px 4px", flex: 1 }}
+                              >
+                                <option value="reps">{TEXTES_GUIDE.enReps}</option>
+                                <option value="sec">{TEXTES_GUIDE.enSecondes}</option>
+                              </select>
+                            </label>
+                          )}
                           <select
                             value={mode}
                             onChange={(e) => modifierExercice(i, { mode: e.target.value })}
@@ -1328,6 +1380,7 @@ export function ConstructeurSeances({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Field label="Durée (min)">
                 <NumberInput
+                  placeholder={seanceEditee.debutLe ? TEXTES_GUIDE.dureeAuto(dureeAuto(seanceEditee.debutLe)) : undefined}
                   value={seanceEditee.durationMin}
                   onChange={(e) => setSeanceEditee({ ...seanceEditee, durationMin: e.target.value })}
                 />
@@ -1483,9 +1536,27 @@ export function ConstructeurSeances({
               />
             </Field>
 
-            <Btn onClick={enregistrerSeance} style={{ width: "100%", marginTop: 4 }}>
-              Enregistrer la séance
-            </Btn>
+            {/* Barre collee en bas (24 octobre 2026) : l'avancement et
+                « Enregistrer » restent a portee de pouce, sans tout faire defiler. */}
+            <div data-barre-enregistrer style={styleBarreEnregistrer}>
+              {(() => {
+                const { faites, total } = progressionSeance(seanceEditee.exercises);
+                if (!total) return null;
+                return (
+                  <>
+                    <div data-progression-seance style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 5 }}>
+                      {TEXTES_GUIDE.progression(faites, total)}
+                    </div>
+                    <div style={styleProgression}>
+                      <div style={{ width: `${Math.round((faites / total) * 100)}%`, height: "100%", background: faites === total ? COLORS.good : COLORS.gold }} />
+                    </div>
+                  </>
+                );
+              })()}
+              <Btn onClick={enregistrerSeance} style={{ width: "100%" }}>
+                Enregistrer la séance
+              </Btn>
+            </div>
           </div>
         )}
       </Modal>

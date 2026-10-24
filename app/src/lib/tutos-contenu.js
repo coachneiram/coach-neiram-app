@@ -528,11 +528,11 @@ export const TUTOS = [
       },
       {
         titre: "Note chaque série",
-        texte: "Charge, répétitions et RPE, puis la coche ✓ : le repos se lance tout seul. « + Série » en ajoute une. « Dernière fois » rappelle ce que tu avais fait."
+        texte: "Charges et répétitions sont déjà remplies : change-les si tu as fait autrement, puis touche ✓ : le repos se lance tout seul. Un exercice fini passe au vert et le suivant arrive à l'écran. « Dernière fois » rappelle ce que tu avais fait."
       },
       {
         titre: "Termine",
-        texte: "Plus bas, la « Durée (min) » et ton effort ressenti (« RPE (1-10) »), puis « Enregistrer la séance »."
+        texte: "« Enregistrer la séance » reste en bas de l'écran, avec tes séries faites. Laisse la « Durée (min) » vide : elle se calcule depuis le démarrage. Ton effort ressenti (« RPE (1-10) ») est facultatif."
       }
     ],
     libelles: [

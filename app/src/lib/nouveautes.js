@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-24-seance-guidee",
+    date: "2026-10-24",
+    titre: "Une séance plus facile à suivre",
+    texte:
+      "Chaque exercice est numéroté et passe au vert quand il est fini. La charge proposée est expliquée, tes séries faites et « Enregistrer » restent en bas de l'écran, et la durée se calcule toute seule.",
+    onglet: "entrainements",
+    bouton: "Voir mes séances"
+  },
+  {
     id: "2026-10-24-forme-consignes",
     date: "2026-10-24",
     titre: "Ta forme du jour et les consignes",
