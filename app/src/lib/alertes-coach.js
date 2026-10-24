@@ -103,3 +103,37 @@ export function manquesAvecMotifs(manques, creneaux, justifications, libelleJour
     return { ...m, motif: r ? r.label : "", precision: r ? r.detail : "" };
   });
 }
+
+/**
+ * Alerte « sommeil et stress » (24 octobre 2026, demande du coach) :
+ * nuits difficiles (12 nuits de qualite 1 ou 2 sur 28 jours) ou stress
+ * moyen d'au moins 8/10 sur 14 jours (lib/sommeil.js, signauxAlerte).
+ *
+ * Un meme episode n'est signale qu'une fois ; s'il dure, on le redit au
+ * bout de 28 jours. Un nouveau signal (le stress apres les nuits) change la
+ * signature et part tout de suite. Quand plus rien n'est actif, l'etat se
+ * remet a zero : l'episode suivant sera signale.
+ */
+export const RAPPEL_ALERTE_SOMMEIL_JOURS = 28;
+
+export function decisionAlerteSommeilStress({ maintenant, signaux, etat }) {
+  const non = (raison, reinitialiser = false) => ({ alerter: false, raison, reinitialiser });
+  const actifs = ["nuitsDifficiles", "stressDurable"].filter((k) => signaux && signaux[k]);
+  if (!actifs.length) return non("aucun signal", !!(etat && etat.signature));
+  const signature = actifs.join("|");
+  if (etat && etat.signature === signature && etat.delivered) {
+    const dernier = etat.lastAt ? new Date(etat.lastAt).getTime() : 0;
+    if (maintenant.getTime() - dernier < RAPPEL_ALERTE_SOMMEIL_JOURS * MS_PAR_JOUR) return non("deja signale");
+  }
+  return { alerter: true, raison: "a signaler", signature };
+}
+
+export function messageAlerteSommeilStress(signaux) {
+  const morceaux = [];
+  if (signaux.nuitsDifficiles) morceaux.push("Nuits difficiles : au moins 3 par semaine depuis 4 semaines (qualité notée 1 ou 2 sur 5).");
+  if (signaux.stressDurable) morceaux.push("Stress très élevé : au moins 8/10 en moyenne sur les 14 derniers jours.");
+  return morceaux.join(" ");
+}
+
+export const TOAST_ALERTE_SOMMEIL =
+  "Ton coach a été prévenu de tes nuits ou de ton stress difficiles. Il va revenir vers toi.";

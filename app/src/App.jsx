@@ -407,6 +407,7 @@ export default function App() {
       profile,
       seances: sessions,
       justifications: raisonsCreneaux,
+      journal: dailyForm,
       afficherToast: (m) => {
         if (!arrete) afficherToast(m);
       }
@@ -414,7 +415,7 @@ export default function App() {
     return () => {
       arrete = true;
     };
-  }, [pret, profile, sessions, raisonsCreneaux]);
+  }, [pret, profile, sessions, raisonsCreneaux, dailyForm]);
 
   /**
    * Les envois restes en file (hors ligne, proxy ou script indisponible)

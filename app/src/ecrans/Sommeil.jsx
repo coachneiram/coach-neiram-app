@@ -1,9 +1,12 @@
 /**
  * Ecran Sommeil.
  *
- * Portage fidele de SommeilTab (index.html, ligne 2813). Aucun changement
- * d'apparence ni de comportement : la logique de calcul est simplement
- * deplacee dans lib/sommeil.js pour etre testable.
+ * Portage fidele de SommeilTab (index.html, ligne 2813) : la logique de
+ * calcul est dans lib/sommeil.js pour etre testable.
+ *
+ * Complete le 24/10/2026 (repris de l'app Neiram, demande du coach) :
+ * conseils revus d'apres les preuves, respiration guidee, regularite du
+ * lever, bibliotheque des preuves et « Quand en parler a un medecin ».
  */
 
 import { COLORS } from "../tokens.js";
@@ -11,6 +14,8 @@ import { fmtDateShort, fmtWeekShort, round } from "../lib/dates.js";
 import { conseilsSommeil, conseilsStress, moyennes7Jours, notesDeStress, nuitsEnregistrees } from "../lib/sommeil.js";
 import { Card, EmptyState, SectionTitle, StatChip } from "../ui/primitives.jsx";
 import { Moon, Star } from "../ui/icones.jsx";
+import { AlertesSommeilStress, BibliothequePreuves, RegulariteSommeil, RespirationGuidee } from "../ui/SommeilStressPreuves.jsx";
+import { enLigne } from "../lib/semaine.js";
 
 function ListeConseils({ conseils }) {
   return (
@@ -126,6 +131,11 @@ export function Sommeil({ formApi, profile }) {
           <ListeConseils conseils={conseilsDetente} />
         </div>
       </Card>
+
+      <RespirationGuidee />
+      <RegulariteSommeil entrees={formApi.items} />
+      <AlertesSommeilStress entrees={formApi.items} coachPrevenu={enLigne(profile)} />
+      <BibliothequePreuves />
 
       {nuits.length === 0 ? (
         <EmptyState

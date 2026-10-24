@@ -39,7 +39,9 @@ const SOURCE_LEGACY = readFileSync(join(ICI, "..", "index.html"), "utf8")
   // decodage, tout texte en contenant un paraissait absent de l'original.
   .replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
 
-describe("les conseils sont repris mot pour mot de l'application actuelle", () => {
+// Textes revus le 24 octobre 2026 d'apres les preuves, a la demande du
+// coach (reprise de l'app Neiram) : ils ne sont plus ceux d'index.html.
+describe("les conseils gardent leur structure (textes revus d'apres les preuves)", () => {
   const tous = [
     ...CONSEILS_SOMMEIL.duree,
     ...CONSEILS_SOMMEIL.qualite,
@@ -48,10 +50,11 @@ describe("les conseils sont repris mot pour mot de l'application actuelle", () =
     ...CONSEILS_STRESS.general
   ];
 
-  test("chaque conseil existe a l'identique dans index.html", () => {
+  test("chaque conseil est une phrase tutoyee, sans doublon", () => {
     for (const conseil of tous) {
-      assert.ok(SOURCE_LEGACY.includes(conseil), "conseil reformule ou absent de l'original : " + conseil);
+      assert.ok(conseil.length > 20 && !/\bvous\b|\bvotre\b/.test(conseil), conseil);
     }
+    assert.equal(new Set(tous).size, tous.length);
   });
 
   test("aucun conseil n'a ete perdu en route", () => {
@@ -251,5 +254,36 @@ describe("formats de date", () => {
 
   test("une date absente ne casse pas l'affichage", () => {
     assert.equal(fmtDateShort(""), "");
+  });
+});
+
+describe("sommeil et stress : preuves, régularité, alertes", async () => {
+  const { regulariteLever, signauxAlerte } = await import("../app/src/lib/sommeil.js");
+  const { PREUVES_SOMMEIL_STRESS } = await import("../app/src/lib/sommeil-preuves.js");
+
+  test("chaque conseil a une source, un niveau et un thème ; le 3114 est présent", () => {
+    for (const p of PREUVES_SOMMEIL_STRESS) {
+      assert.ok(p.sources.length >= 1, p.id);
+      assert.ok(p.niveau, p.id);
+      assert.ok(p.theme, p.id);
+      assert.ok(!/\bvous\b|\bvotre\b/.test(p.conseil), "tutoiement : " + p.id);
+    }
+    assert.ok(PREUVES_SOMMEIL_STRESS.some((p) => /3114/.test(p.conseil)));
+    assert.ok(!PREUVES_SOMMEIL_STRESS.some((p) => /restriction/i.test(p.conseil)), "pas de restriction de sommeil en autonomie");
+  });
+
+  test("régularité de l'heure de lever (écart-type, 5 levers au moins)", () => {
+    const l = ["07:00", "07:30", "06:30", "07:00", "07:00"].map((w, i) => ({ date: `2026-10-${20 + i}`, wakeTime: w }));
+    assert.deepEqual(regulariteLever(l, "2026-10-24"), { ecartMin: 19, nuits: 5 });
+    assert.equal(regulariteLever(l.slice(0, 4), "2026-10-24"), null);
+  });
+
+  test("alertes : nuits difficiles 3 fois par semaine sur 4 semaines, stress durable", () => {
+    const nuits = Array.from({ length: 12 }, (_, i) => ({ date: `2026-10-${String(1 + i * 2).padStart(2, "0")}`, sleepQuality: 2 }));
+    assert.equal(signauxAlerte(nuits, "2026-10-24").nuitsDifficiles, true);
+    assert.equal(signauxAlerte(nuits.slice(0, 8), "2026-10-24").nuitsDifficiles, false);
+    const stress = Array.from({ length: 7 }, (_, i) => ({ date: `2026-10-${18 + i}`, stress: 8 }));
+    assert.equal(signauxAlerte(stress, "2026-10-24").stressDurable, true);
+    assert.equal(signauxAlerte(stress.slice(0, 6), "2026-10-24").stressDurable, false);
   });
 });
