@@ -29,6 +29,7 @@ import { SeancesCoach } from "./SeancesCoach.jsx";
 import { ProgressionCharges } from "./ProgressionCharges.jsx";
 import { Records } from "./Records.jsx";
 import { CarteForme } from "../ui/CarteForme.jsx";
+import { CartePerformances } from "../ui/CartePerformances.jsx";
 import { todayISO } from "../lib/dates.js";
 
 export function Entrainements({
@@ -47,8 +48,13 @@ export function Entrainements({
   onDebutCoaching,
   onSeancesAvantApp,
   onContrat,
-  formDuJour
+  formDuJour,
+  poidsKg
 }) {
+  // Mes performances et niveau officiel (repris de l'app Neiram, 24/10/2026).
+  const performances = (
+    <CartePerformances profil={profile} poidsKg={poidsKg} maxisForce={maxisForce} onDefinirMaxiForce={onDefinirMaxiForce} seances={sessionsApi.items} />
+  );
   // Forme du jour (reprise de l'app Neiram, 24 octobre 2026) : sous « Ta
   // séance du jour », seulement si le client a note sa forme aujourd'hui.
   const forme = <CarteForme form={formDuJour} seances={sessionsApi.items} date={todayISO()} />;
@@ -117,6 +123,7 @@ export function Entrainements({
           <div style={{ marginTop: 20 }}>
             <ProgressionCharges sessions={sessionsApi.items} />
             <Records sessions={sessionsApi.items} />
+            {performances}
             <ConstructeurSeances
               routinesApi={routinesApi}
               sessionsApi={sessionsApi}
@@ -127,6 +134,7 @@ export function Entrainements({
               maxisForce={maxisForce}
               onDefinirMaxiForce={onDefinirMaxiForce}
               avecSeanceDuJour={false}
+              poidsKg={poidsKg}
             />
           </div>
         )}
@@ -147,11 +155,13 @@ export function Entrainements({
       onAssignerJour={onAssignerJour}
       maxisForce={maxisForce}
       onDefinirMaxiForce={onDefinirMaxiForce}
+      poidsKg={poidsKg}
     >
       {forme}
       {enTete}
       <ProgressionCharges sessions={sessionsApi.items} />
       <Records sessions={sessionsApi.items} />
+      {performances}
     </ConstructeurSeances>
   );
 }

@@ -18,6 +18,12 @@ import { COLORS } from "../tokens.js";
 import { fmtWeekShort, round } from "../lib/dates.js";
 import { MOUVEMENTS_FORCE, PALIERS_RPE, RPE_CHART, meilleursMaxis, totalForce } from "../lib/force.js";
 import { Card, SectionTitle } from "../ui/primitives.jsx";
+import { NiveauForce } from "../ui/NiveauPerformances.jsx";
+import { maxisRetenus } from "../lib/performances.js";
+import { TEXTES_PERF } from "../lib/textes-performances.js";
+
+const styleBlocNiveau = { marginTop: 14, paddingTop: 12, borderTop: `1px solid ${COLORS.border}` };
+const styleTitreNiveau = { fontSize: 11.5, fontWeight: 600, color: COLORS.gold, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 };
 
 /** Nombre de repetitions couvertes par la table. */
 const MAX_REPS_TABLE = 12;
@@ -132,8 +138,9 @@ function TableRPE() {
   );
 }
 
-export function ForceAthletique({ maxis, onDefinirMaxi, sessions }) {
+export function ForceAthletique({ maxis, onDefinirMaxi, sessions, profil, poidsKg }) {
   const meilleurs = useMemo(() => meilleursMaxis(sessions), [sessions]);
+  const retenus = useMemo(() => maxisRetenus(maxis, sessions), [maxis, sessions]);
   const total = totalForce(maxis);
 
   return (
@@ -192,6 +199,12 @@ export function ForceAthletique({ maxis, onDefinirMaxi, sessions }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Niveau face a la grille officielle FFForce (repris de l'app Neiram, 24/10/2026). */}
+      <div style={styleBlocNiveau}>
+        <div style={styleTitreNiveau}>{TEXTES_PERF.tonNiveauForce}</div>
+        <NiveauForce total={retenus.total} bench={retenus.bench} profil={profil || {}} poidsKg={poidsKg} />
       </div>
 
       <TableRPE />

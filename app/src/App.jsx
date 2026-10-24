@@ -44,6 +44,8 @@ import {
   verifierRappelNutrition
 } from "./lib/moteur-rappels.js";
 import { verifierAlertesCoach } from "./lib/moteur-alertes.js";
+import { lignesPerformancesBilan } from "./lib/performances-bilan.js";
+import { lirePerformances } from "./lib/performances.js";
 import { viderFile } from "./lib/synchro-coach.js";
 import { totauxDuJour } from "./lib/score-jour.js";
 import { Coque } from "./ui/Coque.jsx";
@@ -222,7 +224,17 @@ export default function App() {
       weekStats,
       report: bilanCourant,
       photos,
-      targets
+      targets,
+      // Performances, niveau et transformation (24 octobre 2026).
+      performances: lignesPerformancesBilan({
+        performances: lirePerformances(),
+        maxisForce,
+        seances: sessions,
+        profil: profile,
+        poidsKg: poidsCourant,
+        bodyLogs,
+        date: todayISO()
+      })
     });
     if (resultat === "shared" || resultat === "downloaded") {
       marquerBilanEnvoye(weekStats.weekKey);
@@ -661,7 +673,7 @@ export default function App() {
       />
     ),
     sommeil: <Sommeil formApi={formApi} profile={profil} />,
-    mensurations: <Mensurations api={measurementsApi} bodyApi={bodyApi} objectif={profil?.goal} />,
+    mensurations: <Mensurations api={measurementsApi} bodyApi={bodyApi} objectif={profil?.goal} profil={profil} />,
     entrainements: (
       <Entrainements
         routinesApi={routinesApi}
@@ -680,6 +692,7 @@ export default function App() {
         onSeancesAvantApp={definirSeancesAvantApp}
         onContrat={definirContrat}
         formDuJour={dailyForm.find((f) => f.date === todayISO())}
+        poidsKg={poidsCourant}
       />
     ),
     tendances: weekStats ? (
