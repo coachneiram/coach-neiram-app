@@ -2,9 +2,12 @@
  * Coach Neiram — synchro et alertes du coaching en ligne
  * Version 2.3 (24 octobre 2026) — alerte sommeil et stress.
  *
- * La v2.3 ajoute le type « alerte_sommeil_stress » (nuits difficiles ou
- * stress très élevé pendant 2 semaines, détail dans « message ») : une
- * ligne dans Alertes et un mail. Mise en place : coller ce fichier,
+ * La v2.3 ajoute deux types :
+ *  - « alerte_sommeil_stress » (nuits difficiles ou stress très élevé
+ *    pendant 2 semaines, détail dans « message ») : une ligne dans Alertes
+ *    et un mail ;
+ *  - « activite » (autre sport : course, vélo, foot…) : une ligne dans le
+ *    Journal (date, durée, RPE, détail), sans mail. Mise en place : coller ce fichier,
  * ENREGISTRER, puis Gérer les déploiements > Modifier > Nouvelle version
  * (même adresse /exec). Rien d'autre ne change.
  *
@@ -102,7 +105,8 @@ var TYPES_AUTORISES = [
   'alerte_seances_manquees',
   'alerte_decalages',
   'resume_hebdo',
-  'alerte_sommeil_stress'
+  'alerte_sommeil_stress',
+  'activite'
 ];
 
 /** Heures pendant lesquelles on n'envoie pas deux fois la même alerte

@@ -27,7 +27,9 @@ export const TYPES_EVENEMENTS = [
   "alerte_seances_manquees",
   "alerte_decalages",
   "resume_hebdo",
-  "alerte_sommeil_stress"
+  "alerte_sommeil_stress",
+  // Autre sport (course, velo, foot...) : une ligne dans le Journal du coach.
+  "activite"
 ];
 
 /**

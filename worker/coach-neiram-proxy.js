@@ -676,7 +676,9 @@ const TYPES_AUTORISES = [
   "alerte_decalages",
   "resume_hebdo",
   // Sommeil et stress (24 octobre 2026) : le detail tient dans « message ».
-  "alerte_sommeil_stress"
+  "alerte_sommeil_stress",
+  // Autre sport (24 octobre 2026) : sport, duree, RPE et charge dans « message ».
+  "activite"
 ];
 
 const LONGUEUR_MAX_TEXTE = 500;

@@ -93,4 +93,10 @@ describe("chaine", () => {
     assert.ok(gs.includes("'alerte_sommeil_stress'"));
     assert.match(gs, /t === 'alerte_sommeil_stress'/);
   });
+  test("le type « activite » (autres sports, etape 3) est deja connu des trois, sans mail", () => {
+    for (const f of ["app/src/lib/synchro-coach.js", "worker/coach-neiram-proxy.js"]) assert.ok(lire(f).includes('"activite"'), f);
+    const gs = lire("worker/coach-sync.gs");
+    assert.ok(gs.includes("'activite'"));
+    assert.ok(!/t === 'activite'/.test(gs), "pas de mail pour une activite");
+  });
 });
