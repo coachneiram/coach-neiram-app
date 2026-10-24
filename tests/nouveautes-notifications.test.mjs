@@ -54,16 +54,22 @@ describe("les annonces", () => {
     }
   });
 
-  test("les reprises de Neiram (24 octobre 2026) en tete, en cinq entrees", () => {
+  test("les defis entre amis (25 octobre 2026) en tete, dans le Journal", () => {
+    assert.equal(NOUVEAUTES[0].id, "2026-10-25-defis-amis");
+    assert.equal(NOUVEAUTES[0].onglet, "journal");
+    assert.equal(NOUVEAUTES[0].titre, "Défis entre amis");
+  });
+
+  test("puis les reprises de Neiram (24 octobre 2026), en cinq entrees", () => {
     assert.deepEqual(
-      NOUVEAUTES.slice(0, 5).map((n) => n.id),
+      NOUVEAUTES.slice(1, 6).map((n) => n.id),
       ["2026-10-24-tutos-raccourcis", "2026-10-24-menu-nutrition", "2026-10-24-tous-sports", "2026-10-24-habitudes", "2026-10-24-sommeil-stress"]
     );
-    assert.deepEqual(NOUVEAUTES.slice(0, 5).map((n) => n.onglet || n.ouvre), ["guide", "repas", "entrainements", "journal", "sommeil"]);
+    assert.deepEqual(NOUVEAUTES.slice(1, 6).map((n) => n.onglet || n.ouvre), ["guide", "repas", "entrainements", "journal", "sommeil"]);
   });
 
   test("puis : seance guidee, forme et consignes, defis, tutos, repos et barre, carnet, puis diete flexible", () => {
-    const NOUVEAUTES_AVANT = NOUVEAUTES.slice(5);
+    const NOUVEAUTES_AVANT = NOUVEAUTES.slice(6);
     assert.equal(NOUVEAUTES_AVANT[0].id, "2026-10-24-seance-guidee");
     assert.equal(NOUVEAUTES_AVANT[0].onglet, "entrainements");
     assert.equal(NOUVEAUTES_AVANT[1].id, "2026-10-24-forme-consignes");

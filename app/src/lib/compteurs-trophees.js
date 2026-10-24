@@ -20,6 +20,7 @@ import { CLE_HABITUDES, meilleureSerie } from "./habitudes.js";
 import { CLE_LECONS, leconsFaites } from "./lecons.js";
 import { EPREUVES, lirePerformances, maxisRetenus } from "./performances.js";
 import { marcheFederale, niveauCourse, niveauFFForce, niveauFFHM, niveauNatation } from "./niveaux.js";
+import { defisGagnes } from "./defis-amis.js";
 
 /**
  * Meilleure marche fédérale atteinte (0 à 3) : force athlétique (total et
@@ -61,6 +62,8 @@ export function compteursTrophees({ seances = [], profil = {}, maxisForce = {}, 
     programmes: Array.isArray(termines) ? termines.length : 0,
     habitudes: meilleureSerie(charger(CLE_HABITUDES, null), date),
     lecons: leconsFaites(charger(CLE_LECONS, null)),
-    niveauFederal: niveauFederal({ performances: lirePerformances(), maxisForce, seances, profil, poidsKg })
+    niveauFederal: niveauFederal({ performances: lirePerformances(), maxisForce, seances, profil, poidsKg }),
+    // Defis entre amis gagnes (lib/defis-amis.js, 24 octobre 2026).
+    duels: defisGagnes()
   };
 }

@@ -12,6 +12,7 @@
 
 import { CarteSauvegarde } from "../ui/CarteSauvegarde.jsx";
 import { CarteDefi } from "../ui/CarteDefi.jsx";
+import { CarteDefisAmis } from "../ui/CarteDefisAmis.jsx";
 import { CarteHabitudes } from "../ui/CarteHabitudes.jsx";
 import { CarteLecon } from "../ui/CarteLecon.jsx";
 import { premierJourSuivi } from "../lib/rappel-sauvegarde.js";
@@ -617,6 +618,9 @@ export function Journal({
           objectifs={targets}
         />
       )}
+
+      {/* Defis entre amis, reserves aux clients du coach (24 octobre 2026). */}
+      {date === todayISO() && <CarteDefisAmis journal={formApi.items} seances={sessionsApi.items} />}
 
       <Card style={{ marginBottom: 16 }}>
         <SectionTitle>Nutrition — mes repas du jour</SectionTitle>
