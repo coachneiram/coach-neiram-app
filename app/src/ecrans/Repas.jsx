@@ -13,11 +13,15 @@ import { COLORS, POLICES } from "../tokens.js";
 import { Aliments } from "./Aliments.jsx";
 import { Plats } from "./Plats.jsx";
 import { Courses } from "./Courses.jsx";
+import { MenuSemaine } from "./MenuSemaine.jsx";
+import { TEXTES_MENU } from "../lib/textes-menu.js";
 import { CoachIA } from "./CoachIA.jsx";
 
 /** Sous-onglets, dans l'ordre de l'application actuelle. */
 const SOUS_ONGLETS = [
   { id: "plats", label: "Mes plats" },
+  // Repris de l'app Neiram le 24/10/2026, tout inclus.
+  { id: "menu", label: TEXTES_MENU.onglet },
   { id: "courses", label: "Courses" },
   { id: "aliments", label: "Aliments" },
   { id: "coach", label: "Coach IA", requiertIA: true }
@@ -54,6 +58,7 @@ export function Repas({ api, profile, targets, logEntries, iaDisponible = true }
       </div>
 
       {sousOnglet === "plats" && <Plats api={api} habitudePesee={profile?.weighsStaples} profile={profile} />}
+      {sousOnglet === "menu" && <MenuSemaine profile={profile} targets={targets} />}
       {sousOnglet === "courses" && <Courses profile={profile} />}
       {sousOnglet === "aliments" && (
         <Aliments profile={profile} targets={targets} logEntries={logEntries} />
