@@ -324,7 +324,8 @@ export const RECETTES_COACH = [
       "sans-porc"
     ],
     "contient": [
-      "poisson"
+      "poisson",
+      "moutarde"
     ],
     "portions": 2,
     "preparationMin": 10,
@@ -909,7 +910,8 @@ export const RECETTES_COACH = [
     ],
     "regimes": [],
     "contient": [
-      "porc"
+      "porc",
+      "moutarde"
     ],
     "portions": 2,
     "preparationMin": 15,

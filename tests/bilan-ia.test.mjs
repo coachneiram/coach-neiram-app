@@ -31,6 +31,19 @@ import {
   promptBilanMensuel
 } from "../app/src/lib/bilan-ia.js";
 import { cleMoisPrecedent } from "../app/src/lib/semaine.js";
+import { REGLE_PREUVES } from "../app/src/lib/preuves.js";
+
+/**
+ * Seul ajout volontaire au prompt d'origine (24/10/2026, repris de l'app
+ * Neiram) : la regle des preuves, juste avant le format de reponse. On
+ * l'insere au meme endroit dans le texte d'origine, puis on compare tout
+ * caractere par caractere comme avant.
+ */
+const MARQUE_FORMAT = "\n\nRéponds UNIQUEMENT";
+function avecPreuves(texte) {
+  assert.equal(texte.split(MARQUE_FORMAT).length, 2, "le format de reponse doit apparaitre une seule fois");
+  return texte.replace(MARQUE_FORMAT, "\n\n" + REGLE_PREUVES + MARQUE_FORMAT);
+}
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const lire = (c) => readFileSync(join(ICI, "..", c), "utf8");
@@ -156,7 +169,7 @@ describe("parite du prompt hebdomadaire", () => {
         lastPhotos: null
       };
       const attendu = await promptLegacy((app) => app.callBilanAPI({ ...args, apiKey: "k" }));
-      assert.equal(promptBilanHebdo(args), attendu.texte);
+      assert.equal(promptBilanHebdo(args), avecPreuves(attendu.texte));
     });
   }
 
@@ -164,7 +177,7 @@ describe("parite du prompt hebdomadaire", () => {
     const profil = { ...PROFIL, dietType: "vegetarien", allergies: ["lactose", "gluten"] };
     const args = { weekStats: SEMAINE, lastWeekStats: null, profile: profil, targets: OBJECTIFS, lastActionsText: null, thisPhotos: null, lastPhotos: null };
     const attendu = await promptLegacy((app) => app.callBilanAPI({ ...args, apiKey: "k" }));
-    assert.equal(promptBilanHebdo(args), attendu.texte);
+    assert.equal(promptBilanHebdo(args), avecPreuves(attendu.texte));
     assert.match(promptBilanHebdo(args), /régime = |allergies\/intolérances = /);
   });
 
@@ -245,13 +258,13 @@ describe("parite du prompt mensuel", () => {
   test("identique a l'original", async () => {
     const args = { monthStats: MOIS, prevMonthStats: { ...MOIS, workoutsCount: 18 }, profile: PROFIL, targets: OBJECTIFS, lastActionsText: "1. Tenir 3 seances" };
     const attendu = await promptLegacy((app) => app.callBilanMensuelAPI({ ...args, apiKey: "k" }));
-    assert.equal(promptBilanMensuel(args), attendu.texte);
+    assert.equal(promptBilanMensuel(args), avecPreuves(attendu.texte));
   });
 
   test("un mois sans mensurations le dit, au lieu d'un blanc", async () => {
     const args = { monthStats: { ...MOIS, measureDeltas: [] }, prevMonthStats: null, profile: PROFIL, targets: OBJECTIFS, lastActionsText: null };
     const attendu = await promptLegacy((app) => app.callBilanMensuelAPI({ ...args, apiKey: "k" }));
-    assert.equal(promptBilanMensuel(args), attendu.texte);
+    assert.equal(promptBilanMensuel(args), avecPreuves(attendu.texte));
     assert.match(promptBilanMensuel(args), /aucune prise de mensurations ce mois-ci/);
   });
 });

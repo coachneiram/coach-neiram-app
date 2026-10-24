@@ -44,12 +44,14 @@ describe("conversion d'une fiche Open Food Facts", () => {
   /**
    * DIVERGENCE VOLONTAIRE : la conversion ajoute « fibres100 », absent de
    * l'application d'origine qui ne suivait pas les fibres, ainsi que
-   * « nutriscore » et « nova » (badges ajoutes apres la bascule). Tout le reste
+   * « nutriscore » et « nova » (badges ajoutes apres la bascule), et
+   * « allergenes » et « traces » (14 allergenes UE, repris de l'app Neiram
+   * le 24/10/2026). Tout le reste
    * doit rester identique — c'est ce que verifie ce test, champ par champ,
    * plutot que par une egalite globale qui ne dirait plus rien.
    */
   const SANS_FIBRES = (produit) => {
-    const { fibres100, nutriscore, nova, ...reste } = produit;
+    const { fibres100, nutriscore, nova, allergenes, traces, ...reste } = produit;
     return reste;
   };
 

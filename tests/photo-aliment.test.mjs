@@ -196,14 +196,16 @@ describe("fiche produit par code-barres", () => {
       "3017620422003",
       env({ ok: true, json: async () => ({ product: fiche }) })
     );
-    // « fibres100 », « nutriscore » et « nova » sont des ajouts volontaires :
-    // l'application d'origine ne les suivait pas. Le reste doit rester
-    // identique.
-    const { fibres100, nutriscore, nova, ...reste } = r;
+    // « fibres100 », « nutriscore », « nova », « allergenes » et « traces »
+    // sont des ajouts volontaires : l'application d'origine ne les suivait
+    // pas. Le reste doit rester identique.
+    const { fibres100, nutriscore, nova, allergenes, traces, ...reste } = r;
     assert.deepEqual(reste, JSON.parse(JSON.stringify(legacy.mapOFFProduct(fiche))));
     assert.equal(fibres100, null, "une fiche sans fibres ne doit pas donner zero");
     assert.equal(nutriscore, null, "une fiche sans Nutri-Score n'en invente pas");
     assert.equal(nova, null, "une fiche sans groupe NOVA n'en invente pas");
+    assert.deepEqual(allergenes, [], "une fiche sans allergenes n'en invente pas");
+    assert.deepEqual(traces, []);
   });
 
   test("un code inconnu rend null", async () => {

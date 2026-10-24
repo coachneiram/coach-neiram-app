@@ -152,12 +152,14 @@ describe("Profil incomplet ou donnees illisibles : jamais de conseil alimentaire
   });
 
   test("allergie hors liste : transmise telle quelle, conseils permis, mais signalee non verifiable", () => {
-    const p = { ...base, allergies: ["sesame"] };
+    // Le sesame, exemple d'origine, fait partie des 14 allergenes UE depuis
+    // le 24/10/2026 (lib/allergenes.js) : le kiwi le remplace.
+    const p = { ...base, allergies: ["kiwi"] };
     const k = lireContraintes(p);
     assert.equal(k.etat, "ok");
-    assert.deepEqual(k.horsListe, ["sesame"]);
-    assert.match(construireConsigneCoach(p, cibles, null), /déclarées : sesame\./);
-    assert.deepEqual(verifierReponse("Un bol de riz.", p).nonVerifiables, ["sesame"]);
+    assert.deepEqual(k.horsListe, ["kiwi"]);
+    assert.match(construireConsigneCoach(p, cibles, null), /déclarées : kiwi\./);
+    assert.deepEqual(verifierReponse("Un bol de riz.", p).nonVerifiables, ["kiwi"]);
   });
 
   test("enregistrer le formulaire declare « aucune » si le champ manquait, sans toucher une valeur presente", () => {
