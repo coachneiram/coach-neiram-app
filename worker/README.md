@@ -202,3 +202,103 @@ CREATE INDEX IF NOT EXISTS defis_participants_client ON defis_participants (clie
   client, 20 participants par défi, 3 défis en cours par client.
 - La tâche planifiée (Cron) efface les défis 60 jours après leur fin.
 - Tests : `node --test tests/worker-defis.test.mjs`.
+
+## Communauté « Team Neiram » — ajout du 24 octobre 2026
+
+Classements entre clients du coach, athlète du mois et de l'année, mur des
+transformations. Routes `POST /communaute/*` dans `coach-neiram-proxy.js`
+(section « Communauté Team Neiram »). Rien à configurer : elles utilisent la
+liaison `DB` déjà en place, et les tables sont créées toutes seules à la
+première requête (`CREATE TABLE IF NOT EXISTS`, aucune table existante n'est
+touchée) :
+
+```sql
+CREATE TABLE IF NOT EXISTS communaute_profils (client_id TEXT PRIMARY KEY, pseudo TEXT NOT NULL, pseudo_norme TEXT NOT NULL UNIQUE, stats TEXT NOT NULL DEFAULT '{}', accord_disc INTEGER NOT NULL DEFAULT 0, accord_transfo INTEGER NOT NULL DEFAULT 0, maj_le INTEGER NOT NULL, cree_le INTEGER NOT NULL, masque INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS communaute_scores_mois (mois TEXT NOT NULL, discipline TEXT NOT NULL, client_id TEXT NOT NULL, score REAL NOT NULL, maj_le INTEGER NOT NULL, PRIMARY KEY (mois, discipline, client_id));
+CREATE INDEX IF NOT EXISTS communaute_scores_client ON communaute_scores_mois (client_id);
+CREATE TABLE IF NOT EXISTS communaute_transformations (id INTEGER PRIMARY KEY AUTOINCREMENT, client_id TEXT NOT NULL, periode TEXT NOT NULL, jours INTEGER NOT NULL, gras REAL, muscle REAL, texte TEXT NOT NULL, cree_le INTEGER NOT NULL, masque INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS communaute_transformations_date ON communaute_transformations (masque, cree_le);
+CREATE TABLE IF NOT EXISTS communaute_bravos (transformation INTEGER NOT NULL, client_id TEXT NOT NULL, le INTEGER NOT NULL, PRIMARY KEY (transformation, client_id));
+CREATE TABLE IF NOT EXISTS communaute_signalements (id INTEGER PRIMARY KEY AUTOINCREMENT, cible_type TEXT NOT NULL, cible TEXT NOT NULL, motif TEXT, auteur TEXT NOT NULL, cree_le INTEGER NOT NULL, traite INTEGER NOT NULL DEFAULT 0, UNIQUE (cible_type, cible, auteur));
+```
+
+| Route | Rôle |
+|---|---|
+| `/communaute/etat` | mon profil (pseudo, masqué, accords) ou rien |
+| `/communaute/profil` | accord « profil » : créer le profil ou changer de pseudo (`accord: true` exigé) |
+| `/communaute/stats` | mes chiffres (filtrés par les accords enregistrés côté serveur) |
+| `/communaute/accord` | accord « disciplines » ou « transformation », donné ou retiré (retirer efface) |
+| `/communaute/classement` | un classement (régularité, discipline, transformation), filtré par sexe et catégorie |
+| `/communaute/athletes-du-mois` | podiums du mois, de l'année, mes titres |
+| `/communaute/signaler` | signaler un pseudo ou une transformation |
+| `/communaute/transformations/liste`, `/publier`, `/bravo`, `/supprimer` | le mur |
+| `/communaute/supprimer` | « Supprimer mon profil de la communauté » : efface tout |
+| `/admin/communaute` | modération du coach (`ADMIN_SECRET`), voir plus bas |
+
+- Réservé aux clients du coach : jeton client obligatoire sur toutes les routes,
+  **même en mode « transition »**. Un client révoqué (`/admin/revoquer`)
+  disparaît des classements et du mur, et ses données communauté sont effacées.
+- Trois accords distincts dans l'app, retirables à tout moment : profil (pseudo,
+  séances du mois, régularité sur 30 jours), disciplines (performances, sexe et
+  catégorie de poids, jamais le poids), transformation (gras perdu en %, muscle
+  pris en kg, mur). Le serveur ne garde que ce que l'accord enregistré permet.
+- Rien de santé : ni poids, ni mesure. Les exclusions du classement de perte
+  (moins de 18 ans, grossesse, allaitement, trouble alimentaire, IMC sous 18,5,
+  masse grasse très basse) se calculent sur le téléphone ; le serveur reçoit
+  seulement `perte_eligible` (1 ou 0), jamais la raison, et ne la garde pas.
+- Bornes : celles de l'app publique (total de force athlétique ≤ 1 300 kg, 5 km ≥ 12:30, gras
+  perdu ≤ 13 % en 90 jours, muscle ≤ 3,3 kg en 90 jours…) : au-delà, refusé.
+- Plafonds : 30 appels par minute et par client ; 100 écritures (profil,
+  chiffres, accords), 10 signalements et 100 « Bravo » par jour et par client ;
+  une transformation publiée par semaine ; message de 280 caractères au plus.
+- Modération : pseudos et messages filtrés (insultes, liens, e-mails, numéros),
+  **masquage automatique à 2 signalements de clients différents**.
+- La tâche planifiée (Cron) efface les scores mensuels de plus de deux années
+  civiles, les signalements traités et les publications masquées de plus de
+  180 jours.
+- Tests : `node --test tests/worker-communaute.test.mjs`.
+
+### Modérer depuis l'Espace coach
+
+Le plus simple : la page **Espace coach** (`espace-coach.html` à côté de l'app,
+voir `SECURITE.md`, « L'Espace coach »), section « Modération de la
+communauté ». Elle appelle les routes ci-dessous avec le secret tapé à
+l'ouverture, jamais enregistré.
+
+### Modérer avec `ADMIN_SECRET` (requêtes)
+
+```
+POST /admin/communaute   Authorization: Bearer <ADMIN_SECRET>
+{ "action": "signalements" }                                  → à traiter, et profils masqués
+{ "action": "masquer", "cible": "Pseudo" }                     → masque un profil
+{ "action": "afficher", "cible": "Pseudo" }                    → le réaffiche (signalements traités)
+{ "action": "masquer-transformation", "cible": "12" }          → masque une publication du mur
+{ "action": "afficher-transformation", "cible": "12" }
+{ "action": "supprimer-transformation", "cible": "12" }
+{ "action": "supprimer-profil", "cible": "Pseudo" }            → efface tout ce que la communauté en garde
+```
+
+### Modérer à la main dans D1 (tant que `ADMIN_SECRET` n'est pas réparé)
+
+Cloudflare → **Storage & Databases → D1** → la base liée en `DB` → **Console**.
+Remplace `Pseudo` et `12` par les vraies valeurs.
+
+```sql
+-- Ce qui a été signalé (pseudo du profil, ou texte de la publication) :
+SELECT s.cible_type, COUNT(*) AS nombre, GROUP_CONCAT(COALESCE(s.motif, ''), ' | ') AS motifs,
+       COALESCE((SELECT p.pseudo FROM communaute_profils p WHERE s.cible_type = 'profil' AND p.client_id = s.cible),
+                (SELECT t.id || ' — ' || t.texte FROM communaute_transformations t WHERE s.cible_type = 'transformation' AND t.id = CAST(s.cible AS INTEGER))) AS apercu
+FROM communaute_signalements s WHERE s.traite = 0 GROUP BY s.cible_type, s.cible;
+
+-- Masquer un profil (il disparaît des classements, des podiums et du mur) :
+UPDATE communaute_profils SET masque = 1 WHERE pseudo = 'Pseudo';
+-- Le réafficher et classer ses signalements :
+UPDATE communaute_profils SET masque = 0 WHERE pseudo = 'Pseudo';
+UPDATE communaute_signalements SET traite = 1 WHERE cible_type = 'profil' AND cible = (SELECT client_id FROM communaute_profils WHERE pseudo = 'Pseudo');
+
+-- Masquer une publication du mur (son numéro est dans l'aperçu ci-dessus) :
+UPDATE communaute_transformations SET masque = 1 WHERE id = 12;
+-- La réafficher :
+UPDATE communaute_transformations SET masque = 0 WHERE id = 12;
+UPDATE communaute_signalements SET traite = 1 WHERE cible_type = 'transformation' AND cible = '12';
+```

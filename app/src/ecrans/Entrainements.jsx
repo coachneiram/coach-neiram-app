@@ -30,6 +30,7 @@ import { ProgressionCharges } from "./ProgressionCharges.jsx";
 import { Records } from "./Records.jsx";
 import { CarteForme } from "../ui/CarteForme.jsx";
 import { CartePerformances } from "../ui/CartePerformances.jsx";
+import { CarteCommunaute } from "../ui/EcranCommunaute.jsx";
 import { todayISO } from "../lib/dates.js";
 import { useState } from "react";
 import { ModaleActivite } from "./ModaleActivite.jsx";
@@ -72,7 +73,8 @@ export function Entrainements({
   formDuJour,
   poidsKg,
   journal,
-  corps
+  corps,
+  repas
 }) {
   // Autres sports, programmes guides et « Mon annee » (repris de l'app
   // Neiram, 24/10/2026). Une activite est une seance avec un champ
@@ -147,8 +149,16 @@ export function Entrainements({
     onRefaireActivite: (s) => ouvrirActivite({ date: todayISO(), activite: s.activite, notes: s.notes })
   };
   // Mes performances et niveau officiel (repris de l'app Neiram, 24/10/2026).
+  // Communaute Team Neiram (24/10/2026, accord du coach) : juste sous
+  // « Mes performances », qui nourrissent ses classements par discipline.
+  const communaute = (
+    <CarteCommunaute seances={sessionsApi.items} repas={repas || []} journal={journal || []} corps={corps || []} profil={profile} maxis={maxisForce} />
+  );
   const performances = (
-    <CartePerformances profil={profile} poidsKg={poidsKg} maxisForce={maxisForce} onDefinirMaxiForce={onDefinirMaxiForce} seances={sessionsApi.items} />
+    <>
+      <CartePerformances profil={profile} poidsKg={poidsKg} maxisForce={maxisForce} onDefinirMaxiForce={onDefinirMaxiForce} seances={sessionsApi.items} />
+      <div style={{ marginTop: 20 }}>{communaute}</div>
+    </>
   );
   // Forme du jour (reprise de l'app Neiram, 24 octobre 2026) : sous « Ta
   // séance du jour », seulement si le client a note sa forme aujourd'hui.
@@ -216,6 +226,7 @@ export function Entrainements({
             onEnregistrerLien={onEnregistrerLienSheets}
           />
         </div>
+        {!importees && <div style={{ marginTop: 20 }}>{communaute}</div>}
         {importees && (
           <div style={{ marginTop: 20 }}>
             <ProgressionCharges sessions={sessionsApi.items} />

@@ -15,9 +15,13 @@
  *   POST /push/desabonner -> l'oublie
  *   POST /defis/...       -> defis entre amis, reserves aux clients du coach
  *                            (jeton client obligatoire, meme en transition)
+ *   POST /communaute/...  -> communaute « Team Neiram » entre clients du coach :
+ *                            classements, athlete du mois, mur des
+ *                            transformations (jeton client obligatoire)
  * Et une tache planifiee (Cron Trigger, toutes les 15 minutes) qui envoie
- * les rappels arrives a echeance, meme application fermee, et efface les
- * defis termines depuis plus de 60 jours.
+ * les rappels arrives a echeance, meme application fermee, efface les
+ * defis termines depuis plus de 60 jours et fait le menage de la
+ * communaute (vieux scores, signalements traites).
  *
  * Variables a definir dans Cloudflare (Settings > Variables and Secrets) :
  *   GEMINI_API_KEY      (secret)   cle API Google Gemini
@@ -206,6 +210,7 @@ export default {
       if (url.pathname.startsWith("/admin/")) return await routeAdmin(url.pathname, request, env, cors, ip);
       if (url.pathname.startsWith("/push/")) return await routePush(url.pathname, request, env, cors, ip);
       if (url.pathname.startsWith("/defis/")) return await routeDefis(url.pathname, request, env, cors);
+      if (url.pathname.startsWith("/communaute/")) return await routeCommunaute(url.pathname, request, env, cors);
     } catch (e) {
       // Jamais de detail interne dans la reponse.
       return refus(url.pathname, 500, "erreur-interne", cors);
@@ -221,6 +226,7 @@ export default {
     if (env.PUSH_KV) taches.push(envoyerAnnonces(env, Date.now(), env.ANNONCES_TEST || ANNONCES).catch(() => null));
     if (env.DB) taches.push(nettoyerCompteurs(env, Date.now()).catch(() => null));
     if (env.DB) taches.push(nettoyerDefis(env, Date.now()).catch(() => null));
+    if (env.DB) taches.push(nettoyerCommunaute(env, Date.now()).catch(() => null));
     const tout = Promise.all(taches);
     if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(tout);
     await tout;
@@ -241,7 +247,15 @@ const SCHEMA = [
   // Defis entre amis (24 octobre 2026) : voir la section dediee plus bas.
   "CREATE TABLE IF NOT EXISTS defis (code TEXT PRIMARY KEY, type TEXT NOT NULL, debut TEXT NOT NULL, fin TEXT NOT NULL, createur TEXT NOT NULL, cree_le INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS defis_participants (code TEXT NOT NULL, client_id TEXT NOT NULL, pseudo TEXT NOT NULL, valeur REAL NOT NULL DEFAULT 0, maj_le INTEGER NOT NULL, PRIMARY KEY (code, client_id))",
-  "CREATE INDEX IF NOT EXISTS defis_participants_client ON defis_participants (client_id)"
+  "CREATE INDEX IF NOT EXISTS defis_participants_client ON defis_participants (client_id)",
+  // Communaute Team Neiram (24 octobre 2026) : voir la section dediee plus bas.
+  "CREATE TABLE IF NOT EXISTS communaute_profils (client_id TEXT PRIMARY KEY, pseudo TEXT NOT NULL, pseudo_norme TEXT NOT NULL UNIQUE, stats TEXT NOT NULL DEFAULT '{}', accord_disc INTEGER NOT NULL DEFAULT 0, accord_transfo INTEGER NOT NULL DEFAULT 0, maj_le INTEGER NOT NULL, cree_le INTEGER NOT NULL, masque INTEGER NOT NULL DEFAULT 0)",
+  "CREATE TABLE IF NOT EXISTS communaute_scores_mois (mois TEXT NOT NULL, discipline TEXT NOT NULL, client_id TEXT NOT NULL, score REAL NOT NULL, maj_le INTEGER NOT NULL, PRIMARY KEY (mois, discipline, client_id))",
+  "CREATE INDEX IF NOT EXISTS communaute_scores_client ON communaute_scores_mois (client_id)",
+  "CREATE TABLE IF NOT EXISTS communaute_transformations (id INTEGER PRIMARY KEY AUTOINCREMENT, client_id TEXT NOT NULL, periode TEXT NOT NULL, jours INTEGER NOT NULL, gras REAL, muscle REAL, texte TEXT NOT NULL, cree_le INTEGER NOT NULL, masque INTEGER NOT NULL DEFAULT 0)",
+  "CREATE INDEX IF NOT EXISTS communaute_transformations_date ON communaute_transformations (masque, cree_le)",
+  "CREATE TABLE IF NOT EXISTS communaute_bravos (transformation INTEGER NOT NULL, client_id TEXT NOT NULL, le INTEGER NOT NULL, PRIMARY KEY (transformation, client_id))",
+  "CREATE TABLE IF NOT EXISTS communaute_signalements (id INTEGER PRIMARY KEY AUTOINCREMENT, cible_type TEXT NOT NULL, cible TEXT NOT NULL, motif TEXT, auteur TEXT NOT NULL, cree_le INTEGER NOT NULL, traite INTEGER NOT NULL DEFAULT 0, UNIQUE (cible_type, cible, auteur))"
 ];
 
 // Schema cree une fois par base et par instance du Worker.
@@ -661,10 +675,15 @@ async function routeAdmin(chemin, request, env, cors, ip) {
       db.prepare("UPDATE jetons SET revoque_le = ?1 WHERE client_id = ?2 AND revoque_le IS NULL").bind(maintenant, clientId),
       // Un client revoque sort de ses defis entre amis : son pseudo et son
       // total disparaissent des classements.
-      db.prepare("DELETE FROM defis_participants WHERE client_id = ?1").bind(clientId)
+      db.prepare("DELETE FROM defis_participants WHERE client_id = ?1").bind(clientId),
+      // ... et de la communaute : profil, scores, transformations, bravos,
+      // signalements (requetesEffacementCommunaute, section Communaute).
+      ...requetesEffacementCommunaute(db, clientId)
     ]);
     return reponseJson({ ok: true }, 200, cors);
   }
+
+  if (chemin === "/admin/communaute") return reponseJson(await adminCommunaute(db, corps), 200, cors);
 
   return reponseJson({ ok: false, error: "not-found" }, 404, cors);
 }
@@ -1440,7 +1459,627 @@ async function nettoyerDefis(env, maintenant) {
   ]);
 }
 
+/* ------------------------------------------------------------------ */
+/* Communauté Team Neiram (24 octobre 2026)                             */
+/* ------------------------------------------------------------------ */
+/*
+ * Reprise de l'app publique Neiram (worker/communaute.js et
+ * worker/transformations.js), accord du coach du 24/10/2026, RESERVEE AUX
+ * CLIENTS DU COACH :
+ *   - chaque route exige un jeton client valide (identifier), y compris en
+ *     mode « transition » ; identite = client.id ;
+ *   - un client revoque ne voit plus rien (jeton refuse), disparait de tous
+ *     les classements (jointure sur clients) et /admin/revoquer efface ses
+ *     donnees (requetesEffacementCommunaute).
+ *
+ * TROIS ACCORDS DISTINCTS, donnes dans l'app et retirables a tout moment :
+ *   - profil : pseudo (filtre par validerPseudo) et classements de
+ *     regularite (seances du mois, regularite sur 30 jours) ;
+ *   - disciplines (accord_disc) : performances par discipline, sexe et
+ *     categorie de poids (jamais le poids exact), athlete du mois ;
+ *   - transformation (accord_transfo) : gras perdu (% du poids de depart)
+ *     et muscle pris (kg), mur des transformations.
+ * Retirer un accord efface cote serveur les donnees correspondantes ;
+ * /communaute/supprimer efface tout.
+ *
+ * RIEN DE SANTE : ni poids, ni mesure, ni masse grasse. Les exclusions du
+ * classement de perte (moins de 18 ans, grossesse, allaitement, antecedent
+ * de trouble alimentaire, IMC sous 18,5, masse grasse tres basse) se
+ * calculent sur le telephone : le serveur recoit « perte_eligible » (1 ou
+ * 0), jamais la raison, et ecarte la perte de gras sans ce 1.
+ *
+ * MODERATION : pseudos et messages filtres (mots interdits, liens, e-mails,
+ * numeros), signalement par les autres clients, masquage automatique a 2
+ * signalements de clients differents (le groupe est petit), masquage par le
+ * coach (/admin/communaute, ADMIN_SECRET) ou a la main dans D1 (requetes
+ * dans worker/README.md).
+ *
+ * Plafonds (depasse) : 30 appels par minute et par client, 100 ecritures
+ * (profil, chiffres, accords) par jour, 10 signalements et 100 « Bravo » par
+ * jour, une transformation publiee par semaine.
+ */
+
+/**
+ * Categories de classement : borne haute (et basse pour les temps), accord
+ * requis, filtres permis. Memes bornes que l'app publique.
+ */
+const COMMUNAUTE_CATEGORIES = {
+  seances_mois: { max: 62, mensuel: true, accord: "profil" },
+  regularite_30: { max: 30, frais: true, accord: "profil" },
+  // Force athletique : total des trois maxis et points IPF GL.
+  pl_total: { max: 1300, accord: "disc", filtres: ["sexe", "cat_pl"] },
+  pl_gl: { max: 140, accord: "disc", filtres: ["sexe"] },
+  // Halterophilie : total olympique et points Sinclair.
+  halt_total: { max: 500, accord: "disc", filtres: ["sexe", "cat_halt"] },
+  halt_sinclair: { max: 560, accord: "disc", filtres: ["sexe"] },
+  // Course et natation : secondes, le plus petit gagne ; le minimum refuse
+  // un temps plus rapide que le record du monde.
+  course_5k: { min: 750, max: 7200, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  course_10k: { min: 1560, max: 14400, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  course_semi: { min: 3360, max: 21600, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  course_marathon: { min: 7140, max: 43200, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  nat_50nl_25: { min: 19, max: 300, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  nat_100nl_25: { min: 44, max: 600, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  nat_400nl_25: { min: 210, max: 1800, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  nat_50nl_50: { min: 20, max: 300, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  nat_100nl_50: { min: 46, max: 600, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  nat_400nl_50: { min: 218, max: 1800, ordre: "asc", accord: "disc", filtres: ["sexe"] },
+  // Transformation : plafonds du telephone (1 % du poids par semaine,
+  // 0,25 kg de muscle par semaine, lib/transformation.js).
+  gras_90: { max: 13, accord: "transfo", perte: true, filtres: ["sexe"] },
+  muscle_90: { max: 3.3, accord: "transfo", filtres: ["sexe"] },
+  gras_an: { max: 52, accord: "transfo", perte: true, filtres: ["sexe"] },
+  muscle_an: { max: 13, accord: "transfo", filtres: ["sexe"] }
+};
+
+/** Valeurs permises des filtres (categories IPF et IWF du 01/08/2026). */
+const COMMUNAUTE_FILTRES = {
+  sexe: ["h", "f"],
+  cat_pl: ["43", "47", "52", "57", "63", "69", "76", "84", "84+", "53", "59", "66", "74", "83", "93", "105", "120", "120+"],
+  cat_halt: ["45", "49", "53", "57", "61", "69", "77", "77+", "86", "86+", "55", "60", "65", "70", "75", "85", "95", "95+", "110", "110+"]
+};
+/** Accord qui permet de publier chaque filtre. */
+const ACCORD_FILTRE = { sexe: ["disc", "transfo"], cat_pl: ["disc"], cat_halt: ["disc"] };
+
+/**
+ * Athlete du mois : un score comparable entre hommes et femmes et entre
+ * categories, calcule sur le telephone (lib/stats-disciplines.js) pour une
+ * performance notee dans le mois. Chaque publication garde le meilleur
+ * score du mois ; l'annee retient le meilleur score mensuel.
+ */
+const COMMUNAUTE_SCORES_MOIS = {
+  force: { cle: "score_force", max: 140 },
+  halterophilie: { cle: "score_halt", max: 560 },
+  course: { cle: "score_course", max: 100 },
+  natation: { cle: "score_natation", max: 1100 }
+};
+
+const COMMUNAUTE_PERIODES = { "90": { gras: 13, muscle: 3.3, jours: 90 }, an: { gras: 52, muscle: 13, jours: 366 } };
+const SIGNALEMENTS_POUR_MASQUER = 2;
+const COMMUNAUTE_TAILLE_CLASSEMENT = 50;
+const COMMUNAUTE_TAILLE_PODIUM = 3;
+const COMMUNAUTE_FRAIS_MS = 3 * 86400000;
+const COMMUNAUTE_APPELS_PAR_MINUTE = 30;
+const COMMUNAUTE_ECRITURES_PAR_JOUR = 100;
+const COMMUNAUTE_SIGNALEMENTS_PAR_JOUR = 10;
+const COMMUNAUTE_BRAVOS_PAR_JOUR = 100;
+const DELAI_TRANSFORMATION_MS = 7 * 86400000;
+const TEXTE_TRANSFORMATION_MAX = 280;
+const MUR_TAILLE = 50;
+const TAILLE_MAX_COMMUNAUTE = 8 * 1024;
+// Menage (tache planifiee) : scores de plus de deux ans civils,
+// signalements traites et transformations masquees de plus de 180 jours.
+const COMMUNAUTE_CONSERVATION_MS = 180 * 86400000;
+
+/** Liens, e-mails, numeros de telephone : refuses dans les messages. */
+function contientCoordonnees(texte) {
+  const t = String(texte || "");
+  if (/(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|fr|net|org|io|be|ch|ca|ly|gg|me)\b)/i.test(t)) return true;
+  if (/[\w.+-]+@[\w-]+\.[\w.]+/.test(t)) return true;
+  if (/(\+?\d[\s.-]?){9,}/.test(t)) return true;
+  return false;
+}
+
+const moisUtc = (maintenant) => new Date(maintenant).toISOString().slice(0, 7);
+const moisAvant = (mois) => {
+  const [a, m] = mois.split("-").map(Number);
+  return m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, "0")}`;
+};
+
+/**
+ * Chiffres envoyes par l'app : seuls les champs connus, bornes, ET permis
+ * par les accords enregistres ici (jamais ceux que l'app pretend avoir).
+ * `accords` : { disc, transfo } (booleens). La perte de gras exige
+ * perte_eligible === 1 (calcule sur le telephone) ; ce drapeau n'est pas
+ * garde.
+ */
+function nettoyerStatsCommunaute(brut, maintenant, accords = {}) {
+  const s = brut && typeof brut === "object" && !Array.isArray(brut) ? brut : {};
+  const permis = { profil: true, disc: !!accords.disc, transfo: !!accords.transfo };
+  const sortie = {};
+  for (const [cle, regle] of Object.entries(COMMUNAUTE_CATEGORIES)) {
+    if (!permis[regle.accord]) continue;
+    if (regle.perte && Number(s.perte_eligible) !== 1) continue;
+    const v = Number(s[cle]);
+    if (s[cle] !== null && s[cle] !== "" && Number.isFinite(v) && v > 0 && v >= (regle.min || 0) && v <= regle.max) sortie[cle] = Math.round(v * 10) / 10;
+  }
+  for (const [cle, valeurs] of Object.entries(COMMUNAUTE_FILTRES)) {
+    if (ACCORD_FILTRE[cle].some((a) => permis[a]) && valeurs.includes(s[cle])) sortie[cle] = s[cle];
+  }
+  if (permis.disc) {
+    for (const { cle, max } of Object.values(COMMUNAUTE_SCORES_MOIS)) {
+      const v = Number(s[cle]);
+      if (Number.isFinite(v) && v > 0 && v <= max) sortie[cle] = Math.round(v * 10) / 10;
+    }
+  }
+  // Le mois des chiffres : le mois en cours, ou le precedent (fuseau du
+  // telephone en debut de mois). Rien dans le futur ni dans le passe lointain.
+  const courant = moisUtc(maintenant);
+  sortie.mois = s.mois === courant || s.mois === moisAvant(courant) ? s.mois : courant;
+  return sortie;
+}
+
+/** Publication du mur verifiee, ou { erreur }. */
+function validerTransformationCommunaute(corps) {
+  const periode = String((corps && corps.periode) || "");
+  const regle = COMMUNAUTE_PERIODES[periode];
+  if (!regle) return { erreur: "periode-inconnue" };
+  const jours = Math.round(Number(corps.jours));
+  if (!(jours >= 21 && jours <= regle.jours)) return { erreur: "periode-inconnue" };
+  const lire = (v, max) => {
+    const n = Number(v);
+    return v !== null && v !== "" && Number.isFinite(n) && n > 0 && n <= max ? Math.round(n * 10) / 10 : null;
+  };
+  // Perte de gras : seulement si le telephone l'a jugee eligible.
+  const gras = Number(corps.perte_eligible) === 1 ? lire(corps.gras, regle.gras) : null;
+  const muscle = lire(corps.muscle, regle.muscle);
+  if (gras == null && muscle == null) return { erreur: "transformation-vide" };
+  const texte = String(corps.texte == null ? "" : corps.texte)
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, TEXTE_TRANSFORMATION_MAX);
+  if (texte.length < 3) return { erreur: "message-vide" };
+  if (contientMotInterdit(texte) || contientCoordonnees(texte)) return { erreur: "message-refuse" };
+  return { periode, jours, gras, muscle, texte };
+}
+
+/**
+ * Tout ce que la communaute garde d'un client, a effacer (suppression du
+ * profil, revocation). Une liste d'instructions pour db.batch.
+ */
+function requetesEffacementCommunaute(db, clientId) {
+  return [
+    db.prepare("DELETE FROM communaute_bravos WHERE client_id = ?1 OR transformation IN (SELECT id FROM communaute_transformations WHERE client_id = ?1)").bind(clientId),
+    db.prepare("DELETE FROM communaute_signalements WHERE auteur = ?1 OR (cible_type = 'profil' AND cible = ?1) OR (cible_type = 'transformation' AND cible IN (SELECT CAST(id AS TEXT) FROM communaute_transformations WHERE client_id = ?1))").bind(clientId),
+    db.prepare("DELETE FROM communaute_transformations WHERE client_id = ?1").bind(clientId),
+    db.prepare("DELETE FROM communaute_scores_mois WHERE client_id = ?1").bind(clientId),
+    db.prepare("DELETE FROM communaute_profils WHERE client_id = ?1").bind(clientId)
+  ];
+}
+
+/** Garde le meilleur score du mois par discipline (accord « disciplines »). */
+async function retenirScoresCommunaute(db, clientId, stats, maintenant) {
+  const requetes = [];
+  for (const [discipline, { cle }] of Object.entries(COMMUNAUTE_SCORES_MOIS)) {
+    if (!(stats[cle] > 0)) continue;
+    requetes.push(
+      db
+        .prepare(
+          "INSERT INTO communaute_scores_mois (mois, discipline, client_id, score, maj_le) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(mois, discipline, client_id) DO UPDATE SET score = MAX(score, excluded.score), maj_le = excluded.maj_le"
+        )
+        .bind(stats.mois, discipline, clientId, stats[cle], maintenant)
+    );
+  }
+  if (requetes.length) await db.batch(requetes);
+}
+
+// Profils d'un client non revoque (alias p). PROFILS_VISIBLES pour un FROM ;
+// joindreProfils(colonne) pour rattacher une table a son profil visible.
+const PROFILS_VISIBLES = "communaute_profils p JOIN clients c ON c.id = p.client_id AND c.revoque_le IS NULL";
+const joindreProfils = (colonne, { masques = false } = {}) =>
+  `JOIN communaute_profils p ON p.client_id = ${colonne}${masques ? "" : " AND p.masque = 0"} JOIN clients c ON c.id = p.client_id AND c.revoque_le IS NULL`;
+
+async function profilCommunaute(db, clientId) {
+  const p = await db
+    .prepare("SELECT pseudo, stats, accord_disc, accord_transfo, masque FROM communaute_profils WHERE client_id = ?1")
+    .bind(clientId)
+    .first();
+  if (!p) return null;
+  return { pseudo: p.pseudo, masque: Number(p.masque) === 1, disciplines: Number(p.accord_disc) === 1, transformation: Number(p.accord_transfo) === 1, stats: p.stats };
+}
+const profilPublic = (p) => (p ? { pseudo: p.pseudo, masque: p.masque, disciplines: p.disciplines, transformation: p.transformation } : null);
+
+/** Classement d'une categorie : { lignes: [{ rang, pseudo, valeur, moi }], moi, total }. */
+async function classementCommunaute(db, categorie, { clientId, maintenant, filtres = {} }) {
+  const regle = COMMUNAUTE_CATEGORIES[categorie];
+  // La categorie entre dans le SQL : seules les cles connues passent.
+  if (!regle || !Object.prototype.hasOwnProperty.call(COMMUNAUTE_CATEGORIES, categorie)) throw new Error("categorie-inconnue");
+  const valeurs = [];
+  const param = (v) => {
+    valeurs.push(v);
+    return `?${valeurs.length}`;
+  };
+  const conditions = ["p.masque = 0", `json_extract(p.stats, '$.${categorie}') > 0`];
+  for (const cle of regle.filtres || []) {
+    const v = filtres[cle];
+    if (v != null && COMMUNAUTE_FILTRES[cle].includes(v)) conditions.push(`json_extract(p.stats, '$.${cle}') = ${param(v)}`);
+  }
+  if (regle.mensuel) conditions.push(`json_extract(p.stats, '$.mois') = ${param(moisUtc(maintenant))}`);
+  if (regle.frais) conditions.push(`p.maj_le >= ${param(maintenant - COMMUNAUTE_FRAIS_MS)}`);
+  const { results } = await db
+    .prepare(
+      `SELECT p.client_id AS client_id, p.pseudo AS pseudo, json_extract(p.stats, '$.${categorie}') AS valeur FROM ${PROFILS_VISIBLES} WHERE ${conditions.join(" AND ")} ORDER BY valeur ${regle.ordre === "asc" ? "ASC" : "DESC"}, p.pseudo ASC`
+    )
+    .bind(...valeurs)
+    .all();
+  const toutes = (results || []).map((r, i) => ({ rang: i + 1, pseudo: r.pseudo, valeur: Number(r.valeur), moi: r.client_id === clientId }));
+  const moi = toutes.find((l) => l.moi) || null;
+  return { lignes: toutes.slice(0, COMMUNAUTE_TAILLE_CLASSEMENT), moi: moi ? { rang: moi.rang, valeur: moi.valeur } : null, total: toutes.length };
+}
+
+/** Podiums par discipline d'un mois (« AAAA-MM ») ou d'une annee (« AAAA »). */
+async function podiumsCommunaute(db, periode, clientId) {
+  const annee = periode.length === 4;
+  const { results } = await db
+    .prepare(
+      `SELECT s.discipline AS discipline, MAX(s.score) AS score, s.client_id AS client_id, p.pseudo AS pseudo
+       FROM communaute_scores_mois s ${joindreProfils("s.client_id")}
+       WHERE ${annee ? "substr(s.mois, 1, 4)" : "s.mois"} = ?1
+       GROUP BY s.discipline, s.client_id ORDER BY s.discipline, score DESC, p.pseudo ASC`
+    )
+    .bind(periode)
+    .all();
+  const par = {};
+  for (const r of results || []) {
+    const l = (par[r.discipline] = par[r.discipline] || []);
+    if (l.length < COMMUNAUTE_TAILLE_PODIUM) l.push({ rang: l.length + 1, pseudo: r.pseudo, score: Number(r.score), moi: r.client_id === clientId });
+  }
+  return Object.keys(COMMUNAUTE_SCORES_MOIS).map((d) => ({ discipline: d, lignes: par[d] || [] }));
+}
+
+/**
+ * Titres du client sur les periodes TERMINEES (rang 1 a 3) : mois
+ * (« Podiums du mois », « Athlète du mois ») ou annees (« Athlète de
+ * l'année »).
+ */
+async function titresCommunaute(db, clientId, { annee, avant }) {
+  const colonne = annee ? "substr(s.mois, 1, 4)" : "s.mois";
+  const { results } = await db
+    .prepare(
+      `SELECT periode, discipline, rang FROM (
+         SELECT periode, discipline, client_id, ROW_NUMBER() OVER (PARTITION BY periode, discipline ORDER BY score DESC, pseudo ASC) AS rang
+         FROM (SELECT ${colonne} AS periode, s.discipline AS discipline, s.client_id AS client_id, MAX(s.score) AS score, p.pseudo AS pseudo
+               FROM communaute_scores_mois s ${joindreProfils("s.client_id")}
+               WHERE ${colonne} < ?2 GROUP BY periode, s.discipline, s.client_id)
+       ) WHERE client_id = ?1 AND rang <= ${COMMUNAUTE_TAILLE_PODIUM} ORDER BY periode, discipline`
+    )
+    .bind(clientId, avant)
+    .all();
+  return (results || []).map((r) => (annee ? { annee: r.periode, discipline: r.discipline, rang: Number(r.rang) } : { mois: r.periode, discipline: r.discipline, rang: Number(r.rang) }));
+}
+
+/** Masque la cible a partir de SIGNALEMENTS_POUR_MASQUER clients differents. */
+async function masquerSiSignale(db, type, cible) {
+  const n = await db
+    .prepare(
+      "SELECT COUNT(DISTINCT s.auteur) AS n FROM communaute_signalements s JOIN clients c ON c.id = s.auteur AND c.revoque_le IS NULL WHERE s.cible_type = ?1 AND s.cible = ?2 AND s.traite = 0"
+    )
+    .bind(type, cible)
+    .first();
+  if (Number((n && n.n) || 0) < SIGNALEMENTS_POUR_MASQUER) return false;
+  if (type === "profil") await db.prepare("UPDATE communaute_profils SET masque = 1 WHERE client_id = ?1").bind(cible).run();
+  else await db.prepare("UPDATE communaute_transformations SET masque = 1 WHERE id = ?1").bind(Number(cible)).run();
+  return true;
+}
+
+async function routeCommunaute(chemin, request, env, cors) {
+  const route = "/communaute";
+  const id = await identifier(route, request, env, cors);
+  if (id.reponse) return id.reponse;
+  const { client, db } = id;
+  // Mode transition : identifier accepte une requete sans jeton. Pas ici.
+  if (!client) return refus(route, 401, "acces-requis", cors);
+  if (!db) return refus(route, 503, "acces-non-configure", cors);
+
+  const maintenant = Date.now();
+  const lent = await depasse(
+    db,
+    [{ cle: `communaute:min:${client.id}:${minute(maintenant)}`, limite: COMMUNAUTE_APPELS_PAR_MINUTE, dureeMs: 120000, raison: "trop-de-requetes" }],
+    maintenant
+  );
+  if (lent) return refus(route, 429, lent, cors, client);
+
+  const lu = await lireJson(route, request, cors, TAILLE_MAX_COMMUNAUTE);
+  if (lu.reponse) return lu.reponse;
+  const corps = lu.corps;
+  const ok = (donnees) => reponseJson({ ok: true, ...donnees }, 200, cors);
+  const plafond = async (type, limite) =>
+    depasse(db, [{ cle: `communaute:${type}:${client.id}:${jourUtc(maintenant)}`, limite, dureeMs: 2 * 86400000, raison: "trop-de-requetes" }], maintenant);
+
+  const profil = await profilCommunaute(db, client.id);
+
+  if (chemin === "/communaute/etat") return ok({ profil: profilPublic(profil) });
+
+  if (chemin === "/communaute/supprimer") {
+    // Suppression totale : profil, chiffres, scores, transformations,
+    // bravos, signalements faits ou recus.
+    await db.batch(requetesEffacementCommunaute(db, client.id));
+    journal(route, 200, null, client);
+    return ok({ profil: null });
+  }
+
+  if (chemin === "/communaute/profil") {
+    // Accord « profil » : creation, ou changement de pseudo.
+    if (corps.accord !== true) return refus(route, 400, "accord-requis", cors, client);
+    const v = validerPseudo(corps.pseudo);
+    if (v.erreur) return refus(route, 400, v.erreur, cors, client);
+    if (await plafond("ecritures", COMMUNAUTE_ECRITURES_PAR_JOUR)) return refus(route, 429, "trop-de-requetes", cors, client);
+    const pris = await db.prepare("SELECT client_id FROM communaute_profils WHERE pseudo_norme = ?1").bind(v.norme).first();
+    if (pris && pris.client_id !== client.id) return refus(route, 409, "pseudo-pris", cors, client);
+    const accords = { disc: profil && profil.disciplines, transfo: profil && profil.transformation };
+    const stats = nettoyerStatsCommunaute(corps.stats, maintenant, accords);
+    await db
+      .prepare(
+        "INSERT INTO communaute_profils (client_id, pseudo, pseudo_norme, stats, maj_le, cree_le) VALUES (?1, ?2, ?3, ?4, ?5, ?5) ON CONFLICT(client_id) DO UPDATE SET pseudo = ?2, pseudo_norme = ?3, stats = ?4, maj_le = ?5"
+      )
+      .bind(client.id, v.pseudo, v.norme, JSON.stringify(stats), maintenant)
+      .run();
+    if (accords.disc) await retenirScoresCommunaute(db, client.id, stats, maintenant);
+    journal(route, 200, null, client);
+    return ok({ profil: profilPublic(await profilCommunaute(db, client.id)) });
+  }
+
+  // Toutes les autres routes demandent un profil (accord « profil »).
+  if (!profil) return refus(route, 403, "profil-requis", cors, client);
+
+  if (chemin === "/communaute/stats") {
+    if (await plafond("ecritures", COMMUNAUTE_ECRITURES_PAR_JOUR)) return refus(route, 429, "trop-de-requetes", cors, client);
+    const stats = nettoyerStatsCommunaute(corps.stats, maintenant, { disc: profil.disciplines, transfo: profil.transformation });
+    await db.prepare("UPDATE communaute_profils SET stats = ?2, maj_le = ?3 WHERE client_id = ?1").bind(client.id, JSON.stringify(stats), maintenant).run();
+    if (profil.disciplines) await retenirScoresCommunaute(db, client.id, stats, maintenant);
+    return ok({ profil: profilPublic(profil) });
+  }
+
+  if (chemin === "/communaute/accord") {
+    // Accords « disciplines » et « transformation » : donner ou retirer.
+    // Retirer efface les donnees correspondantes.
+    const type = String(corps.type || "");
+    if (type !== "disciplines" && type !== "transformation") return refus(route, 400, "accord-inconnu", cors, client);
+    if (await plafond("ecritures", COMMUNAUTE_ECRITURES_PAR_JOUR)) return refus(route, 429, "trop-de-requetes", cors, client);
+    const oui = corps.oui === true;
+    const accords = { disc: type === "disciplines" ? oui : profil.disciplines, transfo: type === "transformation" ? oui : profil.transformation };
+    let anciennes = {};
+    try {
+      anciennes = JSON.parse(profil.stats || "{}");
+    } catch (e) {
+      anciennes = {};
+    }
+    // Les chiffres gardes repassent par le filtre des nouveaux accords.
+    const stats = nettoyerStatsCommunaute({ ...anciennes, perte_eligible: 1 }, maintenant, accords);
+    const requetes = [
+      db
+        .prepare("UPDATE communaute_profils SET accord_disc = ?2, accord_transfo = ?3, stats = ?4, maj_le = ?5 WHERE client_id = ?1")
+        .bind(client.id, accords.disc ? 1 : 0, accords.transfo ? 1 : 0, JSON.stringify(stats), maintenant)
+    ];
+    if (!accords.disc) requetes.push(db.prepare("DELETE FROM communaute_scores_mois WHERE client_id = ?1").bind(client.id));
+    if (!accords.transfo) {
+      requetes.push(db.prepare("DELETE FROM communaute_bravos WHERE transformation IN (SELECT id FROM communaute_transformations WHERE client_id = ?1)").bind(client.id));
+      requetes.push(db.prepare("DELETE FROM communaute_transformations WHERE client_id = ?1").bind(client.id));
+    }
+    await db.batch(requetes);
+    journal(route, 200, null, client);
+    return ok({ profil: profilPublic(await profilCommunaute(db, client.id)) });
+  }
+
+  if (chemin === "/communaute/classement") {
+    const categorie = String(corps.categorie || "");
+    const regle = Object.prototype.hasOwnProperty.call(COMMUNAUTE_CATEGORIES, categorie) ? COMMUNAUTE_CATEGORIES[categorie] : null;
+    if (!regle) return refus(route, 400, "categorie-inconnue", cors, client);
+    // Reciprocite : on voit un classement par discipline ou de
+    // transformation seulement en y participant soi-meme.
+    if (regle.accord === "disc" && !profil.disciplines) return refus(route, 403, "accord-disciplines-requis", cors, client);
+    if (regle.accord === "transfo" && !profil.transformation) return refus(route, 403, "accord-transformation-requis", cors, client);
+    const filtres = corps.filtres && typeof corps.filtres === "object" ? corps.filtres : {};
+    return ok(await classementCommunaute(db, categorie, { clientId: client.id, maintenant, filtres }));
+  }
+
+  if (chemin === "/communaute/athletes-du-mois") {
+    if (!profil.disciplines) return refus(route, 403, "accord-disciplines-requis", cors, client);
+    const mois = moisUtc(maintenant);
+    const annee = mois.slice(0, 4);
+    return ok({
+      mois,
+      moisPrecedent: moisAvant(mois),
+      enCours: await podiumsCommunaute(db, mois, client.id),
+      precedent: await podiumsCommunaute(db, moisAvant(mois), client.id),
+      titres: await titresCommunaute(db, client.id, { annee: false, avant: mois }),
+      annee,
+      anneeEnCours: await podiumsCommunaute(db, annee, client.id),
+      anneePrecedente: await podiumsCommunaute(db, String(Number(annee) - 1), client.id),
+      titresAnnee: await titresCommunaute(db, client.id, { annee: true, avant: annee })
+    });
+  }
+
+  if (chemin === "/communaute/signaler") {
+    const type = String(corps.type || "");
+    if (type !== "profil" && type !== "transformation") return refus(route, 400, "signalement-invalide", cors, client);
+    if (await plafond("signalements", COMMUNAUTE_SIGNALEMENTS_PAR_JOUR)) return refus(route, 429, "trop-de-requetes", cors, client);
+    // La cible est resolue ici : un profil par son pseudo (gardé en
+    // client_id, jamais renvoye), une transformation par son numero.
+    let cible = null;
+    if (type === "profil") {
+      const p = await db.prepare("SELECT client_id FROM communaute_profils WHERE pseudo = ?1").bind(String(corps.cible || "").slice(0, 40)).first();
+      cible = p && p.client_id !== client.id ? p.client_id : null;
+    } else {
+      const t = await db.prepare("SELECT id, client_id FROM communaute_transformations WHERE id = ?1").bind(Number(corps.cible) || 0).first();
+      cible = t && t.client_id !== client.id ? String(t.id) : null;
+    }
+    // Inconnu ou soi-meme : refuse.
+    if (!cible) return refus(route, 400, "signalement-invalide", cors, client);
+    const motif = String(corps.motif || "").replace(/[\u0000-\u001F\u007F]/g, " ").slice(0, 200) || null;
+    await db
+      .prepare("INSERT INTO communaute_signalements (cible_type, cible, motif, auteur, cree_le) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT DO NOTHING")
+      .bind(type, cible, motif, client.id, maintenant)
+      .run();
+    await masquerSiSignale(db, type, cible);
+    journal(route, 200, null, client);
+    return ok({});
+  }
+
+  if (chemin === "/communaute/transformations/liste") {
+    const { results } = await db
+      .prepare(
+        `SELECT t.id AS id, t.client_id AS client_id, p.pseudo AS pseudo, t.periode AS periode, t.jours AS jours, t.gras AS gras, t.muscle AS muscle, t.texte AS texte, t.cree_le AS cree_le,
+                (SELECT COUNT(*) FROM communaute_bravos b JOIN clients cb ON cb.id = b.client_id AND cb.revoque_le IS NULL WHERE b.transformation = t.id) AS bravos,
+                (SELECT COUNT(*) FROM communaute_bravos b WHERE b.transformation = t.id AND b.client_id = ?1) AS mon_bravo
+         FROM communaute_transformations t ${joindreProfils("t.client_id", { masques: true })}
+         WHERE t.masque = 0 AND (p.masque = 0 OR p.client_id = ?1) ORDER BY t.cree_le DESC LIMIT ${MUR_TAILLE}`
+      )
+      .bind(client.id)
+      .all();
+    const transformations = (results || []).map((t) => ({
+      id: Number(t.id),
+      pseudo: t.pseudo,
+      periode: t.periode,
+      jours: Number(t.jours),
+      gras: t.gras == null ? null : Number(t.gras),
+      muscle: t.muscle == null ? null : Number(t.muscle),
+      texte: t.texte,
+      le: Number(t.cree_le),
+      bravos: Number(t.bravos || 0),
+      monBravo: Number(t.mon_bravo || 0) > 0,
+      moi: t.client_id === client.id
+    }));
+    return ok({ transformations });
+  }
+
+  if (chemin === "/communaute/transformations/publier") {
+    if (!profil.transformation) return refus(route, 403, "accord-transformation-requis", cors, client);
+    if (profil.masque) return refus(route, 403, "profil-masque", cors, client);
+    const v = validerTransformationCommunaute(corps);
+    if (v.erreur) return refus(route, 400, v.erreur, cors, client);
+    const derniere = await db.prepare("SELECT MAX(cree_le) AS le FROM communaute_transformations WHERE client_id = ?1").bind(client.id).first();
+    if (derniere && derniere.le && maintenant - Number(derniere.le) < DELAI_TRANSFORMATION_MS) return refus(route, 429, "une-par-semaine", cors, client);
+    await db
+      .prepare("INSERT INTO communaute_transformations (client_id, periode, jours, gras, muscle, texte, cree_le) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
+      .bind(client.id, v.periode, v.jours, v.gras, v.muscle, v.texte, maintenant)
+      .run();
+    journal(route, 200, null, client);
+    return ok({});
+  }
+
+  if (chemin === "/communaute/transformations/bravo") {
+    const idT = Number(corps.id) || 0;
+    const t = await db.prepare("SELECT id, client_id FROM communaute_transformations WHERE id = ?1 AND masque = 0").bind(idT).first();
+    if (!t) return refus(route, 404, "introuvable", cors, client);
+    if (t.client_id === client.id) return refus(route, 400, "pas-a-soi-meme", cors, client);
+    if (await plafond("bravos", COMMUNAUTE_BRAVOS_PAR_JOUR)) return refus(route, 429, "trop-de-requetes", cors, client);
+    const deja = await db.prepare("SELECT 1 AS x FROM communaute_bravos WHERE transformation = ?1 AND client_id = ?2").bind(idT, client.id).first();
+    if (deja) await db.prepare("DELETE FROM communaute_bravos WHERE transformation = ?1 AND client_id = ?2").bind(idT, client.id).run();
+    else await db.prepare("INSERT INTO communaute_bravos (transformation, client_id, le) VALUES (?1, ?2, ?3)").bind(idT, client.id, maintenant).run();
+    return ok({ bravo: !deja });
+  }
+
+  if (chemin === "/communaute/transformations/supprimer") {
+    // Sa propre publication seulement, effacee (avec ses bravos).
+    const idT = Number(corps.id) || 0;
+    await db.batch([
+      db.prepare("DELETE FROM communaute_bravos WHERE transformation = (SELECT id FROM communaute_transformations WHERE id = ?1 AND client_id = ?2)").bind(idT, client.id),
+      db.prepare("DELETE FROM communaute_transformations WHERE id = ?1 AND client_id = ?2").bind(idT, client.id)
+    ]);
+    return ok({});
+  }
+
+  return reponseJson({ ok: false, error: "not-found" }, 404, cors);
+}
+
+/**
+ * Moderation par le coach (POST /admin/communaute, ADMIN_SECRET), corps.action :
+ *  - « signalements » : signalements a traiter (avec pseudo et apercu) et profils masques ;
+ *  - « masquer » / « afficher » un profil (cible : pseudo) ;
+ *  - « masquer-transformation » / « afficher-transformation » (cible : numero) ;
+ *  - « supprimer-profil » (cible : pseudo) : tout ce que la communaute en garde ;
+ *  - « supprimer-transformation » (cible : numero).
+ * « afficher » vaut aussi « signalements traites » pour cette cible.
+ */
+async function adminCommunaute(db, corps) {
+  const action = String(corps.action || "");
+  const cible = String(corps.cible || "");
+  if (action === "signalements") {
+    const { results } = await db
+      .prepare(
+        `SELECT s.cible_type AS type, s.cible AS cible, COUNT(*) AS nombre, MAX(s.cree_le) AS dernier, GROUP_CONCAT(COALESCE(s.motif, ''), ' | ') AS motifs,
+                COALESCE((SELECT p.pseudo FROM communaute_profils p WHERE s.cible_type = 'profil' AND p.client_id = s.cible),
+                         (SELECT p.pseudo || ' : ' || t.texte FROM communaute_transformations t JOIN communaute_profils p ON p.client_id = t.client_id WHERE s.cible_type = 'transformation' AND t.id = CAST(s.cible AS INTEGER))) AS apercu
+         FROM communaute_signalements s WHERE s.traite = 0 GROUP BY s.cible_type, s.cible ORDER BY nombre DESC, dernier DESC LIMIT 200`
+      )
+      .all();
+    const { results: masques } = await db.prepare("SELECT pseudo FROM communaute_profils WHERE masque = 1 ORDER BY pseudo").all();
+    // L'identifiant interne d'un profil ne sort pas : le coach agit par pseudo.
+    const signalements = (results || []).map((r) => ({ ...r, cible: r.type === "profil" ? null : r.cible }));
+    return { ok: true, signalements, masques: (masques || []).map((m) => m.pseudo) };
+  }
+  if (action === "masquer" || action === "afficher") {
+    const p = await db.prepare("SELECT client_id FROM communaute_profils WHERE pseudo = ?1").bind(cible).first();
+    if (!p) return { ok: false, error: "introuvable" };
+    await db.batch([
+      db.prepare("UPDATE communaute_profils SET masque = ?2 WHERE client_id = ?1").bind(p.client_id, action === "masquer" ? 1 : 0),
+      db.prepare("UPDATE communaute_signalements SET traite = 1 WHERE cible_type = 'profil' AND cible = ?1").bind(p.client_id)
+    ]);
+    return { ok: true };
+  }
+  if (action === "masquer-transformation" || action === "afficher-transformation") {
+    await db.batch([
+      db.prepare("UPDATE communaute_transformations SET masque = ?2 WHERE id = ?1").bind(Number(cible) || 0, action === "masquer-transformation" ? 1 : 0),
+      db.prepare("UPDATE communaute_signalements SET traite = 1 WHERE cible_type = 'transformation' AND cible = ?1").bind(String(Number(cible) || 0))
+    ]);
+    return { ok: true };
+  }
+  if (action === "supprimer-profil") {
+    const p = await db.prepare("SELECT client_id FROM communaute_profils WHERE pseudo = ?1").bind(cible).first();
+    if (!p) return { ok: false, error: "introuvable" };
+    await db.batch(requetesEffacementCommunaute(db, p.client_id));
+    return { ok: true };
+  }
+  if (action === "supprimer-transformation") {
+    const n = Number(cible) || 0;
+    await db.batch([
+      db.prepare("DELETE FROM communaute_bravos WHERE transformation = ?1").bind(n),
+      db.prepare("DELETE FROM communaute_transformations WHERE id = ?1").bind(n),
+      db.prepare("DELETE FROM communaute_signalements WHERE cible_type = 'transformation' AND cible = ?1").bind(String(n))
+    ]);
+    return { ok: true };
+  }
+  return { ok: false, error: "action-inconnue" };
+}
+
+/**
+ * Tache planifiee : scores mensuels de plus de deux annees civiles (l'annee
+ * passee reste pour l'athlete de l'annee), signalements traites et
+ * transformations masquees de plus de 180 jours, bravos orphelins.
+ */
+async function nettoyerCommunaute(env, maintenant) {
+  const db = await base(env);
+  if (!db) return;
+  const anneeLimite = String(Number(new Date(maintenant).toISOString().slice(0, 4)) - 1);
+  const limite = maintenant - COMMUNAUTE_CONSERVATION_MS;
+  await db.batch([
+    db.prepare("DELETE FROM communaute_scores_mois WHERE substr(mois, 1, 4) < ?1").bind(anneeLimite),
+    db.prepare("DELETE FROM communaute_signalements WHERE traite = 1 AND cree_le < ?1").bind(limite),
+    db.prepare("DELETE FROM communaute_transformations WHERE masque = 1 AND cree_le < ?1").bind(limite),
+    db.prepare("DELETE FROM communaute_bravos WHERE transformation NOT IN (SELECT id FROM communaute_transformations)")
+  ]);
+}
+
 // Acces des tests aux fonctions internes (sans effet en production).
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
   Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
+  Object.assign(globalThis.__COACH_TEST__, {
+    nettoyerStatsCommunaute,
+    validerTransformationCommunaute,
+    contientCoordonnees,
+    nettoyerCommunaute,
+    COMMUNAUTE: { CATEGORIES: COMMUNAUTE_CATEGORIES, FILTRES: COMMUNAUTE_FILTRES, SCORES_MOIS: COMMUNAUTE_SCORES_MOIS, PERIODES: COMMUNAUTE_PERIODES, SIGNALEMENTS_POUR_MASQUER, COMMUNAUTE_APPELS_PAR_MINUTE, COMMUNAUTE_ECRITURES_PAR_JOUR, COMMUNAUTE_SIGNALEMENTS_PAR_JOUR, COMMUNAUTE_BRAVOS_PAR_JOUR, DELAI_TRANSFORMATION_MS }
+  });
 }

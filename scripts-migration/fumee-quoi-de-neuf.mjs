@@ -162,13 +162,14 @@ try {
 
   // 10 a 12 : aide et bandeau d'installation.
   {
-    // Les defis entre amis (25 octobre) et les reprises de Neiram (24
-    // octobre) occupent les 5 places : ils sont marques vus ici, pour que
+    // La communaute Team Neiram, les defis entre amis et les reprises de
+    // Neiram (24 octobre) occupent les 5 places : ils sont marques vus ici, pour que
     // l'annonce des tutos (« Voir le guide ») revienne dans la fenetre.
     // L'annonce de l'Aide (7 octobre) passait par le meme chemin.
     const { ctx, page } = await ouvrir({
       profil: PROFIL,
       vues: [
+        "2026-10-24-communaute",
         "2026-10-24-defis-amis",
         "2026-10-24-tutos-raccourcis",
         "2026-10-24-menu-nutrition",

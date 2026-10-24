@@ -8,7 +8,8 @@
  * Le niveau fédéral se calcule à partir des performances notées
  * (lib/performances.js) et des grilles officielles (lib/niveaux.js) : la
  * meilleure marche (1 régional, 2 national, 3 international) toutes
- * disciplines confondues. Pas de palmarès serveur dans l'app coach.
+ * disciplines confondues. Le palmarès de la communauté Team Neiram vient de
+ * lib/palmares.js.
  */
 
 import { charger } from "./stockage.js";
@@ -21,6 +22,7 @@ import { CLE_LECONS, leconsFaites } from "./lecons.js";
 import { EPREUVES, lirePerformances, maxisRetenus } from "./performances.js";
 import { marcheFederale, niveauCourse, niveauFFForce, niveauFFHM, niveauNatation } from "./niveaux.js";
 import { defisGagnes } from "./defis-amis.js";
+import { compteursPalmares } from "./palmares.js";
 
 /**
  * Meilleure marche fédérale atteinte (0 à 3) : force athlétique (total et
@@ -64,6 +66,9 @@ export function compteursTrophees({ seances = [], profil = {}, maxisForce = {}, 
     lecons: leconsFaites(charger(CLE_LECONS, null)),
     niveauFederal: niveauFederal({ performances: lirePerformances(), maxisForce, seances, profil, poidsKg }),
     // Defis entre amis gagnes (lib/defis-amis.js, 24 octobre 2026).
-    duels: defisGagnes()
+    duels: defisGagnes(),
+    // Communaute Team Neiram (lib/palmares.js, 24 octobre 2026) : meilleur
+    // top, podiums, athlete du mois et de l'annee.
+    ...compteursPalmares()
   };
 }

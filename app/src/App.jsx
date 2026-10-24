@@ -72,6 +72,7 @@ import { CLE_SPORTS_PERSO, definirSportsPerso } from "./lib/activites.js";
 import { messageEau } from "./lib/raccourcis.js";
 import { brancherRaccourcis, ecouterRaccourcis, poserIntention } from "./lib/reception-raccourcis.js";
 import { brancherInvitationDefi } from "./lib/defis-amis.js";
+import { publierSiBesoin, statsCommunaute } from "./lib/communaute.js";
 
 /** Duree d'affichage d'une notification passagere, en millisecondes. */
 const DUREE_TOAST = 8000;
@@ -392,6 +393,17 @@ export default function App() {
     if (!pret || !profile) return undefined;
     return ecouterRaccourcis((a) => gererRaccourci.current(a));
   }, [pret, Boolean(profile)]);
+  // Communaute Team Neiram (lib/communaute.js) : avec un profil seulement,
+  // les chiffres permis par les accords partent au plus toutes les 30 min.
+  useEffect(() => {
+    if (!pret || !profile) return undefined;
+    const minuteur = setTimeout(() => {
+      publierSiBesoin({
+        stats: statsCommunaute({ date: todayISO(), seances: sessions, repas: logEntries, journal: dailyForm, corps: bodyLogs, profil: profile, maxis: maxisForce })
+      });
+    }, 3000);
+    return () => clearTimeout(minuteur);
+  }, [pret, profile, sessions, logEntries, dailyForm, bodyLogs, maxisForce]);
 
   /**
    * Poids courant : la derniere pesee, a defaut le poids de depart du
@@ -631,7 +643,9 @@ export default function App() {
   };
 
   const definirMaxiForce = (mouvement, valeur) => {
-    const suivant = { ...maxisForce, [mouvement]: valeur };
+    // « maj » : date de chaque maxi, pour l'athlete du mois de la
+    // communaute (lib/stats-disciplines.js), comme dans l'app Neiram.
+    const suivant = { ...maxisForce, [mouvement]: valeur, maj: { ...(maxisForce.maj || {}), [mouvement]: todayISO() } };
     setMaxisForce(suivant);
     enregistrer(CLES_ANNEXES.maxisForce, suivant);
   };
@@ -746,6 +760,7 @@ export default function App() {
         poidsKg={poidsCourant}
         journal={dailyForm}
         corps={bodyLogs}
+        repas={logEntries}
       />
     ),
     tendances: weekStats ? (

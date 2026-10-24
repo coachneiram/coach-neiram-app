@@ -14,6 +14,11 @@
  *
  * Défis entre amis (24 octobre 2026, accord du coach) : repris, réservés
  * aux clients du coach (code d'accès activé), carte du Journal.
+ *
+ * Communauté Team Neiram (24 octobre 2026, accord du coach) : classements
+ * et mur des transformations repris, entre clients du coach seulement
+ * (carte « Team Neiram » de Séances) : tutos « classements » et
+ * « transformations ».
  */
 
 export const TUTOS_VIE = [
@@ -49,6 +54,56 @@ export const TUTOS_VIE = [
       }
     ],
     libelles: ["Défis entre amis", "Accès de ton coach", "Le plus de pas", "Le plus de séances", "Le plus de minutes de sport", "Lancer un défi", "J'ai compris, continuer", "Inviter", "Code reçu", "Rejoindre", "Quitter"]
+  },
+
+  /* ---------------------------------------------------------------- */
+  /* Séances : communauté Team Neiram                                   */
+  /* ---------------------------------------------------------------- */
+  {
+    id: "classements",
+    onglet: "entrainements",
+    emoji: "🏆",
+    titre: "La communauté Team Neiram",
+    resume: "Classements entre clients du coach et athlète du mois, seulement si tu le choisis.",
+    etapes: [
+      {
+        titre: "Active ton accès",
+        texte: "La communauté est réservée aux clients du coach : son code d'accès doit être entré une fois dans les Réglages, carte « Accès de ton coach »."
+      },
+      {
+        titre: "Rejoins",
+        texte: "Séances, carte « Team Neiram » : « Ouvrir la communauté », vérifie ton pseudo, coche l'accord puis « Rejoindre la communauté ». Tu entres dans les classements « Régularité »."
+      },
+      {
+        titre: "Tes disciplines",
+        texte: "Touche « Force athlé », « Haltéro », « Course » ou « Natation », puis « Entrer dans les classements par discipline ». Ton sexe et ta catégorie de poids partent, jamais ton poids."
+      },
+      {
+        titre: "Athlète du mois",
+        texte: "« Athlète du mois et de l'année » se joue sur les performances notées dans le mois, dans « Mes performances ». Tes podiums comptent pour les trophées."
+      },
+      {
+        titre: "Tout se retire",
+        texte: "« Retirer mes performances », « Retirer ma transformation » ou « Supprimer mon profil de la communauté » effacent tes données du serveur, à tout moment."
+      }
+    ],
+    libelles: [
+      "Accès de ton coach",
+      "Team Neiram",
+      "Ouvrir la communauté",
+      "Rejoindre la communauté",
+      "Régularité",
+      "Force athlé",
+      "Haltéro",
+      "Course",
+      "Natation",
+      "Entrer dans les classements par discipline",
+      "Athlète du mois et de l'année",
+      "Mes performances",
+      "Retirer mes performances",
+      "Retirer ma transformation",
+      "Supprimer mon profil de la communauté"
+    ]
   },
 
   /* ---------------------------------------------------------------- */
@@ -103,13 +158,21 @@ export const TUTOS_VIE = [
     onglet: "mensurations",
     emoji: "🔥",
     titre: "Ma transformation",
-    resume: "Le gras perdu et le muscle pris, calculés sur tes pesées.",
+    resume: "Le gras perdu et le muscle pris, calculés sur tes pesées, et le mur de la Team Neiram.",
     etapes: [
       { titre: "Ta transformation", texte: "Onglet Mesures, carte « Ma transformation » : gras perdu et muscle pris sur les « 90 jours » écoulés ou « Cette année », d'après tes pesées et ta masse grasse." },
       { titre: "Des garde-fous", texte: "La perte comptée est plafonnée à 1 % du poids par semaine, le muscle à 0,25 kg par semaine : au-delà, c'est surtout de l'eau ou l'imprécision de la balance." },
-      { titre: "Pèse-toi pareil", texte: "Le matin, à jeun, après être allé aux toilettes : ce sont les mêmes conditions qui rendent la comparaison juste." }
+      { titre: "Pèse-toi pareil", texte: "Le matin, à jeun, après être allé aux toilettes : ce sont les mêmes conditions qui rendent la comparaison juste." },
+      {
+        titre: "Le mur",
+        texte: "Communauté, onglet « 🔥 Transformations » : « Entrer dans les classements de transformation », écris un message puis « Partager sur le mur ». Les autres clients répondent « 👏 Bravo »."
+      },
+      {
+        titre: "Ta santé d'abord",
+        texte: "Pas de classement de perte avant 18 ans, enceinte ou allaitante, avec un antécédent de trouble alimentaire ou une masse grasse très basse. Aucune photo ni aucun poids n'est envoyé."
+      }
     ],
-    libelles: ["Ma transformation", "90 jours", "Cette année"]
+    libelles: ["Ma transformation", "90 jours", "Cette année", "🔥 Transformations", "Entrer dans les classements de transformation", "Partager sur le mur", "👏 Bravo"]
   },
 
   /* ---------------------------------------------------------------- */

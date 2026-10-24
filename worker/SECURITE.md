@@ -57,7 +57,7 @@ Classeur « Suivi Coaching en ligne » → *Extensions* → *Apps Script* :
 
 ### 5. Vérifier avec ton propre téléphone
 
-1. Sur ton ordinateur : `export ADMIN_SECRET='…'` puis `node worker/invitations.mjs creer "Marien P."`.
+1. Ouvre l'**Espace coach** (voir « L'Espace coach » plus bas), tape ton `ADMIN_SECRET`, puis « Créer un code d'accès » avec le libellé « Marien P. ».
 2. Sur ton téléphone, dans l'application : *Réglages* → *Accès de ton coach* → saisis le code. Attendu : « Activé pour Marien P. ».
 3. Coach IA : pose une question. Attendu : une réponse.
 4. Pointe une séance avec un profil « en ligne ». Attendu : une ligne dans *Journal*, avec le client « Marien P. » (et non « … (non vérifié) »).
@@ -67,11 +67,11 @@ Si un point échoue, arrête-toi et reviens en arrière (voir plus bas).
 
 ### 6. Distribuer les codes
 
-Lance `node worker/invitations.mjs creer "Prénom I."` pour chaque client. Puis envoie le code par WhatsApp, par exemple :
+Dans l'Espace coach, « Créer un code d'accès » pour chaque client (libellé « Prénom I. ») ; le code s'affiche une seule fois, avec « Copier ». Puis envoie-le par WhatsApp, par exemple :
 
 > Salut Thomas, petite mise à jour de sécurité de l'appli : ouvre Réglages → « Accès de ton coach » et saisis ce code : K7PM-Q4XT. Il est valable 30 jours et ne sert qu'une fois. Ça active l'assistant IA et l'envoi de tes séances.
 
-`node worker/invitations.mjs liste` montre qui a activé son code (au moins « 1 téléphone(s) actif(s) »). Pour un nouveau téléphone, lance `node worker/invitations.mjs code <id>`.
+La liste « Clients » de l'Espace coach montre qui a activé son code (« 1 téléphone actif ») et met en évidence ceux dont le « code pas encore activé ». Pour un nouveau téléphone : « Nouveau code » sur la ligne du client.
 
 ### 7. Fermer l'accès anonyme
 
@@ -99,7 +99,28 @@ Pendant l'opération, l'ancien et le nouveau secret sont tous deux acceptés : a
 
 ## Révoquer un client
 
-Téléphone perdu, fin de suivi, comportement anormal : `node worker/invitations.mjs revoquer <id>`. Tous ses jetons tombent immédiatement, et ses codes non utilisés aussi.
+Téléphone perdu, fin de suivi, comportement anormal : Espace coach → liste « Clients » → « Révoquer ». Tous ses jetons tombent immédiatement, et ses codes non utilisés aussi ; il sort des défis entre amis et de la communauté (profil, chiffres, publications effacés).
+
+## L'Espace coach (24 octobre 2026)
+
+Page réservée au coach, servie avec l'application : **`https://coachneiram.github.io/coach-neiram-app/espace-coach.html`** (l'adresse de l'app, avec `espace-coach.html` à la place de la fin). Aucun lien ne la montre aux clients ; garde-la en favori sur ton ordinateur ou ton téléphone.
+
+- Tape ton `ADMIN_SECRET` à chaque ouverture (champ masqué). Il reste dans la page le temps de la visite, n'est enregistré nulle part (ni stockage du navigateur, ni cookie, ni adresse) et part seulement dans l'en-tête `Authorization` vers le Worker. « Verrouiller » l'oublie ; 15 minutes sans action aussi.
+- Fonctions : liste des clients, créer un code (nouveau client ou client qui a perdu le sien), révoquer, modération de la communauté (signalements, masquer, afficher, supprimer un profil ou une publication).
+- Messages : « Secret refusé » (mauvais secret), « Trop d'essais : réessaie dans une heure » (10 échecs par heure), « L'espace coach n'est pas activé sur le serveur » (`ADMIN_SECRET` absent ou de moins de 32 caractères dans Cloudflare).
+- Ne l'ouvre pas sur un ordinateur partagé ou public, et ne laisse pas ton navigateur enregistrer le secret.
+
+### En secours : l'outil en terminal
+
+Si la page ne s'ouvre pas, `worker/invitations.mjs` fait la même chose depuis ton ordinateur (Node 22) :
+
+```
+export ADMIN_SECRET='…'
+node worker/invitations.mjs creer "Prénom I."     → nouveau client + code
+node worker/invitations.mjs code <id-client>      → nouveau code (nouveau téléphone)
+node worker/invitations.mjs liste                 → clients, jetons actifs
+node worker/invitations.mjs revoquer <id-client>  → coupe tous ses accès
+```
 
 ## Plafonds
 
@@ -122,7 +143,7 @@ Ces plafonds ne sont actifs **qu'une fois le Worker collé et la base D1 liée**
 | L'IA ne répond plus pour personne | Cloudflare : `ACCES_CLIENTS = transition`, puis *Deploy*. Si cela ne suffit pas, *Deployments* → version précédente → *Rollback*. |
 | Les pointages n'arrivent plus | Cloudflare : remets l'**ancienne** adresse dans `COACH_SYNC_URL` et reviens à la version précédente du Worker (*Rollback*). L'ancien déploiement Apps Script n'est archivé qu'à l'étape 8 : il est encore là. |
 | Le script refuse les événements signés | `verifier()` : le secret est-il en place ? Est-ce le même que `COACH_SYNC_SECRET` ? En dernier recours, `ACCEPTER_SECRET_EN_CLAIR = true` et nouvelle version. |
-| Un client a perdu son code | `node worker/invitations.mjs code <id>`. |
+| Un client a perdu son code | Espace coach → « Nouveau code » sur sa ligne (en secours : `node worker/invitations.mjs code <id>`). |
 
 Aucune donnée du client n'est supprimée par ces correctifs : le jeton est une clé de plus sur le téléphone, et la file des séances reste en place tant qu'un envoi n'est pas confirmé.
 

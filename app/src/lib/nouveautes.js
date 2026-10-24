@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-24-communaute",
+    date: "2026-10-24",
+    titre: "La communauté Team Neiram",
+    texte:
+      "Dans Séances, carte « Team Neiram » : classements entre clients du coach (régularité, force, course, natation), athlète du mois et mur des transformations. Tu n'y apparais que si tu le choisis, et tu peux tout retirer.",
+    onglet: "entrainements",
+    bouton: "Voir la communauté"
+  },
+  {
     id: "2026-10-24-defis-amis",
     date: "2026-10-24",
     titre: "Défis entre amis",
