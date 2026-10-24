@@ -69,10 +69,19 @@ const FAMILLES_CONTRAINTES = ["porc", "crustaces", "mollusques"];
  * contrainte halal, casher ou sans alcool.
  */
 export function recettesDuMenu(catalogue, profil) {
+  return filtrerContraintes(recettesPourClient(catalogue, profil), profil);
+}
+
+/**
+ * Retire les recettes contraires aux contraintes du profil (halal, casher,
+ * sans alcool). Sert au menu ET à l'écran Recettes du coach (24/10/2026).
+ */
+export function filtrerContraintes(recettes, profil) {
   const exclues = exclusionsContraintes(profil);
   const familles = FAMILLES_CONTRAINTES.filter((f) => exclues.includes(f));
   const sansAlcool = exclues.includes("alcool");
-  return recettesPourClient(catalogue, profil).filter((r) => {
+  if (!familles.length && !sansAlcool) return recettes || [];
+  return (recettes || []).filter((r) => {
     if ((r.contient || []).some((x) => familles.includes(x))) return false;
     if (sansAlcool && (r.ingredients || []).some((i) => MOTS_ALCOOL.test(String(i.nom).replace(VINAIGRES, "")))) return false;
     return true;

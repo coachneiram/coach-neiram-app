@@ -5,6 +5,7 @@
  * « menu » dans la liste Courses.
  */
 
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { RECETTES_COACH } from "../app/src/lib/recettes-coach-catalogue.js";
@@ -15,6 +16,7 @@ import { partagerTexte } from "../app/src/lib/partage-texte.js";
 import { TEXTES_MENU } from "../app/src/lib/textes-menu.js";
 import { creerLocalStorage } from "./harness.mjs";
 import {
+  filtrerContraintes,
   CLE_AJOUTS_COURSES,
   CLE_PLAN_REPAS,
   REPAS_DU_JOUR,
@@ -304,4 +306,14 @@ test("changer un dîner suivi de restes : le déjeuner du lendemain suit, jamais
     } else assert.notEqual(dej.recetteId, p.jours[k].repas.find((x) => x.typeRepas === "dejeuner").recetteId);
     assert.equal(q.jours[k].total.kcal, q.jours[k].repas.reduce((s, x) => s + (x.kcal || 0), 0));
   }
+});
+
+test("écran Recettes : les mêmes contraintes que le menu (halal, casher, sans alcool)", () => {
+  const src = readFileSync(new URL("../app/src/ecrans/RecettesCoach.jsx", import.meta.url), "utf8");
+  assert.equal((src.match(/filtrerContraintes\(recettesPourClient\(/g) || []).length, 3, "les trois listes de l'écran sont filtrées");
+  const casher = { contraintesAlim: ["casher"] };
+  const liste = filtrerContraintes(RECETTES_COACH, casher);
+  assert.ok(liste.length > 0 && liste.length < RECETTES_COACH.length);
+  assert.ok(liste.every((r) => !(r.contient || []).some((x) => ["porc", "crustaces", "mollusques"].includes(x))));
+  assert.equal(filtrerContraintes(RECETTES_COACH, {}).length, RECETTES_COACH.length, "sans contrainte : rien n'est retiré");
 });
