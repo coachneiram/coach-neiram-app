@@ -50,19 +50,17 @@ describe("les annonces", () => {
       assert.ok(n.titre && n.titre.length <= 45, n.id);
       assert.ok(n.texte && n.texte.length <= 260, n.id + " : texte trop long pour un telephone");
       assert.ok(n.bouton, n.id);
-      assert.ok(n.ouvre === "aide" || onglets.has(n.onglet), n.id + " : ecran inconnu " + n.onglet);
+      assert.ok(n.ouvre === "aide" || n.ouvre === "guide" || onglets.has(n.onglet), n.id + " : ecran inconnu " + n.onglet);
     }
   });
 
-  test("les dernieres nouveautes : carnet d'entrainement, diete flexible, evolution, puis dictee", () => {
-    assert.equal(NOUVEAUTES[0].id, "2026-10-22-carnet-series");
-    assert.equal(NOUVEAUTES[0].onglet, "entrainements");
-    assert.equal(NOUVEAUTES[1].id, "2026-10-14-diete-flexible");
-    assert.equal(NOUVEAUTES[1].onglet, "nutrition");
-    assert.equal(NOUVEAUTES[2].id, "2026-10-14-evolution");
-    assert.equal(NOUVEAUTES[2].onglet, "tendances");
-    assert.equal(NOUVEAUTES[3].id, "2026-10-12-dictee");
-    assert.equal(NOUVEAUTES[3].onglet, "repas");
+  test("les dernieres nouveautes : tutos, repos et barre, carnet d'entrainement, puis diete flexible", () => {
+    assert.equal(NOUVEAUTES[0].id, "2026-10-24-tutos");
+    assert.equal(NOUVEAUTES[0].ouvre, "guide");
+    assert.equal(NOUVEAUTES[1].id, "2026-10-24-repos-barre");
+    assert.equal(NOUVEAUTES[1].onglet, "entrainements");
+    assert.equal(NOUVEAUTES[2].id, "2026-10-22-carnet-series");
+    assert.equal(NOUVEAUTES[3].id, "2026-10-14-diete-flexible");
   });
 });
 

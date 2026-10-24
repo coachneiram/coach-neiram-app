@@ -38,7 +38,7 @@
  */
 
 import { chromium } from "playwright";
-import { appareil } from "./appareil.mjs";
+import { appareil, sansAides } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -85,6 +85,7 @@ const tuilesAttendues = (semaines, profil = {}) =>
 
 async function ouvrir({ semaines, difficiles = [], profil = {} }) {
   const ctx = await nav.newContext(appareil("Pixel 7"));
+  await ctx.addInitScript(sansAides);
   const page = await ctx.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
   // Partage natif simule : on garde le texte partage pour le verifier.

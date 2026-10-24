@@ -41,6 +41,10 @@ import {
   preparerSeance,
   resumeExercice,
   TECHNIQUES_SERIE,
+  FAMILLES_TECHNIQUE,
+  chargeBackoff,
+  parametresParDefaut,
+  techniqueParId,
   videoExercice
 } from "../lib/constructeur-seances.js";
 import { charger, enregistrer } from "../lib/stockage.js";
@@ -61,6 +65,7 @@ import {
 } from "../lib/series.js";
 import { MinuteurRepos, preparerSon } from "../ui/MinuteurRepos.jsx";
 import { ChoixRepos } from "../ui/ChoixRepos.jsx";
+import { OutilsBarre } from "../ui/OutilsBarre.jsx";
 import { seancesProgrammeDebutant, TEXTES_DEBUTANT, TEXTES_PROGRAMME } from "../lib/seance-du-jour.js";
 import { SeanceDuJour } from "./SeanceDuJour.jsx";
 import { ForceAthletique } from "./ForceAthletique.jsx";
@@ -361,8 +366,10 @@ export function ConstructeurSeances({
    */
   const changerTechnique = (i, technique) => {
     const ex = seanceEditee.exercises[i];
-    if (technique === "superset") {
+    if (technique === "superset" || technique === "triset" || technique === "circuit") {
       modifierExercice(i, { technique, supersetGroupe: ex.supersetGroupe || GROUPES_SUPERSET[0] });
+    } else if (technique && technique !== "degressive") {
+      modifierExercice(i, { technique, techniqueParams: { ...parametresParDefaut(technique), ...(ex.technique === technique ? ex.techniqueParams : {}) } });
     } else if (technique === "degressive") {
       modifierExercice(i, {
         technique,
@@ -936,6 +943,11 @@ export function ConstructeurSeances({
                               {`${TEXTES_SERIES.derniereFois} (${fmtDateShort(precedent.date)}) : ${resumePrecedent}`}
                             </div>
                           )}
+                          {avecCharge && (
+                            <OutilsBarre
+                              charge={series.reduce((m, s) => Math.max(m, Number(String(s.weight || "").replace(",", ".")) || 0), 0) || ex.weight}
+                            />
+                          )}
                           <div
                             style={{
                               display: "grid",
@@ -1128,14 +1140,51 @@ export function ConstructeurSeances({
                               style={{ ...champCompact, padding: "8px 4px", flex: 1, minWidth: 130 }}
                             >
                               <option value="">Série classique</option>
-                              {TECHNIQUES_SERIE.map((t) => (
-                                <option key={t.id} value={t.id}>
-                                  {t.label}
-                                </option>
+                              {FAMILLES_TECHNIQUE.map((f) => (
+                                <optgroup key={f.id} label={f.label}>
+                                  {TECHNIQUES_SERIE.filter((t) => t.famille === f.id).map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
                               ))}
                             </select>
 
-                            {ex.technique === "superset" && (
+                            {(techniqueParId(ex.technique)?.params || []).map((r) =>
+                              r.type === "choix" ? (
+                                <select
+                                  key={r.cle}
+                                  aria-label={r.label}
+                                  value={ex.techniqueParams?.[r.cle] ?? r.defaut}
+                                  onChange={(e) => modifierExercice(i, { techniqueParams: { ...ex.techniqueParams, [r.cle]: e.target.value } })}
+                                  style={{ ...champCompact, padding: "8px 4px", width: 120, flexShrink: 0 }}
+                                >
+                                  {r.options.map(([v, l]) => (
+                                    <option key={v} value={v}>
+                                      {l}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <label key={r.cle} style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+                                  <span style={{ ...styleEtiquette, marginBottom: 2 }}>{r.label}</span>
+                                  <input
+                                    type={r.type === "texte" ? "text" : "number"}
+                                    data-param-technique={r.cle}
+                                    min={r.min}
+                                    max={r.max}
+                                    step={r.pas || 1}
+                                    placeholder={String(r.defaut)}
+                                    value={ex.techniqueParams?.[r.cle] ?? ""}
+                                    onChange={(e) => modifierExercice(i, { techniqueParams: { ...ex.techniqueParams, [r.cle]: e.target.value } })}
+                                    style={{ ...champCompact, width: r.type === "texte" ? 84 : 70, textAlign: "center" }}
+                                  />
+                                </label>
+                              )
+                            )}
+
+                            {["superset", "triset", "circuit"].includes(ex.technique) && (
                               <select
                                 aria-label="Groupe de superset"
                                 value={ex.supersetGroupe || GROUPES_SUPERSET[0]}
@@ -1180,11 +1229,27 @@ export function ConstructeurSeances({
                             )}
                           </div>
 
-                          {ex.technique === "superset" && (
+                          {["superset", "triset", "circuit"].includes(ex.technique) && (
                             <p style={styleNoteTechnique}>
                               Enchaîné sans repos avec les autres exercices marqués groupe{" "}
                               {ex.supersetGroupe || GROUPES_SUPERSET[0]}.
                             </p>
+                          )}
+
+                          {ex.technique === "top-set" && chargeBackoff(ex.weight, ex.techniqueParams?.baissePct) && (
+                            <p style={styleNoteTechnique}>
+                              Back-off : {ex.techniqueParams?.backoff || "?"} séries à{" "}
+                              {chargeBackoff(ex.weight, ex.techniqueParams?.baissePct)} kg.
+                            </p>
+                          )}
+
+                          {techniqueParId(ex.technique) && (
+                            <details data-preuve-technique={ex.technique} style={{ marginTop: 4 }}>
+                              <summary style={{ ...styleNoteTechnique, cursor: "pointer", margin: 0 }}>
+                                {techniqueParId(ex.technique).description}
+                              </summary>
+                              <p style={styleNoteTechnique}>Preuves : {techniqueParId(ex.technique).preuve}</p>
+                            </details>
                           )}
 
                           {ex.technique === "degressive" &&

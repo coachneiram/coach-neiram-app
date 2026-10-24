@@ -214,6 +214,7 @@ export default {
   async scheduled(evenement, env, ctx) {
     const taches = [];
     if (env.PUSH_KV) taches.push(envoyerRappelsDus(env, Date.now()));
+    if (env.PUSH_KV) taches.push(envoyerAnnonces(env, Date.now(), env.ANNONCES_TEST || ANNONCES).catch(() => null));
     if (env.DB) taches.push(nettoyerCompteurs(env, Date.now()).catch(() => null));
     const tout = Promise.all(taches);
     if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(tout);
@@ -1094,7 +1095,71 @@ async function envoyerRappelsDus(env, maintenant) {
   return bilan;
 }
 
+/**
+ * Annonces a tous les telephones abonnes aux notifications (24 octobre
+ * 2026, demande du coach : prevenir les clients des nouveautes).
+ *
+ * Chaque annonce part UNE fois par telephone, entre `debut` et `fin`, et
+ * seulement entre 9 h et 20 h (heure de Paris) : jamais de notification la
+ * nuit. Le « deja envoye » est garde a part (cle « annonce:<id>:<telephone> »)
+ * parce que la fiche du telephone est reecrite a chaque mise a jour de ses
+ * rappels. Pour une nouvelle annonce : ajouter une entree, redeployer.
+ */
+const ANNONCES = [
+  {
+    id: "2026-10-24-nouveautes",
+    debut: Date.parse("2026-10-24T07:00:00Z"),
+    fin: Date.parse("2026-10-28T19:00:00Z"),
+    titre: "Coach Neiram — du nouveau 💪",
+    texte: "Chronomètre de repos, disques et échauffement sous chaque exercice, et un tuto pour chaque écran. Ouvre l'appli pour découvrir.",
+    tag: "nouveautes-2026-10-24"
+  }
+];
+const HEURE_ANNONCE_MIN = 9;
+const HEURE_ANNONCE_MAX = 20;
+
+/** Heure (0 a 23) a Paris pour un instant donne. */
+function heureParis(maintenant) {
+  const h = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "numeric", hour12: false }).format(new Date(maintenant));
+  return Number.parseInt(h, 10) % 24;
+}
+
+async function envoyerAnnonces(env, maintenant, annonces = ANNONCES) {
+  const bilan = { envoyees: 0, oublies: 0 };
+  const actives = annonces.filter((a) => maintenant >= a.debut && maintenant <= a.fin);
+  if (!actives.length) return bilan;
+  const h = heureParis(maintenant);
+  if (h < HEURE_ANNONCE_MIN || h >= HEURE_ANNONCE_MAX) return bilan;
+  let vapid = null;
+  let curseur;
+  do {
+    const page = await env.PUSH_KV.list({ prefix: "ab:", cursor: curseur });
+    for (const { name } of page.keys) {
+      const fiche = await env.PUSH_KV.get(name, "json");
+      if (!fiche || !fiche.abonnement) continue;
+      for (const a of actives) {
+        const marque = "annonce:" + a.id + ":" + name;
+        if (await env.PUSH_KV.get(marque)) continue;
+        vapid = vapid || (await clesVapid(env));
+        const statut = await envoyerPush(fiche.abonnement, { titre: a.titre, texte: a.texte, tag: a.tag }, vapid, maintenant);
+        if (statut === 404 || statut === 410) {
+          await env.PUSH_KV.delete(name);
+          bilan.oublies++;
+          break;
+        }
+        if (statut >= 200 && statut < 300) {
+          // Garde la marque un peu au-dela de la fin de l'annonce, puis elle s'efface seule.
+          await env.PUSH_KV.put(marque, "1", { expirationTtl: 30 * 24 * 3600 });
+          bilan.envoyees++;
+        }
+      }
+    }
+    curseur = page.list_complete ? undefined : page.cursor;
+  } while (curseur);
+  return bilan;
+}
+
 // Acces des tests aux fonctions internes (sans effet en production).
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
-  Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement });
+  Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement });
 }

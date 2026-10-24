@@ -22,7 +22,7 @@
  */
 
 import { chromium } from "playwright";
-import { appareil } from "./appareil.mjs";
+import { appareil, sansAides } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -40,6 +40,7 @@ await new Promise((r) => serveur.listen(4661, r));
 
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 const ctx = await nav.newContext(appareil("Pixel 7"));
+await ctx.addInitScript(sansAides);
 const page = await ctx.newPage();
 const erreurs = [];
 page.on("pageerror", (e) => erreurs.push(e.message));
@@ -140,6 +141,7 @@ try {
 // 6. Synchro active ET creneaux manques : le bouton WhatsApp reste la.
 try {
   const ctx2 = await nav.newContext(appareil("Pixel 7"));
+  await ctx2.addInitScript(sansAides);
   const page2 = await ctx2.newPage();
   page2.on("pageerror", (e) => erreurs.push(e.message));
   await page2.route("**/coach-sync", (route) =>

@@ -23,10 +23,28 @@ export const NOUVEAUTES_MAX = 5;
 
 /**
  * Les plus recentes d'abord. `onglet` : ecran ouvert par le bouton ;
- * `ouvre: "aide"` : le bouton ouvre l'Aide.
+ * `ouvre: "aide"` : le bouton ouvre l'Aide ; `ouvre: "guide"` : le guide des tutos.
  * `pour: "enligne"` : annonce reservee aux clients du coaching en ligne.
  */
 export const NOUVEAUTES = [
+  {
+    id: "2026-10-24-tutos",
+    date: "2026-10-24",
+    titre: "Un tuto pour chaque écran",
+    texte:
+      "Touche le livre en haut de l'écran : un tuto pas à pas t'explique l'écran où tu es. Tous les tutos sont aussi dans Réglages → « Guide d'utilisation (tutos) ».",
+    ouvre: "guide",
+    bouton: "Voir le guide"
+  },
+  {
+    id: "2026-10-24-repos-barre",
+    date: "2026-10-24",
+    titre: "Repos libre, disques et échauffement",
+    texte:
+      "Dans tes séances : un repos jusqu'à 10 min, en durée libre ou en chronomètre. Sous chaque exercice, « Disques & échauffement » te dit quoi mettre sur la barre et comment t'échauffer. Et 17 techniques dans « Options ».",
+    onglet: "entrainements",
+    bouton: "Voir mes séances"
+  },
   {
     // Texte valide par le coach le 22 octobre 2026.
     id: "2026-10-22-carnet-series",

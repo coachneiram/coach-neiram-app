@@ -52,10 +52,183 @@ export const exerciceVide = () => ({
  *   sous la barre, c'est le nombre de baisses et de combien — pas le mot.
  *   D'ou deux champs chiffres, et des charges calculees d'avance.
  */
-export const TECHNIQUES_SERIE = [
-  { id: "superset", label: "Superset" },
-  { id: "degressive", label: "Dégressive" }
+export const FAMILLES_TECHNIQUE = [
+  { id: "temps", label: "Gagner du temps" },
+  { id: "charge", label: "Charge et intensité" },
+  { id: "controle", label: "Contrôle du mouvement" },
+  { id: "special", label: "Méthodes spéciales" }
 ];
+
+export const TECHNIQUES_SERIE = [
+  {
+    id: "superset",
+    label: "Superset",
+    famille: "temps",
+    groupe: true,
+    description: "Deux exercices enchaînés sans repos, idéalement des muscles opposés (pectoraux/dos). Repos après le bloc.",
+    preuve: "B — volume conservé, séance plus courte, effort perçu plus élevé (Zhang et al., Sports Med 2025)."
+  },
+  {
+    id: "triset",
+    label: "Tri-set / série géante",
+    famille: "temps",
+    groupe: true,
+    description: "Trois exercices ou plus enchaînés sans repos, puis repos après le bloc.",
+    preuve: "C — extrapolé des supersets : gain de temps, fatigue plus marquée."
+  },
+  {
+    id: "circuit",
+    label: "Circuit",
+    famille: "temps",
+    groupe: true,
+    description: "Stations enchaînées avec peu de repos, plusieurs tours. Travaille aussi le cardio.",
+    preuve: "B — effets modérés sur la force et le VO2max."
+  },
+  {
+    id: "degressive",
+    label: "Dégressive (drop set)",
+    famille: "temps",
+    description: "Après la série, on baisse la charge et on continue sans repos.",
+    preuve: "A — même prise de muscle que des séries classiques, en 54 à 70 % de temps en moins (Sødal et al. 2023 ; Coleman et al. 2022)."
+  },
+  {
+    id: "rest-pause",
+    label: "Rest-pause",
+    famille: "temps",
+    description: "Série proche de l'échec, courte pause, puis quelques répétitions de plus, plusieurs fois.",
+    preuve: "B — résultats égaux ou légèrement meilleurs, en moins de temps (Prestes 2019 ; Enes 2021).",
+    params: [
+      { cle: "miniSeries", label: "Mini-séries", min: 1, max: 5, defaut: 2 },
+      { cle: "pauseS", label: "Pause (s)", min: 5, max: 60, pas: 5, defaut: 15 }
+    ]
+  },
+  {
+    id: "myo-reps",
+    label: "Myo-reps",
+    famille: "temps",
+    description: "Une série d'activation proche de l'échec, puis des mini-séries de 3 à 5 répétitions séparées de 3 à 5 respirations.",
+    preuve: "C — pas d'essai dédié ; logique proche du rest-pause.",
+    params: [
+      { cle: "miniReps", label: "Rép. par mini-série", min: 2, max: 8, defaut: 4 },
+      { cle: "miniSeries", label: "Mini-séries", min: 1, max: 6, defaut: 4 }
+    ]
+  },
+  {
+    id: "top-set",
+    label: "Top set + back-off",
+    famille: "charge",
+    description: "Une série lourde, puis des séries plus légères avec la charge réduite.",
+    preuve: "B — mode d'autorégulation : aussi efficace que les % fixes (Hickmott et al. 2022).",
+    params: [
+      { cle: "backoff", label: "Séries back-off", min: 1, max: 6, defaut: 3 },
+      { cle: "baissePct", label: "Baisse (%)", min: 5, max: 40, pas: 5, defaut: 10 }
+    ]
+  },
+  {
+    id: "pyramide",
+    label: "Pyramide",
+    famille: "charge",
+    description: "La charge monte et les répétitions baissent à chaque série (ou l'inverse).",
+    preuve: "B — ni meilleure ni moins bonne que des séries à charge fixe (Angleri 2017) : question de préférence.",
+    params: [{ cle: "sens", label: "Sens", type: "choix", options: [["montante", "Montante"], ["descendante", "Descendante"]], defaut: "montante" }]
+  },
+  {
+    id: "cluster",
+    label: "Cluster",
+    famille: "charge",
+    description: "Courtes pauses à l'intérieur de la série (ex. 2 répétitions, 20 s, 2 répétitions…).",
+    preuve: "A — mêmes gains qu'en séries classiques avec moins de fatigue et une vitesse de barre mieux conservée (Davies et al., Sports Med 2021).",
+    params: [
+      { cle: "repsBloc", label: "Rép. par bloc", min: 1, max: 6, defaut: 2 },
+      { cle: "pauseS", label: "Pause (s)", min: 5, max: 60, pas: 5, defaut: 20 }
+    ]
+  },
+  {
+    id: "echec",
+    label: "Jusqu'à l'échec",
+    famille: "charge",
+    description: "Dernière série menée jusqu'à ne plus pouvoir faire une répétition propre.",
+    preuve: "A — la prise de muscle augmente près de l'échec ; la force progresse aussi bien à 1-3 répétitions en réserve (Robinson et al. 2024). À réserver aux exercices sûrs.",
+    params: []
+  },
+  {
+    id: "amrap",
+    label: "AMRAP",
+    famille: "charge",
+    description: "Autant de répétitions que possible sur la dernière série, ou de tours dans un temps donné.",
+    preuve: "C — pratique de terrain ; utile comme test de progression.",
+    params: [{ cle: "minutes", label: "Temps (min, 0 = série)", min: 0, max: 60, defaut: 0 }]
+  },
+  {
+    id: "emom",
+    label: "EMOM",
+    famille: "charge",
+    description: "Les répétitions prévues au début de chaque minute, le reste de la minute en repos.",
+    preuve: "C — pratique de terrain (cross-training) ; densité de travail élevée.",
+    params: [{ cle: "minutes", label: "Minutes", min: 2, max: 60, defaut: 10 }]
+  },
+  {
+    id: "tempo",
+    label: "Tempo",
+    famille: "controle",
+    description: "Durées imposées : descente - pause en bas - montée - pause en haut (ex. 3-1-1-0).",
+    preuve: "A — de 0,5 à 8 s par répétition, la prise de muscle est similaire (Schoenfeld 2015) : utile pour la technique, pas indispensable.",
+    params: [{ cle: "tempo", label: "Tempo", type: "texte", defaut: "3-1-1-0" }]
+  },
+  {
+    id: "excentrique",
+    label: "Excentrique lente / accentuée",
+    famille: "controle",
+    description: "Descente lente et contrôlée, ou charge plus lourde à la descente qu'à la montée.",
+    preuve: "B — gains de force surtout ; réduit le risque de blessure aux ischios (Nordic).",
+    params: [{ cle: "descenteS", label: "Descente (s)", min: 2, max: 10, defaut: 4 }]
+  },
+  {
+    id: "isometrie",
+    label: "Isométrie (gainage, tenue)",
+    famille: "controle",
+    description: "Position tenue sans mouvement, à un angle donné.",
+    preuve: "A pour la tension artérielle (baisse d'environ 8/4 mmHg, Edwards et al., BJSM 2023) ; B pour la force (Lum & Barbosa 2019).",
+    params: [{ cle: "tenueS", label: "Tenue (s)", min: 5, max: 180, pas: 5, defaut: 30 }]
+  },
+  {
+    id: "partielles",
+    label: "Partielles en étirement",
+    famille: "controle",
+    description: "Répétitions partielles dans la partie où le muscle est le plus étiré, seules ou après les répétitions complètes.",
+    preuve: "B — l'amplitude complète reste la base ; les partielles en étirement font au moins aussi bien (Wolf et al. 2023).",
+    params: [{ cle: "repsPartielles", label: "Partielles ajoutées", min: 0, max: 15, defaut: 5 }]
+  },
+  {
+    id: "bfr",
+    label: "Occlusion (BFR)",
+    famille: "special",
+    description: "Charge légère (20-40 % du max) avec un brassard qui limite le retour veineux. Schéma classique 30-15-15-15 répétitions.",
+    preuve: "A — prise de muscle proche des charges lourdes, force un peu moindre (Patterson 2019 ; de Queiros 2024). À éviter en cas de troubles circulatoires ou de grossesse ; avis médical conseillé.",
+    params: [{ cle: "pression", label: "Pression (% occlusion)", min: 40, max: 80, pas: 5, defaut: 50 }]
+  }
+];
+
+export const techniqueParId = (id) => TECHNIQUES_SERIE.find((t) => t.id === id) || null;
+
+/** Reglages par defaut d'une technique (objet vide si aucun). */
+export function parametresParDefaut(id) {
+  const t = techniqueParId(id);
+  const p = {};
+  for (const r of (t && t.params) || []) p[r.cle] = r.defaut;
+  return p;
+}
+
+/**
+ * Charges des series back-off apres un top set : une seule baisse depuis
+ * la charge du top set, arrondie a 2,5 kg.
+ */
+export function chargeBackoff(poids, baissePct) {
+  const w = num(poids);
+  const pct = num(baissePct);
+  if (!(w > 0) || !(pct > 0) || pct >= 100) return null;
+  return Math.max(2.5, round((w * (1 - pct / 100)) / 2.5, 0) * 2.5);
+}
 
 /** Groupes de superset : la lettre qui dit quels exercices s'enchainent. */
 export const GROUPES_SUPERSET = ["A", "B", "C", "D"];
@@ -101,15 +274,52 @@ export function paliersDegressifs(poids, paliers, baissePct) {
  */
 export function resumeTechnique(ex) {
   const technique = ex && ex.technique;
-  if (technique === "superset") {
-    return ` · superset${ex.supersetGroupe ? " " + ex.supersetGroupe : ""}`;
+  if (!technique || (ex && ex.mode === "cardio")) return "";
+  if (technique === "superset" || technique === "triset" || technique === "circuit") {
+    const nom = { superset: "superset", triset: "tri-set", circuit: "circuit" }[technique];
+    return ` · ${nom}${ex.supersetGroupe ? " " + ex.supersetGroupe : ""}`;
   }
   if (technique === "degressive") {
     const paliers = num(ex.degressivePaliers);
     const pct = num(ex.degressiveBaissePct);
     return ` · dégressive${paliers ? " ×" + paliers : ""}${pct ? " (-" + pct + " %)" : ""}`;
   }
-  return "";
+  const p = ex.techniqueParams || {};
+  const n = (k) => num(p[k]);
+  switch (technique) {
+    case "rest-pause":
+      return ` · rest-pause${n("miniSeries") ? " +" + n("miniSeries") : ""}${n("pauseS") ? " (" + n("pauseS") + " s)" : ""}`;
+    case "myo-reps":
+      return ` · myo-reps${n("miniSeries") ? " " + n("miniSeries") + "×" + (n("miniReps") || "?") : ""}`;
+    case "top-set": {
+      const kg = chargeBackoff(ex.weight, p.baissePct);
+      return ` · top set + ${n("backoff") || "?"} back-off${kg ? " @ " + kg + " kg" : n("baissePct") ? " (-" + n("baissePct") + " %)" : ""}`;
+    }
+    case "pyramide":
+      return ` · pyramide ${p.sens === "descendante" ? "descendante" : "montante"}`;
+    case "cluster":
+      return ` · cluster${n("repsBloc") ? " " + n("repsBloc") + " rép." : ""}${n("pauseS") ? " / " + n("pauseS") + " s" : ""}`;
+    case "echec":
+      return " · jusqu'à l'échec";
+    case "amrap":
+      return ` · AMRAP${n("minutes") ? " " + n("minutes") + " min" : ""}`;
+    case "emom":
+      return ` · EMOM${n("minutes") ? " " + n("minutes") + " min" : ""}`;
+    case "tempo": {
+      const t = String(p.tempo || "").trim();
+      return /^[0-9xX]{1,2}(-[0-9xX]{1,2}){3}$/.test(t) ? ` · tempo ${t}` : " · tempo";
+    }
+    case "excentrique":
+      return ` · excentrique${n("descenteS") ? " " + n("descenteS") + " s" : ""}`;
+    case "isometrie":
+      return ` · isométrie${n("tenueS") ? " " + n("tenueS") + " s" : ""}`;
+    case "partielles":
+      return ` · partielles${n("repsPartielles") ? " +" + n("repsPartielles") : ""}`;
+    case "bfr":
+      return ` · BFR${n("pression") ? " " + n("pression") + " %" : ""}`;
+    default:
+      return "";
+  }
 }
 
 /**

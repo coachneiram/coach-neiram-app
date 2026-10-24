@@ -13,6 +13,7 @@
 import { COLORS, POLICES } from "../tokens.js";
 import { ONGLETS as LISTE_ONGLETS } from "../lib/onglets.js";
 import { Apple, BookOpen, Dumbbell, Moon, Ruler, Settings, TrendingUp, UtensilsCrossed, X } from "./icones.jsx";
+import { TEXTES_TUTOS } from "../lib/tutos.js";
 
 /** Icone de chaque onglet. La liste elle-meme vit dans lib/onglets.js. */
 const ICONES = {
@@ -78,7 +79,17 @@ export function Toast({ message, onClose, icone: Icone }) {
   );
 }
 
-export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, toast, onFermerToast, iconeToast, children }) {
+const styleBoutonEntete = {
+  background: "none",
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: 10,
+  padding: 8,
+  color: COLORS.textMuted,
+  cursor: "pointer",
+  display: "flex"
+};
+
+export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, onOuvrirTuto, toast, onFermerToast, iconeToast, children }) {
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: POLICES.texte, color: COLORS.text }}>
       <Toast message={toast} onClose={onFermerToast} icone={iconeToast} />
@@ -113,6 +124,12 @@ export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, toast, o
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <Marque taille={19} tailleTitre={13} tailleSurtitre={6.5} />
             </div>
+            <div style={{ display: "flex", gap: 8 }}>
+            {onOuvrirTuto && (
+              <button onClick={onOuvrirTuto} aria-label={TEXTES_TUTOS.aria} data-bouton-tuto style={styleBoutonEntete}>
+                <BookOpen size={17} />
+              </button>
+            )}
             <button
               onClick={onOuvrirReglages}
               aria-label="Réglages"
@@ -128,6 +145,7 @@ export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, toast, o
             >
               <Settings size={17} />
             </button>
+            </div>
           </header>
 
           <main className="main-content">{children}</main>

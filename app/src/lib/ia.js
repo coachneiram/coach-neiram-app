@@ -29,8 +29,20 @@ export const MSG_ERREUR = {
   // Acces par jeton client (17 octobre 2026, audit P0-3).
   acces: "L'assistant IA n'est pas activé sur ce téléphone : entre le code d'accès donné par ton coach dans les Réglages.",
   "quota-client": "Tu as utilisé toute ton IA du jour. Elle revient demain.",
-  frequence: "Beaucoup de demandes d'affilée : patiente une minute, puis réessaie."
+  frequence: "Beaucoup de demandes d'affilée : patiente une minute, puis réessaie.",
+  // Accord refuse a l'ecran d'accord : rien n'a ete envoye.
+  consentement: "Rien n'a été envoyé : cette fonction a besoin de ton accord pour transmettre ces informations au service d'IA."
   /* FIN-TEXTE-NOUVEAU */
+};
+
+/**
+ * Accord du client avant tout envoi a l'IA (lib/consentement.js, repris de
+ * l'app Neiram le 24 octobre 2026). Par defaut (tests), rien n'est bloque ;
+ * l'app branche la vraie verification au demarrage (main.jsx).
+ */
+let verifierConsentement = () => Promise.resolve(true);
+export const definirConsentementIa = (f) => {
+  verifierConsentement = typeof f === "function" ? f : () => Promise.resolve(true);
 };
 
 /** Traduit une erreur technique en message affichable. */
@@ -122,6 +134,8 @@ async function appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs
  * chance apres une courte pause, comme dans la version d'origine.
  */
 export async function genererTexte({ prompt, images, history, systemPrompt, maxTokens, delaiMs }) {
+  // Rien ne part sans l'accord explicite du client.
+  if (!(await verifierConsentement())) throw new Error("consentement");
   const messages = construireMessages({ prompt, images, history });
   let derniereErreur = null;
 
@@ -132,7 +146,7 @@ export async function genererTexte({ prompt, images, history, systemPrompt, maxT
       derniereErreur = e;
       // Un delai depasse ne se rattrape pas en essayant le modele suivant :
       // l'attente s'additionnerait, et c'est justement ce qu'on veut borner.
-      if (["bad-key", "delai", "acces", "quota-client", "frequence"].includes(e.message)) throw e;
+      if (["bad-key", "delai", "acces", "quota-client", "frequence", "consentement"].includes(e.message)) throw e;
       if (e.message === "quota") {
         await new Promise((r) => setTimeout(r, 1600));
         try {

@@ -6,6 +6,7 @@
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import { readFileSync } from "node:fs";
 
 globalThis.__COACH_TEST__ = {};
 const { default: worker } = await import("../worker/coach-neiram-proxy.js");
@@ -176,7 +177,8 @@ describe("envoi planifie", () => {
   const fetchOrigine = globalThis.fetch;
 
   async function preparer(rappels, reponse = 201) {
-    const env = { PUSH_KV: kvFactice() };
+    // Sans annonce : ces tests portent sur les rappels de chaque telephone.
+    const env = { PUSH_KV: kvFactice(), ANNONCES_TEST: [] };
     const tel = telephone();
     await worker.fetch(requete("/push/abonner", { abonnement: tel.abonnement, rappels }), env);
     const envois = [];
@@ -248,5 +250,75 @@ describe("envoi planifie", () => {
 
   test("sans stockage, la tache planifiee ne fait rien", async () => {
     await worker.scheduled({}, {}, { waitUntil() {} });
+  });
+});
+
+describe("annonce a tous les telephones (24 octobre 2026)", () => {
+  const fetchOrigine = globalThis.fetch;
+  const { envoyerAnnonces, heureParis } = globalThis.__COACH_TEST__;
+  // Samedi 24 octobre 2026, 12 h a Paris (10 h UTC, heure d'ete).
+  const MIDI = Date.parse("2026-10-24T10:00:00Z");
+  const ANNONCE = { id: "test", debut: MIDI - 3600e3, fin: MIDI + 3 * 86400e3, titre: "Du nouveau", texte: "Ouvre l'appli", tag: "nouveautes" };
+
+  async function deuxTelephones(statut = 201) {
+    const env = { PUSH_KV: kvFactice(), ANNONCES_TEST: [] };
+    const a = telephone("https://fcm.googleapis.com/fcm/send/a");
+    const b = telephone("https://web.push.apple.com/b");
+    await worker.fetch(requete("/push/abonner", { abonnement: a.abonnement, rappels: [] }), env);
+    await worker.fetch(requete("/push/abonner", { abonnement: b.abonnement, rappels: [] }), env);
+    const envois = [];
+    globalThis.fetch = async (url, init) => {
+      envois.push({ url: String(url), init });
+      return new Response(null, { status: statut });
+    };
+    return { env, a, b, envois };
+  }
+
+  test("heure de Paris", () => {
+    assert.equal(heureParis(MIDI), 12);
+    assert.equal(heureParis(Date.parse("2026-12-24T22:30:00Z")), 23);
+  });
+
+  test("chaque telephone la recoit une fois, chiffree", async () => {
+    const { env, a, envois } = await deuxTelephones();
+    try {
+      assert.deepEqual(await envoyerAnnonces(env, MIDI, [ANNONCE]), { envoyees: 2, oublies: 0 });
+      const versA = envois.find((e) => e.url === a.abonnement.endpoint);
+      assert.deepEqual(dechiffrer(a, versA.init.body), { titre: "Du nouveau", texte: "Ouvre l'appli", tag: "nouveautes" });
+      // Tour suivant du Cron, et apres une mise a jour des rappels du telephone : rien de plus.
+      await worker.fetch(requete("/push/abonner", { abonnement: a.abonnement, rappels: [] }), env);
+      assert.deepEqual(await envoyerAnnonces(env, MIDI + 15 * 60e3, [ANNONCE]), { envoyees: 0, oublies: 0 });
+      assert.equal(envois.length, 2);
+    } finally {
+      globalThis.fetch = fetchOrigine;
+    }
+  });
+
+  test("jamais la nuit, ni avant le debut, ni apres la fin", async () => {
+    const { env, envois } = await deuxTelephones();
+    try {
+      await envoyerAnnonces(env, Date.parse("2026-10-24T20:30:00Z"), [ANNONCE]); // 22 h 30 a Paris
+      await envoyerAnnonces(env, ANNONCE.debut - 60e3, [ANNONCE]);
+      await envoyerAnnonces(env, ANNONCE.fin + 60e3, [ANNONCE]);
+      assert.equal(envois.length, 0);
+    } finally {
+      globalThis.fetch = fetchOrigine;
+    }
+  });
+
+  test("telephone desabonne (410) : oublie, comme pour les rappels", async () => {
+    const { env } = await deuxTelephones(410);
+    try {
+      assert.deepEqual(await envoyerAnnonces(env, MIDI, [ANNONCE]), { envoyees: 0, oublies: 2 });
+      assert.equal([...env.PUSH_KV.d.keys()].filter((k) => k.startsWith("ab:")).length, 0);
+    } finally {
+      globalThis.fetch = fetchOrigine;
+    }
+  });
+
+  test("le Cron envoie l'annonce en production (liste par defaut)", () => {
+    const src = readFileSync(new URL("../worker/coach-neiram-proxy.js", import.meta.url), "utf8");
+    assert.match(src, /envoyerAnnonces\(env, Date\.now\(\), env\.ANNONCES_TEST \|\| ANNONCES\)/);
+    assert.match(src, /id: "2026-10-24-nouveautes"/);
   });
 });

@@ -17,7 +17,7 @@
  *      client sait comment installer l'app ;
  *  10. Reglages → « Aide et questions frequentes » : les questions des
  *      guides, une reponse s'ouvre d'un toucher ;
- *  11. « Voir l'aide » depuis la fenetre ouvre l'Aide ;
+ *  11. « Voir le guide » depuis la fenetre ouvre le guide des tutos ;
  *  12. bandeau d'installation : etapes Android, « Plus tard » le masque, y
  *      compris apres reouverture ; sur iPhone, les etapes de Safari.
  *
@@ -162,11 +162,13 @@ try {
   // 10 a 12 : aide et bandeau d'installation.
   {
     const { ctx, page } = await ouvrir({ profil: PROFIL });
-    await page.getByRole("button", { name: "Voir l'aide" }).click();
+    // L'annonce de l'Aide (7 octobre) est sortie des 5 affichees : le bouton
+    // « Voir le guide » des tutos (24 octobre) passe par le meme chemin.
+    await page.getByRole("button", { name: "Voir le guide" }).click();
     await page.waitForTimeout(500);
-    const depuisFenetre = await page.locator("[data-aide]").count();
-    console.log("11. VOIR L'AIDE         :", depuisFenetre === 1 ? "la fenêtre « Quoi de neuf » ouvre l'Aide" : "*** AIDE NON OUVERTE ***");
-    await page.getByRole("button", { name: "Fermer", exact: true }).last().click();
+    const depuisFenetre = await page.locator("[data-guide-tutos]").count();
+    console.log("11. VOIR LE GUIDE       :", depuisFenetre === 1 ? "la fenêtre « Quoi de neuf » ouvre le guide des tutos" : "*** GUIDE NON OUVERT ***");
+    await page.locator(".modal-panel button[aria-label='Fermer']").last().click();
     await page.waitForTimeout(400);
 
     await page.locator('button[aria-label="Réglages"]').first().click();

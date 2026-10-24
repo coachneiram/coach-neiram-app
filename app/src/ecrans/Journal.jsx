@@ -10,6 +10,8 @@
  * ne pense a l'appuyer avant de fermer son telephone.
  */
 
+import { CarteSauvegarde } from "../ui/CarteSauvegarde.jsx";
+import { premierJourSuivi } from "../lib/rappel-sauvegarde.js";
 import { useMemo, useState } from "react";
 import { COLORS, POLICES } from "../tokens.js";
 import { num, todayISO } from "../lib/dates.js";
@@ -554,6 +556,15 @@ export function Journal({
       <MotivationCard text={motivation} icone={Flame} />
 
       <BandeauSerie serie={serie} />
+
+      {/* Rappel de sauvegarde (repris de l'app Neiram, 24 octobre 2026) : le
+          suivi ne vit que sur le telephone. */}
+      {date === todayISO() && (
+        <CarteSauvegarde
+          premierJour={premierJourSuivi(logEntriesApi.items, formApi.items, bodyApi.items, sessionsApi.items)}
+          nomProfil={profile?.name}
+        />
+      )}
 
       {score != null && (
         <Card style={{ marginBottom: 16 }}>

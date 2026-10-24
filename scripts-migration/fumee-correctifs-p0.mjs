@@ -17,7 +17,7 @@
  */
 
 import { chromium } from "playwright";
-import { appareil } from "./appareil.mjs";
+import { appareil, sansAides } from "./appareil.mjs";
 import { createServer } from "node:http";
 import { readFileSync, existsSync, mkdtempSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -46,6 +46,7 @@ const PROFIL = {
 
 async function contexte(profil, extra = () => {}) {
   const ctx = await nav.newContext({ ...appareil(), acceptDownloads: true });
+  await ctx.addInitScript(sansAides);
   const page = await ctx.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
   await page.addInitScript(
