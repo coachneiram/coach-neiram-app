@@ -18,6 +18,7 @@ import {
   versRecetteClient
 } from "../lib/recettes-coach.js";
 import { enregistrerRecette, lireRepasTypes } from "../lib/repas-types.js";
+import { filtrerContraintes } from "../lib/plan-repas.js";
 import { Btn, Card, Modal, SectionTitle } from "../ui/primitives.jsx";
 import { Plus, X } from "../ui/icones.jsx";
 
@@ -49,13 +50,13 @@ export function RecettesCoach({ profile, onAjoutee, catalogue = RECETTES_COACH }
     () => new Set(lireRepasTypes().map((r) => r.origine).filter(Boolean))
   );
 
-  const compatibles = useMemo(() => recettesPourClient(catalogue, profile), [catalogue, profile]);
-  const pourToi = useMemo(() => recettesPourClient(catalogue, profile, "pour-toi"), [catalogue, profile]);
+  const compatibles = useMemo(() => filtrerContraintes(recettesPourClient(catalogue, profile), profile), [catalogue, profile]);
+  const pourToi = useMemo(() => filtrerContraintes(recettesPourClient(catalogue, profile, "pour-toi"), profile), [catalogue, profile]);
   // « Pour toi » vide (aucune recette de son objectif cette semaine) : on
   // montre tout ce qui est compatible plutot qu'une liste vide.
   const filtreEffectif = filtre === "pour-toi" && !pourToi.length ? null : filtre;
   const liste = useMemo(
-    () => recettesPourClient(catalogue, profile, filtreEffectif),
+    () => filtrerContraintes(recettesPourClient(catalogue, profile, filtreEffectif), profile),
     [catalogue, profile, filtreEffectif]
   );
   const profilsPresents = PROFILS_RECETTE.filter((p) => compatibles.some((r) => r.profils.includes(p.id)));
