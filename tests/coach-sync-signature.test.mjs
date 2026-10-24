@@ -211,9 +211,12 @@ describe("Proxy → Apps Script : la signature", () => {
     assert.equal(ancien.poster({ ...POINTAGE, secret: "faux" }).error, "non-autorise");
   });
 
-  test("le depot livre la transition ouverte (le proxy en production envoie encore l'ancien format)", () => {
+  // Transition fermee chez le coach le 24/10/2026 (version 17) : le depot
+  // livre desormais le secret en clair refuse.
+  test("le depot livre la transition fermee (le proxy en production signe)", () => {
     const s = creerScript({ reglages: { EXIGER_SECRET: true } });
-    assert.equal(s.contexte.ACCEPTER_SECRET_EN_CLAIR, true);
+    assert.equal(s.contexte.ACCEPTER_SECRET_EN_CLAIR, false);
+    assert.equal(s.poster({ ...POINTAGE, secret: SECRET }).error, "non-autorise");
     assert.equal(s.contexte.FENETRE_SIGNATURE_MS, 300000);
   });
 });

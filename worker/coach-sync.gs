@@ -1,5 +1,21 @@
 /**
  * Coach Neiram — synchro et alertes du coaching en ligne
+ * Version 2.4 (24 octobre 2026) — adresse d'alerte dans les propriétés.
+ *
+ * La v2.4 lit l'adresse qui reçoit les alertes dans la propriété du script
+ * EMAIL_COACH (Paramètres du projet > Propriétés du script). Remplacer
+ * Code.gs ne la fait donc plus perdre. Sans cette propriété, l'adresse
+ * écrite plus bas sert encore (repli). Le secret envoyé en clair est
+ * refusé par défaut (coupé chez le coach le 24/10/2026, version 17).
+ * Mise en place, une seule fois :
+ *   1. Paramètres du projet > Propriétés du script > Ajouter :
+ *      EMAIL_COACH = ton adresse ; enregistrer ;
+ *   2. sauvegarder l'ancien Code.gs dans un fichier ENTIÈREMENT COMMENTÉ,
+ *      coller ce fichier dans Code.gs, ENREGISTRER ;
+ *   3. lancer verifier() : il doit afficher « Adresse d'alerte : propriété » ;
+ *   4. Gérer les déploiements > crayon du déploiement ACTIF > Nouvelle
+ *      version (même adresse /exec), puis testerMail().
+ *
  * Version 2.3 (24 octobre 2026) — alerte sommeil et stress.
  *
  * La v2.3 ajoute deux types :
@@ -63,9 +79,20 @@
 
 /* ---------------------------------------------------------------- CONFIG */
 
-/** Adresse qui reçoit les alertes. Le dépôt garde un exemple : remets ton
- *  adresse ici en installant (celle de la v2). */
+/** Adresse de REPLI pour les alertes. Depuis la v2.4, l'adresse se met
+ *  dans la propriété du script EMAIL_COACH (voir adresseCoach) : ce fichier
+ *  peut alors être remplacé sans rien perdre. Le dépôt garde un exemple. */
 var EMAIL_COACH = 'ton.adresse@exemple.com';
+
+/** Nom de la propriété du script qui contient l'adresse d'alerte. */
+var PROPRIETE_EMAIL = 'EMAIL_COACH';
+
+/** Adresse qui reçoit les alertes : la propriété du script, sinon le repli. */
+function adresseCoach() {
+  var p = PropertiesService.getScriptProperties().getProperty(PROPRIETE_EMAIL);
+  p = p ? String(p).trim() : '';
+  return p || EMAIL_COACH;
+}
 
 var F_JOURNAL  = 'Journal';
 var F_ALERTES  = 'Alertes';
@@ -86,10 +113,10 @@ var PROPRIETE_SECRET = 'SECRET_SYNC';
 /** Secret précédent, accepté pendant une rotation (voir tournerSecret). */
 var PROPRIETE_SECRET_PRECEDENT = 'SECRET_SYNC_PRECEDENT';
 
-/** Transition v2.1 → v2.2 : tant que l'ancien proxy (qui envoie le secret
- *  en clair) peut encore écrire, true. À passer à false dès qu'un pointage
- *  signé est arrivé (étape c de la mise en place). */
-var ACCEPTER_SECRET_EN_CLAIR = true;
+/** Transition v2.1 → v2.2 : l'ancien proxy envoyait le secret en clair.
+ *  false en production depuis le 24 octobre 2026 (version 17, pointages
+ *  signés vérifiés). Ne le remettre à true que pour revenir en arrière. */
+var ACCEPTER_SECRET_EN_CLAIR = false;
 
 /** Âge maximal d'un événement signé, et durée de mémoire des nonces. */
 var FENETRE_SIGNATURE_MS = 5 * 60 * 1000;
@@ -191,11 +218,12 @@ function doPost(e) {
       // L'événement est enregistré : un échec d'e-mail ne doit pas le faire
       // renvoyer par l'application, sinon il serait écrit deux fois.
       try {
-        if (/@exemple\.com$/.test(EMAIL_COACH)) {
+        var adresse = adresseCoach();
+        if (/@exemple\.com$/.test(adresse)) {
           journaliserErreur('EMAIL_COACH non renseigné : alerte non envoyée', JSON.stringify(data));
         } else if (doitEnvoyerMail(data) && peutEnvoyerMail(data.client)) {
           var m = composerMail(data);
-          MailApp.sendEmail(EMAIL_COACH, m.sujet, m.corps);
+          MailApp.sendEmail(adresse, m.sujet, m.corps);
           marquerEnvoi(data);
         }
       } catch (err) {
@@ -216,7 +244,7 @@ function doPost(e) {
 
 function doGet() {
   return ContentService.createTextOutput(
-    'Synchro Coach Neiram active (v2.2). Utiliser POST.');
+    'Synchro Coach Neiram active (v2.4). Utiliser POST.');
 }
 
 /* ------------------------------------------------------------------ LECTURE */
@@ -799,8 +827,9 @@ function testerMail() {
   journaliser(faux);
   consignerAlerte(faux);
   var m = composerMail(faux);
-  MailApp.sendEmail(EMAIL_COACH, m.sujet, m.corps);
-  afficher('Mail de test envoyé à ' + EMAIL_COACH);
+  var adresse = adresseCoach();
+  MailApp.sendEmail(adresse, m.sujet, m.corps);
+  afficher('Mail de test envoyé à ' + adresse);
 }
 
 /** Affiche les en-têtes réellement présents, onglet par onglet. */
@@ -812,6 +841,9 @@ function verifier() {
     var e = n ? sh.getRange(1, 1, 1, n).getValues()[0].join(' | ') : '(vide)';
     lignes.push(sh.getName() + '\n   ' + e);
   });
+  var propriete = PropertiesService.getScriptProperties().getProperty(PROPRIETE_EMAIL);
+  lignes.push('Adresse d\'alerte : ' + (propriete && String(propriete).trim() ? 'propriété' :
+              (/@exemple\.com$/.test(EMAIL_COACH) ? 'NON RENSEIGNÉE' : 'repli dans le code')));
   lignes.push('Secret en place : ' + (secretAttendu() ? 'oui' : 'NON') +
               ' · exigé : ' + (EXIGER_SECRET ? 'oui' : 'non') +
               ' · ancien format (secret en clair) accepté : ' + (ACCEPTER_SECRET_EN_CLAIR ? 'OUI, à couper' : 'non') +
