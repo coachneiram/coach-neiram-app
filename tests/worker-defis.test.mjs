@@ -239,8 +239,14 @@ describe("tâche planifiée et schéma", () => {
 
   test("les tables existantes restent intactes", async () => {
     await clientActive("Alex D.");
-    const tables = env.DB.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all().map((r) => r.name);
-    assert.deepEqual(tables, ["clients", "compteurs", "defis", "defis_participants", "invitations", "jetons"]);
+    // Les tables de la communaute (24 octobre 2026) ont leur propre test
+    // (tests/worker-communaute.test.mjs) ; sqlite_sequence vient de leurs
+    // cles AUTOINCREMENT.
+    const tables = env.DB.sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'communaute_%' ORDER BY name")
+      .all()
+      .map((r) => r.name);
+    assert.deepEqual(tables, ["clients", "compteurs", "defis", "defis_participants", "invitations", "jetons", "sqlite_sequence"]);
   });
 
   test("pseudo : filtre et prénom par défaut", () => {
