@@ -5,7 +5,8 @@
  *      le niveau FFForce et les points IPF GL ;
  *   2. course : un 10 km en 45:00 donne le niveau FFA ; une faute de frappe
  *      est signalée sans effacer le chrono ;
- *   3. Mesures → « Ma transformation » : gras perdu sur 90 jours.
+ *   3. Mesures → « Ma transformation » : gras perdu sur 90 jours ;
+ *   4. Tendances → comparateur avant / après entre deux semaines de photos.
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-performances.mjs
@@ -48,6 +49,9 @@ await page.addInitScript(() => {
     activityLevel: "modere", goal: "perte", sessionsPerWeek: 3,
     trainingMode: "app", coachingMode: "presentiel", dietType: "aucun", allergies: []
   }));
+  const px = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  localStorage.setItem("coach_photos_2026-08-03", JSON.stringify({ face: px }));
+  localStorage.setItem("coach_photos_2026-10-19", JSON.stringify({ face: px }));
   localStorage.setItem("coach_body_logs", JSON.stringify([
     { id: "b1", date: jour(80), weightKg: 86, bodyFatPct: 20 },
     { id: "b2", date: jour(2), weightKg: 82.4, bodyFatPct: 17 }
@@ -97,6 +101,18 @@ try {
   console.log(
     "3. TRANSFORMATION       :",
     /Poids : 86 kg → 82,4 kg/.test(t3) && /Gras perdu : 3,2 kg/.test(t3) ? "poids 86 → 82,4 kg, 3,2 kg de gras perdus sur 90 jours" : `*** « ${t3.slice(0, 200)} » ***`
+  );
+
+  // 4. Comparateur.
+  await page.getByRole("button", { name: "Tendances", exact: true }).last().click();
+  await page.waitForTimeout(700);
+  const comp = page.locator("[data-comparateur]");
+  const avant = await comp.locator("[data-choix-avant] option").count();
+  await comp.locator("[data-curseur-comparateur]").fill("20");
+  const valeur = await comp.locator("[data-curseur-comparateur]").inputValue();
+  console.log(
+    "4. AVANT / APRÈS        :",
+    (await comp.count()) === 1 && avant === 2 && valeur === "20" ? "deux semaines de photos, curseur à 20 %" : `*** comparateur ${await comp.count()}, ${avant} semaines, curseur ${valeur} ***`
   );
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
