@@ -28,6 +28,51 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-24-tutos-raccourcis",
+    date: "2026-10-24",
+    titre: "Un « ? » sur chaque carte",
+    texte:
+      "Touche le « ? » à côté d'un titre : le mode d'emploi de la fonction s'ouvre. Sur Android, garde le doigt sur l'icône de l'appli pour ajouter un verre d'eau, lancer ta séance ou noter un repas.",
+    ouvre: "guide",
+    bouton: "Voir le guide"
+  },
+  {
+    id: "2026-10-24-menu-nutrition",
+    date: "2026-10-24",
+    titre: "Ton menu de la semaine",
+    texte:
+      "Repas → « Menu » : 7 jours calés sur tes objectifs, avec la liste de courses. En Nutrition : un repère d'après tes données (tes objectifs restent ceux de ton coach), les 14 allergènes, la catégorie de poids et les compléments utiles.",
+    onglet: "repas",
+    bouton: "Voir mon menu"
+  },
+  {
+    id: "2026-10-24-tous-sports",
+    date: "2026-10-24",
+    titre: "Tous tes sports, tes performances",
+    texte:
+      "Course, vélo, foot, yoga… : note tous tes sports (« Activité »), suis un programme guidé, vois ton année se remplir. Note tes maxis et tes chronos pour ton niveau officiel ; ta transformation et tes photos avant / après. Ton coach le voit.",
+    onglet: "entrainements",
+    bouton: "Voir mes séances"
+  },
+  {
+    id: "2026-10-24-habitudes",
+    date: "2026-10-24",
+    titre: "Habitudes, leçons et déclics",
+    texte:
+      "Dans le Journal : coche tes petites habitudes (série et joker), lis la leçon du jour en 2 minutes. Dans Tendances, « Mes déclics » montre ce qui va avec tes meilleures journées. Et de nouveaux trophées.",
+    onglet: "journal",
+    bouton: "Voir mon journal"
+  },
+  {
+    id: "2026-10-24-sommeil-stress",
+    date: "2026-10-24",
+    titre: "Sommeil et stress d'après les études",
+    texte:
+      "Conseils revus d'après les études, 5 minutes de respiration guidée, la régularité de ton lever et « Quand en parler à un médecin ». Chaque conseil a sa source.",
+    onglet: "sommeil",
+    bouton: "Voir le sommeil"
+  },
+  {
     id: "2026-10-24-seance-guidee",
     date: "2026-10-24",
     titre: "Une séance plus facile à suivre",

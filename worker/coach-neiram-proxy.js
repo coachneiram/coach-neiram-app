@@ -1109,10 +1109,18 @@ async function envoyerRappelsDus(env, maintenant) {
  * parce que la fiche du telephone est reecrite a chaque mise a jour de ses
  * rappels. Pour une nouvelle annonce : ajouter une entree, redeployer.
  */
-// Aucune annonce en cours (24/10/2026) : le Worker peut etre redeploye
-// sans rien envoyer aux clients. L'annonce des reprises de Neiram arrive
-// avec la derniere PR, en une seule notification.
-const ANNONCES = [];
+// Annonce des reprises de Neiram (24 octobre 2026), une seule fois par
+// telephone, entre 9 h et 20 h (heure de Paris), jusqu'au 1er novembre.
+const ANNONCES = [
+  {
+    id: "2026-10-24-reprises-neiram",
+    debut: Date.parse("2026-10-24T07:00:00Z"),
+    fin: Date.parse("2026-11-01T19:00:00Z"),
+    titre: "Coach Neiram — du nouveau 💪",
+    texte: "Ton menu de la semaine, tous tes sports et tes performances, tes habitudes, le sommeil d'après les études, et un « ? » sur chaque carte. Ouvre l'appli pour découvrir.",
+    tag: "nouveautes-2026-10-24"
+  }
+];
 const HEURE_ANNONCE_MIN = 9;
 const HEURE_ANNONCE_MAX = 20;
 
