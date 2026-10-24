@@ -13,6 +13,11 @@
  *
  * La celebration porte aussi, au plus une fois toutes les 4 semaines, la
  * relance du parrainage (lib/relance-parrainage.js).
+ *
+ * Familles « mode de vie et tous sports » (24/10/2026, compteurs de
+ * lib/compteurs-trophees.js) : au premier calcul, leurs trophees deja
+ * obtenus sont marques vus sans celebration (vusAvecModeDeVie), pour ne pas
+ * feter d'un coup une dizaine de trophees chez un client existant.
  */
 
 import { useMemo, useState } from "react";
@@ -20,7 +25,8 @@ import { Send } from "../ui/icones.jsx";
 import { COLORS, POLICES } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
 import { charger, enregistrer } from "../lib/stockage.js";
-import { messageSemaine, nouveauxTrophees, trophees, tropheesAffiches } from "../lib/trophees.js";
+import { messageSemaine, nouveauxTrophees, trophees, tropheesAffiches, vusAvecModeDeVie } from "../lib/trophees.js";
+import { compteursTrophees } from "../lib/compteurs-trophees.js";
 import { debutSaisi, seancesAvant } from "../lib/carte-progres.js";
 import { DebutCoaching, LIBELLE_CHAMP, ListesDate, SeancesTotales } from "./CarteProgres.jsx";
 import { FORMULES_CONTRAT, contratDuProfil, dateCourte, echeanceContrat, etatContrat, messageFinContrat } from "../lib/contrat.js";
@@ -38,15 +44,26 @@ const ICONES_FAMILLE = { seances: "🏅", semaines: "🔥", anciennete: "🎖️
    Trophees et serie de semaines tenues, ajoutes a la demande du coach pour
    que les clients restent actifs, d'apres Peloton, Orangetheory et Duolingo.
    Aucun de ces libelles n'existe dans index.html. */
-export function Trophees({ seances, profile, semainesDifficiles, avecJoker, onDebutCoaching, onSeancesAvantApp, onContrat }) {
+export function Trophees({ seances, profile, semainesDifficiles, avecJoker, onDebutCoaching, onSeancesAvantApp, onContrat, maxisForce, poidsKg }) {
   const date = todayISO();
   const etat = useMemo(
-    () => trophees({ seances, profil: profile, semainesDifficiles, date }),
-    [seances, profile, semainesDifficiles, date]
+    () =>
+      trophees({
+        seances,
+        profil: profile,
+        semainesDifficiles,
+        date,
+        compteurs: compteursTrophees({ seances, profil: profile, maxisForce, poidsKg, date })
+      }),
+    [seances, profile, semainesDifficiles, date, maxisForce, poidsKg]
   );
   const [vus, setVus] = useState(() => {
     const v = charger(CLE_VUS, []);
-    return Array.isArray(v) ? v : [];
+    const lus = Array.isArray(v) ? v : [];
+    const migres = vusAvecModeDeVie(etat.liste, lus);
+    if (!migres) return lus;
+    enregistrer(CLE_VUS, migres);
+    return migres;
   });
   const nouveaux = nouveauxTrophees(etat.liste, vus);
   const { serie, meilleure, enCours } = etat.series;
@@ -186,7 +203,7 @@ export function Trophees({ seances, profile, semainesDifficiles, avecJoker, onDe
                 }}
               >
                 <div style={{ fontSize: 22, filter: t.obtenu ? "none" : "grayscale(1)" }}>
-                  {ICONES_FAMILLE[t.famille]}
+                  {ICONES_FAMILLE[t.famille] || t.icone}
                 </div>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: t.obtenu ? COLORS.gold : COLORS.textMuted, marginTop: 4 }}>
                   {t.titre}
