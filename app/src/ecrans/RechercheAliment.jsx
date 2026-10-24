@@ -18,8 +18,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { num, round } from "../lib/dates.js";
-import { charger, enregistrer } from "../lib/stockage.js";
-import { chercherAliments, chercherParCodeBarres } from "../lib/recherche-aliments.js";
+import { charger, enregistrer, STORAGE_KEYS } from "../lib/stockage.js";
+import { chercherAliments, chercherParCodeBarres, conflitsAllergenes } from "../lib/recherche-aliments.js";
+import { libelleAllergene } from "../lib/allergenes.js";
+import { TEXTES_ALLERGENES_PRODUIT } from "../lib/textes-nutrition-perso.js";
 import { fibresPour, mentionEtat } from "../lib/fibres.js";
 import { ChoixPhoto } from "../ui/ChoixPhoto.jsx";
 import { redimensionnerPhoto } from "../lib/images.js";
@@ -297,6 +299,31 @@ function LigneAliment({ p, choisi, onChoisir, estFavori, onBasculerFavori }) {
  * la ligne de resultat, avant meme ce choix de quantite ; la repeter ici
  * doublonnerait l'action plutot que de la faciliter.
  */
+const styleAlerteAllergenes = {
+  fontSize: 12,
+  marginTop: 6,
+  lineHeight: 1.45,
+  fontWeight: 600
+};
+
+/**
+ * Allergenes du profil dans le produit (Open Food Facts), repris de l'app
+ * Neiram le 24/10/2026 : « Contient » en rouge, « Traces » en orange. Le
+ * profil est relu ici : l'ecran de recherche ne le recoit pas.
+ */
+function AlerteAllergenes({ produit }) {
+  const profil = charger(STORAGE_KEYS.profile, null);
+  const { contient, traces } = conflitsAllergenes(produit, profil && profil.allergies);
+  if (!contient.length && !traces.length) return null;
+  const noms = (liste) => liste.map((id) => libelleAllergene(id).toLowerCase()).join(", ");
+  return (
+    <div data-alerte-allergenes style={styleAlerteAllergenes}>
+      {contient.length > 0 && <div style={{ color: COLORS.bad }}>{TEXTES_ALLERGENES_PRODUIT.contient(noms(contient))}</div>}
+      {traces.length > 0 && <div style={{ color: COLORS.warn }}>{TEXTES_ALLERGENES_PRODUIT.traces(noms(traces))}</div>}
+    </div>
+  );
+}
+
 function QuantiteProduit({ produit, onChoisir, estFavori, onBasculerFavori }) {
   const [grammes, setGrammes] = useState(produit.serving || 100);
   const g = Math.max(0, num(grammes));
@@ -328,6 +355,7 @@ function QuantiteProduit({ produit, onChoisir, estFavori, onBasculerFavori }) {
         {produit.kcal100} kcal · P{produit.p100} G{produit.c100} L{produit.f100} / 100 g
       </div>
       <BadgesQualite produit={produit} detaille />
+      <AlerteAllergenes produit={produit} />
       <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginTop: 10 }}>
         <div style={{ width: 110 }}>
           <Field label="Quantité (g)">

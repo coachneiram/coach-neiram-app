@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 /**
  * Script Google de synchro, version 2.1 (4 octobre 2026).
  *
@@ -60,8 +61,9 @@ describe("1. secret partage", () => {
     assert.equal(s.poster(pointage({ secret: "" })).ok, true);
   });
 
+  // Ancien format (v2.1, secret en clair), refuse par defaut depuis la v2.4.
   test("exige : sans le bon secret, refuse et rien n'est ecrit", () => {
-    const s = creerScript({ reglages: { EXIGER_SECRET: true }, proprietes: { SECRET_SYNC: "le-vrai-secret" }, entetesExistants: CLASSEUR_DU_COACH });
+    const s = creerScript({ reglages: { EXIGER_SECRET: true, ACCEPTER_SECRET_EN_CLAIR: true }, proprietes: { SECRET_SYNC: "le-vrai-secret" }, entetesExistants: CLASSEUR_DU_COACH });
     assert.deepEqual(s.poster(pointage({ secret: "faux" })), { ok: false, statut: "erreur", error: "non-autorise" });
     assert.equal(s.poster(pointage({ secret: undefined })).ok, false);
     assert.equal(s.lignes("Journal").length, 0);
@@ -270,6 +272,34 @@ describe("ce que la v2 faisait deja reste en place", () => {
 
   test("doGet annonce la version", () => {
     const s = creerScript();
-    assert.match(s.appeler("doGet").contenu, /v2\.2/);
+    assert.match(s.appeler("doGet").contenu, /v2\.4/);
+  });
+
+  // v2.4 (24/10/2026) : l'adresse d'alerte vit dans les proprietes du
+  // script, et survit donc au remplacement de Code.gs.
+  test("v2.4 : la propriete EMAIL_COACH l'emporte sur l'adresse du code", () => {
+    const s = creerScript({ entetesExistants: CLASSEUR_DU_COACH, proprietes: { EMAIL_COACH: " coach@propriete.fr " } });
+    assert.equal(s.poster({ type: "alerte_seances_manquees", client: "Thomas", nbManquees: 2 }).ok, true);
+    assert.deepEqual(s.mails.map((m) => m.a), ["coach@propriete.fr"]);
+  });
+
+  test("v2.4 : propriete renseignee, fichier colle tel quel (adresse d'exemple) : l'alerte part", () => {
+    const s = creerScript({ entetesExistants: CLASSEUR_DU_COACH, reglages: { EMAIL_COACH: "ton.adresse@exemple.com" }, proprietes: { EMAIL_COACH: "coach@propriete.fr" } });
+    s.poster({ type: "alerte_seances_manquees", client: "Thomas", nbManquees: 2 });
+    assert.equal(s.mails.length, 1);
+    assert.equal(s.lignes("Erreurs").length, 0);
+  });
+
+  test("v2.4 : propriete vide : repli sur l'adresse du code", () => {
+    const s = creerScript({ entetesExistants: CLASSEUR_DU_COACH, proprietes: { EMAIL_COACH: "  " } });
+    s.poster({ type: "alerte_seances_manquees", client: "Thomas", nbManquees: 2 });
+    assert.deepEqual(s.mails.map((m) => m.a), ["coach@test.fr"]);
+  });
+
+  test("v2.4 : le depot ne contient que l'adresse d'exemple et refuse le secret en clair par defaut", () => {
+    const src = readFileSync(new URL("../worker/coach-sync.gs", import.meta.url), "utf8");
+    assert.match(src, /var EMAIL_COACH = 'ton\.adresse@exemple\.com';/);
+    assert.match(src, /var ACCEPTER_SECRET_EN_CLAIR = false;/);
+    assert.equal((src.match(/@(?!exemple\.com)[a-z0-9-]+\.[a-z]{2,}/gi) || []).length, 0, "aucune autre adresse");
   });
 });

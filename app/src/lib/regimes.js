@@ -104,6 +104,37 @@ export const EXCLUSIONS = {
 };
 
 /**
+ * Contraintes religieuses ou de mode de vie, cumulables avec le regime
+ * (champ `contraintesAlim` du profil), reprises de l'app Neiram le
+ * 24/10/2026. Halal : ni porc ni alcool ; casher : ni porc ni crustaces ni
+ * mollusques (la regle viande/lait se respecte au repas) ; sans alcool.
+ * Le « sans porc » d'origine reste un regime a part entiere : il n'est pas
+ * remplace, une contrainte s'y ajoute.
+ *
+ * Elles filtrent les aliments proposes (aliments.js, regimeOk) et la
+ * consigne du Coach IA (consigne-coach.js). Elles ne changent AUCUN
+ * objectif : computeTargets ne lit pas ce champ.
+ */
+export const CONTRAINTES_ALIM = [
+  { id: "halal", label: "Halal", exclut: ["porc", "alcool"] },
+  { id: "casher", label: "Casher", exclut: ["porc", "crustaces", "mollusques"] },
+  { id: "sans-alcool", label: "Sans alcool", exclut: ["alcool"] },
+  { id: "flexitarien", label: "Flexitarien (peu de viande)", exclut: [] }
+];
+
+/** Identifiants de contraintes du profil, reconnus et sans doublon. */
+export function contraintesDuProfil(profile) {
+  const ids = Array.isArray(profile && profile.contraintesAlim) ? profile.contraintesAlim : [];
+  return CONTRAINTES_ALIM.filter((c) => ids.includes(c.id)).map((c) => c.id);
+}
+
+/** Etiquettes exclues par les contraintes du profil. */
+export function exclusionsContraintes(profile) {
+  const ids = contraintesDuProfil(profile);
+  return [...new Set(CONTRAINTES_ALIM.filter((c) => ids.includes(c.id)).flatMap((c) => c.exclut))];
+}
+
+/**
  * Etiquettes ajoutees apres la migration, par nom d'article.
  *
  * La liste de courses est verifiee a l'identique contre index.html
@@ -159,8 +190,8 @@ export const MAJORATION_PROTEINES = { vegetalien: 1.15, vegetarien: 1.1 };
  *    mais ce serait promettre un regime et n'en livrer que l'ombre.
  *  - JEUNE INTERMITTENT : c'est un horaire, pas une composition. Ni les
  *    macros ni les aliments ne bougent. Il a sa place dans les rappels.
- *  - HALAL, CASHER : il faudrait distinguer le porc du reste des viandes,
- *    et le catalogue ne porte qu'une etiquette « viande » globale.
+ *  - HALAL, CASHER : ce ne sont pas des repartitions. Ils sont venus le
+ *    24/10/2026 comme contraintes cumulables (CONTRAINTES_ALIM ci-dessus).
  *  - SANS GLUTEN, SANS LACTOSE : deja proposes, et mieux, dans les
  *    allergies et intolerances du profil.
  */
@@ -168,7 +199,14 @@ export const REPARTITIONS = [
   { id: "standard", label: "Standard (recommandé)" },
   { id: "lowcarb", label: "Pauvre en glucides (low carb)" },
   { id: "keto", label: "Kéto (très faible en glucides)" },
-  { id: "hyperproteine", label: "Hyperprotéiné (ultra protéiné)" }
+  { id: "hyperproteine", label: "Hyperprotéiné (ultra protéiné)" },
+  // Modeles repris de l'app Neiram (24/10/2026). Dans l'app coach, ils ne
+  // changent PAS les objectifs (computeTargets les traite comme le
+  // standard) : seul le repere sur mesure (lib/nutrition-perso.js) en tient
+  // compte, et descriptionRegime le dit au client.
+  { id: "mediterraneen", label: "Méditerranéen (huile d'olive, poisson, légumineuses)" },
+  { id: "dash", label: "DASH (tension artérielle, peu de sel)" },
+  { id: "paleo", label: "Paléo (sans céréales ni produits transformés)" }
 ];
 
 /** Repartitions qui posent les glucides bas plutot que de les laisser absorber. */
@@ -394,6 +432,19 @@ const enDeficitProfil = (profile) =>
   !!(profile && (profile.goal === "perte" || profile.performanceDirection === "perte"));
 
 /**
+ * Modeles alimentaires repris de l'app Neiram : leur explication dit
+ * clairement que les objectifs du coach ne bougent pas.
+ */
+const MODELES_REPERE = {
+  mediterraneen:
+    "Modèle méditerranéen : huile d'olive, poisson, légumineuses, légumes et céréales complètes. Tes objectifs restent ceux de ton coach ; le repère sur mesure de l'onglet Nutrition vise environ 37 % de lipides.",
+  dash:
+    "Modèle DASH : fruits, légumes, laitages maigres et peu de sel (moins de 5 g par jour). Tes objectifs restent ceux de ton coach ; le repère sur mesure vise environ 27 % de lipides et au moins 18 % de protéines.",
+  paleo:
+    "Modèle paléo : viandes, poissons, œufs, légumes, fruits et oléagineux, sans céréales ni produits transformés. Tes objectifs restent ceux de ton coach ; le repère sur mesure vise environ 35 % de lipides."
+};
+
+/**
  * Phrases expliquant au client ce que ses reglages changent pour lui.
  *
  * Ecrites au present et a la deuxieme personne : elles s'affichent sous
@@ -439,6 +490,7 @@ export function descriptionRegime(profile) {
         : "Tes protéines montent à 2,5 g par kilo, contre 2 g en temps normal. Tes lipides et tes glucides gardent leur calcul habituel."
     );
   }
+  if (MODELES_REPERE[repartition]) phrases.push(MODELES_REPERE[repartition]);
 
   return phrases;
 }

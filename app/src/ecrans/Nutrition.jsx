@@ -11,7 +11,7 @@
  * modifierait ses objectifs sans qu'il l'ait demande.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { COLORS } from "../tokens.js";
 import { fmtDateShort } from "../lib/dates.js";
 import { computeCalibration, etatCalibrage } from "../lib/nutrition.js";
@@ -20,12 +20,21 @@ import { objectifFibres, totalFibres } from "../lib/fibres.js";
 import { todayISO } from "../lib/dates.js";
 import { Btn, Card, MacroTarget, SectionTitle } from "../ui/primitives.jsx";
 import { budgetSemaine, messageSemaine, reglesDieteFlexible } from "../lib/diete-flexible.js";
+import { enregistrerReglagesSurMesure, lireReglagesSurMesure } from "../lib/nutrition-perso.js";
+import { CarteObjectifsSurMesure } from "../ui/CarteObjectifsSurMesure.jsx";
+import { CarteComplements } from "../ui/CarteComplements.jsx";
 
 /** Fenetre d'observation du calibrage, en jours. Valeur d'origine. */
 const FENETRE_CALIBRAGE = 28;
 
-export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntries, onApplyCalibration }) {
+export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntries, onApplyCalibration, seances, seancePrevue }) {
   const etatCal = etatCalibrage(profile, currentWeight);
+
+  // Reponses du repere sur mesure (repris de l'app Neiram le 24/10/2026) :
+  // une cle a part, cn_objectifs_sur_mesure, jamais le profil. Les
+  // objectifs du coach (targets) ne dependent donc pas de ces reponses.
+  const [reglagesSurMesure, setReglagesSurMesure] = useState(() => lireReglagesSurMesure());
+  const majReglagesSurMesure = (r) => setReglagesSurMesure(enregistrerReglagesSurMesure(r));
   const calibration = useMemo(
     () => computeCalibration(bodyLogs, logEntries, FENETRE_CALIBRAGE),
     [bodyLogs, logEntries]
@@ -57,7 +66,7 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Card>
+      <Card data-objectifs-coach>
         <SectionTitle>Objectifs journaliers</SectionTitle>
         {targets?.calories ? (
           <>
@@ -123,6 +132,18 @@ export function Nutrition({ profile, targets, currentWeight, bodyLogs, logEntrie
           </p>
         )}
       </Card>
+
+      <CarteObjectifsSurMesure
+        profile={profile}
+        targets={targets}
+        currentWeight={currentWeight}
+        bodyLogs={bodyLogs}
+        seances={seances}
+        seancePrevue={seancePrevue}
+        reglages={reglagesSurMesure}
+        onReglages={majReglagesSurMesure}
+      />
+      <CarteComplements profile={profile} seances={seances} reglages={reglagesSurMesure} />
 
       <DieteFlexible semaine={semaine} regles={reglesDieteFlexible(targets?.calories)} />
 

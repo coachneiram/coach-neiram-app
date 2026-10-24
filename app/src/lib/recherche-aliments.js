@@ -23,7 +23,42 @@ import { round } from "./dates.js";
 import { trierSelonPesee } from "./fibres.js";
 
 /** Champs demandes a Open Food Facts. */
-const CHAMPS_OFF = "code,product_name,product_name_fr,brands,nutriments,serving_quantity,nutrition_grades,nova_group";
+const CHAMPS_OFF =
+  "code,product_name,product_name_fr,brands,nutriments,serving_quantity,nutrition_grades,nova_group,allergens_tags,traces_tags";
+
+/**
+ * Etiquettes d'allergenes d'Open Food Facts -> identifiants du profil (les
+ * 14 allergenes UE, lib/allergenes.js). Repris de l'app Neiram le
+ * 24/10/2026 : un produit scanne affiche « Contient » ou « Traces » pour
+ * les allergies du client.
+ */
+export const ALLERGENES_OFF = {
+  "en:gluten": "gluten",
+  "en:milk": "lactose",
+  "en:peanuts": "arachides",
+  "en:nuts": "fruits-a-coque",
+  "en:eggs": "oeufs",
+  "en:fish": "poisson",
+  "en:crustaceans": "crustaces",
+  "en:soybeans": "soja",
+  "en:sesame-seeds": "sesame",
+  "en:mustard": "moutarde",
+  "en:celery": "celeri",
+  "en:sulphur-dioxide-and-sulphites": "sulfites",
+  "en:lupin": "lupin",
+  "en:molluscs": "mollusques"
+};
+
+const allergenesDe = (tags) => [...new Set((Array.isArray(tags) ? tags : []).map((t) => ALLERGENES_OFF[t]).filter(Boolean))];
+
+/** Allergenes du profil presents dans le produit (contient / traces). */
+export function conflitsAllergenes(produit, allergies) {
+  const a = new Set(Array.isArray(allergies) ? allergies : []);
+  return {
+    contient: ((produit && produit.allergenes) || []).filter((x) => a.has(x)),
+    traces: ((produit && produit.traces) || []).filter((x) => a.has(x))
+  };
+}
 
 /**
  * Nutri-Score (a a e) et groupe NOVA (1 a 4) d'une fiche.
@@ -68,7 +103,9 @@ export function convertirProduitOFF(p) {
     fibres100: n.fiber_100g != null ? round(n.fiber_100g, 1) : null,
     serving: p.serving_quantity ? parseFloat(p.serving_quantity) : null,
     nutriscore: nutriScoreDe(p),
-    nova: novaDe(p)
+    nova: novaDe(p),
+    allergenes: allergenesDe(p.allergens_tags),
+    traces: allergenesDe(p.traces_tags)
   };
 }
 

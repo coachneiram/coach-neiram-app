@@ -44,7 +44,7 @@ Elle contient les fiches clients (identifiant aléatoire et libellé court, par 
 ### 3. Script Google v2.2 (nouvelle adresse)
 
 Classeur « Suivi Coaching en ligne » → *Extensions* → *Apps Script* :
-1. remplace tout `Code.gs` par `worker/coach-sync.gs` et **remets ton adresse** dans `EMAIL_COACH` ;
+1. remplace tout `Code.gs` par `worker/coach-sync.gs`. Depuis la v2.4, l'adresse d'alerte vit dans la propriété du script `EMAIL_COACH` (Paramètres du projet → Propriétés du script) : rien à remettre dans le code. Sans cette propriété, remets ton adresse dans `EMAIL_COACH` ;
 2. enregistre ;
 3. *Déployer* → **Nouveau déploiement** → type *Application Web*, exécuter en tant que *moi*, accès *Tout le monde* → copie la nouvelle adresse `/exec`.
 
@@ -134,3 +134,15 @@ Aucune donnée du client n'est supprimée par ces correctifs : le jeton est une 
 - **Anti-rejeu côté Apps Script** : la mémoire des nonces (`CacheService`) peut être vidée plus tôt par Google. La fenêtre de 5 minutes borne alors le rejeu, qui exige de toute façon d'avoir intercepté un envoi signé.
 - **Routes `/push`** : elles restent sans jeton, avec le frein en mémoire d'avant. Le risque se limite à des écritures dans le KV et à des rappels envoyés à un appareil qui s'est abonné lui-même. Ce point est hors du périmètre P0 et sera repris au lot P0-B.
 - **Codes d'invitation** : 32⁸ ≈ 10¹² combinaisons. Avec 60 essais par heure au total, en deviner un prendrait des millénaires.
+
+## État au 24 octobre 2026
+
+Procédure v2.2 terminée chez le coach (étapes a à d) :
+- `ACCEPTER_SECRET_EN_CLAIR = false` en version 17, pointages signés vérifiés ;
+- anciens déploiements archivés, un seul déploiement actif ;
+- le dépôt livre désormais `ACCEPTER_SECRET_EN_CLAIR = false` par défaut (v2.4).
+
+Mise à jour du script : sauvegarder l'ancien `Code.gs` dans un fichier **entièrement commenté** (une copie active écraserait `doPost`), puis *Gérer les déploiements* → crayon du déploiement **actif** → *Nouvelle version*. Jamais un nouveau déploiement.
+
+Restent : rotation du secret, fermeture de l'accès anonyme (`ACCES_CLIENTS`), réparation d'`ADMIN_SECRET`.
+

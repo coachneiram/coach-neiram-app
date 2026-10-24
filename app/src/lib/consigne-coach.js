@@ -15,10 +15,17 @@
  * composant, donc plus de branchement a oublier.
  *
  * LA SOURCE DE VERITE est le profil du client (`coach_profile`) :
- *   - `allergies` : tableau d'identifiants (ALLERGENS, catalogues.js) ;
+ *   - `allergies` : tableau d'identifiants (les 14 allergenes UE,
+ *     lib/allergenes.js) ;
  *   - `dietType` : restriction (aucun, vegetarien, vegetalien, pescetarien,
  *     sans-porc), ou ancien « keto » relu comme repartition ;
- *   - `repartitionMacros` : standard, lowcarb, keto, hyperproteine.
+ *   - `repartitionMacros` : standard, lowcarb, keto, hyperproteine (et,
+ *     depuis le 24/10/2026, mediterraneen, dash, paleo) ;
+ *   - `contraintesAlim` : halal, casher, sans-alcool, flexitarien
+ *     (CONTRAINTES_ALIM, regimes.js), cumulables avec le regime.
+ * Les reponses du questionnaire « Repère d'après tes données » (grossesse,
+ * sante, categorie de poids) n'y figurent pas : elles restent sur le
+ * telephone (lib/nutrition-perso.js).
  * Les memes fonctions que le reste de l'application les lisent
  * (restrictionDuProfil, repartitionDuProfil, regimeOk) : une seule lecture,
  * pas de copie qui divergerait.
@@ -31,13 +38,17 @@
  * une allergie hors liste n'est pas verifiable.
  */
 
-import { ALLERGENS, EQUIV_FRUITS, EQUIV_GLUCIDES, EQUIV_LIPIDES, EQUIV_PROTEINES, FOOD_DB, GOAL_FOOD_NOTES, SHOPPING_LIST } from "./catalogues.js";
+import { EQUIV_FRUITS, EQUIV_GLUCIDES, EQUIV_LIPIDES, EQUIV_PROTEINES, FOOD_DB, GOAL_FOOD_NOTES, SHOPPING_LIST } from "./catalogues.js";
+import { libelleAllergene, TOUS_LES_ALLERGENES } from "./allergenes.js";
 import { regimeOk } from "./aliments.js";
 import { GOALS } from "./nutrition.js";
 import { REVELE } from "./recettes-coach.js";
-import { libelleRegime, repartitionDuProfil, restrictionDuProfil } from "./regimes.js";
+import { CONTRAINTES_ALIM, contraintesDuProfil, libelleRegime, repartitionDuProfil, restrictionDuProfil } from "./regimes.js";
+import { REGLE_PREUVES } from "./preuves.js";
 
-const ALLERGENES_CONNUS = ALLERGENS.map((a) => a.id);
+// Les 14 allergenes UE (lib/allergenes.js) : la liste d'origine et les six
+// ajoutes le 24/10/2026.
+const ALLERGENES_CONNUS = TOUS_LES_ALLERGENES.map((a) => a.id);
 
 /** Familles ecartees par chaque restriction, pour la relecture des reponses. */
 const FAMILLES_EXCLUES = {
@@ -47,8 +58,21 @@ const FAMILLES_EXCLUES = {
   "sans-porc": ["porc"]
 };
 
-/** Detecteurs : ceux des recettes du coach, plus le miel (regle vegane). */
-const DETECTEURS = { ...REVELE, miel: /(?<!\p{L})miel(?!\p{L})/iu };
+/**
+ * Familles ecartees par les contraintes cumulables (halal, casher, sans
+ * alcool : CONTRAINTES_ALIM, regimes.js), relues dans les reponses.
+ */
+const FAMILLES_CONTRAINTES = Object.fromEntries(CONTRAINTES_ALIM.map((c) => [c.id, c.exclut]));
+
+/**
+ * Detecteurs : ceux des recettes du coach, plus le miel (regle vegane) et
+ * l'alcool (halal, sans alcool). Volontairement larges, comme les autres.
+ */
+const DETECTEURS = {
+  ...REVELE,
+  miel: /(?<!\p{L})miel(?!\p{L})/iu,
+  alcool: /(?<!\p{L})(?:alcools?|vins?|bi[èe]res?|rhum|vodka|whisky|gin|cidre|liqueurs?|champagne|ap[ée]ritifs?)(?!\p{L})/iu
+};
 
 const LIBELLES_FAMILLES = {
   viande: "viande",
@@ -58,10 +82,10 @@ const LIBELLES_FAMILLES = {
   crustaces: "crustacés",
   lactose: "produits laitiers",
   oeufs: "œufs",
-  miel: "miel"
+  miel: "miel",
+  mollusques: "mollusques",
+  alcool: "alcool"
 };
-
-const libelleAllergene = (id) => ALLERGENS.find((a) => a.id === id)?.label || id;
 
 /**
  * Ce que le profil dit des contraintes alimentaires, sans rien inventer.
@@ -101,7 +125,8 @@ export function lireContraintes(profile) {
     horsListe: allergies.filter((a) => !ALLERGENES_CONNUS.includes(a)),
     brutIllisible,
     restriction: valide ? restrictionDuProfil(profile) : "aucun",
-    repartition: valide ? repartitionDuProfil(profile) : "standard"
+    repartition: valide ? repartitionDuProfil(profile) : "standard",
+    contraintes: valide ? contraintesDuProfil(profile) : []
   };
 }
 
@@ -126,6 +151,13 @@ function ligneContraintes(c) {
     "Régime : " + (c.restriction === "aucun" ? "aucune restriction déclarée" : libelleRegime(c.restriction)) + "."
   );
   if (c.repartition !== "standard") lignes.push("Répartition des macros : " + libelleRegime(c.repartition) + ".");
+  if (c.contraintes.length) {
+    lignes.push(
+      "Contraintes alimentaires (à respecter comme le régime) : " +
+        c.contraintes.map((id) => CONTRAINTES_ALIM.find((x) => x.id === id).label).join(", ") +
+        "."
+    );
+  }
   if (c.etat === "ok") {
     lignes.push(
       c.allergies.length
@@ -201,7 +233,10 @@ export function construireConsigneCoach(profile, targets, restant) {
     "- N'invente rien sur le client : si une information manque (allergie, régime, objectif), dis-le et demande-la, ne la suppose pas.",
     "- Base-toi UNIQUEMENT sur les recommandations alimentaires du Coach Neiram ci-dessous. Ne recommande pas d'aliments hors de ces listes, sauf légumes verts et aromates, toujours autorisés.",
     "- Adapte les quantités à l'objectif et aux macros restantes du jour.",
-    "- Tu n'es pas médecin : pour toute question médicale (symptôme, réaction allergique, maladie, médicament, grossesse, trouble du comportement alimentaire), ne donne pas d'avis et renvoie vers un professionnel de santé."
+    "- Tu n'es pas médecin : pour toute question médicale (symptôme, réaction allergique, maladie, médicament, grossesse, trouble du comportement alimentaire), ne donne pas d'avis et renvoie vers un professionnel de santé.",
+    "- Ne donne JAMAIS de protocole de déshydratation pour faire un poids de catégorie (sauna, combinaison de sudation, diurétiques, laxatifs, restriction d'eau) : renvoie vers un encadrement qualifié.",
+    "",
+    REGLE_PREUVES
   ];
 
   if (!sur) {
@@ -282,6 +317,7 @@ export function verifierReponse(texte, profile) {
   };
   c.allergies.forEach((a) => chercher(a, "allergie"));
   (FAMILLES_EXCLUES[c.restriction] || []).forEach((f) => chercher(f, "regime"));
+  c.contraintes.forEach((id) => (FAMILLES_CONTRAINTES[id] || []).forEach((f) => chercher(f, "regime")));
   return {
     alertes,
     nonVerifiables: c.allergies.filter((a) => !DETECTEURS[a]).map(libelleAllergene)

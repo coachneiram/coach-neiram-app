@@ -10,7 +10,7 @@
  * allergique. Elle est donc verifiee contre l'original, cas par cas.
  */
 
-import { EXCLUSIONS, etiquettesArticle, repartitionDuProfil, restrictionDuProfil } from "./regimes.js";
+import { EXCLUSIONS, etiquettesArticle, exclusionsContraintes, repartitionDuProfil, restrictionDuProfil } from "./regimes.js";
 
 /** Categories d'aliments exclues par les regimes sans viande. */
 const CHAIRS = ["viande", "volaille", "poisson", "crustaces"];
@@ -59,6 +59,11 @@ export function regimeOk(aliment, profil) {
 
   const exclues = EXCLUSIONS[restrictionDuProfil(profil)];
   if (exclues && contient.some((x) => exclues.includes(x))) return false;
+
+  // Contraintes cumulables (halal, casher, sans alcool), reprises de l'app
+  // Neiram le 24/10/2026 : elles s'ajoutent au regime, sans le remplacer.
+  const contraintes = exclusionsContraintes(profil);
+  if (contraintes.length && contient.some((x) => contraintes.includes(x))) return false;
 
   return true;
 }

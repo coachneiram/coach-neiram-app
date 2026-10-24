@@ -13,11 +13,17 @@
  *   - la consigne sur les douleurs (aucun diagnostic, renvoi au medecin) ;
  *   - celle sur les creneaux manques (traiter la cause, sans culpabiliser) ;
  *   - celle sur la semaine difficile (valoriser d'avoir tenu, ne pas charger).
+ *
+ * SEUL AJOUT AU TEXTE D'ORIGINE (24/10/2026, repris de l'app Neiram) : la
+ * regle des preuves (lib/preuves.js, REGLE_PREUVES), placee juste avant le
+ * format de reponse. Les tests de parite comparent tout le reste a
+ * index.html mot pour mot.
  */
 
 import { fmtDateLong, parseISO } from "./dates.js";
 import { fmtL } from "./score-jour.js";
-import { ALLERGENS } from "./catalogues.js";
+import { libelleAllergene } from "./allergenes.js";
+import { REGLE_PREUVES } from "./preuves.js";
 // Les deux axes en une phrase : sans cela, un client vegetalien en
 // hyperproteine serait decrit a l'IA comme « vegetalien » tout court, et
 // elle proposerait des repas qui ratent la moitie de son objectif.
@@ -39,7 +45,7 @@ export function ligneRegime(profile) {
   const alg = (profile && profile.allergies) || [];
   if (alg.length) {
     parts.push(
-      "allergies/intolérances = " + alg.map((a) => ALLERGENS.find((x) => x.id === a)?.label || a).join(", ")
+      "allergies/intolérances = " + alg.map(libelleAllergene).join(", ")
     );
   }
   return parts.length ? ", " + parts.join(", ") : "";
@@ -190,6 +196,8 @@ ${
 
 ${regleAlimentaire(profile)}
 
+${REGLE_PREUVES}
+
 Réponds UNIQUEMENT dans ce format exact, texte simple sans markdown (remplace les <...>, omets une section si elle n'a rien de pertinent sauf RÉSUMÉ, ÉVOLUTION et ACTIONS qui sont obligatoires) :
 
 RÉSUMÉ:
@@ -300,6 +308,8 @@ ACTIONS RECOMMANDÉES AU DERNIER BILAN MENSUEL (évalue si elles ont été suivi
 ${lastActionsText || "aucune"}
 
 ${regleAlimentaire(profile)}
+
+${REGLE_PREUVES}
 
 Réponds UNIQUEMENT dans ce format exact, texte simple sans markdown (remplace les <...>, omets une section si rien de pertinent sauf RÉSUMÉ, ÉVOLUTION et ACTIONS qui sont obligatoires) :
 

@@ -74,6 +74,13 @@ export const CONTIENT_RECETTE = [
   "poisson",
   "crustaces",
   "soja",
+  // Les six allergenes UE repris de l'app Neiram (24/10/2026, lib/allergenes.js).
+  "sesame",
+  "moutarde",
+  "celeri",
+  "sulfites",
+  "lupin",
+  "mollusques",
   "viande",
   "volaille",
   "porc",
@@ -129,7 +136,14 @@ export const REVELE = {
   crustaces: mots("crevettes?|crabe|homard|langoustines?|gambas|[ée]crevisses?"),
   viande: mots("b(?:œ|oe)uf|veau|agneau|viande|merguez"),
   volaille: mots("poulet|dinde|canard|pintade|volaille"),
-  porc: MOTS_PORC
+  porc: MOTS_PORC,
+  // Les six allergenes UE repris de l'app Neiram le 24/10/2026.
+  sesame: mots("s[ée]sames?|tahin[ié]?|tahini|houmous|hummus|halva|gomasio"),
+  moutarde: mots("moutardes?"),
+  celeri: mots("c[ée]leris?(?:-rave)?"),
+  sulfites: mots("sulfites?|vins?|vinaigre de vin|fruits secs sulfit[ée]s"),
+  lupin: mots("lupins?|farine de lupin"),
+  mollusques: mots("moules?|hu[iî]tres?|calamars?|seiches?|poulpes?|encornets?|coquilles saint-jacques|saint-jacques|escargots?|bulots?|palourdes?|coques?")
 };
 
 /** Les erreurs d'une recette ; une liste vide veut dire qu'elle est publiable. */

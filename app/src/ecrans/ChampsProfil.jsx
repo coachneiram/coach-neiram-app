@@ -19,11 +19,14 @@ import {
   REPARTITIONS,
   repartitionDuProfil,
   RESTRICTIONS,
-  restrictionDuProfil
+  restrictionDuProfil,
+  CONTRAINTES_ALIM
 } from "../lib/regimes.js";
 import { regimeOk } from "../lib/aliments.js";
 import { HABITUDES_PESEE } from "../lib/fibres.js";
-import { ALLERGENS, COACHING_MODES, TRAINING_MODES } from "../lib/catalogues.js";
+import { COACHING_MODES, TRAINING_MODES } from "../lib/catalogues.js";
+import { TOUS_LES_ALLERGENES } from "../lib/allergenes.js";
+import { TEXTES_CONTRAINTES_ALIM } from "../lib/textes-nutrition-perso.js";
 import { Btn, Field, IconBtn, NumberInput, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { Plus, Trash2 } from "../ui/icones.jsx";
 
@@ -35,6 +38,24 @@ const TYPES_METIER = [
 ];
 
 const styleAide = { fontSize: 11, color: COLORS.textFaint, margin: "6px 0 0", lineHeight: 1.45 };
+
+const styleContraintes = {
+  display: "flex",
+  gap: 7,
+  flexWrap: "wrap"
+};
+
+/** Puce d'une contrainte alimentaire, cochee ou non. */
+const stylePuceContrainte = (coche) => ({
+  background: coche ? `${COLORS.gold}22` : COLORS.bgAlt,
+  border: `1px solid ${coche ? COLORS.gold : COLORS.border}`,
+  color: coche ? COLORS.gold : COLORS.textMuted,
+  borderRadius: 999,
+  padding: "7px 12px",
+  fontSize: 12,
+  cursor: "pointer",
+  fontFamily: "inherit"
+});
 
 /** Champs propres au coaching en ligne : creneaux et lien de synchro. */
 function ChampsCoaching({ value, set }) {
@@ -387,9 +408,35 @@ export function ChampsProfil({ value, onChange }) {
       )}
       {/* FIN-TEXTE-NOUVEAU */}
 
+      {/* Contraintes cumulables avec le regime (halal, casher, sans alcool,
+          flexitarien), reprises de l'app Neiram le 24/10/2026
+          (lib/regimes.js, CONTRAINTES_ALIM). Elles filtrent les aliments
+          et la consigne du Coach IA, jamais les objectifs du coach. */}
+      <Field label={TEXTES_CONTRAINTES_ALIM.titre}>
+        <div data-contraintes-alim style={styleContraintes}>
+          {CONTRAINTES_ALIM.map((c) => {
+            const actuelles = Array.isArray(value.contraintesAlim) ? value.contraintesAlim : [];
+            const coche = actuelles.includes(c.id);
+            return (
+              <button
+                type="button"
+                key={c.id}
+                data-contrainte={c.id}
+                aria-pressed={coche}
+                onClick={() => set({ contraintesAlim: coche ? actuelles.filter((x) => x !== c.id) : [...actuelles, c.id] })}
+                style={stylePuceContrainte(coche)}
+              >
+                {c.label}
+              </button>
+            );
+          })}
+        </div>
+        <p style={styleAide}>{TEXTES_CONTRAINTES_ALIM.aide}</p>
+      </Field>
+
       <Field label="Allergies / intolérances">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
-          {ALLERGENS.map((a) => {
+          {TOUS_LES_ALLERGENES.map((a) => {
             const coche = (value.allergies || []).includes(a.id);
             return (
               <label
