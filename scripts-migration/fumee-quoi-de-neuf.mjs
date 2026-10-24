@@ -52,13 +52,13 @@ const URL_APP = "http://localhost:4694/";
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 const erreurs = [];
 
-async function ouvrir({ profil, notifications = "accordees", telephone = "Pixel 7" }) {
+async function ouvrir({ profil, notifications = "accordees", telephone = "Pixel 7", vues = null }) {
   const ctx = await nav.newContext(appareil(telephone));
   if (notifications === "accordees") await ctx.grantPermissions(["notifications"]);
   const page = await ctx.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
   await page.addInitScript(
-    ({ profil, notifications }) => {
+    ({ profil, notifications, vues }) => {
       // Les notifications remises par le service worker sont relevees ici.
       // Sur les machines de la CI, Chromium refuse l'autorisation accordee
       // par le test : on la simule, et l'on verifie que l'application passe
@@ -81,11 +81,12 @@ async function ouvrir({ profil, notifications = "accordees", telephone = "Pixel 
         delete window.Notification;
       }
       localStorage.setItem("cn_nouveautes_locale", "1");
+      if (vues && !localStorage.getItem("cn_nouveautes_vues")) localStorage.setItem("cn_nouveautes_vues", JSON.stringify(vues));
       if (profil && !localStorage.getItem("coach_profile")) {
         localStorage.setItem("coach_profile", JSON.stringify(profil));
       }
     },
-    { profil, notifications }
+    { profil, notifications, vues }
   );
   await page.goto(URL_APP, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
@@ -161,9 +162,14 @@ try {
 
   // 10 a 12 : aide et bandeau d'installation.
   {
-    const { ctx, page } = await ouvrir({ profil: PROFIL });
-    // L'annonce de l'Aide (7 octobre) est sortie des 5 affichees : le bouton
-    // « Voir le guide » des tutos (24 octobre) passe par le meme chemin.
+    // Les reprises de Neiram (24 octobre) occupent les 5 places : elles sont
+    // marquees vues ici, pour que l'annonce des tutos (« Voir le guide »)
+    // revienne dans la fenetre. L'annonce de l'Aide (7 octobre) passait par
+    // le meme chemin.
+    const { ctx, page } = await ouvrir({
+      profil: PROFIL,
+      vues: ["2026-10-24-tutos-raccourcis", "2026-10-24-menu-nutrition", "2026-10-24-tous-sports", "2026-10-24-habitudes", "2026-10-24-sommeil-stress"]
+    });
     await page.getByRole("button", { name: "Voir le guide" }).click();
     await page.waitForTimeout(500);
     const depuisFenetre = await page.locator("[data-guide-tutos]").count();

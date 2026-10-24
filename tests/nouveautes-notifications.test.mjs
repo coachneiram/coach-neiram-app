@@ -54,19 +54,28 @@ describe("les annonces", () => {
     }
   });
 
-  test("les dernieres nouveautes : seance guidee, forme et consignes, defis, tutos, repos et barre, carnet, puis diete flexible", () => {
-    assert.equal(NOUVEAUTES[0].id, "2026-10-24-seance-guidee");
-    assert.equal(NOUVEAUTES[0].onglet, "entrainements");
-    assert.equal(NOUVEAUTES[1].id, "2026-10-24-forme-consignes");
-    assert.equal(NOUVEAUTES[1].onglet, "entrainements");
-    assert.equal(NOUVEAUTES[2].id, "2026-10-24-defis");
-    assert.equal(NOUVEAUTES[2].onglet, "journal");
-    assert.equal(NOUVEAUTES[3].id, "2026-10-24-tutos");
-    assert.equal(NOUVEAUTES[3].ouvre, "guide");
-    assert.equal(NOUVEAUTES[4].id, "2026-10-24-repos-barre");
-    assert.equal(NOUVEAUTES[4].onglet, "entrainements");
-    assert.equal(NOUVEAUTES[5].id, "2026-10-22-carnet-series");
-    assert.equal(NOUVEAUTES[6].id, "2026-10-14-diete-flexible");
+  test("les reprises de Neiram (24 octobre 2026) en tete, en cinq entrees", () => {
+    assert.deepEqual(
+      NOUVEAUTES.slice(0, 5).map((n) => n.id),
+      ["2026-10-24-tutos-raccourcis", "2026-10-24-menu-nutrition", "2026-10-24-tous-sports", "2026-10-24-habitudes", "2026-10-24-sommeil-stress"]
+    );
+    assert.deepEqual(NOUVEAUTES.slice(0, 5).map((n) => n.onglet || n.ouvre), ["guide", "repas", "entrainements", "journal", "sommeil"]);
+  });
+
+  test("puis : seance guidee, forme et consignes, defis, tutos, repos et barre, carnet, puis diete flexible", () => {
+    const NOUVEAUTES_AVANT = NOUVEAUTES.slice(5);
+    assert.equal(NOUVEAUTES_AVANT[0].id, "2026-10-24-seance-guidee");
+    assert.equal(NOUVEAUTES_AVANT[0].onglet, "entrainements");
+    assert.equal(NOUVEAUTES_AVANT[1].id, "2026-10-24-forme-consignes");
+    assert.equal(NOUVEAUTES_AVANT[1].onglet, "entrainements");
+    assert.equal(NOUVEAUTES_AVANT[2].id, "2026-10-24-defis");
+    assert.equal(NOUVEAUTES_AVANT[2].onglet, "journal");
+    assert.equal(NOUVEAUTES_AVANT[3].id, "2026-10-24-tutos");
+    assert.equal(NOUVEAUTES_AVANT[3].ouvre, "guide");
+    assert.equal(NOUVEAUTES_AVANT[4].id, "2026-10-24-repos-barre");
+    assert.equal(NOUVEAUTES_AVANT[4].onglet, "entrainements");
+    assert.equal(NOUVEAUTES_AVANT[5].id, "2026-10-22-carnet-series");
+    assert.equal(NOUVEAUTES_AVANT[6].id, "2026-10-14-diete-flexible");
   });
 });
 

@@ -316,11 +316,11 @@ describe("annonce a tous les telephones (24 octobre 2026)", () => {
     }
   });
 
-  test("le Cron lit la liste par defaut, vide en attendant la derniere PR des reprises", () => {
+  test("le Cron envoie l'annonce des reprises de Neiram (liste par defaut)", () => {
     const src = readFileSync(new URL("../worker/coach-neiram-proxy.js", import.meta.url), "utf8");
     assert.match(src, /envoyerAnnonces\(env, Date\.now\(\), env\.ANNONCES_TEST \|\| ANNONCES\)/);
-    // Un redeploiement du Worker ne doit rien envoyer aux clients tant que
-    // toutes les reprises de Neiram ne sont pas en ligne (24/10/2026).
-    assert.match(src, /const ANNONCES = \[\];/);
+    // Un seul envoi par telephone : identifiant neuf, jamais envoye avant.
+    assert.match(src, /id: "2026-10-24-reprises-neiram"/);
+    assert.equal((src.match(/const ANNONCES = \[/g) || []).length, 1);
   });
 });
