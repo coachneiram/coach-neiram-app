@@ -36,9 +36,11 @@
  * Niveau federal. Leurs compteurs viennent de lib/compteurs-trophees.js
  * (qui lit le stockage) et sont PASSES a trophees() : la fonction reste
  * pure. Sans compteurs, ces familles valent 0 et ne s'affichent pas (une
- * famille de ce type n'apparait qu'une fois commencee). Les classements,
- * podiums et athlete du mois ne sont pas repris : ils demandent un serveur
- * public.
+ * famille de ce type n'apparait qu'une fois commencee).
+ *
+ * Communaute Team Neiram (24 octobre 2026, accord du coach) : familles
+ * « Classements », « Podiums du mois », « Athlète du mois » et « Athlète
+ * de l'année » (lib/palmares.js), visibles une fois commencees.
  *
  * Defis entre amis (24 octobre 2026, accord du coach) : les defis passent
  * par le Worker du coach et sont reserves a ses clients. La famille
@@ -198,7 +200,14 @@ export const FAMILLES_MODE_DE_VIE = [
   { id: "habitudes", titre: "Habitudes", icone: "🌱", unite: (n) => `${n} jours d'affilée sur une habitude`, paliers: [3, 7, 21, 66, 100, 365] },
   { id: "lecons", titre: "L'école Neiram", icone: "🎓", unite: (n) => pluriel(n, "leçon"), paliers: [1, 7, 14, 28] },
   { id: "niveauFederal", titre: "Niveau fédéral", icone: "🎖️", unite: (n) => `Niveau ${MARCHES_FEDERALES[n - 1]} dans une discipline`, paliers: [1, 2, 3] },
-  { id: "duels", titre: "Défis entre amis", icone: "⚔️", unite: (n) => `${pluriel(n, "défi")} gagné${n > 1 ? "s" : ""} entre amis`, paliers: [1, 3, 10, 25] }
+  { id: "duels", titre: "Défis entre amis", icone: "⚔️", unite: (n) => `${pluriel(n, "défi")} gagné${n > 1 ? "s" : ""} entre amis`, paliers: [1, 3, 10, 25] },
+  // Communaute Team Neiram (24 octobre 2026) : memes paliers que les
+  // badges de l'app Neiram (lib/badges.js). « Classements » : top 50 % a
+  // top 1 % d'un classement d'au moins 10 clients (lib/palmares.js).
+  { id: "topClassement", titre: "Classements", icone: "📊", unite: (n) => `Top ${100 - n} % d'un classement`, paliers: [50, 75, 90, 95, 99] },
+  { id: "podiums", titre: "Podiums du mois", icone: "🥉", unite: (n) => `${pluriel(n, "podium")} du mois`, paliers: [1, 3, 6, 12] },
+  { id: "athleteMois", titre: "Athlète du mois", icone: "👑", unite: (n) => `${pluriel(n, "titre")} d'athlète du mois`, paliers: [1, 2, 3, 6, 12] },
+  { id: "athleteAnnee", titre: "Athlète de l'année", icone: "🏆", unite: (n) => `${pluriel(n, "titre")} d'athlète de l'année`, paliers: [1, 2, 3] }
 ];
 
 /** Compteurs a 0 : l'etat d'un client qui n'a rien commence. */

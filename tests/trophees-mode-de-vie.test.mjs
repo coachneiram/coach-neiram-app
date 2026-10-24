@@ -43,13 +43,40 @@ describe("familles et paliers", () => {
       habitudes: [3, 7, 21, 66, 100, 365],
       lecons: [1, 7, 14, 28],
       niveauFederal: [1, 2, 3],
-      duels: [1, 3, 10, 25]
+      duels: [1, 3, 10, 25],
+      topClassement: [50, 75, 90, 95, 99],
+      podiums: [1, 3, 6, 12],
+      athleteMois: [1, 2, 3, 6, 12],
+      athleteAnnee: [1, 2, 3]
     });
   });
 
-  test("pas de classements, podiums ni athlète du mois (serveur public)", () => {
+  test("pas de stories ni de parrainage (app publique seulement)", () => {
     const ids = FAMILLES_MODE_DE_VIE.map((f) => f.id);
-    for (const id of ["topClassement", "podiums", "athleteMois", "athleteAnnee", "stories"]) assert.ok(!ids.includes(id), id);
+    for (const id of ["stories", "parrainage"]) assert.ok(!ids.includes(id), id);
+  });
+
+  test("communauté Team Neiram (24/10/2026) : 4 familles du palmarès, masquées tant qu'elles ne sont pas commencées", () => {
+    const titres = Object.fromEntries(FAMILLES_MODE_DE_VIE.map((f) => [f.id, f.titre]));
+    assert.equal(titres.topClassement, "Classements");
+    assert.equal(titres.podiums, "Podiums du mois");
+    assert.equal(titres.athleteMois, "Athlète du mois");
+    assert.equal(titres.athleteAnnee, "Athlète de l'année");
+    const l = Object.fromEntries(tropheesModeDeVie({ ...COMPTEURS_VIDES, topClassement: 92, podiums: 2, athleteMois: 1 }).map((t) => [t.id, t]));
+    assert.equal(l["topClassement-90"].detail, "Top 10 % d'un classement");
+    assert.ok(l["topClassement-90"].obtenu && !l["topClassement-95"].obtenu);
+    assert.equal(l["podiums-3"].detail, "3 podiums du mois");
+    assert.ok(l["podiums-1"].obtenu && !l["podiums-3"].obtenu);
+    assert.equal(l["athleteMois-1"].detail, "1 titre d'athlète du mois");
+    assert.equal(l["athleteAnnee-2"].detail, "2 titres d'athlète de l'année");
+    const sans = tropheesAffiches(trophees({ seances: [], profil: PROFIL, date: AUJ }).liste).map((f) => f.id);
+    for (const id of ["topClassement", "podiums", "athleteMois", "athleteAnnee"]) assert.ok(!sans.includes(id), id);
+    // Le palmarès (cn_palmares) nourrit les compteurs.
+    localStorage.setItem("cn_palmares", JSON.stringify({ titres: [{ mois: "2026-09", discipline: "course", rang: 1 }, { mois: "2026-09", discipline: "force", rang: 2 }], titresAnnee: [], meilleurTop: 76 }));
+    const c = compteursTrophees({ seances: [], profil: PROFIL, date: AUJ });
+    assert.deepEqual([c.topClassement, c.podiums, c.athleteMois, c.athleteAnnee], [76, 2, 1, 0]);
+    const avec = tropheesAffiches(trophees({ seances: [], profil: PROFIL, date: AUJ, compteurs: c }).liste);
+    assert.deepEqual(avec.find((f) => f.id === "athleteMois").tuiles.map((t) => t.id), ["athleteMois-1", "athleteMois-2"]);
   });
 
   test("défis entre amis (24/10/2026) : famille « duels », masquée tant qu'aucun défi n'est gagné", () => {

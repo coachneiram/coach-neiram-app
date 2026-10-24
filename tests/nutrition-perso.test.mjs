@@ -239,7 +239,12 @@ describe("app coach : les données de santé restent sur le téléphone", () => 
     "lib/textes-nutrition-perso.js",
     "ui/CarteObjectifsSurMesure.jsx",
     "ui/CarteComplements.jsx",
-    "ecrans/Nutrition.jsx"
+    "ecrans/Nutrition.jsx",
+    // Communaute Team Neiram (24 octobre 2026) : calcule sur le telephone
+    // si le classement de perte de gras est ouvert, et ne rend qu'un oui ou
+    // non (« perte_eligible ») ; tests/communaute.test.mjs verifie que rien
+    // d'autre ne part.
+    "lib/eligibilite-perte.js"
   ]);
 
   const fichiers = (dossier) =>
