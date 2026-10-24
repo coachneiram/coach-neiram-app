@@ -13,8 +13,11 @@
  *   POST /push/cle        -> cle publique des notifications push (VAPID)
  *   POST /push/abonner    -> enregistre un telephone et ses rappels a venir
  *   POST /push/desabonner -> l'oublie
+ *   POST /defis/...       -> defis entre amis, reserves aux clients du coach
+ *                            (jeton client obligatoire, meme en transition)
  * Et une tache planifiee (Cron Trigger, toutes les 15 minutes) qui envoie
- * les rappels arrives a echeance, meme application fermee.
+ * les rappels arrives a echeance, meme application fermee, et efface les
+ * defis termines depuis plus de 60 jours.
  *
  * Variables a definir dans Cloudflare (Settings > Variables and Secrets) :
  *   GEMINI_API_KEY      (secret)   cle API Google Gemini
@@ -202,6 +205,7 @@ export default {
       if (url.pathname === "/auth/activer") return await activerCode(request, env, cors, ip);
       if (url.pathname.startsWith("/admin/")) return await routeAdmin(url.pathname, request, env, cors, ip);
       if (url.pathname.startsWith("/push/")) return await routePush(url.pathname, request, env, cors, ip);
+      if (url.pathname.startsWith("/defis/")) return await routeDefis(url.pathname, request, env, cors);
     } catch (e) {
       // Jamais de detail interne dans la reponse.
       return refus(url.pathname, 500, "erreur-interne", cors);
@@ -216,6 +220,7 @@ export default {
     if (env.PUSH_KV) taches.push(envoyerRappelsDus(env, Date.now()));
     if (env.PUSH_KV) taches.push(envoyerAnnonces(env, Date.now(), env.ANNONCES_TEST || ANNONCES).catch(() => null));
     if (env.DB) taches.push(nettoyerCompteurs(env, Date.now()).catch(() => null));
+    if (env.DB) taches.push(nettoyerDefis(env, Date.now()).catch(() => null));
     const tout = Promise.all(taches);
     if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(tout);
     await tout;
@@ -232,7 +237,11 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS clients (id TEXT PRIMARY KEY, libelle TEXT NOT NULL, cree_le INTEGER NOT NULL, revoque_le INTEGER)",
   "CREATE TABLE IF NOT EXISTS invitations (empreinte TEXT PRIMARY KEY, client_id TEXT NOT NULL, cree_le INTEGER NOT NULL, expire_le INTEGER NOT NULL, utilise_le INTEGER)",
   "CREATE TABLE IF NOT EXISTS jetons (empreinte TEXT PRIMARY KEY, client_id TEXT NOT NULL, cree_le INTEGER NOT NULL, revoque_le INTEGER)",
-  "CREATE TABLE IF NOT EXISTS compteurs (cle TEXT PRIMARY KEY, n INTEGER NOT NULL, expire_le INTEGER NOT NULL)"
+  "CREATE TABLE IF NOT EXISTS compteurs (cle TEXT PRIMARY KEY, n INTEGER NOT NULL, expire_le INTEGER NOT NULL)",
+  // Defis entre amis (24 octobre 2026) : voir la section dediee plus bas.
+  "CREATE TABLE IF NOT EXISTS defis (code TEXT PRIMARY KEY, type TEXT NOT NULL, debut TEXT NOT NULL, fin TEXT NOT NULL, createur TEXT NOT NULL, cree_le INTEGER NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS defis_participants (code TEXT NOT NULL, client_id TEXT NOT NULL, pseudo TEXT NOT NULL, valeur REAL NOT NULL DEFAULT 0, maj_le INTEGER NOT NULL, PRIMARY KEY (code, client_id))",
+  "CREATE INDEX IF NOT EXISTS defis_participants_client ON defis_participants (client_id)"
 ];
 
 // Schema cree une fois par base et par instance du Worker.
@@ -649,7 +658,10 @@ async function routeAdmin(chemin, request, env, cors, ip) {
     if (!c) return refus(route, 404, "client-inconnu", cors);
     await db.batch([
       db.prepare("UPDATE clients SET revoque_le = ?1 WHERE id = ?2 AND revoque_le IS NULL").bind(maintenant, clientId),
-      db.prepare("UPDATE jetons SET revoque_le = ?1 WHERE client_id = ?2 AND revoque_le IS NULL").bind(maintenant, clientId)
+      db.prepare("UPDATE jetons SET revoque_le = ?1 WHERE client_id = ?2 AND revoque_le IS NULL").bind(maintenant, clientId),
+      // Un client revoque sort de ses defis entre amis : son pseudo et son
+      // total disparaissent des classements.
+      db.prepare("DELETE FROM defis_participants WHERE client_id = ?1").bind(clientId)
     ]);
     return reponseJson({ ok: true }, 200, cors);
   }
@@ -1165,7 +1177,270 @@ async function envoyerAnnonces(env, maintenant, annonces = ANNONCES) {
   return bilan;
 }
 
+/* ------------------------------------------------------------------ */
+/* Défis entre amis (24 octobre 2026)                                   */
+/* ------------------------------------------------------------------ */
+/*
+ * Repris de l'app publique Neiram (worker/defis.js), accord du coach du
+ * 24/10/2026, et RESERVE AUX CLIENTS DU COACH (Team Neiram) :
+ *   - chaque route exige un jeton client valide (identifier), y compris en
+ *     mode « transition » : pas d'anonyme dans les defis ;
+ *   - un participant = client.id (jamais l'adresse IP ni un identifiant de
+ *     telephone) ; un client revoque ne voit plus rien (jeton refuse) et
+ *     sort de ses defis (/admin/revoquer efface ses participations).
+ *
+ * Un client lance un defi de 7 jours (le plus de pas, de seances ou de
+ * minutes de sport) et partage un code a 6 caracteres. Ce qui est publie
+ * aux autres participants du defi : un pseudo (filtre) et un total, borne
+ * ici. Rien d'autre : ni le libelle du client, ni poids, ni sante.
+ *
+ * Plafonds (fonction depasse) : 5 defis crees par jour et par client,
+ * 30 appels par minute et par client ; 20 participants par defi ; 3 defis
+ * en cours au plus par client. Les defis sont effaces 60 jours apres leur
+ * fin, par la tache planifiee.
+ */
+
+const DEFIS_TYPES = {
+  pas: { max: 7 * 70000 },
+  seances: { max: 21 },
+  minutes: { max: 7 * 600 }
+};
+const DEFIS_DUREE_JOURS = 7;
+const DEFIS_PARTICIPANTS_MAX = 20;
+const DEFIS_PAR_JOUR = 5;
+const DEFIS_ACTIFS_MAX = 3;
+const DEFIS_APPELS_PAR_MINUTE = 30;
+const DEFIS_CONSERVATION_JOURS = 60;
+const DEFIS_PROGRES_MAX = 20;
+const TAILLE_MAX_DEFIS = 4 * 1024;
+// Sans 0/O, 1/I/L : un code se dicte et se recopie sans erreur.
+const ALPHABET_DEFI = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const LONGUEUR_CODE_DEFI = 6;
+
+const PSEUDO_MIN = 3;
+const PSEUDO_MAX = 20;
+
+/**
+ * Mots refuses dans un pseudo (insultes, haine, sexe, drogue, usurpation),
+ * repris de l'app publique (worker/communaute.js) : liste courte et
+ * volontairement large.
+ */
+const MOTS_INTERDITS = [
+  "connard", "connasse", "salope", "salaud", "pute", "putain", "encule", "enculé", "batard", "bâtard", "pd", "pédé", "pede",
+  "negre", "nègre", "bougnoul", "youpin", "nazi", "hitler", "fdp", "ntm", "nique", "niquer", "bite", "chatte", "couille",
+  "porn", "porno", "sexe", "xxx", "fuck", "shit", "bitch", "dick", "cock", "pussy", "nigger", "nigga", "faggot", "whore",
+  "cocaine", "coke", "heroine", "weed", "admin", "neiram", "coachneiram", "moderateur", "modérateur"
+];
+
+const normaliserPseudo = (t) =>
+  String(t || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/0/g, "o")
+    .replace(/1/g, "i")
+    .replace(/3/g, "e")
+    .replace(/4/g, "a")
+    .replace(/5/g, "s");
+
+function contientMotInterdit(texte) {
+  const n = normaliserPseudo(texte);
+  return MOTS_INTERDITS.some((m) => {
+    const mn = normaliserPseudo(m);
+    // Mots tres courts (pd, fdp...) : seulement s'ils sont le pseudo entier
+    // ou un mot isole, pour ne pas refuser « Lepdg » ou « Sandpiper ».
+    if (mn.length <= 3) return n === mn || new RegExp(`(^|[^a-z0-9])${m}([^a-z0-9]|$)`, "i").test(String(texte || ""));
+    return n.includes(mn);
+  });
+}
+
+/** Pseudo propre, ou { erreur } : longueur, caracteres, mots interdits. */
+function validerPseudo(brut) {
+  const pseudo = String(brut || "").trim().replace(/\s+/g, " ");
+  if (pseudo.length < PSEUDO_MIN || pseudo.length > PSEUDO_MAX) return { erreur: "pseudo-longueur" };
+  if (!/^[\p{L}\p{N} _.\-]+$/u.test(pseudo)) return { erreur: "pseudo-caracteres" };
+  if (contientMotInterdit(pseudo)) return { erreur: "pseudo-refuse" };
+  return { pseudo, norme: normaliserPseudo(pseudo) };
+}
+
+/** Pseudo par defaut : le prenom du libelle (« Sabine P. » → « Sabine »). */
+function prenomDuLibelle(libelle) {
+  return String(libelle || "").trim().split(/\s+/)[0] || "";
+}
+
+function genererCodeDefi(aleatoire = () => crypto.getRandomValues(new Uint32Array(1))[0]) {
+  let c = "";
+  for (let i = 0; i < LONGUEUR_CODE_DEFI; i++) c += ALPHABET_DEFI[aleatoire() % ALPHABET_DEFI.length];
+  return c;
+}
+
+const codeDefiPropre = (v) =>
+  String(v || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, LONGUEUR_CODE_DEFI);
+
+const plusJours = (iso, n) => jourUtc(Date.parse(iso + "T12:00:00Z") + n * 86400000);
+
+/** Total borne et arrondi, ou null s'il est impossible pour ce type. */
+function valeurDefiBornee(type, brut) {
+  const regle = DEFIS_TYPES[type];
+  const v = Number(brut);
+  if (!regle || brut === null || brut === undefined || brut === "" || !Number.isFinite(v) || v < 0 || v > regle.max) return null;
+  return Math.round(v);
+}
+
+/**
+ * Etat d'un defi vu par un client : seuls pseudo, total, rang et « moi »
+ * sortent. Les participants d'un client revoque sont ecartes (ceinture et
+ * bretelles : /admin/revoquer les efface deja).
+ */
+async function etatDefi(db, code, clientId, maintenant) {
+  const d = await db.prepare("SELECT code, type, debut, fin FROM defis WHERE code = ?1").bind(code).first();
+  if (!d) return null;
+  const { results } = await db
+    .prepare(
+      "SELECT p.client_id AS client_id, p.pseudo AS pseudo, p.valeur AS valeur FROM defis_participants p JOIN clients c ON c.id = p.client_id WHERE p.code = ?1 AND c.revoque_le IS NULL ORDER BY p.valeur DESC, p.pseudo ASC"
+    )
+    .bind(code)
+    .all();
+  const participants = (results || []).map((p, i) => ({ rang: i + 1, pseudo: p.pseudo, valeur: Number(p.valeur), moi: p.client_id === clientId }));
+  return { code: d.code, type: d.type, debut: d.debut, fin: d.fin, termine: jourUtc(maintenant) > d.fin, participants };
+}
+
+/** Defis encore en cours (pas finis) auxquels le client participe. */
+async function defisActifs(db, clientId, maintenant) {
+  const r = await db
+    .prepare("SELECT COUNT(*) AS n FROM defis_participants p JOIN defis d ON d.code = p.code WHERE p.client_id = ?1 AND d.fin >= ?2")
+    .bind(clientId, jourUtc(maintenant))
+    .first();
+  return Number((r && r.n) || 0);
+}
+
+async function routeDefis(chemin, request, env, cors) {
+  const route = "/defis";
+  const id = await identifier(route, request, env, cors);
+  if (id.reponse) return id.reponse;
+  const { client, db } = id;
+  // Mode transition : identifier accepte une requete sans jeton. Pas ici.
+  if (!client) return refus(route, 401, "acces-requis", cors);
+  if (!db) return refus(route, 503, "acces-non-configure", cors);
+
+  const maintenant = Date.now();
+  const lent = await depasse(
+    db,
+    [{ cle: `defis:min:${client.id}:${minute(maintenant)}`, limite: DEFIS_APPELS_PAR_MINUTE, dureeMs: 120000, raison: "trop-de-requetes" }],
+    maintenant
+  );
+  if (lent) return refus(route, 429, lent, cors, client);
+
+  const lu = await lireJson(route, request, cors, TAILLE_MAX_DEFIS);
+  if (lu.reponse) return lu.reponse;
+  const corps = lu.corps;
+  const pseudoDemande = (brut) => validerPseudo(brut === undefined || brut === null || brut === "" ? prenomDuLibelle(client.libelle) : brut);
+
+  if (chemin === "/defis/creer") {
+    const type = String(corps.type || "");
+    if (!DEFIS_TYPES[type]) return refus(route, 400, "type-inconnu", cors, client);
+    const v = pseudoDemande(corps.pseudo);
+    if (v.erreur) return refus(route, 400, v.erreur, cors, client);
+    if ((await defisActifs(db, client.id, maintenant)) >= DEFIS_ACTIFS_MAX) return refus(route, 400, "trop-de-defis-actifs", cors, client);
+    const trop = await depasse(
+      db,
+      [{ cle: `defis:creer:${client.id}:${jourUtc(maintenant)}`, limite: DEFIS_PAR_JOUR, dureeMs: 2 * 86400000, raison: "trop-de-defis" }],
+      maintenant
+    );
+    if (trop) return refus(route, 429, trop, cors, client);
+    const debut = jourUtc(maintenant);
+    const fin = plusJours(debut, DEFIS_DUREE_JOURS - 1);
+    let code = genererCodeDefi();
+    for (let i = 0; i < 5 && (await db.prepare("SELECT 1 AS x FROM defis WHERE code = ?1").bind(code).first()); i++) code = genererCodeDefi();
+    await db.batch([
+      db.prepare("INSERT INTO defis (code, type, debut, fin, createur, cree_le) VALUES (?1, ?2, ?3, ?4, ?5, ?6)").bind(code, type, debut, fin, client.id, maintenant),
+      db.prepare("INSERT INTO defis_participants (code, client_id, pseudo, valeur, maj_le) VALUES (?1, ?2, ?3, 0, ?4)").bind(code, client.id, v.pseudo, maintenant)
+    ]);
+    journal(route, 200, null, client);
+    return reponseJson({ ok: true, defi: await etatDefi(db, code, client.id, maintenant) }, 200, cors);
+  }
+
+  if (chemin === "/defis/rejoindre") {
+    const code = codeDefiPropre(corps.code);
+    if (code.length !== LONGUEUR_CODE_DEFI) return refus(route, 404, "defi-inconnu", cors, client);
+    const v = pseudoDemande(corps.pseudo);
+    if (v.erreur) return refus(route, 400, v.erreur, cors, client);
+    const d = await etatDefi(db, code, client.id, maintenant);
+    if (!d) return refus(route, 404, "defi-inconnu", cors, client);
+    if (d.termine) return refus(route, 400, "defi-termine", cors, client);
+    if (!d.participants.some((p) => p.moi)) {
+      if (d.participants.length >= DEFIS_PARTICIPANTS_MAX) return refus(route, 400, "defi-complet", cors, client);
+      if ((await defisActifs(db, client.id, maintenant)) >= DEFIS_ACTIFS_MAX) return refus(route, 400, "trop-de-defis-actifs", cors, client);
+    }
+    if (d.participants.some((p) => !p.moi && normaliserPseudo(p.pseudo) === v.norme)) return refus(route, 409, "pseudo-pris", cors, client);
+    await db
+      .prepare(
+        "INSERT INTO defis_participants (code, client_id, pseudo, valeur, maj_le) VALUES (?1, ?2, ?3, 0, ?4) ON CONFLICT(code, client_id) DO UPDATE SET pseudo = ?3, maj_le = ?4"
+      )
+      .bind(code, client.id, v.pseudo, maintenant)
+      .run();
+    journal(route, 200, null, client);
+    return reponseJson({ ok: true, defi: await etatDefi(db, code, client.id, maintenant) }, 200, cors);
+  }
+
+  if (chemin === "/defis/progres") {
+    // Plusieurs defis d'un coup : [{ code, valeur }] ; sans valeur, on lit
+    // seulement l'etat (premier passage : le telephone ne connait pas
+    // encore les dates du defi).
+    const liste = Array.isArray(corps.defis) ? corps.defis.slice(0, DEFIS_PROGRES_MAX) : [];
+    const sortie = [];
+    const vus = new Set();
+    for (const x of liste) {
+      const code = codeDefiPropre(x && x.code);
+      if (code.length !== LONGUEUR_CODE_DEFI || vus.has(code)) continue;
+      vus.add(code);
+      const d = await db.prepare("SELECT type, fin FROM defis WHERE code = ?1").bind(code).first();
+      if (!d) continue;
+      const valeur = valeurDefiBornee(d.type, x.valeur);
+      // Un defi termine ne bouge plus (un jour de grace pour les pas de la veille).
+      if (valeur !== null && jourUtc(maintenant) <= plusJours(d.fin, 1)) {
+        await db
+          .prepare("UPDATE defis_participants SET valeur = ?3, maj_le = ?4 WHERE code = ?1 AND client_id = ?2")
+          .bind(code, client.id, valeur, maintenant)
+          .run();
+      }
+      const etat = await etatDefi(db, code, client.id, maintenant);
+      if (etat && etat.participants.some((p) => p.moi)) sortie.push(etat);
+    }
+    return reponseJson({ ok: true, defis: sortie }, 200, cors);
+  }
+
+  if (chemin === "/defis/quitter") {
+    // Quitter efface la participation (pseudo et total) ; un defi sans
+    // plus personne est efface aussi.
+    const code = codeDefiPropre(corps.code);
+    await db.batch([
+      db.prepare("DELETE FROM defis_participants WHERE code = ?1 AND client_id = ?2").bind(code, client.id),
+      db.prepare("DELETE FROM defis WHERE code = ?1 AND NOT EXISTS (SELECT 1 FROM defis_participants WHERE code = ?1)").bind(code)
+    ]);
+    journal(route, 200, null, client);
+    return reponseJson({ ok: true }, 200, cors);
+  }
+
+  return reponseJson({ ok: false, error: "not-found" }, 404, cors);
+}
+
+/** Tache planifiee : efface les defis finis depuis plus de 60 jours. */
+async function nettoyerDefis(env, maintenant) {
+  const db = await base(env);
+  if (!db) return;
+  const limite = plusJours(jourUtc(maintenant), -DEFIS_CONSERVATION_JOURS);
+  await db.batch([
+    db.prepare("DELETE FROM defis_participants WHERE code IN (SELECT code FROM defis WHERE fin < ?1)").bind(limite),
+    db.prepare("DELETE FROM defis WHERE fin < ?1").bind(limite)
+  ]);
+}
+
 // Acces des tests aux fonctions internes (sans effet en production).
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
-  Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement });
+  Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
 }

@@ -156,6 +156,20 @@ console.log("\n--- Route /coach-sync ---");
   verifie("panne reseau signalee (502)", r.status === 502, "statut " + r.status);
 }
 
+console.log("\n--- Defis entre amis (detail : tests/worker-defis.test.mjs) ---");
+{
+  const r = await worker.fetch(req("/defis/creer", { type: "pas" }), env);
+  const d = await r.json();
+  verifie("defi cree avec le jeton client (200)", r.status === 200 && /^[A-HJKMNP-Z2-9]{6}$/.test(d.defi && d.defi.code), "statut " + r.status);
+  verifie("pseudo par defaut = prenom de la fiche", d.defi && d.defi.participants[0].pseudo === "Marien");
+  const sans = await worker.fetch(new Request("https://proxy.test/defis/creer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://coachneiram.github.io" },
+    body: JSON.stringify({ type: "pas" })
+  }), { ...env, ACCES_CLIENTS: "transition" });
+  verifie("sans jeton refuse, meme en transition (401)", sans.status === 401, "statut " + sans.status);
+}
+
 console.log("\n--- Proxy non configure ---");
 {
   const r = await worker.fetch(req("/ai", { model: "gemini-3.6-flash", messages: [{}] }), {});
