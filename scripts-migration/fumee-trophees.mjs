@@ -31,6 +31,10 @@
  *      retire du profil.
  * Les tuiles attendues sont calculees avec lib/trophees.js sur le meme
  * historique : l'anciennete depend de la date du jour.
+ *
+ * Familles « mode de vie » (24/10/2026) : « Mon année » apparait des la
+ * premiere seance ; ses trophees deja obtenus au premier calcul sont vus
+ * sans celebration (marque familles-mode-de-vie dans cn_trophees_vus).
  * Capture de l'ecran pour controle visuel (TROPHEES_PNG).
  *
  *   cd app && npm run build && cd ..
@@ -43,7 +47,9 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { trophees, tropheesAffiches } from "../app/src/lib/trophees.js";
+import { IDS_FAMILLES_MODE_DE_VIE, MARQUE_MODE_DE_VIE, trophees, tropheesAffiches } from "../app/src/lib/trophees.js";
+import { meilleureAnnee } from "../app/src/lib/calendrier.js";
+import { semainesActivesOMS, sportsPratiques } from "../app/src/lib/activites.js";
 import { ajouterMois, etatContrat, messageFinContrat } from "../app/src/lib/contrat.js";
 import { addDays } from "../app/src/lib/dates.js";
 
@@ -78,10 +84,20 @@ function historique(semaines) {
   }
   return seances;
 }
+/** Compteurs « mode de vie » de cet historique (rien d'autre n'est stocke). */
+const compteursDe = (seances) => ({ annee: meilleureAnnee(seances), sports: sportsPratiques(seances), actif: semainesActivesOMS(seances) });
 const tuilesAttendues = (semaines, profil = {}) =>
   tropheesAffiches(
-    trophees({ seances: historique(semaines), profil: { sessionsPerWeek: 3, ...profil }, semainesDifficiles: {}, date: new Date().toISOString().slice(0, 10) }).liste
+    trophees({
+      seances: historique(semaines),
+      profil: { sessionsPerWeek: 3, ...profil },
+      semainesDifficiles: {},
+      date: new Date().toISOString().slice(0, 10),
+      compteurs: compteursDe(historique(semaines))
+    }).liste
   ).flatMap((f) => f.tuiles);
+/** Trophees celebres : ceux des familles d'avant le 24/10/2026. */
+const fetes = (tuiles) => tuiles.filter((t) => !IDS_FAMILLES_MODE_DE_VIE.includes(t.famille));
 
 async function ouvrir({ semaines, difficiles = [], profil = {} }) {
   const ctx = await nav.newContext(appareil("Pixel 7"));
@@ -172,7 +188,11 @@ try {
     );
 
     const banniere = page.locator("[data-nouveau-trophee]");
-    const avant = (await banniere.count()) && new RegExp(`${attendus.length} nouveaux trophées`).test(await banniere.innerText());
+    const aFeter = fetes(attendues.filter((t) => t.obtenu)).map((t) => t.id);
+    const avant =
+      (await banniere.count()) &&
+      new RegExp(`${aFeter.length} nouveaux trophées`).test(await banniere.innerText()) &&
+      !/Mon année/.test(await banniere.innerText());
 
     // Relance du parrainage : dans la celebration, fermee par la croix.
     const phraseVue = (await relanceDe(page).count()) === 1 && (await relanceDe(page).innerText()).replace(/\s+/g, " ").includes(PHRASE);
@@ -200,8 +220,8 @@ try {
     const auRechargement = await page.locator("[data-nouveau-trophee]").count();
     console.log(
       "3. CÉLÉBRATION          :",
-      avant && apres === 0 && auRechargement === 0 && vus.length === attendus.length
-        ? `bannière « ${attendus.length} nouveaux trophées », mémorisée après « Super ! », absente au rechargement`
+      avant && apres === 0 && auRechargement === 0 && vus.length === attendus.length + 1 && vus.includes(MARQUE_MODE_DE_VIE)
+        ? `bannière « ${aFeter.length} nouveaux trophées » (sans « Mon année », vu sans fête), mémorisée après « Super ! », absente au rechargement`
         : `*** avant ${avant}, après ${apres}, rechargement ${auRechargement}, vus ${JSON.stringify(vus)} ***`
     );
     if (process.env.TROPHEES_PNG) {
@@ -289,7 +309,7 @@ try {
     console.log(
       "8. SUIVI DEPUIS 2022    :",
       JSON.stringify(affichees.map((a) => a[0])) === JSON.stringify(attendues) &&
-        JSON.stringify(familles) === JSON.stringify(["seances", "semaines", "anciennete"]) &&
+        JSON.stringify(familles) === JSON.stringify(["seances", "semaines", "anciennete", "annee"]) &&
         parId["seances-750"]?.ob === "oui" &&
         parId["seances-1000"]?.ob === "non" && /980\/1000/.test(parId["seances-1000"].t) &&
         parId["anciennete-36"]?.ob === "oui" &&

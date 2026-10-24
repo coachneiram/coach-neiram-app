@@ -32,7 +32,7 @@ export function echapperHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
-export function construireBilanHTML({ profile, weekStats, report, photos, targets, performances = [] }) {
+export function construireBilanHTML({ profile, weekStats, report, photos, targets, performances = [], habitudes = [] }) {
   const e = echapperHtml;
   const s = weekStats;
   const programme = lireResumeProgramme(s.planSummary);
@@ -217,7 +217,7 @@ export function construireBilanHTML({ profile, weekStats, report, photos, target
   ${liste("Vigilance", sec.vigilance, "#F5B942")}
   ${liste("À corriger", sec.a_corriger, "#F0645A")}
   ${liste("Recommandations de la semaine", sec.actions, "#F8D040")}
-  ${liste("Performances et transformation", performances, "#F8D040")}${blocDouleurs}
+  ${liste("Performances et transformation", performances, "#F8D040")}${liste("Habitudes et déclics", habitudes, "#4ADE80")}${blocDouleurs}
   ${blocNotes}
   <p style="font-size:9.5px;color:#63635C;margin-top:26px;text-align:center">Généré par l'app Coach Neiram le ${e(
     new Date().toLocaleDateString("fr-FR")
@@ -237,8 +237,8 @@ export function nomFichierBilan(profile, weekStats) {
  * un telechargement. Renvoie "shared", "downloaded" ou "cancelled" —
  * l'appelant n'enregistre « bilan envoye » que pour les deux premiers.
  */
-export async function partagerBilan({ profile, weekStats, report, photos, targets, performances }) {
-  const html = construireBilanHTML({ profile, weekStats, report, photos, targets, performances });
+export async function partagerBilan({ profile, weekStats, report, photos, targets, performances, habitudes }) {
+  const html = construireBilanHTML({ profile, weekStats, report, photos, targets, performances, habitudes });
   const nomFichier = nomFichierBilan(profile, weekStats);
   const blob = new Blob([html], { type: "text/html" });
   const fichier = new File([blob], nomFichier, { type: "text/html" });

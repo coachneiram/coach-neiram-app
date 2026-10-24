@@ -12,6 +12,8 @@
 
 import { CarteSauvegarde } from "../ui/CarteSauvegarde.jsx";
 import { CarteDefi } from "../ui/CarteDefi.jsx";
+import { CarteHabitudes } from "../ui/CarteHabitudes.jsx";
+import { CarteLecon } from "../ui/CarteLecon.jsx";
 import { premierJourSuivi } from "../lib/rappel-sauvegarde.js";
 import { useMemo, useState } from "react";
 import { COLORS, POLICES } from "../tokens.js";
@@ -557,6 +559,11 @@ export function Journal({
       <MotivationCard text={motivation} icone={Flame} />
 
       <BandeauSerie serie={serie} />
+
+      {/* Mes habitudes et la leçon du jour (repris de l'app Neiram, 24
+          octobre 2026). La leçon ne s'affiche que le jour même. */}
+      <CarteHabitudes date={date} />
+      {date === todayISO() && <CarteLecon />}
 
       {/* Rappel de sauvegarde (repris de l'app Neiram, 24 octobre 2026) : le
           suivi ne vit que sur le telephone. */}

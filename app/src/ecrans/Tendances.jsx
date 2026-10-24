@@ -30,6 +30,7 @@ import { progressionCorps } from "../lib/progression-corps.js";
 import { MonEvolution } from "../ui/Explorateur.jsx";
 import { Camera, Droplet, Dumbbell, Flame, Footprints, Loader2, Moon, Scale, Share, Sparkles } from "../ui/icones.jsx";
 import { ComparateurPhotos } from "../ui/ComparateurPhotos.jsx";
+import { CarteDeclics } from "../ui/CarteDeclics.jsx";
 
 /** Attente et erreur de generation, communes aux deux bilans. */
 const styleAttente = {
@@ -223,6 +224,9 @@ export function Tendances({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Mes déclics (repris de l'app Neiram, 24 octobre 2026) : ce qui va
+          avec les meilleures journées, en tête comme dans l'app Neiram. */}
+      <CarteDeclics journal={allData.dailyForm} seances={allData.sessions} />
       {/* Ajout du 14 octobre 2026 : chaque donnee au jour, a la semaine, au mois, a l'annee. */}
       <MonEvolution
         donnees={allData}

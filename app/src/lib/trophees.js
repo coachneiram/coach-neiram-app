@@ -29,6 +29,16 @@
  * (profil.seancesAvantApp), et montent jusqu'a 1 000 ; une famille
  * « anciennete » recompense le temps de suivi depuis le debut du coaching
  * (date saisie, sinon premiere seance notee).
+ *
+ * Mode de vie et tous sports (24 octobre 2026, repris des badges de l'app
+ * Neiram, memes paliers que FAMILLES_BADGES) : Mon annee, Multisport,
+ * Semaines actives (OMS), Programmes guides, Habitudes, L'ecole Neiram et
+ * Niveau federal. Leurs compteurs viennent de lib/compteurs-trophees.js
+ * (qui lit le stockage) et sont PASSES a trophees() : la fonction reste
+ * pure. Sans compteurs, ces familles valent 0 et ne s'affichent pas (une
+ * famille de ce type n'apparait qu'une fois commencee). Les classements,
+ * podiums, athlete du mois et defis entre amis ne sont pas repris : ils
+ * demandent un serveur.
  */
 
 import { addDays, num } from "./dates.js";
@@ -163,13 +173,58 @@ export function debutDuSuivi({ seances, profil, date }) {
 
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 
+/** Noms des niveaux d'une famille « mode de vie », du premier au dernier. */
+export const NIVEAUX_TROPHEES = ["Bronze", "Argent", "Or", "Platine", "Diamant", "Légende", "Mythique", "Immortel"];
+
+/** Marches du trophee « Niveau federal » (lib/niveaux.js, marcheFederale). */
+const MARCHES_FEDERALES = ["régional", "national", "international"];
+
+/**
+ * Familles reprises des badges de l'app Neiram (lib/badges.js,
+ * FAMILLES_BADGES), avec les memes paliers. `compteur` : le champ de
+ * `compteurs` passe a trophees().
+ */
+export const FAMILLES_MODE_DE_VIE = [
+  { id: "annee", titre: "Mon année", icone: "📅", unite: (n) => `${n} séances dans une même année`, paliers: [12, 26, 52, 100, 150, 200, 250] },
+  { id: "sports", titre: "Multisport", icone: "🏅", unite: (n) => `${n} sports différents`, paliers: [2, 3, 5, 8, 12] },
+  { id: "actif", titre: "Semaines actives", icone: "🌿", unite: (n) => `${pluriel(n, "semaine")} à 150 min (OMS)`, paliers: [1, 4, 12, 26, 52] },
+  { id: "programmes", titre: "Programmes guidés", icone: "🎯", unite: (n) => `${pluriel(n, "programme")} terminé${n > 1 ? "s" : ""}`, paliers: [1, 2, 3] },
+  { id: "habitudes", titre: "Habitudes", icone: "🌱", unite: (n) => `${n} jours d'affilée sur une habitude`, paliers: [3, 7, 21, 66, 100, 365] },
+  { id: "lecons", titre: "L'école Neiram", icone: "🎓", unite: (n) => pluriel(n, "leçon"), paliers: [1, 7, 14, 28] },
+  { id: "niveauFederal", titre: "Niveau fédéral", icone: "🎖️", unite: (n) => `Niveau ${MARCHES_FEDERALES[n - 1]} dans une discipline`, paliers: [1, 2, 3] }
+];
+
+/** Compteurs a 0 : l'etat d'un client qui n'a rien commence. */
+export const COMPTEURS_VIDES = Object.fromEntries(FAMILLES_MODE_DE_VIE.map((f) => [f.id, 0]));
+
+/** Trophees des familles « mode de vie », a partir des compteurs. */
+export function tropheesModeDeVie(compteurs = COMPTEURS_VIDES) {
+  const liste = [];
+  for (const f of FAMILLES_MODE_DE_VIE) {
+    const valeur = Math.max(0, num(compteurs && compteurs[f.id]));
+    f.paliers.forEach((n, i) => {
+      liste.push({
+        id: `${f.id}-${n}`,
+        famille: f.id,
+        icone: f.icone,
+        titre: `${f.titre} ${NIVEAUX_TROPHEES[i]}`,
+        detail: f.unite(n),
+        obtenu: valeur >= n,
+        progression: `${Math.min(valeur, n)}/${n}`,
+        valeur
+      });
+    });
+  }
+  return liste;
+}
+
 /**
  * Les trophees, obtenus ou a venir, avec la progression vers chacun.
  *
  * `total` : seances notees dans l'application plus celles d'avant ;
  * `totalApp` : seances notees dans l'application seulement.
  */
-export function trophees({ seances, profil, semainesDifficiles, date }) {
+export function trophees({ seances, profil, semainesDifficiles, date, compteurs = COMPTEURS_VIDES }) {
   const totalApp = (seances || []).filter((s) => s && s.date && s.date <= date).length;
   const total = totalApp + seancesAvant(profil);
   const series = seriesSemaines({ seances, profil, semainesDifficiles, date });
@@ -200,7 +255,8 @@ export function trophees({ seances, profil, semainesDifficiles, date }) {
       obtenu: Boolean(debut) && mois >= p.n,
       progression: `${Math.min(mois, p.n)}/${p.n} mois`
     })),
-    ...tropheesContrat(etatContrat({ profil, seances, date }))
+    ...tropheesContrat(etatContrat({ profil, seances, date })),
+    ...tropheesModeDeVie({ ...COMPTEURS_VIDES, ...(compteurs || {}) })
   ];
   return { total, totalApp, mois, debut, series, liste };
 }
@@ -232,22 +288,54 @@ export const FAMILLES_TROPHEES = [
   { id: "seances", titre: "Séances" },
   { id: "semaines", titre: "Semaines tenues d'affilée" },
   { id: "anciennete", titre: "Ancienneté" },
-  { id: "contrat", titre: "Contrat en cours" }
+  { id: "contrat", titre: "Contrat en cours" },
+  ...FAMILLES_MODE_DE_VIE.map((f) => ({ id: f.id, titre: f.titre, siCommencee: true }))
 ];
+
+/** Familles ajoutees le 24/10/2026 (celebration : voir vusAvecModeDeVie). */
+export const IDS_FAMILLES_MODE_DE_VIE = FAMILLES_MODE_DE_VIE.map((f) => f.id);
 
 /**
  * Les tuiles a afficher : dans chaque famille, les trophees obtenus puis le
  * PROCHAIN a gagner seulement. Avec les paliers jusqu'a 1 000 seances et
  * 5 ans de suivi, tout montrer ferait une grille de 23 tuiles surtout
  * grisees.
+ *
+ * Une famille « mode de vie » (siCommencee) n'apparait qu'une fois
+ * commencee : un debutant n'a pas sept familles a zero sous les yeux.
  */
 export function tropheesAffiches(liste) {
   return FAMILLES_TROPHEES.map((f) => {
     const siens = (liste || []).filter((t) => t.famille === f.id);
+    if (f.siCommencee && !siens.some((t) => num(t.valeur) > 0)) return { ...f, tuiles: [] };
     const obtenus = siens.filter((t) => t.obtenu);
     const prochain = siens.find((t) => !t.obtenu);
     return { ...f, tuiles: prochain ? [...obtenus, prochain] : obtenus };
   }).filter((f) => f.tuiles.length);
+}
+
+/**
+ * Marque posee dans « cn_trophees_vus » une fois les familles « mode de
+ * vie » prises en compte.
+ */
+export const MARQUE_MODE_DE_VIE = "familles-mode-de-vie";
+
+/**
+ * Celebration des familles ajoutees le 24/10/2026. Chez un client existant,
+ * leurs trophees seraient « obtenus » d'un coup (une annee a 52 seances,
+ * trois sports…) et la celebration en listerait une dizaine. Au premier
+ * calcul, ceux deja obtenus sont donc marques vus sans fete ; ensuite,
+ * chaque nouveau palier est celebre normalement. Les familles d'avant
+ * (seances, semaines, anciennete, contrat) ne changent pas.
+ *
+ * Rend la liste des vus a enregistrer, ou null si rien ne change.
+ */
+export function vusAvecModeDeVie(liste, vus) {
+  const deja = Array.isArray(vus) ? vus : [];
+  if (deja.includes(MARQUE_MODE_DE_VIE)) return null;
+  const familles = new Set(IDS_FAMILLES_MODE_DE_VIE);
+  const silencieux = (liste || []).filter((t) => t.obtenu && familles.has(t.famille)).map((t) => t.id);
+  return [...new Set([...deja, ...silencieux, MARQUE_MODE_DE_VIE])];
 }
 
 /** Trophees obtenus pas encore montres au client, a celebrer. */

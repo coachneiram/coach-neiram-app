@@ -37,6 +37,7 @@ import { CarteActivite } from "../ui/CarteActivite.jsx";
 import { CarteMesSports } from "../ui/CarteMesSports.jsx";
 import { CarteProgrammes } from "../ui/CarteProgrammes.jsx";
 import { CarteCalendrier } from "../ui/CarteCalendrier.jsx";
+import { CarteBilanAnnee } from "../ui/CarteBilanAnnee.jsx";
 import {
   activiteDeSeance,
   ajouterTermine,
@@ -70,7 +71,8 @@ export function Entrainements({
   onContrat,
   formDuJour,
   poidsKg,
-  journal
+  journal,
+  corps
 }) {
   // Autres sports, programmes guides et « Mon annee » (repris de l'app
   // Neiram, 24/10/2026). Une activite est une seance avec un champ
@@ -124,6 +126,9 @@ export function Entrainements({
         onAjouter={cocherJour}
         onRetirer={(ids) => sessionsApi.removeMany(ids)}
       />
+      {/* « Mon année Neiram » (repris de l'app Neiram, 24/10/2026) : le
+          bilan de l'année en quelques écrans, à côté du calendrier. */}
+      <CarteBilanAnnee seances={sessionsApi.items} journal={journal} corps={corps} profil={profile} maxis={maxisForce} />
       <CarteActivite seances={sessionsApi.items} journal={journal} onAjouter={() => ouvrirActivite()} />
       <CarteProgrammes
         etat={programme}
@@ -160,6 +165,8 @@ export function Entrainements({
       onDebutCoaching={onDebutCoaching}
       onSeancesAvantApp={onSeancesAvantApp}
       onContrat={onContrat}
+      maxisForce={maxisForce}
+      poidsKg={poidsKg}
     />
   );
 

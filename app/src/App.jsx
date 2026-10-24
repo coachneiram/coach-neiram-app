@@ -46,6 +46,8 @@ import {
 import { verifierAlertesCoach } from "./lib/moteur-alertes.js";
 import { lignesPerformancesBilan } from "./lib/performances-bilan.js";
 import { lirePerformances } from "./lib/performances.js";
+import { lignesHabitudesBilan } from "./lib/habitudes-bilan.js";
+import { CLE_HABITUDES } from "./lib/habitudes.js";
 import { viderFile } from "./lib/synchro-coach.js";
 import { totauxDuJour } from "./lib/score-jour.js";
 import { Coque } from "./ui/Coque.jsx";
@@ -236,6 +238,13 @@ export default function App() {
         profil: profile,
         poidsKg: poidsCourant,
         bodyLogs,
+        date: todayISO()
+      }),
+      // Habitudes et déclics (24 octobre 2026).
+      habitudes: lignesHabitudesBilan({
+        habitudes: charger(CLE_HABITUDES, null),
+        journal: dailyForm,
+        seances: sessions,
         date: todayISO()
       })
     });
@@ -699,6 +708,7 @@ export default function App() {
         formDuJour={dailyForm.find((f) => f.date === todayISO())}
         poidsKg={poidsCourant}
         journal={dailyForm}
+        corps={bodyLogs}
       />
     ),
     tendances: weekStats ? (

@@ -53,8 +53,11 @@ function dessinerHaltere(ctx, cx, cy, e = 1) {
  * Dessine la carte et rend le canvas.
  *
  * `lignes` : [{ valeur, libelle }], quatre au plus.
+ * `options.surtitre` (« Mon année Neiram », 24/10/2026) : remplace « MES
+ * PROGRÈS », et une valeur longue (« Course à pied ») prend une police
+ * réduite pour tenir. Sans option, la carte de progrès est inchangée.
  */
-export async function dessinerCarte(lignes) {
+export async function dessinerCarte(lignes, { surtitre = null } = {}) {
   if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
     // Les polices du site doivent etre pretes, sinon le canvas dessine en
     // police systeme et la carte perd son identite.
@@ -86,7 +89,7 @@ export async function dessinerCarte(lignes) {
   ctx.fillText("COACH NEIRAM", LARGEUR / 2, 520);
   ctx.fillStyle = OR;
   ctx.font = `600 40px ${TITRE}`;
-  ctx.fillText("MES PROGRÈS", LARGEUR / 2, 590);
+  ctx.fillText(surtitre || "MES PROGRÈS", LARGEUR / 2, 590);
 
   // Les chiffres, un bloc par ligne.
   // Les blocs sont centres dans l'espace disponible : avec trois chiffres
@@ -103,8 +106,10 @@ export async function dessinerCarte(lignes) {
     ctx.lineWidth = 3;
     ctx.stroke();
     ctx.fillStyle = OR;
-    ctx.font = `800 104px ${TITRE}`;
-    ctx.fillText(String(l.valeur), LARGEUR / 2, y + 112);
+    const valeur = String(l.valeur);
+    const taille = surtitre && valeur.length > 12 ? 72 : surtitre && valeur.length > 8 ? 88 : 104;
+    ctx.font = `800 ${taille}px ${TITRE}`;
+    ctx.fillText(valeur, LARGEUR / 2, y + 112);
     ctx.fillStyle = TEXTE;
     ctx.font = `500 42px ${TITRE}`;
     ctx.fillText(String(l.libelle), LARGEUR / 2, y + 172);
