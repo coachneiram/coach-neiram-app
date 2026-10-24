@@ -6,14 +6,51 @@
  * coach : tout est inclus (aucune mention d'abonnement), le coach reçoit
  * le bilan que tu lui envoies.
  *
- * Écartés : la communauté (classements, mur des transformations, défis
- * entre amis, stories, parrainage, récompenses, code secret des stories,
- * idées), les badges, Apple Santé et Health Connect, Siri et le widget,
+ * Écartés : la communauté (classements, mur des transformations,
+ * stories, parrainage, récompenses, code secret des stories, idées), les
+ * badges, Apple Santé et Health Connect, Siri et le widget,
  * l'abonnement. Raccourcis : seulement la partie web (appui long sur
  * l'icône Android, adresse en favori), sans Siri ni widget.
+ *
+ * Défis entre amis (24 octobre 2026, accord du coach) : repris, réservés
+ * aux clients du coach (code d'accès activé), carte du Journal.
  */
 
 export const TUTOS_VIE = [
+  /* ---------------------------------------------------------------- */
+  /* Journal : défis entre amis                                          */
+  /* ---------------------------------------------------------------- */
+  {
+    id: "defis-amis",
+    onglet: "journal",
+    emoji: "⚔️",
+    titre: "Les défis entre amis",
+    resume: "Un défi de 7 jours entre clients du coach : le plus de pas, de séances ou de minutes de sport.",
+    etapes: [
+      {
+        titre: "Active ton accès",
+        texte: "Les défis sont réservés aux clients du coach : son code d'accès doit être entré une fois dans les Réglages, carte « Accès de ton coach »."
+      },
+      {
+        titre: "Lance un défi",
+        texte: "Dans le Journal, carte « Défis entre amis » : vérifie ton pseudo, choisis « Le plus de pas », « Le plus de séances » ou « Le plus de minutes de sport », puis « Lancer un défi »."
+      },
+      {
+        titre: "Ce que voient les autres",
+        texte: "Avant de lancer ou de rejoindre, l'app rappelle que seuls ton pseudo et ton total sont visibles des autres participants. Touche « J'ai compris, continuer » pour accepter."
+      },
+      {
+        titre: "Invite et rejoins",
+        texte: "« Inviter » envoie le lien ou le code à 6 caractères. Un ami qui ouvre le lien voit le code déjà rempli ; sinon il le tape dans « Code reçu » puis touche « Rejoindre »."
+      },
+      {
+        titre: "Classement et sortie",
+        texte: "Ton total se calcule tout seul avec tes pas, tes séances et tes activités notés. « Quitter » efface ta participation. Un défi gagné compte pour le trophée Défis entre amis."
+      }
+    ],
+    libelles: ["Défis entre amis", "Accès de ton coach", "Le plus de pas", "Le plus de séances", "Le plus de minutes de sport", "Lancer un défi", "J'ai compris, continuer", "Inviter", "Code reçu", "Rejoindre", "Quitter"]
+  },
+
   /* ---------------------------------------------------------------- */
   /* Sommeil                                                            */
   /* ---------------------------------------------------------------- */

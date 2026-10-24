@@ -37,8 +37,14 @@
  * (qui lit le stockage) et sont PASSES a trophees() : la fonction reste
  * pure. Sans compteurs, ces familles valent 0 et ne s'affichent pas (une
  * famille de ce type n'apparait qu'une fois commencee). Les classements,
- * podiums, athlete du mois et defis entre amis ne sont pas repris : ils
- * demandent un serveur.
+ * podiums et athlete du mois ne sont pas repris : ils demandent un serveur
+ * public.
+ *
+ * Defis entre amis (24 octobre 2026, accord du coach) : les defis passent
+ * par le Worker du coach et sont reserves a ses clients. La famille
+ * « Defis entre amis » (id « duels », memes paliers que l'app Neiram)
+ * compte les defis gagnes (lib/defis-amis.js) ; comme les autres familles
+ * mode de vie, elle n'apparait qu'une fois commencee.
  */
 
 import { addDays, num } from "./dates.js";
@@ -191,7 +197,8 @@ export const FAMILLES_MODE_DE_VIE = [
   { id: "programmes", titre: "Programmes guidés", icone: "🎯", unite: (n) => `${pluriel(n, "programme")} terminé${n > 1 ? "s" : ""}`, paliers: [1, 2, 3] },
   { id: "habitudes", titre: "Habitudes", icone: "🌱", unite: (n) => `${n} jours d'affilée sur une habitude`, paliers: [3, 7, 21, 66, 100, 365] },
   { id: "lecons", titre: "L'école Neiram", icone: "🎓", unite: (n) => pluriel(n, "leçon"), paliers: [1, 7, 14, 28] },
-  { id: "niveauFederal", titre: "Niveau fédéral", icone: "🎖️", unite: (n) => `Niveau ${MARCHES_FEDERALES[n - 1]} dans une discipline`, paliers: [1, 2, 3] }
+  { id: "niveauFederal", titre: "Niveau fédéral", icone: "🎖️", unite: (n) => `Niveau ${MARCHES_FEDERALES[n - 1]} dans une discipline`, paliers: [1, 2, 3] },
+  { id: "duels", titre: "Défis entre amis", icone: "⚔️", unite: (n) => `${pluriel(n, "défi")} gagné${n > 1 ? "s" : ""} entre amis`, paliers: [1, 3, 10, 25] }
 ];
 
 /** Compteurs a 0 : l'etat d'un client qui n'a rien commence. */

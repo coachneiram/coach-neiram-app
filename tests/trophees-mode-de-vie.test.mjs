@@ -42,13 +42,28 @@ describe("familles et paliers", () => {
       programmes: [1, 2, 3],
       habitudes: [3, 7, 21, 66, 100, 365],
       lecons: [1, 7, 14, 28],
-      niveauFederal: [1, 2, 3]
+      niveauFederal: [1, 2, 3],
+      duels: [1, 3, 10, 25]
     });
   });
 
-  test("pas de classements, podiums, athlète du mois ni défis entre amis (serveur)", () => {
+  test("pas de classements, podiums ni athlète du mois (serveur public)", () => {
     const ids = FAMILLES_MODE_DE_VIE.map((f) => f.id);
-    for (const id of ["topClassement", "podiums", "athleteMois", "athleteAnnee", "duels", "stories"]) assert.ok(!ids.includes(id), id);
+    for (const id of ["topClassement", "podiums", "athleteMois", "athleteAnnee", "stories"]) assert.ok(!ids.includes(id), id);
+  });
+
+  test("défis entre amis (24/10/2026) : famille « duels », masquée tant qu'aucun défi n'est gagné", () => {
+    const f = FAMILLES_MODE_DE_VIE.find((x) => x.id === "duels");
+    assert.equal(f.titre, "Défis entre amis");
+    const l = tropheesModeDeVie({ ...COMPTEURS_VIDES, duels: 3 });
+    const par = Object.fromEntries(l.map((t) => [t.id, t]));
+    assert.equal(par["duels-1"].detail, "1 défi gagné entre amis");
+    assert.equal(par["duels-3"].detail, "3 défis gagnés entre amis");
+    assert.ok(par["duels-3"].obtenu && !par["duels-10"].obtenu);
+    const sans = trophees({ seances: [], profil: PROFIL, date: AUJ });
+    assert.ok(!tropheesAffiches(sans.liste).some((x) => x.id === "duels"));
+    const avec = trophees({ seances: [], profil: PROFIL, date: AUJ, compteurs: { duels: 1 } });
+    assert.deepEqual(tropheesAffiches(avec.liste).find((x) => x.id === "duels").tuiles.map((t) => t.id), ["duels-1", "duels-3"]);
   });
 
   test("tuiles : titre par niveau, détail, progression", () => {

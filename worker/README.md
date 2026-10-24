@@ -179,3 +179,26 @@ activation, une clé `ab:…` apparaît dans le namespace KV.
 
 Coût : 0 €. Offre gratuite de KV : 100 000 lectures, 1 000 écritures et 1 000 listes par
 jour ; la tâche planifiée fait 96 listes par jour et n'écrit que lorsqu'un rappel part.
+
+## Défis entre amis (Team Neiram) — ajout du 24 octobre 2026
+
+Routes `POST /defis/creer`, `/defis/rejoindre`, `/defis/progres`, `/defis/quitter`,
+dans `coach-neiram-proxy.js` (section « Défis entre amis »). Rien à configurer :
+elles utilisent la liaison `DB` déjà en place, et les tables sont créées toutes
+seules à la première requête (`CREATE TABLE IF NOT EXISTS`, aucune table
+existante n'est touchée) :
+
+```sql
+CREATE TABLE IF NOT EXISTS defis (code TEXT PRIMARY KEY, type TEXT NOT NULL, debut TEXT NOT NULL, fin TEXT NOT NULL, createur TEXT NOT NULL, cree_le INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS defis_participants (code TEXT NOT NULL, client_id TEXT NOT NULL, pseudo TEXT NOT NULL, valeur REAL NOT NULL DEFAULT 0, maj_le INTEGER NOT NULL, PRIMARY KEY (code, client_id));
+CREATE INDEX IF NOT EXISTS defis_participants_client ON defis_participants (client_id);
+```
+
+- Réservé aux clients du coach : jeton client obligatoire, **même en mode
+  « transition »**. Un client révoqué (`/admin/revoquer`) sort de ses défis.
+- Publié aux autres participants : le pseudo (filtré) et le total, borné
+  (pas ≤ 490 000, séances ≤ 21, minutes ≤ 4 200 sur 7 jours). Rien d'autre.
+- Plafonds : 5 défis créés par jour et par client, 30 appels par minute et par
+  client, 20 participants par défi, 3 défis en cours par client.
+- La tâche planifiée (Cron) efface les défis 60 jours après leur fin.
+- Tests : `node --test tests/worker-defis.test.mjs`.

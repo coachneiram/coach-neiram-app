@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-24-defis-amis",
+    date: "2026-10-24",
+    titre: "Défis entre amis",
+    texte:
+      "Dans le Journal : lance un défi de 7 jours avec d'autres clients du coach (pas, séances ou minutes de sport), envoie le lien ou le code et suis le classement. Seuls ton pseudo et ton total sont visibles.",
+    onglet: "journal",
+    bouton: "Lancer un défi"
+  },
+  {
     id: "2026-10-24-tutos-raccourcis",
     date: "2026-10-24",
     titre: "Un « ? » sur chaque carte",

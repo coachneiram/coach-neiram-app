@@ -71,6 +71,7 @@ import { NOUVEAUTES_MAX, annoncesAutorisees, lireVues, marquerToutVu, nouveautes
 import { CLE_SPORTS_PERSO, definirSportsPerso } from "./lib/activites.js";
 import { messageEau } from "./lib/raccourcis.js";
 import { brancherRaccourcis, ecouterRaccourcis, poserIntention } from "./lib/reception-raccourcis.js";
+import { brancherInvitationDefi } from "./lib/defis-amis.js";
 
 /** Duree d'affichage d'une notification passagere, en millisecondes. */
 const DUREE_TOAST = 8000;
@@ -383,6 +384,9 @@ export default function App() {
   };
   useEffect(() => {
     brancherRaccourcis();
+    // Lien d'invitation a un defi entre amis (?defi=CODE) : code retenu
+    // pour la carte du Journal, adresse nettoyee.
+    brancherInvitationDefi();
   }, []);
   useEffect(() => {
     if (!pret || !profile) return undefined;
