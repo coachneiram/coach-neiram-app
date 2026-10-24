@@ -92,11 +92,13 @@ export function SectionTitle({ children, tuto }) {
   if (!tuto) return titre;
   // `tuto` : identifiant du tuto de la fonction (lib/tutos-contenu*.js),
   // ouvert par le bouton « ? » a droite du titre (repris de l'app Neiram).
+  // <header> plutot que <div> : la carte reste le premier bloc qui contient
+  // le titre (les ecrans et les fumees cherchent la carte par son titre).
   return (
-    <div style={styleTitreAvecTuto}>
+    <header style={styleTitreAvecTuto}>
       {titre}
       <LienTuto id={tuto} />
-    </div>
+    </header>
   );
 }
 
