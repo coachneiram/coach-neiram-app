@@ -14,6 +14,7 @@ import { PROXY_BASE_URL } from "./config.js";
 import { enTetesAcces } from "./acces.js";
 import { CLES_ANNEXES, charger, enregistrer } from "./stockage.js";
 import { creneauPourDate, enLigne, slotDayLabel } from "./semaine.js";
+import { niveauAlerte } from "./gravite-alertes.js";
 
 /** Au-dela, on abandonne les plus anciens : une file sans fin ne sert personne. */
 const TAILLE_MAX_FILE = 40;
@@ -29,7 +30,14 @@ export const TYPES_EVENEMENTS = [
   "resume_hebdo",
   "alerte_sommeil_stress",
   // Autre sport (course, velo, foot...) : une ligne dans le Journal du coach.
-  "activite"
+  "activite",
+  // Smart Coach (25 octobre 2026). L'inactivite est detectee par le Worker
+  // (route /presence et tache planifiee) : l'application ne l'envoie jamais,
+  // le proxy la refuse si elle vient d'un telephone. Le poids et la
+  // nutrition partent de l'application (lib/alertes-smart.js).
+  "alerte_inactivite",
+  "alerte_poids",
+  "alerte_nutrition"
 ];
 
 /**
@@ -92,8 +100,12 @@ function synchroLocaleAutorisee() {
 export async function envoyerEvenement(profil, evenement) {
   if (!synchroActive(profil)) return false;
 
+  // Gravite (Smart Coach) : toute alerte porte un niveau, celui qu'elle
+  // annonce ou celui de la table (lib/gravite-alertes.js).
+  const niveau = niveauAlerte(evenement);
   const charge = {
     ...evenement,
+    ...(niveau ? { niveau } : {}),
     client: (profil && (profil.name || profil.firstName)) || "Client sans prénom",
     envoyeLe: new Date().toISOString()
   };

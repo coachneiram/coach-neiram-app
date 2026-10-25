@@ -13,7 +13,9 @@ import { charger, enregistrer } from "./stockage.js";
 import { CLES_ANNEXES } from "./stockage.js";
 import { envoyerEvenement, synchroActive } from "./synchro-coach.js";
 import { decalagesRecents, manquesRecents, tauxRespect } from "./creneaux.js";
-import { getWeekKey, normaliserCreneaux, slotDayLabel } from "./semaine.js";
+import { enLigne, getWeekKey, normaliserCreneaux, slotDayLabel } from "./semaine.js";
+import { decisionAlerteNutrition, decisionAlertesPoids } from "./alertes-smart.js";
+import { stagnationPoidsSurveillee } from "./eligibilite-perte.js";
 import { todayISO } from "./dates.js";
 import { signauxAlerte } from "./sommeil.js";
 import {
@@ -173,4 +175,97 @@ async function evaluerAlertes({
   }
 
   return { alertes: resultats };
+}
+
+/* ------------------------------------------------------------------ */
+/* Smart Coach (25 octobre 2026) : poids et nutrition                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Meme file que les autres alertes : une evaluation a la fois, pour qu'une
+ * deuxieme ne parte pas avant que la premiere ait note son envoi.
+ */
+function enFile(fn) {
+  const suite = evaluationEnCours.then(fn);
+  evaluationEnCours = suite.catch(() => null);
+  return suite;
+}
+
+/** Coaching en ligne avec synchro active : sinon, rien ne part. */
+const smartActif = (profile) => enLigne(profile) && synchroActive(profile);
+
+/**
+ * Alertes de poids, a l'enregistrement d'une pesee : variation brutale
+ * (attention) et stagnation en phase de perte (info). Au plus une de
+ * chaque sorte tous les 14 jours (CLES_ANNEXES.alertePoids).
+ */
+export function verifierAlertesPoids({
+  profile,
+  pesees,
+  surveillerStagnation = stagnationPoidsSurveillee,
+  maintenant = new Date(),
+  aujourdhui = todayISO(),
+  envoyer = envoyerEvenement
+}) {
+  return enFile(async () => {
+    if (!smartActif(profile)) return { alertes: [], raison: "pas en coaching en ligne" };
+    const etat = charger(CLES_ANNEXES.alertePoids, {}) || {};
+    const aEnvoyer = decisionAlertesPoids({
+      pesees,
+      stagnationSurveillee: surveillerStagnation({ profil: profile }),
+      aujourdhui,
+      maintenant,
+      etat
+    });
+    const resultats = [];
+    for (const a of aEnvoyer) {
+      const remis = await envoyer(profile, {
+        type: "alerte_poids",
+        sousType: a.sousType,
+        niveau: a.niveau,
+        weekKey: getWeekKey(aujourdhui),
+        message: a.message
+      });
+      if (remis) {
+        const actuel = charger(CLES_ANNEXES.alertePoids, {}) || {};
+        enregistrer(CLES_ANNEXES.alertePoids, { ...actuel, [a.sousType]: { lastAt: maintenant.toISOString() } });
+      }
+      resultats.push({ type: "alerte_poids", sousType: a.sousType, niveau: a.niveau, remis });
+    }
+    return { alertes: resultats };
+  });
+}
+
+/**
+ * Alerte nutrition, a l'ouverture, au plus une fois par jour : 5 jours ou
+ * plus hors cible sur les 7 derniers jours complets (CLES_ANNEXES.alerteNutrition).
+ */
+export function verifierAlerteNutrition({
+  profile,
+  repas,
+  cibles,
+  maintenant = new Date(),
+  aujourdhui = todayISO(),
+  envoyer = envoyerEvenement
+}) {
+  return enFile(async () => {
+    if (!smartActif(profile)) return { alertes: [], raison: "pas en coaching en ligne" };
+    const etat = charger(CLES_ANNEXES.alerteNutrition, {}) || {};
+    const d = decisionAlerteNutrition({ repas, cibles, aujourdhui, maintenant, etat });
+    if (!d.verifier) return { alertes: [], raison: d.raison };
+    let lastAt = etat.lastAt || null;
+    const resultats = [];
+    if (d.alerter) {
+      const remis = await envoyer(profile, {
+        type: "alerte_nutrition",
+        niveau: "attention",
+        weekKey: getWeekKey(aujourdhui),
+        message: d.message
+      });
+      if (remis) lastAt = maintenant.toISOString();
+      resultats.push({ type: "alerte_nutrition", remis });
+    }
+    enregistrer(CLES_ANNEXES.alerteNutrition, { jour: aujourdhui, lastAt });
+    return { alertes: resultats, raison: d.raison };
+  });
 }

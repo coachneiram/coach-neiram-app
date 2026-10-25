@@ -241,9 +241,10 @@ describe("tâche planifiée et schéma", () => {
     await clientActive("Alex D.");
     // Les tables de la communaute (24 octobre 2026) ont leur propre test
     // (tests/worker-communaute.test.mjs) ; sqlite_sequence vient de leurs
-    // cles AUTOINCREMENT.
+    // cles AUTOINCREMENT. La table presence (Smart Coach, 25 octobre 2026)
+    // a la sienne (tests/worker-presence.test.mjs).
     const tables = env.DB.sqlite
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'communaute_%' ORDER BY name")
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'communaute_%' AND name <> 'presence' ORDER BY name")
       .all()
       .map((r) => r.name);
     assert.deepEqual(tables, ["clients", "compteurs", "defis", "defis_participants", "invitations", "jetons", "sqlite_sequence"]);

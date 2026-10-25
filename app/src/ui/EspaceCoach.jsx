@@ -20,7 +20,9 @@ import {
   listeClients,
   messageErreurAdmin,
   moderation,
+  presenceClients,
   revoquerClient,
+  trierPresence,
   ERREURS_ESPACE_COACH
 } from "../lib/espace-coach.js";
 import { Btn, Card, SectionTitle, TextInput } from "./primitives.jsx";
@@ -114,6 +116,13 @@ function puce(couleur = COLORS.border) {
 }
 const styleEtat = (etat) => ({ ...STYLE_DETAIL, color: etat === "sans-jeton" ? COLORS.warn : etat === "revoque" ? COLORS.bad : COLORS.good, fontWeight: 600 });
 
+const styleNiveau = (niveau) => ({
+  ...STYLE_DETAIL,
+  textAlign: "right",
+  fontWeight: 600,
+  color: niveau === "critique" ? COLORS.bad : niveau === "attention" ? COLORS.warn : COLORS.good
+});
+
 /** Saisie du secret : champ mot de passe, rien n'est gardé. */
 function Verrou({ onOuvrir, message }) {
   const [saisie, setSaisie] = useState("");
@@ -159,6 +168,7 @@ export function EspaceCoach() {
   const [secret, setSecret] = useState(null);
   const [clients, setClients] = useState([]);
   const [moder, setModer] = useState(null);
+  const [presence, setPresence] = useState(null);
   const [nouveauCode, setNouveauCode] = useState(null);
   const [libelle, setLibelle] = useState("");
   const [pseudo, setPseudo] = useState("");
@@ -173,6 +183,7 @@ export function EspaceCoach() {
     setSecret(null);
     setClients([]);
     setModer(null);
+    setPresence(null);
     setNouveauCode(null);
     setErreur(null);
     setInfo(null);
@@ -210,15 +221,17 @@ export function EspaceCoach() {
     }
   };
   const recharger = async (s = secret) => {
-    const [c, m] = await Promise.all([agir(() => listeClients(s)), agir(() => moderation("signalements", null, s))]);
+    const [c, m, p] = await Promise.all([agir(() => listeClients(s)), agir(() => moderation("signalements", null, s)), agir(() => presenceClients(s))]);
     if (c) setClients(c.clients || []);
     if (m) setModer(m);
+    if (p) setPresence(p.clients || []);
   };
   const ouvrir = (s, liste) => {
     setMessage(null);
     setSecret(s);
     setClients(liste);
     agir(() => moderation("signalements", null, s)).then((m) => m && setModer(m));
+    agir(() => presenceClients(s)).then((p) => p && setPresence(p.clients || []));
   };
 
   if (!secret) {
@@ -337,6 +350,39 @@ export function EspaceCoach() {
               </div>
             );
           })
+        )}
+      </Card>
+
+      <Card>
+        <SectionTitle>{T.presenceTitre}</SectionTitle>
+        <p style={STYLE_AIDE}>{T.presenceAide}</p>
+        {!presence ? (
+          <p style={STYLE_AIDE}>{T.chargement}</p>
+        ) : !presence.length ? (
+          <p style={STYLE_AIDE}>{T.aucunePresence}</p>
+        ) : (
+          trierPresence(presence).map((c) => (
+            <div key={c.id} data-presence={c.libelle} data-niveau={c.niveau || (c.jours == null ? "jamais" : "ok")} data-jours={c.jours == null ? "" : c.jours} style={STYLE_LIGNE}>
+              <div>
+                <div style={STYLE_NOM}>{c.libelle}</div>
+                {c.vuLe ? (
+                  <>
+                    <div style={STYLE_DETAIL}>{T.derniereSaisie(c.derniereSaisie)}</div>
+                    <div style={STYLE_DETAIL}>{T.vuLe(c.vuLe)}</div>
+                  </>
+                ) : (
+                  <div style={STYLE_DETAIL}>{T.jamaisVu}</div>
+                )}
+              </div>
+              {c.jours != null && (
+                <div style={styleNiveau(c.niveau)}>
+                  <div>{T.niveauPresence[c.niveau] || T.aJour}</div>
+                  <div style={STYLE_DETAIL}>{T.joursSansSaisie(c.jours)}</div>
+                  {c.alerteEnvoyee && <div style={STYLE_DETAIL}>{T.alerteEnvoyee(c.alerteEnvoyee)}</div>}
+                </div>
+              )}
+            </div>
+          ))
         )}
       </Card>
 

@@ -18,10 +18,16 @@
  *   POST /communaute/...  -> communaute « Team Neiram » entre clients du coach :
  *                            classements, athlete du mois, mur des
  *                            transformations (jeton client obligatoire)
+ *   POST /presence        -> « je suis la, derniere saisie le … » (Smart Coach,
+ *                            jeton client obligatoire, quelques appels par jour)
+ *   POST /admin/presence  -> presence des clients, pour l'Espace coach
  * Et une tache planifiee (Cron Trigger, toutes les 15 minutes) qui envoie
  * les rappels arrives a echeance, meme application fermee, efface les
  * defis termines depuis plus de 60 jours et fait le menage de la
- * communaute (vieux scores, signalements traites).
+ * communaute (vieux scores, signalements traites). Une fois par jour,
+ * entre 8 h et 9 h (heure de Paris), elle previent aussi le coach des
+ * clients inactifs depuis 4 jours (attention) ou 7 jours (critique) : voir
+ * la section « Presence et inactivite ».
  *
  * Variables a definir dans Cloudflare (Settings > Variables and Secrets) :
  *   GEMINI_API_KEY      (secret)   cle API Google Gemini
@@ -110,7 +116,8 @@ const PLAFONDS = {
   syncAnonymeParHeure: 30,
   activationParHeure: 10,    // codes essayes, par adresse IP
   activationGlobaleParHeure: 60,
-  adminEchecsParHeure: 10
+  adminEchecsParHeure: 10,
+  presenceParJour: 6         // l'application en envoie une par jour
 };
 
 // Codes d'invitation : 8 caracteres sans 0/O ni 1/I, valables 30 jours.
@@ -206,6 +213,7 @@ export default {
     try {
       if (url.pathname === "/ai") return await relaiIa(request, env, cors, ip);
       if (url.pathname === "/coach-sync") return await relaiCoachSync(request, env, cors, ip);
+      if (url.pathname === "/presence") return await routePresence(request, env, cors);
       if (url.pathname === "/auth/activer") return await activerCode(request, env, cors, ip);
       if (url.pathname.startsWith("/admin/")) return await routeAdmin(url.pathname, request, env, cors, ip);
       if (url.pathname.startsWith("/push/")) return await routePush(url.pathname, request, env, cors, ip);
@@ -227,6 +235,8 @@ export default {
     if (env.DB) taches.push(nettoyerCompteurs(env, Date.now()).catch(() => null));
     if (env.DB) taches.push(nettoyerDefis(env, Date.now()).catch(() => null));
     if (env.DB) taches.push(nettoyerCommunaute(env, Date.now()).catch(() => null));
+    // Tache separee : une panne ici n'empeche ni les rappels ni le menage.
+    if (env.DB) taches.push(alerterInactivite(env, Date.now()).catch(() => null));
     const tout = Promise.all(taches);
     if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(tout);
     await tout;
@@ -255,7 +265,9 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS communaute_transformations (id INTEGER PRIMARY KEY AUTOINCREMENT, client_id TEXT NOT NULL, periode TEXT NOT NULL, jours INTEGER NOT NULL, gras REAL, muscle REAL, texte TEXT NOT NULL, cree_le INTEGER NOT NULL, masque INTEGER NOT NULL DEFAULT 0)",
   "CREATE INDEX IF NOT EXISTS communaute_transformations_date ON communaute_transformations (masque, cree_le)",
   "CREATE TABLE IF NOT EXISTS communaute_bravos (transformation INTEGER NOT NULL, client_id TEXT NOT NULL, le INTEGER NOT NULL, PRIMARY KEY (transformation, client_id))",
-  "CREATE TABLE IF NOT EXISTS communaute_signalements (id INTEGER PRIMARY KEY AUTOINCREMENT, cible_type TEXT NOT NULL, cible TEXT NOT NULL, motif TEXT, auteur TEXT NOT NULL, cree_le INTEGER NOT NULL, traite INTEGER NOT NULL DEFAULT 0, UNIQUE (cible_type, cible, auteur))"
+  "CREATE TABLE IF NOT EXISTS communaute_signalements (id INTEGER PRIMARY KEY AUTOINCREMENT, cible_type TEXT NOT NULL, cible TEXT NOT NULL, motif TEXT, auteur TEXT NOT NULL, cree_le INTEGER NOT NULL, traite INTEGER NOT NULL DEFAULT 0, UNIQUE (cible_type, cible, auteur))",
+  // Presence (Smart Coach, 25 octobre 2026) : voir la section dediee plus bas.
+  "CREATE TABLE IF NOT EXISTS presence (client_id TEXT PRIMARY KEY, vu_le INTEGER NOT NULL, derniere_saisie TEXT, alerte_le INTEGER, niveau TEXT)"
 ];
 
 // Schema cree une fois par base et par instance du Worker.
@@ -685,6 +697,8 @@ async function routeAdmin(chemin, request, env, cors, ip) {
 
   if (chemin === "/admin/communaute") return reponseJson(await adminCommunaute(db, corps), 200, cors);
 
+  if (chemin === "/admin/presence") return reponseJson({ ok: true, clients: await adminPresence(db, maintenant) }, 200, cors);
+
   return reponseJson({ ok: false, error: "not-found" }, 404, cors);
 }
 
@@ -709,8 +723,19 @@ const TYPES_AUTORISES = [
   // Sommeil et stress (24 octobre 2026) : le detail tient dans « message ».
   "alerte_sommeil_stress",
   // Autre sport (24 octobre 2026) : sport, duree, RPE et charge dans « message ».
-  "activite"
+  "activite",
+  // Smart Coach (25 octobre 2026). alerte_inactivite est produite ICI (tache
+  // planifiee) : un telephone ne peut pas l'envoyer (TYPES_SERVEUR).
+  "alerte_inactivite",
+  "alerte_poids",
+  "alerte_nutrition"
 ];
+
+/** Types que seul le Worker emet : refuses sur /coach-sync. */
+const TYPES_SERVEUR = ["alerte_inactivite"];
+
+/** Gravite d'une alerte (app/src/lib/gravite-alertes.js). */
+const NIVEAUX_ALERTE = ["info", "attention", "critique"];
 
 const LONGUEUR_MAX_TEXTE = 500;
 const MARQUE_NON_VERIFIE = " (non vérifié)";
@@ -752,6 +777,65 @@ async function signerEvenement(propre, secret, maintenant = Date.now(), nonce = 
   return JSON.stringify({ v: 2, ts: maintenant, nonce, charge, sig });
 }
 
+/**
+ * L'evenement tel qu'il part vers Apps Script : reconstruit champ par champ,
+ * chaque texte plafonne. Sert au relais /coach-sync et a la tache planifiee
+ * d'inactivite, pour que le script recoive toujours la meme forme.
+ */
+function evenementPropre(evenement, libelle) {
+  const propre = {
+    type: texteCourt(evenement.type),
+    client: libelle,
+    date: texteCourt(evenement.date),
+    creneau: texteCourt(evenement.creneau),
+    lieu: texteCourt(evenement.lieu),
+    heureReelle: texteCourt(evenement.heureReelle),
+    retard: !!evenement.retard,
+    maintien: !!evenement.maintien,
+    dureeMin: nombreOuVide(evenement.dureeMin),
+    rpe: nombreOuVide(evenement.rpe),
+    ecartMin: nombreOuVide(evenement.ecartMin),
+    motif: texteCourt(evenement.motif),
+    message: texteCourt(evenement.message),
+    note: texteCourt(evenement.note),
+    weekKey: texteCourt(evenement.weekKey),
+    nbManquees: nombreOuVide(evenement.nbManquees),
+    // Champs des deux alertes ajoutees tardivement. Sans eux, le type
+    // passait la liste blanche mais arrivait vide de chiffres en aval : le
+    // proxy reconstruit l'evenement champ par champ, donc tout champ non
+    // nomme ici est silencieusement perdu.
+    nbDecalages: nombreOuVide(evenement.nbDecalages),
+    honored: nombreOuVide(evenement.honored),
+    resolved: nombreOuVide(evenement.resolved),
+    missed: nombreOuVide(evenement.missed),
+    shifted: nombreOuVide(evenement.shifted),
+    pct: Number.isFinite(Number(evenement.pct)) ? Number(evenement.pct) : "",
+    // Smart Coach (25 octobre 2026) : gravite de l'alerte et jours
+    // d'inactivite. Un niveau inconnu est vide : le script prend alors
+    // celui de sa table (niveauParDefaut).
+    niveau: NIVEAUX_ALERTE.includes(evenement.niveau) ? evenement.niveau : "",
+    nbJours: nombreOuVide(evenement.nbJours),
+    envoyeLe: texteCourt(evenement.envoyeLe)
+  };
+
+  const creneauxPlafonnes = (liste) =>
+    liste.slice(0, 20).map((m) => ({
+      jour: texteCourt(m && m.jour),
+      heure: texteCourt(m && m.heure),
+      date: texteCourt(m && m.date),
+      lieu: texteCourt(m && m.lieu)
+    }));
+
+  if (Array.isArray(evenement.creneauxManques)) {
+    propre.creneauxManques = creneauxPlafonnes(evenement.creneauxManques);
+  }
+  if (Array.isArray(evenement.creneauxDecales)) {
+    propre.creneauxDecales = creneauxPlafonnes(evenement.creneauxDecales);
+  }
+
+  return propre;
+}
+
 async function relaiCoachSync(request, env, cors, ip) {
   const route = "/coach-sync";
   if (!env.COACH_SYNC_URL || !env.COACH_SYNC_SECRET) return refus(route, 503, "proxy-non-configure", cors);
@@ -781,6 +865,11 @@ async function relaiCoachSync(request, env, cors, ip) {
   if (!TYPES_AUTORISES.includes(String(evenement.type || ""))) {
     return refus(route, 400, "type-inconnu", cors, client);
   }
+  // Une alerte d'inactivite ne peut venir que de la tache planifiee : un
+  // client ne doit pas pouvoir en fabriquer une, ni en effacer une vraie.
+  if (TYPES_SERVEUR.includes(String(evenement.type))) {
+    return refus(route, 400, "type-reserve", cors, client);
+  }
 
   // On reconstruit l'evenement champ par champ : rien d'inattendu ne passe,
   // et chaque texte est plafonne avant d'atteindre le Google Sheets / les mails.
@@ -788,52 +877,12 @@ async function relaiCoachSync(request, env, cors, ip) {
   // LE PRENOM VIENT DE LA FICHE CLIENT, jamais de la requete : un jeton
   // valide dit qui ecrit. Sans jeton (mode transition), le prenom annonce
   // est garde mais marque « (non vérifié) » dans le classeur du coach.
-  const propre = {
-    type: texteCourt(evenement.type),
-    client: client
+  const propre = evenementPropre(
+    evenement,
+    client
       ? texteCourt(client.libelle)
-      : texteCourt(evenement.client).slice(0, LONGUEUR_MAX_TEXTE - MARQUE_NON_VERIFIE.length) + MARQUE_NON_VERIFIE,
-    date: texteCourt(evenement.date),
-    creneau: texteCourt(evenement.creneau),
-    lieu: texteCourt(evenement.lieu),
-    heureReelle: texteCourt(evenement.heureReelle),
-    retard: !!evenement.retard,
-    maintien: !!evenement.maintien,
-    dureeMin: nombreOuVide(evenement.dureeMin),
-    rpe: nombreOuVide(evenement.rpe),
-    ecartMin: nombreOuVide(evenement.ecartMin),
-    motif: texteCourt(evenement.motif),
-    message: texteCourt(evenement.message),
-    note: texteCourt(evenement.note),
-    weekKey: texteCourt(evenement.weekKey),
-    nbManquees: nombreOuVide(evenement.nbManquees),
-    // Champs des deux alertes ajoutees tardivement. Sans eux, le type
-    // passait la liste blanche mais arrivait vide de chiffres en aval : le
-    // proxy reconstruit l'evenement champ par champ, donc tout champ non
-    // nomme ici est silencieusement perdu.
-    nbDecalages: nombreOuVide(evenement.nbDecalages),
-    honored: nombreOuVide(evenement.honored),
-    resolved: nombreOuVide(evenement.resolved),
-    missed: nombreOuVide(evenement.missed),
-    shifted: nombreOuVide(evenement.shifted),
-    pct: Number.isFinite(Number(evenement.pct)) ? Number(evenement.pct) : "",
-    envoyeLe: texteCourt(evenement.envoyeLe)
-  };
-
-  const creneauxPlafonnes = (liste) =>
-    liste.slice(0, 20).map((m) => ({
-      jour: texteCourt(m && m.jour),
-      heure: texteCourt(m && m.heure),
-      date: texteCourt(m && m.date),
-      lieu: texteCourt(m && m.lieu)
-    }));
-
-  if (Array.isArray(evenement.creneauxManques)) {
-    propre.creneauxManques = creneauxPlafonnes(evenement.creneauxManques);
-  }
-  if (Array.isArray(evenement.creneauxDecales)) {
-    propre.creneauxDecales = creneauxPlafonnes(evenement.creneauxDecales);
-  }
+      : texteCourt(evenement.client).slice(0, LONGUEUR_MAX_TEXTE - MARQUE_NON_VERIFIE.length) + MARQUE_NON_VERIFIE
+  );
 
   let amont;
   try {
@@ -858,6 +907,218 @@ async function relaiCoachSync(request, env, cors, ip) {
   }
   journal(route, ok ? 200 : 502, ok ? null : "destination-refus", client);
   return reponseJson({ ok, verifie: Boolean(client) }, ok ? 200 : 502, cors);
+}
+
+/* ------------------------------------------------------------------ */
+/* Presence et inactivite (Smart Coach, 25 octobre 2026)                */
+/* ------------------------------------------------------------------ */
+/*
+ * L'application ne peut pas signaler un client qui ne l'ouvre plus. Elle
+ * envoie donc, au plus une fois par jour et a l'ouverture (coaching en
+ * ligne seulement), POST /presence { derniereSaisie: "AAAA-MM-JJ" } : la
+ * date de sa derniere saisie reelle (repas, seance, pesee, journal).
+ *
+ * Table presence, une ligne par client :
+ *   vu_le            derniere presence recue (ms) ;
+ *   derniere_saisie  la plus recente date de saisie annoncee ;
+ *   niveau           dernier niveau d'alerte envoye au coach (NULL : aucun) ;
+ *   alerte_le        quand (ms).
+ * Une presence remet niveau et alerte_le a zero : le client est revenu.
+ *
+ * Tache planifiee, une fois par jour entre 8 h et 9 h (heure de Paris) et
+ * seulement si la precedente date de plus de 20 h : pour chaque client non
+ * revoque QUI A DEJA ENVOYE UNE PRESENCE, jours = jours (dates de Paris)
+ * depuis le plus recent de derniere_saisie et du jour de vu_le.
+ *   4 a 6 jours : « attention » ; 7 jours et plus : « critique ».
+ * Une seule alerte par niveau tant que le client n'est pas revenu. Un client
+ * qui n'a jamais active son code n'a pas de ligne : il n'est jamais alerte.
+ *
+ * L'alerte part vers Apps Script comme /coach-sync : meme adresse
+ * (COACH_SYNC_URL), meme enveloppe signee (signerEvenement), type
+ * « alerte_inactivite ». Rien d'autre que le libelle du client, le nombre
+ * de jours et le niveau.
+ */
+
+const INACTIVITE_ATTENTION_JOURS = 4;
+const INACTIVITE_CRITIQUE_JOURS = 7;
+const RANG_NIVEAU = { info: 1, attention: 2, critique: 3 };
+const HEURE_INACTIVITE = 8; // de 8 h a 9 h, heure de Paris
+const INACTIVITE_ECART_MIN_MS = 20 * 3600000;
+// Derniere execution : une ligne de la table compteurs (n = horodatage).
+const CLE_TACHE_INACTIVITE = "tache:inactivite";
+const TAILLE_MAX_PRESENCE = 1024;
+const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
+const MS_JOUR = 86400000;
+
+/** Date (AAAA-MM-JJ) a Paris pour un instant donne. */
+function dateParis(maintenant) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(maintenant));
+}
+
+const ecartJours = (plusTard, plusTot) => Math.round((Date.parse(plusTard + "T00:00:00Z") - Date.parse(plusTot + "T00:00:00Z")) / MS_JOUR);
+
+/** Date ISO plausible : bien formee, reelle, pas apres demain. */
+function dateSaisieValide(d, maintenant) {
+  if (typeof d !== "string" || !DATE_ISO.test(d)) return false;
+  const t = Date.parse(d + "T00:00:00Z");
+  if (!Number.isFinite(t) || new Date(t).toISOString().slice(0, 10) !== d) return false;
+  return d >= "2020-01-01" && ecartJours(d, dateParis(maintenant)) <= 1;
+}
+
+/** Jours sans saisie ni ouverture, a Paris ; null sans presence. */
+function joursInactivite(ligne, maintenant) {
+  if (!ligne || !ligne.vu_le) return null;
+  const vu = dateParis(Number(ligne.vu_le));
+  const ref = ligne.derniere_saisie && ligne.derniere_saisie > vu ? ligne.derniere_saisie : vu;
+  return Math.max(0, ecartJours(dateParis(maintenant), ref));
+}
+
+function niveauInactivite(jours) {
+  if (jours == null) return null;
+  if (jours >= INACTIVITE_CRITIQUE_JOURS) return "critique";
+  if (jours >= INACTIVITE_ATTENTION_JOURS) return "attention";
+  return null;
+}
+
+const messageInactivite = (jours) => "Aucune saisie depuis " + jours + " jours";
+
+async function routePresence(request, env, cors) {
+  const route = "/presence";
+  const id = await identifier(route, request, env, cors);
+  if (id.reponse) return id.reponse;
+  const { client, db } = id;
+  // Mode transition : identifier accepte une requete sans jeton. Pas ici.
+  if (!client) return refus(route, 401, "acces-requis", cors);
+  if (!db) return refus(route, 503, "acces-non-configure", cors);
+
+  const maintenant = Date.now();
+  const raison = await depasse(
+    db,
+    [{ cle: `presence:jour:${client.id}:${jourUtc(maintenant)}`, limite: PLAFONDS.presenceParJour, dureeMs: 2 * MS_JOUR, raison: "trop-de-requetes" }],
+    maintenant
+  );
+  if (raison) return refus(route, 429, raison, cors, client);
+
+  const lu = await lireJson(route, request, cors, TAILLE_MAX_PRESENCE);
+  if (lu.reponse) return lu.reponse;
+  const brute = lu.corps.derniereSaisie;
+  let derniere = null;
+  if (brute !== undefined && brute !== null && brute !== "") {
+    if (!dateSaisieValide(brute, maintenant)) return refus(route, 400, "date-invalide", cors, client);
+    derniere = brute;
+  }
+
+  // La date de saisie ne recule pas (une reinstallation sans sauvegarde
+  // n'efface pas ce que le Worker sait deja) ; l'alerte se remet a zero.
+  await db
+    .prepare(
+      "INSERT INTO presence (client_id, vu_le, derniere_saisie, alerte_le, niveau) VALUES (?1, ?2, ?3, NULL, NULL) " +
+        "ON CONFLICT(client_id) DO UPDATE SET vu_le = excluded.vu_le, alerte_le = NULL, niveau = NULL, " +
+        "derniere_saisie = CASE WHEN excluded.derniere_saisie IS NULL THEN presence.derniere_saisie " +
+        "WHEN presence.derniere_saisie IS NULL OR excluded.derniere_saisie > presence.derniere_saisie THEN excluded.derniere_saisie " +
+        "ELSE presence.derniere_saisie END"
+    )
+    .bind(client.id, maintenant, derniere)
+    .run();
+  journal(route, 200, null, client);
+  return reponseJson({ ok: true }, 200, cors);
+}
+
+/** Pour l'Espace coach : tous les clients non revoques, avec ou sans presence. */
+async function adminPresence(db, maintenant) {
+  const r = await db
+    .prepare(
+      "SELECT c.id AS id, c.libelle AS libelle, p.vu_le AS vu_le, p.derniere_saisie AS derniere_saisie, p.niveau AS alerte " +
+        "FROM clients c LEFT JOIN presence p ON p.client_id = c.id WHERE c.revoque_le IS NULL ORDER BY c.cree_le"
+    )
+    .all();
+  return (r.results || []).map((l) => {
+    const jours = joursInactivite(l, maintenant);
+    return {
+      id: l.id,
+      libelle: l.libelle,
+      vuLe: l.vu_le || null,
+      derniereSaisie: l.derniere_saisie || null,
+      jours,
+      niveau: niveauInactivite(jours),
+      alerteEnvoyee: l.alerte || null
+    };
+  });
+}
+
+/** Envoie un evenement au script Google, signe. Rend true si accepte. */
+async function remettreAuScript(env, propre, maintenant) {
+  try {
+    const amont = await fetch(env.COACH_SYNC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: await signerEvenement(propre, env.COACH_SYNC_SECRET, maintenant)
+    });
+    const texte = await amont.text();
+    try {
+      return amont.ok && JSON.parse(texte).ok !== false;
+    } catch (e) {
+      return amont.ok;
+    }
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Tache planifiee : alertes d'inactivite. Rend un bilan pour les tests :
+ * { raison } si elle ne tourne pas, sinon { envoyees, echecs, remises }.
+ */
+async function alerterInactivite(env, maintenant) {
+  if (!env.COACH_SYNC_URL || !env.COACH_SYNC_SECRET) return { raison: "non-configure" };
+  if (heureParis(maintenant) !== HEURE_INACTIVITE) return { raison: "hors-horaire" };
+  const db = await base(env);
+  if (!db) return { raison: "sans-base" };
+
+  // Reservation atomique de l'execution du jour : la ligne n'est ecrite que
+  // si la precedente date de plus de 20 h (le Cron passe 4 fois entre 8 h
+  // et 9 h ; un seul passage travaille).
+  const prise = await db
+    .prepare(
+      "INSERT INTO compteurs (cle, n, expire_le) VALUES (?1, ?2, ?3) ON CONFLICT(cle) DO UPDATE SET n = excluded.n, expire_le = excluded.expire_le WHERE compteurs.n <= ?4 RETURNING n"
+    )
+    .bind(CLE_TACHE_INACTIVITE, maintenant, maintenant + 7 * MS_JOUR, maintenant - INACTIVITE_ECART_MIN_MS)
+    .first();
+  if (!prise) return { raison: "deja-faite" };
+
+  const bilan = { envoyees: 0, echecs: 0, remises: 0 };
+  const r = await db
+    .prepare(
+      "SELECT p.client_id AS id, c.libelle AS libelle, p.vu_le AS vu_le, p.derniere_saisie AS derniere_saisie, p.niveau AS niveau " +
+        "FROM presence p JOIN clients c ON c.id = p.client_id WHERE c.revoque_le IS NULL"
+    )
+    .all();
+  for (const l of r.results || []) {
+    const jours = joursInactivite(l, maintenant);
+    const cible = niveauInactivite(jours);
+    if (!cible) {
+      // Revenu sans que la presence ait remis a zero (cas limite) : on oublie.
+      if (l.niveau) {
+        await db.prepare("UPDATE presence SET niveau = NULL, alerte_le = NULL WHERE client_id = ?1 AND vu_le = ?2").bind(l.id, l.vu_le).run();
+        bilan.remises++;
+      }
+      continue;
+    }
+    if ((RANG_NIVEAU[cible] || 0) <= (RANG_NIVEAU[l.niveau] || 0)) continue;
+    const propre = evenementPropre(
+      { type: "alerte_inactivite", niveau: cible, nbJours: jours, message: messageInactivite(jours), envoyeLe: new Date(maintenant).toISOString() },
+      texteCourt(l.libelle)
+    );
+    if (await remettreAuScript(env, propre, maintenant)) {
+      // vu_le inchange : une presence arrivee entre-temps garde la remise a zero.
+      await db.prepare("UPDATE presence SET niveau = ?1, alerte_le = ?2 WHERE client_id = ?3 AND vu_le = ?4").bind(cible, maintenant, l.id, l.vu_le).run();
+      bilan.envoyees++;
+    } else {
+      bilan.echecs++;
+    }
+  }
+  journal("/cron/inactivite", 200, null, null);
+  return bilan;
 }
 
 /* ------------------------------------------------------------------ */
@@ -2075,6 +2336,7 @@ async function nettoyerCommunaute(env, maintenant) {
 // Acces des tests aux fonctions internes (sans effet en production).
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
   Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
+  Object.assign(globalThis.__COACH_TEST__, { alerterInactivite, joursInactivite, niveauInactivite, dateParis, INACTIVITE: { INACTIVITE_ATTENTION_JOURS, INACTIVITE_CRITIQUE_JOURS, PRESENCE_PAR_JOUR: PLAFONDS.presenceParJour } });
   Object.assign(globalThis.__COACH_TEST__, {
     nettoyerStatsCommunaute,
     validerTransformationCommunaute,

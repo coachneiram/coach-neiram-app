@@ -65,12 +65,29 @@ export async function appelerAdmin(chemin, corps, secret, env = globalThis) {
 export const listeClients = (secret, env) => appelerAdmin("/admin/clients", {}, secret, env);
 export const creerCode = ({ libelle, client }, secret, env) => appelerAdmin("/admin/invitations", client ? { client } : { libelle }, secret, env);
 export const revoquerClient = (client, secret, env) => appelerAdmin("/admin/revoquer", { client }, secret, env);
+export const presenceClients = (secret, env) => appelerAdmin("/admin/presence", {}, secret, env);
 export const moderation = (action, cible, secret, env) => appelerAdmin("/admin/communaute", { action, ...(cible != null ? { cible: String(cible) } : {}) }, secret, env);
 
 /** Libellé attendu par le Worker (LIBELLE_VALIDE) : on prévient avant l'envoi. */
 export const libelleValide = (l) => /^[\p{L}\p{N} .'-]{1,40}$/u.test(String(l || "").trim());
 
 const dateCourte = (ms) => (ms ? new Date(Number(ms)).toLocaleDateString("fr-FR") : "");
+
+const dateIso = (iso) => (iso ? new Date(iso + "T12:00:00").toLocaleDateString("fr-FR") : "");
+
+/**
+ * Bloc « Présence » (Smart Coach, 25 octobre 2026) : les plus inactifs
+ * d'abord (critique, attention, puis jours sans saisie), les clients sans
+ * aucune présence à la fin.
+ */
+export function trierPresence(liste) {
+  const rang = { critique: 3, attention: 2 };
+  return [...(liste || [])].sort((a, b) => {
+    const sa = a.jours == null ? -1 : a.jours;
+    const sb = b.jours == null ? -1 : b.jours;
+    return (rang[b.niveau] || 0) - (rang[a.niveau] || 0) || sb - sa;
+  });
+}
 
 /** État d'un client pour la liste. */
 export function etatClient(c) {
@@ -110,6 +127,18 @@ export const TEXTES_ESPACE_COACH = {
   copier: "Copier",
   copie: "Copié",
   masquerCode: "J'ai noté le code",
+  // Présence (Smart Coach).
+  presenceTitre: "Présence",
+  presenceAide:
+    "Coaching en ligne. Jours depuis la dernière saisie dans l'appli (repas, séance, pesée, journal) ou sa dernière ouverture. Chaque matin, une alerte part dans ton classeur à 4 jours (attention) et à 7 jours (critique).",
+  aucunePresence: "Aucun client pour l'instant.",
+  jamaisVu: "aucune présence reçue : code pas activé, ou appli pas ouverte depuis la mise à jour",
+  derniereSaisie: (iso) => (iso ? `dernière saisie le ${dateIso(iso)}` : "aucune saisie notée"),
+  vuLe: (ms) => `appli ouverte le ${dateCourte(ms)}`,
+  joursSansSaisie: (n) => (n === 0 ? "actif aujourd'hui" : `${n} jour${n > 1 ? "s" : ""} sans saisie`),
+  niveauPresence: { critique: "🔴 critique", attention: "⚠️ attention" },
+  aJour: "à jour",
+  alerteEnvoyee: (niveau) => `alerte « ${niveau} » envoyée`,
   // Modération.
   moderationTitre: "Modération de la communauté",
   aucunSignalement: "Aucun signalement en attente.",

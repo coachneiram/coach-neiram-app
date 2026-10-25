@@ -272,7 +272,7 @@ describe("ce que la v2 faisait deja reste en place", () => {
 
   test("doGet annonce la version", () => {
     const s = creerScript();
-    assert.match(s.appeler("doGet").contenu, /v2\.4/);
+    assert.match(s.appeler("doGet").contenu, /v2\.5/);
   });
 
   // v2.4 (24/10/2026) : l'adresse d'alerte vit dans les proprietes du

@@ -40,7 +40,12 @@ export const CLES_ANNEXES = {
   planSemaine: "cn_weekly_plan",
   maxisForce: "cn_pl_1rm",
   bilanHebdo: "cn_coach_weekly_state",
-  alerteSommeil: "cn_coach_sleep_alert_state"
+  alerteSommeil: "cn_coach_sleep_alert_state",
+  // Smart Coach (25 octobre 2026) : anti-repetition des alertes poids et
+  // nutrition, et jour du dernier signal de presence envoye au Worker.
+  alertePoids: "cn_coach_weight_alert_state",
+  alerteNutrition: "cn_coach_nutrition_alert_state",
+  presence: "cn_presence_state"
 };
 
 /** Prefixe historique des donnees de suivi. */

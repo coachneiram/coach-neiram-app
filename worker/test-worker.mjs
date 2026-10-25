@@ -170,6 +170,29 @@ console.log("\n--- Defis entre amis (detail : tests/worker-defis.test.mjs) ---")
   verifie("sans jeton refuse, meme en transition (401)", sans.status === 401, "statut " + sans.status);
 }
 
+console.log("\n--- Smart Coach : presence et niveaux (detail : tests/worker-presence.test.mjs) ---");
+{
+  const r = await worker.fetch(req("/presence", { derniereSaisie: new Date().toISOString().slice(0, 10) }), env);
+  verifie("presence acceptee avec le jeton client (200)", r.status === 200, "statut " + r.status);
+  const sans = await worker.fetch(new Request("https://proxy.test/presence", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://coachneiram.github.io" },
+    body: JSON.stringify({ derniereSaisie: "2026-10-25" })
+  }), { ...env, ACCES_CLIENTS: "transition" });
+  verifie("presence sans jeton refusee, meme en transition (401)", sans.status === 401, "statut " + sans.status);
+  const faux = await worker.fetch(req("/presence", { derniereSaisie: "demain" }), env);
+  verifie("date de saisie invalide refusee (400)", faux.status === 400, "statut " + faux.status);
+}
+{
+  appelsSortants = [];
+  stubFetch(() => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  const r = await worker.fetch(req("/coach-sync", { type: "alerte_poids", niveau: "info", nbJours: 21, message: "Poids stable depuis 3 semaines en phase de perte" }), env);
+  const envoye = r.status === 200 ? JSON.parse(JSON.parse(appelsSortants[0].init.body).charge) : {};
+  verifie("niveau et nbJours relayes", envoye.niveau === "info" && envoye.nbJours === 21, JSON.stringify(envoye).slice(0, 120));
+  const reserve = await worker.fetch(req("/coach-sync", { type: "alerte_inactivite", nbJours: 9 }), env);
+  verifie("alerte d'inactivite refusee depuis un telephone (400)", reserve.status === 400, "statut " + reserve.status);
+}
+
 console.log("\n--- Proxy non configure ---");
 {
   const r = await worker.fetch(req("/ai", { model: "gemini-3.6-flash", messages: [{}] }), {});
