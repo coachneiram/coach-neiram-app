@@ -26,7 +26,7 @@
  * defis termines depuis plus de 60 jours et fait le menage de la
  * communaute (vieux scores, signalements traites). Une fois par jour,
  * entre 8 h et 9 h (heure de Paris), elle previent aussi le coach des
- * clients inactifs depuis 4 jours (attention) ou 7 jours (critique) : voir
+ * clients sans saisie depuis 4 jours (attention) ou 7 jours (critique) : voir
  * la section « Presence et inactivite ».
  *
  * Variables a definir dans Cloudflare (Settings > Variables and Secrets) :
@@ -923,15 +923,18 @@ async function relaiCoachSync(request, env, cors, ip) {
  *   derniere_saisie  la plus recente date de saisie annoncee ;
  *   niveau           dernier niveau d'alerte envoye au coach (NULL : aucun) ;
  *   alerte_le        quand (ms).
- * Une presence remet niveau et alerte_le a zero : le client est revenu.
+ * Seule une SAISIE remet niveau et alerte_le a zero : une presence dont la
+ * date de derniere saisie avance (decision du coach du 25/10/2026 : ouvrir
+ * l'appli sans rien noter ne compte pas comme un retour).
  *
  * Tache planifiee, une fois par jour entre 8 h et 9 h (heure de Paris) et
  * seulement si la precedente date de plus de 20 h : pour chaque client non
- * revoque QUI A DEJA ENVOYE UNE PRESENCE, jours = jours (dates de Paris)
- * depuis le plus recent de derniere_saisie et du jour de vu_le.
+ * revoque QUI A DEJA ENVOYE UNE PRESENCE AVEC UNE DATE DE SAISIE, jours =
+ * jours (dates de Paris) depuis derniere_saisie. vu_le ne compte pas.
  *   4 a 6 jours : « attention » ; 7 jours et plus : « critique ».
- * Une seule alerte par niveau tant que le client n'est pas revenu. Un client
- * qui n'a jamais active son code n'a pas de ligne : il n'est jamais alerte.
+ * Une seule alerte par niveau tant que le client n'a rien saisi de neuf.
+ * Un client qui n'a jamais active son code n'a pas de ligne, et un client
+ * sans aucune saisie connue n'a pas de date : ni l'un ni l'autre n'est alerte.
  *
  * L'alerte part vers Apps Script comme /coach-sync : meme adresse
  * (COACH_SYNC_URL), meme enveloppe signee (signerEvenement), type
@@ -965,12 +968,10 @@ function dateSaisieValide(d, maintenant) {
   return d >= "2020-01-01" && ecartJours(d, dateParis(maintenant)) <= 1;
 }
 
-/** Jours sans saisie ni ouverture, a Paris ; null sans presence. */
+/** Jours depuis la derniere saisie, a Paris ; null sans saisie connue. */
 function joursInactivite(ligne, maintenant) {
-  if (!ligne || !ligne.vu_le) return null;
-  const vu = dateParis(Number(ligne.vu_le));
-  const ref = ligne.derniere_saisie && ligne.derniere_saisie > vu ? ligne.derniere_saisie : vu;
-  return Math.max(0, ecartJours(dateParis(maintenant), ref));
+  if (!ligne || !ligne.derniere_saisie) return null;
+  return Math.max(0, ecartJours(dateParis(maintenant), ligne.derniere_saisie));
 }
 
 function niveauInactivite(jours) {
@@ -1009,11 +1010,18 @@ async function routePresence(request, env, cors) {
   }
 
   // La date de saisie ne recule pas (une reinstallation sans sauvegarde
-  // n'efface pas ce que le Worker sait deja) ; l'alerte se remet a zero.
+  // n'efface pas ce que le Worker sait deja). L'alerte ne se remet a zero
+  // que si elle AVANCE : une simple ouverture garde le niveau deja signale.
+  // (SQLite evalue chaque SET sur l'ancienne ligne : « presence.* » est
+  // l'etat d'avant la mise a jour.)
+  const avance =
+    "excluded.derniere_saisie IS NOT NULL AND (presence.derniere_saisie IS NULL OR excluded.derniere_saisie > presence.derniere_saisie)";
   await db
     .prepare(
       "INSERT INTO presence (client_id, vu_le, derniere_saisie, alerte_le, niveau) VALUES (?1, ?2, ?3, NULL, NULL) " +
-        "ON CONFLICT(client_id) DO UPDATE SET vu_le = excluded.vu_le, alerte_le = NULL, niveau = NULL, " +
+        "ON CONFLICT(client_id) DO UPDATE SET vu_le = excluded.vu_le, " +
+        `alerte_le = CASE WHEN ${avance} THEN NULL ELSE presence.alerte_le END, ` +
+        `niveau = CASE WHEN ${avance} THEN NULL ELSE presence.niveau END, ` +
         "derniere_saisie = CASE WHEN excluded.derniere_saisie IS NULL THEN presence.derniere_saisie " +
         "WHEN presence.derniere_saisie IS NULL OR excluded.derniere_saisie > presence.derniere_saisie THEN excluded.derniere_saisie " +
         "ELSE presence.derniere_saisie END"
@@ -1099,7 +1107,7 @@ async function alerterInactivite(env, maintenant) {
     if (!cible) {
       // Revenu sans que la presence ait remis a zero (cas limite) : on oublie.
       if (l.niveau) {
-        await db.prepare("UPDATE presence SET niveau = NULL, alerte_le = NULL WHERE client_id = ?1 AND vu_le = ?2").bind(l.id, l.vu_le).run();
+        await db.prepare("UPDATE presence SET niveau = NULL, alerte_le = NULL WHERE client_id = ?1 AND derniere_saisie IS ?2").bind(l.id, l.derniere_saisie).run();
         bilan.remises++;
       }
       continue;
@@ -1110,8 +1118,8 @@ async function alerterInactivite(env, maintenant) {
       texteCourt(l.libelle)
     );
     if (await remettreAuScript(env, propre, maintenant)) {
-      // vu_le inchange : une presence arrivee entre-temps garde la remise a zero.
-      await db.prepare("UPDATE presence SET niveau = ?1, alerte_le = ?2 WHERE client_id = ?3 AND vu_le = ?4").bind(cible, maintenant, l.id, l.vu_le).run();
+      // Saisie inchangee : une saisie arrivee entre-temps garde sa remise a zero.
+      await db.prepare("UPDATE presence SET niveau = ?1, alerte_le = ?2 WHERE client_id = ?3 AND derniere_saisie = ?4").bind(cible, maintenant, l.id, l.derniere_saisie).run();
       bilan.envoyees++;
     } else {
       bilan.echecs++;

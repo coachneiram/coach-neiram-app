@@ -92,13 +92,13 @@ try {
   const idPub = sql("SELECT id FROM communaute_transformations")[0].id;
   await commeClient(thomas, "/communaute/signaler", { type: "transformation", cible: String(idPub), motif: "test" });
   await appelWorker("/admin/invitations", { libelle: "Léa R." }, { Authorization: "Bearer " + ADMIN });
-  // Présence : Marc a ouvert l'appli aujourd'hui ; Thomas n'a rien fait
-  // depuis 8 jours (ligne vieillie à la main) ; Léa n'a pas de présence.
+  // Présence : Marc a saisi aujourd'hui ; Thomas ouvre l'appli aujourd'hui
+  // mais sa dernière saisie date de 8 jours (seules les saisies comptent) ;
+  // Léa n'a pas de présence.
   const aujourdhui = new Date().toISOString().slice(0, 10);
   const ilYa8 = new Date(Date.now() - 8 * 86400000).toISOString().slice(0, 10);
   await commeClient(marc, "/presence", { derniereSaisie: aujourdhui });
   await commeClient(thomas, "/presence", { derniereSaisie: ilYa8 });
-  sql("UPDATE presence SET vu_le = ? WHERE client_id = ?", Date.now() - 8 * 86400000, thomas.client);
 
   const ctx = await nav.newContext({ ...appareil(), permissions: ["clipboard-read", "clipboard-write"] });
   // Toute ecriture de stockage par la page est comptee.

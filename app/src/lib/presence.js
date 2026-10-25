@@ -5,8 +5,9 @@
  * plus. Elle dit donc au Worker, au plus une fois par jour et à
  * l'ouverture, « je suis là, et ma dernière saisie date de tel jour ». Le
  * Worker garde ces deux informations, et sa tâche planifiée du matin
- * prévient le coach quand elles vieillissent (4 jours : attention ;
- * 7 jours : critique).
+ * prévient le coach quand la dernière SAISIE vieillit (4 jours : attention ;
+ * 7 jours : critique). Ouvrir l'appli sans rien noter ne remet pas le
+ * compteur à zéro (décision du coach du 25 octobre 2026).
  *
  * Ce qui part : une date (AAAA-MM-JJ), rien d'autre. Ni repas, ni poids,
  * ni séance. Coaching en ligne seulement, et seulement si le client a

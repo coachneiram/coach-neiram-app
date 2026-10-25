@@ -362,7 +362,7 @@ export function EspaceCoach() {
           <p style={STYLE_AIDE}>{T.aucunePresence}</p>
         ) : (
           trierPresence(presence).map((c) => (
-            <div key={c.id} data-presence={c.libelle} data-niveau={c.niveau || (c.jours == null ? "jamais" : "ok")} data-jours={c.jours == null ? "" : c.jours} style={STYLE_LIGNE}>
+            <div key={c.id} data-presence={c.libelle} data-niveau={c.niveau || (c.jours != null ? "ok" : c.vuLe ? "sans-saisie" : "jamais")} data-jours={c.jours == null ? "" : c.jours} style={STYLE_LIGNE}>
               <div>
                 <div style={STYLE_NOM}>{c.libelle}</div>
                 {c.vuLe ? (

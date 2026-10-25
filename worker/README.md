@@ -310,8 +310,8 @@ toutes les alertes, un statut dans l'onglet Alertes.
 
 | Alerte | D'où | Quand | Niveau |
 |---|---|---|---|
-| `alerte_inactivite` | Worker (tâche planifiée) | aucune saisie ni ouverture depuis 4 à 6 jours / 7 jours et plus | attention / critique |
-| `alerte_poids` | appli, à l'enregistrement d'une pesée | moyenne des 7 derniers jours à plus de 2 % des 7 précédents | attention |
+| `alerte_inactivite` | Worker (tâche planifiée) | aucune saisie depuis 4 à 6 jours / 7 jours et plus (une simple ouverture ne compte pas) | attention / critique |
+| `alerte_poids` | appli, à l'enregistrement d'une pesée | moyenne des 7 derniers jours à plus de 2 % des 7 précédents (sauf grossesse ou allaitement) | attention |
 | `alerte_poids` | appli | objectif perte, 2 pesées par semaine sur 3 semaines, baisse ≤ 0,2 kg | info |
 | `alerte_nutrition` | appli, à l'ouverture (1 fois/jour) | 5 jours ou plus hors cible sur les 7 derniers jours notés (au moins 5) | attention |
 
@@ -324,8 +324,12 @@ Ce qui part chez le coach : le libellé du client, une phrase de tendance
 une semaine », « Calories hors cible 5 jours sur 7 (moyenne 2 650 kcal pour
 2 200) », « Aucune saisie depuis 5 jours »), un nombre de jours et le niveau.
 Jamais la liste des pesées, jamais le détail des repas, jamais le motif d'une
-exclusion (grossesse, allaitement, trouble alimentaire, moins de 18 ans : pas
-d'alerte de stagnation, c'est tout).
+exclusion. Grossesse, allaitement, trouble alimentaire, moins de 18 ans : pas
+d'alerte de stagnation. Grossesse ou allaitement : pas d'alerte de variation
+non plus (un changement de poids y est attendu) ; l'antécédent de trouble
+alimentaire garde l'alerte de variation, c'est ce que le coach doit voir
+(décisions du coach du 25/10/2026). Le calcul passe par
+`app/src/lib/eligibilite-perte.js`, qui ne rend qu'un oui ou un non.
 
 ### Worker : présence et inactivité
 
@@ -341,10 +345,11 @@ d'alerte de stagnation, c'est tout).
 - Tâche planifiée (même Cron `*/15 * * * *`) : entre 8 h et 9 h, heure de
   Paris, une seule fois par jour (dernière exécution gardée dans `compteurs`,
   clé `tache:inactivite`, réservée atomiquement : plus de 20 h d'écart
-  exigées). Jours = jours depuis le plus récent de `derniere_saisie` et du
-  jour de `vu_le`. Une seule alerte par niveau tant que le client ne revient
-  pas ; sa présence suivante remet tout à zéro. Un client qui n'a jamais
-  envoyé de présence (code pas activé) ou révoqué n'est jamais alerté.
+  exigées). Jours = jours depuis `derniere_saisie` ; `vu_le` (ouverture) ne
+  compte pas. Une seule alerte par niveau tant que le client ne saisit rien
+  de neuf ; le niveau se remet à zéro quand `derniere_saisie` avance, pas à
+  la simple ouverture. Un client qui n'a jamais envoyé de présence (code pas
+  activé), qui n'a aucune saisie connue, ou révoqué, n'est jamais alerté.
 - L'alerte part à `COACH_SYNC_URL`, signée comme `/coach-sync`. Un téléphone
   ne peut pas en envoyer (`/coach-sync` répond `400 type-reserve`).
 - `POST /admin/presence` (`ADMIN_SECRET`) : bloc « Présence » de l'Espace coach.
@@ -375,9 +380,9 @@ anti-doublon (12 h par client et par type) inchangés.
 
 ### Dashboard : formules à poser (le classeur n'est pas modifié par le dépôt)
 
-Hypothèse : l'onglet Alertes a les colonnes A à E du coach, donc `migrer()`
-met **Niveau en F** et **Statut en G**. Vérifie avec `verifier()` avant de
-coller ; si les lettres diffèrent, remplace F et G. Séparateur `;` (classeur
+L'onglet Alertes du coach a exactement A:E (Reçu le, Client, Type, Détail,
+Traité, confirmé le 25/10/2026) : `migrer()` met donc **Niveau en F** et
+**Statut en G**. `verifier()` le montre après la migration. Séparateur `;` (classeur
 en français), à poser en ligne 2 puis tirer vers le bas, `Dashboard!A` =
 libellé client.
 

@@ -13,7 +13,12 @@
  *   2. 7 jours de repas hors cible → alerte_nutrition « attention » ;
  *   3. présence envoyée à l'ouverture, une seule fois dans la journée
  *      (rechargement : rien de plus), date de dernière saisie dans D1 ;
- *   4. client en présentiel, mêmes données : rien ne part.
+ *   4. client en présentiel, mêmes données : rien ne part ;
+ *   5. inactivité (tâche planifiée du vrai Worker, à 8 h 30 heure de Paris) :
+ *      seules les saisies comptent. Dernière saisie il y a 5 jours →
+ *      « attention » ; le client ouvre l'appli sans rien noter → le niveau
+ *      reste, pas de seconde alerte ; il ouvre un téléphone qui a des
+ *      saisies récentes → remise à zéro.
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-smart-coach.mjs
@@ -25,7 +30,9 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import worker from "../worker/coach-neiram-proxy.js";
+globalThis.__COACH_TEST__ = globalThis.__COACH_TEST__ || {};
+const { default: worker } = await import("../worker/coach-neiram-proxy.js");
+const { alerterInactivite } = globalThis.__COACH_TEST__;
 import { fauxD1 } from "../tests/faux-d1.mjs";
 
 const PORT = 4733;
@@ -67,11 +74,11 @@ const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH })
 const erreurs = [];
 
 /** Un téléphone : profil, 3 semaines de pesées, 7 jours de repas trop riches. */
-async function telephone(q, coachingMode) {
+async function telephone(q, coachingMode, { vide = false } = {}) {
   const ctx = await nav.newContext(appareil());
   await ctx.addInitScript(sansAides);
   await ctx.addInitScript(
-    ({ jeton, libelle, coachingMode }) => {
+    ({ jeton, libelle, coachingMode, vide }) => {
       if (localStorage.getItem("coach_profile")) return;
       const auj = new Date().toISOString().slice(0, 10);
       const jour = (k) => {
@@ -85,6 +92,7 @@ async function telephone(q, coachingMode) {
         "coach_profile",
         JSON.stringify({ name: "Thomas", sex: "homme", age: 36, heightCm: 180, startWeightKg: 85, activityLevel: "modere", goal: "perte", sessionsPerWeek: 3, trainingMode: "app", coachingMode, dietType: "aucun", allergies: [] })
       );
+      if (vide) return; // aucune saisie sur ce téléphone
       // Deux pesées par semaine sur 3 semaines, toutes à 85 kg (hier compris).
       localStorage.setItem("coach_body_logs", JSON.stringify([1, 4, 8, 11, 15, 18].map((k) => ({ id: "b" + k, date: jour(k), weightKg: 85 }))));
       // 7 jours complets à 4 000 kcal (cible autour de 2 300).
@@ -96,7 +104,7 @@ async function telephone(q, coachingMode) {
         ]))
       );
     },
-    { jeton: q.jeton, libelle: q.libelle, coachingMode }
+    { jeton: q.jeton, libelle: q.libelle, coachingMode, vide }
   );
   const page = await ctx.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));
@@ -188,6 +196,46 @@ try {
       : `*** ${JSON.stringify(smart)}, ${p.presences.length} présence(s) ***`
   );
   await p.ctx.close();
+
+  // 5. Inactivite : la tache planifiee du vrai Worker, signee vers un faux script.
+  env.COACH_SYNC_URL = "https://script.google.com/macros/s/FAUX/exec";
+  env.COACH_SYNC_SECRET = "faux-secret-de-synchro-de-fumee-0123456789";
+  const versScript = [];
+  const fetchOrigine = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    versScript.push(JSON.parse(JSON.parse(init.body).charge));
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  };
+  // 8 h 30 a Paris aujourd'hui (le Worker compte en dates de Paris).
+  const auj = new Date().toISOString().slice(0, 10);
+  const matin = [6, 7].map((h) => Date.parse(`${auj}T0${h}:30:00Z`)).find((t) => new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "numeric" }).format(new Date(t)).startsWith("08"));
+  const ilYa5 = new Date(Date.parse(auj + "T12:00:00Z") - 5 * 86400000).toISOString().slice(0, 10);
+  sql("UPDATE presence SET derniere_saisie = ?, niveau = NULL, alerte_le = NULL WHERE client_id = ?", ilYa5, thomas.client);
+  const b1 = await silencieux(() => alerterInactivite(env, matin));
+  const niveau1 = sql("SELECT niveau FROM presence WHERE client_id = ?", thomas.client)[0].niveau;
+  // Il ouvre l'appli sur un telephone sans saisie : presence, mais rien de neuf.
+  const v = await telephone(thomas, "enligne", { vide: true });
+  await v.page.goto(URL_APP, { waitUntil: "domcontentloaded" });
+  await v.page.waitForTimeout(2500);
+  await v.ctx.close();
+  const apresOuverture = sql("SELECT niveau, derniere_saisie FROM presence WHERE client_id = ?", thomas.client)[0];
+  const b2 = await silencieux(() => alerterInactivite(env, matin + 86400000));
+  // Il ouvre son telephone habituel (saisies jusqu'a hier) : la saisie avance.
+  const r = await telephone(thomas, "enligne");
+  await r.page.goto(URL_APP, { waitUntil: "domcontentloaded" });
+  await r.page.waitForTimeout(2500);
+  await r.ctx.close();
+  const apresSaisie = sql("SELECT niveau, derniere_saisie FROM presence WHERE client_id = ?", thomas.client)[0];
+  globalThis.fetch = fetchOrigine;
+  const ev = versScript[0] || {};
+  console.log(
+    "5. INACTIVITÉ           :",
+    b1.envoyees === 1 && versScript.length === 1 && ev.type === "alerte_inactivite" && ev.client === "Thomas B." && ev.niveau === "attention" && ev.nbJours === 5 && ev.message === "Aucune saisie depuis 5 jours" &&
+      niveau1 === "attention" && v.presences.length === 1 && v.presences[0].derniereSaisie === null && apresOuverture.niveau === "attention" && apresOuverture.derniere_saisie === ilYa5 &&
+      b2.envoyees === 0 && apresSaisie.niveau === null && apresSaisie.derniere_saisie === hier
+      ? `« ${ev.message} » (attention) ; ouverture sans saisie : niveau gardé, pas de seconde alerte ; saisie du ${hier} : remise à zéro`
+      : `*** ${JSON.stringify(b1)} ${JSON.stringify(versScript)} ${niveau1} ${JSON.stringify(v.presences)} ${JSON.stringify(apresOuverture)} ${JSON.stringify(b2)} ${JSON.stringify(apresSaisie)} ***`
+  );
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
 }

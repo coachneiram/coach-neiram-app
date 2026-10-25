@@ -39,3 +39,15 @@ export function stagnationPoidsSurveillee({ profil, reglages = lireReglagesSurMe
   if (!profil || profil.goal !== "perte") return false;
   return !exclusionPerte(profilPourRepere(profil, reglages), null);
 }
+
+/**
+ * Smart Coach (décision du coach du 25 octobre 2026) : l'alerte « variation
+ * brutale du poids » peut-elle partir ? Oui pour tous, SAUF grossesse ou
+ * allaitement, où un changement de poids est attendu. L'antécédent de
+ * trouble alimentaire ne l'exclut pas : un changement brutal est justement
+ * ce que le coach doit voir. Oui ou non, jamais la raison.
+ */
+export function variationPoidsSurveillee({ profil, reglages = lireReglagesSurMesure() }) {
+  const situation = String(profilPourRepere(profil || {}, reglages).situation || "");
+  return !(situation.startsWith("enceinte") || situation === "allaitement");
+}

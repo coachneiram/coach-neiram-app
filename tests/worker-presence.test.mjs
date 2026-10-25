@@ -160,7 +160,7 @@ describe("tâche planifiée : inactivité", () => {
       ev.map((e) => [e.type, e.client, e.nbJours, e.niveau, e.message]),
       [
         ["alerte_inactivite", "Alex D.", 4, "attention", "Aucune saisie depuis 4 jours"],
-        ["alerte_inactivite", "Bea R.", 9, "critique", "Aucune saisie depuis 9 jours"]
+        ["alerte_inactivite", "Bea R.", 13, "critique", "Aucune saisie depuis 13 jours"]
       ]
     );
     assert.equal(ligne(quatre.id).niveau, "attention");
@@ -171,10 +171,34 @@ describe("tâche planifiée : inactivité", () => {
     assert.deepEqual(rempli, ["client", "envoyeLe", "message", "nbJours", "niveau", "type"]);
   });
 
-  test("la date d'ouverture compte aussi : ouvert hier sans rien noter, pas d'alerte", async () => {
+  test("seules les saisies comptent : ouvrir l'appli sans rien noter ne remet pas à zéro", async () => {
+    const a = await clientActive("Alex D.");
+    await presence(a, "2026-10-29", MATIN - 4 * J);
+    assert.equal((await cron(MATIN)).envoyees, 1); // 4 jours : attention
+    // Il ouvre l'appli le lendemain, sans rien saisir de neuf.
+    await presence(a, "2026-10-29", MATIN + J - 3600000);
+    assert.equal(ligne(a.id).niveau, "attention", "le niveau signalé reste");
+    assert.equal((await cron(MATIN + J)).envoyees, 0, "pas de seconde alerte attention");
+    await presence(a, null, MATIN + 2 * J - 3600000);
+    assert.equal((await cron(MATIN + 3 * J)).envoyees, 1, "7 jours depuis la saisie : critique, malgré les ouvertures");
+    assert.deepEqual(evenementsEnvoyes().map((e) => [e.niveau, e.nbJours, e.message]), [
+      ["attention", 4, "Aucune saisie depuis 4 jours"],
+      ["critique", 7, "Aucune saisie depuis 7 jours"]
+    ]);
+  });
+
+  test("ouvert hier mais dernière saisie ancienne : l'alerte part quand même", async () => {
     const a = await clientActive("Alex D.");
     await presence(a, "2026-10-15", MATIN - J);
+    const [e] = (await cron(MATIN), evenementsEnvoyes());
+    assert.deepEqual([e.niveau, e.nbJours], ["critique", 18]);
+  });
+
+  test("présence sans aucune saisie connue : jamais alerté", async () => {
+    const a = await clientActive("Alex D.");
+    await presence(a, null, MATIN - 20 * J);
     assert.deepEqual(await cron(MATIN), { envoyees: 0, echecs: 0, remises: 0 });
+    assert.equal((await admin("/admin/presence")).clients[0].jours, null);
   });
 
   test("une fois par jour : 8 h - 9 h à Paris, et plus de 20 h après la précédente", async () => {
@@ -204,7 +228,7 @@ describe("tâche planifiée : inactivité", () => {
     assert.equal((await cron(MATIN + 4 * J)).envoyees, 0); // 8 jours : déjà dit
     assert.deepEqual(evenementsEnvoyes().map((e) => [e.niveau, e.nbJours]), [["attention", 4], ["critique", 7]]);
 
-    // Il revient : tout repart de zéro, et il faudra 4 nouveaux jours.
+    // Il saisit de nouveau : tout repart de zéro, et il faudra 4 nouveaux jours.
     await presence(a, "2026-11-06", MATIN + 4 * J + 3600000);
     assert.equal(ligne(a.id).niveau, null);
     assert.equal(ligne(a.id).alerte_le, null);

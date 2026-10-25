@@ -89,14 +89,15 @@ function carenceEcoulee(etat, maintenant, jours) {
 
 /**
  * Alertes de poids à envoyer maintenant : [{ sousType, niveau, message }].
- * `stagnationSurveillee` : oui ou non, calculé par lib/eligibilite-perte.js
- * (objectif perte, aucune exclusion de santé) — ce fichier ne lit aucune
- * réponse de santé. `etat` : { variation: { lastAt }, stagnation: { lastAt } }.
+ * `stagnationSurveillee` et `variationSurveillee` : oui ou non, calculés par
+ * lib/eligibilite-perte.js (stagnation : objectif perte, aucune exclusion
+ * de santé ; variation : ni grossesse ni allaitement) — ce fichier ne lit
+ * aucune réponse de santé. `etat` : { variation: { lastAt }, stagnation: { lastAt } }.
  */
-export function decisionAlertesPoids({ pesees, stagnationSurveillee, aujourdhui, maintenant, etat }) {
+export function decisionAlertesPoids({ pesees, stagnationSurveillee, variationSurveillee = true, aujourdhui, maintenant, etat }) {
   const e = etat || {};
   const alertes = [];
-  const variation = variationPoids(pesees, aujourdhui);
+  const variation = variationSurveillee ? variationPoids(pesees, aujourdhui) : null;
   if (variation && carenceEcoulee(e.variation, maintenant, CARENCE_ALERTE_POIDS_JOURS)) {
     alertes.push({ sousType: "variation", niveau: "attention", message: messageVariationPoids(variation.pct) });
   }

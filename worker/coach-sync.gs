@@ -5,7 +5,8 @@
  *
  * La v2.5 :
  *  - trois nouveaux types : « alerte_inactivite » (envoyée par le Worker
- *    lui-même, chaque matin : aucune saisie depuis 4 jours ou plus),
+ *    lui-même, chaque matin : aucune saisie depuis 4 jours ou plus, une
+ *    simple ouverture de l'appli ne compte pas),
  *    « alerte_poids » (variation brutale ou stagnation en phase de perte,
  *    tendance seulement) et « alerte_nutrition » (5 jours hors cible sur 7) ;
  *  - chaque alerte porte un NIVEAU : info, attention ou critique. Celui
@@ -767,7 +768,7 @@ function composerMail(d) {
     var nj = d.nbJours || '';
     sujet = '[Coach] ' + client + ' : aucune saisie depuis ' + nj + ' jours';
     corps = client + ' n\'a rien noté dans l\'appli (repas, séance, pesée, journal) ' +
-      'et ne l\'a pas ouverte depuis ' + nj + ' jours.\n\n' +
+      'depuis ' + nj + ' jours.\n\n' +
       'Un message court et sans reproche aujourd\'hui : demande-lui comment se passe sa semaine, ' +
       'pas pourquoi il ne note plus.';
 

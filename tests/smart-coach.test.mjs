@@ -31,7 +31,7 @@ const {
   messageAlerteNutrition,
   MESSAGE_STAGNATION_POIDS
 } = await import("../app/src/lib/alertes-smart.js");
-const { stagnationPoidsSurveillee } = await import("../app/src/lib/eligibilite-perte.js");
+const { stagnationPoidsSurveillee, variationPoidsSurveillee } = await import("../app/src/lib/eligibilite-perte.js");
 const { niveauAlerte, TABLE_NIVEAUX } = await import("../app/src/lib/gravite-alertes.js");
 const { verifierAlertesPoids, verifierAlerteNutrition } = await import("../app/src/lib/moteur-alertes.js");
 const { envoyerEvenement, TYPES_EVENEMENTS } = await import("../app/src/lib/synchro-coach.js");
@@ -148,6 +148,22 @@ describe("poids : variation brutale", () => {
   });
 });
 
+describe("poids : variation exclue pour grossesse et allaitement seulement", () => {
+  test("éligibilité : oui pour tous, trouble alimentaire compris ; non si grossesse ou allaitement", () => {
+    assert.equal(variationPoidsSurveillee({ profil: EN_LIGNE_PERTE, reglages: {} }), true);
+    assert.equal(variationPoidsSurveillee({ profil: { ...EN_LIGNE_PERTE, goal: "maintien" }, reglages: {} }), true);
+    assert.equal(variationPoidsSurveillee({ profil: EN_LIGNE_PERTE, reglages: { contraintesSante: ["tca"] } }), true);
+    assert.equal(variationPoidsSurveillee({ profil: EN_LIGNE_PERTE, reglages: { situation: "enceinte_t1" } }), false);
+    assert.equal(variationPoidsSurveillee({ profil: EN_LIGNE_PERTE, reglages: { situation: "allaitement" } }), false);
+  });
+
+  test("décision : variation non surveillée, rien ne part", () => {
+    const p = pesees([0, 3, 7, 10], (k) => (k < 7 ? 84 : 80));
+    assert.equal(decisionAlertesPoids({ pesees: p, stagnationSurveillee: false, variationSurveillee: false, aujourdhui: AUJ, maintenant: T0, etat: {} }).length, 0);
+    assert.equal(decisionAlertesPoids({ pesees: p, stagnationSurveillee: false, variationSurveillee: true, aujourdhui: AUJ, maintenant: T0, etat: {} }).length, 1);
+  });
+});
+
 describe("poids : stagnation en phase de perte", () => {
   const stables = pesees(TROIS_SEMAINES, (k) => 85 - (21 - k) * 0.005);
 
@@ -261,6 +277,21 @@ describe("moteur : en ligne seulement, une fois", () => {
     const { envois, envoyer } = capture();
     await verifierAlertesPoids({ profile: EN_LIGNE_PERTE, pesees: pesees(TROIS_SEMAINES, () => 85), maintenant: T0, aujourdhui: AUJ, envoyer });
     assert.equal(envois.length, 0);
+  });
+
+  test("le vrai calcul : allaitement, pas de variation ; trouble alimentaire, variation sans motif", async () => {
+    const brutale = pesees([0, 3, 7, 10], (k) => (k < 7 ? 84 : 80));
+    const profil = { ...EN_LIGNE_PERTE, goal: "maintien" };
+    enregistrer("cn_objectifs_sur_mesure", { situation: "allaitement" });
+    const a = capture();
+    await verifierAlertesPoids({ profile: profil, pesees: brutale, maintenant: T0, aujourdhui: AUJ, envoyer: a.envoyer });
+    assert.equal(a.envois.length, 0);
+    installerStockage();
+    enregistrer("cn_objectifs_sur_mesure", { contraintesSante: ["tca"] });
+    const b = capture();
+    await verifierAlertesPoids({ profile: profil, pesees: brutale, maintenant: T0, aujourdhui: AUJ, envoyer: b.envoyer });
+    assert.deepEqual(b.envois.map((e) => [e.type, e.niveau, e.message]), [["alerte_poids", "attention", "Variation de +5,0 % en une semaine"]]);
+    assert.doesNotMatch(JSON.stringify(b.envois[0]), /tca|trouble|alimentaire|santé|sante/i);
   });
 
   test("présentiel : ni poids ni nutrition", async () => {

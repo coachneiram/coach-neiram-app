@@ -15,7 +15,7 @@ import { envoyerEvenement, synchroActive } from "./synchro-coach.js";
 import { decalagesRecents, manquesRecents, tauxRespect } from "./creneaux.js";
 import { enLigne, getWeekKey, normaliserCreneaux, slotDayLabel } from "./semaine.js";
 import { decisionAlerteNutrition, decisionAlertesPoids } from "./alertes-smart.js";
-import { stagnationPoidsSurveillee } from "./eligibilite-perte.js";
+import { stagnationPoidsSurveillee, variationPoidsSurveillee } from "./eligibilite-perte.js";
 import { todayISO } from "./dates.js";
 import { signauxAlerte } from "./sommeil.js";
 import {
@@ -196,13 +196,15 @@ const smartActif = (profile) => enLigne(profile) && synchroActive(profile);
 
 /**
  * Alertes de poids, a l'enregistrement d'une pesee : variation brutale
- * (attention) et stagnation en phase de perte (info). Au plus une de
+ * (attention, sauf grossesse ou allaitement) et stagnation en phase de
+ * perte (info). Au plus une de
  * chaque sorte tous les 14 jours (CLES_ANNEXES.alertePoids).
  */
 export function verifierAlertesPoids({
   profile,
   pesees,
   surveillerStagnation = stagnationPoidsSurveillee,
+  surveillerVariation = variationPoidsSurveillee,
   maintenant = new Date(),
   aujourdhui = todayISO(),
   envoyer = envoyerEvenement
@@ -213,6 +215,7 @@ export function verifierAlertesPoids({
     const aEnvoyer = decisionAlertesPoids({
       pesees,
       stagnationSurveillee: surveillerStagnation({ profil: profile }),
+      variationSurveillee: surveillerVariation({ profil: profile }),
       aujourdhui,
       maintenant,
       etat

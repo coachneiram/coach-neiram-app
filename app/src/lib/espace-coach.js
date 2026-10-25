@@ -130,7 +130,7 @@ export const TEXTES_ESPACE_COACH = {
   // Présence (Smart Coach).
   presenceTitre: "Présence",
   presenceAide:
-    "Coaching en ligne. Jours depuis la dernière saisie dans l'appli (repas, séance, pesée, journal) ou sa dernière ouverture. Chaque matin, une alerte part dans ton classeur à 4 jours (attention) et à 7 jours (critique).",
+    "Coaching en ligne. Jours depuis la dernière saisie dans l'appli (repas, séance, pesée, journal) ; une simple ouverture ne compte pas. Chaque matin, une alerte part dans ton classeur à 4 jours (attention) et à 7 jours (critique).",
   aucunePresence: "Aucun client pour l'instant.",
   jamaisVu: "aucune présence reçue : code pas activé, ou appli pas ouverte depuis la mise à jour",
   derniereSaisie: (iso) => (iso ? `dernière saisie le ${dateIso(iso)}` : "aucune saisie notée"),
