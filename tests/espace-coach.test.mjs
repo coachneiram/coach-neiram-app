@@ -124,6 +124,17 @@ describe("parcours sur le vrai Worker", () => {
     await assert.rejects(E.listeClients("faux-secret-0123456789-0123456789", vers(env)), /429/);
   });
 
+  test("espaces et retours à la ligne invisibles ignorés des deux côtés", async () => {
+    // Secret collé dans Cloudflare avec un retour à la ligne, saisi avec des espaces.
+    env = { ADMIN_SECRET: ADMIN + "\n", DB: fauxD1() };
+    const f = vers(env);
+    assert.deepEqual((await E.listeClients("  " + ADMIN + " \n", f)).clients, []);
+    assert.deepEqual((await E.listeClients(ADMIN, f)).clients, []);
+    await assert.rejects(E.listeClients("   ", f), /401/, "que des espaces : rien ne part");
+    // Moins de 32 caractères une fois les espaces retirés : routes absentes.
+    await assert.rejects(E.listeClients(ADMIN, vers({ ADMIN_SECRET: "court" + " ".repeat(40), DB: fauxD1() })), /404/);
+  });
+
   test("créer un code, nouveau code d'un client, liste, révoquer, modérer", async () => {
     env = { ADMIN_SECRET: ADMIN, DB: fauxD1() };
     const f = vers(env);
