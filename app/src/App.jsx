@@ -770,6 +770,12 @@ export default function App() {
         targets={targets}
         profile={profil}
         semainesDifficiles={semainesDifficiles}
+        routines={routines}
+        planSemaine={planSemaine}
+        onAller={(onglet, intention) => {
+          if (intention) poserIntention(intention);
+          setOngletActif(onglet);
+        }}
         onToast={afficherToast}
       />
     ),
