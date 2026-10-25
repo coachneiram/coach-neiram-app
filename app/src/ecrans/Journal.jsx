@@ -15,6 +15,10 @@ import { CarteDefi } from "../ui/CarteDefi.jsx";
 import { CarteDefisAmis } from "../ui/CarteDefisAmis.jsx";
 import { CarteHabitudes } from "../ui/CarteHabitudes.jsx";
 import { CarteLecon } from "../ui/CarteLecon.jsx";
+import { CarteAujourdhui } from "../ui/CarteAujourdhui.jsx";
+import { lignesAujourdhui } from "../lib/aujourdhui.js";
+import { CLE_BILAN_ENVOYE } from "../lib/rappel-dimanche.js";
+import { charger } from "../lib/stockage.js";
 import { premierJourSuivi } from "../lib/rappel-sauvegarde.js";
 import { useEffect, useMemo, useState } from "react";
 import { COLORS, POLICES } from "../tokens.js";
@@ -22,7 +26,7 @@ import { num, todayISO } from "../lib/dates.js";
 import { getMonday } from "../lib/semaine.js";
 import { SECTIONS_REPAS } from "../lib/onglets.js";
 import { repasDeLHeure } from "../lib/raccourcis.js";
-import { EVENEMENT_INTENTION, prendreIntention } from "../lib/reception-raccourcis.js";
+import { EVENEMENT_INTENTION, poserIntention, prendreIntention } from "../lib/reception-raccourcis.js";
 import { composantesDuScore, fmtL, libelleDuScore, scoreDuJour, totauxDuJour } from "../lib/score-jour.js";
 import { choisirSuggestions } from "../lib/suggestions.js";
 import { basisMacros, fmtPortion } from "../lib/portions.js";
@@ -271,6 +275,9 @@ export function Journal({
   targets,
   profile,
   semainesDifficiles,
+  routines = [],
+  planSemaine = {},
+  onAller = () => {},
   onToast
 }) {
   const [date, setDate] = useState(todayISO());
@@ -575,6 +582,24 @@ export function Journal({
   return (
     <div>
       <DateNav date={date} onChange={setDate} iconePrecedent={ChevronLeft} iconeSuivant={ChevronRight} />
+
+      {/* Carte « Aujourd'hui » (idée reprise de Fallen, 25 octobre 2026) :
+          séance, nutrition et bilan du jour, d'un coup d'œil. */}
+      {date === todayISO() && (
+        <CarteAujourdhui
+          lignes={lignesAujourdhui({
+            routines,
+            seances: sessionsApi.items,
+            plan: planSemaine,
+            profil: profile,
+            totaux,
+            objectifs: targets,
+            bilanEnvoye: charger(CLE_BILAN_ENVOYE, null),
+            date
+          })}
+          onAction={(a) => (a.onglet ? onAller(a.onglet, a.intention) : a.intention && poserIntention(a.intention))}
+        />
+      )}
 
       <MotDuCoach mot={mot} contexte={contexteMot} />
 

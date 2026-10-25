@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-25-aujourdhui",
+    date: "2026-10-25",
+    titre: "Ta journée d'un coup d'œil",
+    texte:
+      "En haut du Journal, la carte « Aujourd'hui » : ta séance du jour, ce qu'il te reste à manger et ton bilan du dimanche, avec un bouton pour chacun.",
+    onglet: "journal",
+    bouton: "Voir ma journée"
+  },
+  {
     id: "2026-10-24-communaute",
     date: "2026-10-24",
     titre: "La communauté Team Neiram",

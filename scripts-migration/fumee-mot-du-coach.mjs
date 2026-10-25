@@ -87,8 +87,9 @@ try {
   // Regulier : 4 semaines tenues, 1 seance cette semaine (le lundi).
   {
     const { ctx, page, bloc } = await verifier("1", "STANDARD", { semaines: { "-4": 3, "-3": 3, "-2": 3, "-1": 3, 0: 1 } }, "standard");
-    // Jour precedent : deuxieme bouton avant la phrase (‹ date ›).
-    await bloc.locator("xpath=preceding::button[2]").click();
+    // Jour precedent : fleche ‹ du selecteur de date, juste avant la carte
+    // « Aujourd'hui » (25 octobre 2026), elle-meme avant la phrase.
+    await bloc.locator('xpath=preceding::*[@data-carte="aujourdhui"][1]/preceding-sibling::*[1]//button').first().click();
     await page.waitForTimeout(500);
     const restant = await page.locator("[data-mot-du-coach]").count();
     const ailleurs = (await page.locator("body").innerText()).includes("Aujourd'hui");
