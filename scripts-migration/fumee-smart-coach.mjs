@@ -164,16 +164,19 @@ try {
       : `*** avant ${avantPoids}, ${JSON.stringify(poids)}, après ${poidsApres} ***`
   );
 
-  // 3. Présence : une à l'ouverture, aucune au rechargement.
+  // 3. Présence : une à l'ouverture (saisie d'hier), une après la pesée du
+  // jour (25 octobre 2026 : la saisie du jour part le jour même), aucune au
+  // rechargement.
   const hier = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const jour = new Date().toISOString().slice(0, 10);
   const ligne1 = sql("SELECT derniere_saisie, niveau FROM presence WHERE client_id = ?", thomas.client)[0];
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
   const nutritionApres = alertes(recus, "alerte_nutrition").length;
   console.log(
     "3. PRÉSENCE             :",
-    presences.length === 1 && JSON.stringify(presences[0]) === JSON.stringify({ derniereSaisie: hier }) && ligne1 && ligne1.derniere_saisie === hier && nutritionApres === 1
-      ? `une présence { derniereSaisie: "${hier}" } (rien d'autre), enregistrée dans D1 ; rechargement : ni présence ni alerte nutrition de plus`
+    JSON.stringify(presences) === JSON.stringify([{ derniereSaisie: hier }, { derniereSaisie: jour }]) && ligne1 && ligne1.derniere_saisie === jour && nutritionApres === 1
+      ? `présence { derniereSaisie: "${hier}" } à l'ouverture, puis "${jour}" après la pesée (rien d'autre), enregistrée dans D1 ; rechargement : ni présence ni alerte nutrition de plus`
       : `*** ${presences.length} présence(s) ${JSON.stringify(presences)}, D1 ${JSON.stringify(ligne1)}, nutrition ${nutritionApres} ***`
   );
   const niveaux = recus.filter((e) => /^alerte_/.test(e.type)).map((e) => e.type + ":" + e.niveau);

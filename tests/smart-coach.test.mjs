@@ -85,6 +85,11 @@ describe("présence : une fois par jour, en ligne seulement", () => {
     assert.equal(decisionPresence({ profil: { coachingMode: "presentiel" }, etat: {}, aujourdhui: AUJ }).envoyer, false);
     assert.equal(decisionPresence({ profil: { coachingMode: "enligne" }, etat: { jour: AUJ }, aujourdhui: AUJ }).envoyer, false);
     assert.equal(decisionPresence({ profil: { coachingMode: "enligne" }, etat: { jour: "2026-10-24" }, aujourdhui: AUJ }).envoyer, true);
+    // Nouvelle saisie dans la journee : la presence repart, le jour meme.
+    const enligne = { coachingMode: "enligne" };
+    assert.equal(decisionPresence({ profil: enligne, etat: { jour: AUJ, saisie: "2026-10-22" }, aujourdhui: AUJ, saisie: AUJ }).envoyer, true);
+    assert.equal(decisionPresence({ profil: enligne, etat: { jour: AUJ, saisie: AUJ }, aujourdhui: AUJ, saisie: AUJ }).envoyer, false);
+    assert.equal(decisionPresence({ profil: enligne, etat: { jour: AUJ, saisie: "2026-10-22" }, aujourdhui: AUJ, saisie: null }).envoyer, false);
   });
 
   test("envoi : la date seule, une fois ; raté : repart ; sans jeton : rien", async () => {
@@ -109,8 +114,13 @@ describe("présence : une fois par jour, en ligne seulement", () => {
     assert.equal(charger(CLES_ANNEXES.presence, {}).jour, AUJ);
 
     assert.equal(await envoyerPresence({ profil, donnees, aujourdhui: "2026-10-26", envFetch, enTetes }), true, "le lendemain");
+    // Repas noté dans la journée : la nouvelle date part le jour même, une seule fois.
+    const avecRepas = { ...donnees, repas: [...donnees.repas, { date: "2026-10-26", calories: 500, name: "Riz" }] };
+    assert.equal(await envoyerPresence({ profil, donnees: avecRepas, aujourdhui: "2026-10-26", envFetch, enTetes }), true, "nouvelle saisie");
+    assert.deepEqual(appels[3].corps, { derniereSaisie: "2026-10-26" });
+    assert.equal(await envoyerPresence({ profil, donnees: avecRepas, aujourdhui: "2026-10-26", envFetch, enTetes }), false, "même date : rien");
     assert.equal(await envoyerPresence({ profil: { coachingMode: "presentiel" }, donnees, aujourdhui: "2026-10-27", envFetch, enTetes }), false);
-    assert.equal(appels.length, 3);
+    assert.equal(appels.length, 4);
   });
 
   test("deux ouvertures simultanées : une seule présence", async () => {
