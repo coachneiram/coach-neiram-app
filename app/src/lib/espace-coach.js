@@ -43,6 +43,7 @@ export function messageErreurAdmin(e) {
  * code d'erreur du Worker ou « reseau ».
  */
 export async function appelerAdmin(chemin, corps, secret, env = globalThis) {
+  secret = String(secret || "").trim();
   if (!secret) throw new Error("401");
   let r;
   try {

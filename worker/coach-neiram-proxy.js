@@ -621,7 +621,9 @@ const LIBELLE_VALIDE = /^[\p{L}\p{N} .'-]{1,40}$/u;
  */
 async function routeAdmin(chemin, request, env, cors, ip) {
   const route = "/admin";
-  const secret = String(env.ADMIN_SECRET || "");
+  // Espaces et retours a la ligne retires des deux cotes : un secret colle
+  // dans Cloudflare ou dans l'Espace coach en emporte souvent un, invisible.
+  const secret = String(env.ADMIN_SECRET || "").trim();
   if (secret.length < 32) return reponseJson({ ok: false, error: "not-found" }, 404, cors);
 
   let db;
@@ -633,7 +635,7 @@ async function routeAdmin(chemin, request, env, cors, ip) {
   if (!db) return refus(route, 503, "acces-non-configure", cors);
 
   const maintenant = Date.now();
-  const fourni = (request.headers.get("Authorization") || "").replace(/^Bearer /, "");
+  const fourni = (request.headers.get("Authorization") || "").replace(/^Bearer /, "").trim();
   if (!egaliteConstante(await hachage(fourni), await hachage(secret))) {
     const raison = await depasse(
       db,
