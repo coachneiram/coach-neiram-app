@@ -1,5 +1,45 @@
+/** @OnlyCurrentDoc */
 /**
  * Coach Neiram — synchro et alertes du coaching en ligne
+ * Version 2.5 (25 octobre 2026) — Smart Coach : gravité et statut des alertes.
+ *
+ * La v2.5 :
+ *  - trois nouveaux types : « alerte_inactivite » (envoyée par le Worker
+ *    lui-même, chaque matin : aucune saisie depuis 4 jours ou plus, une
+ *    simple ouverture de l'appli ne compte pas),
+ *    « alerte_poids » (variation brutale ou stagnation en phase de perte,
+ *    tendance seulement) et « alerte_nutrition » (5 jours hors cible sur 7) ;
+ *  - chaque alerte porte un NIVEAU : info, attention ou critique. Celui
+ *    envoyé par l'application fait foi ; sans lui (application encore en
+ *    cache), la table niveauParDefaut ci-dessous le donne ;
+ *  - onglet Alertes : deux colonnes AJOUTÉES À LA FIN, « Niveau » et
+ *    « Statut » (liste : nouveau, vu, traité, ignoré ; « nouveau » à
+ *    l'écriture). Rien n'est décalé : la colonne E « Traité » reste, et le
+ *    Dashboard actuel continue de compter ;
+ *  - mail SEULEMENT pour attention et critique, niveau dans l'objet
+ *    (« [Coach] ⚠️ … », « [Coach] 🔴 … ») ; une alerte « info » s'écrit
+ *    seulement dans l'onglet. Plafonds et anti-doublon inchangés ;
+ *  - « @OnlyCurrentDoc » (première ligne) : le script ne demande plus
+ *    l'accès à TOUS tes Google Sheets, seulement à ce classeur.
+ * Mise en place (5 minutes) :
+ *   1. Extensions > Apps Script : copier l'ancien Code.gs dans un nouveau
+ *      fichier « sauvegarde-v2.4 », le COMMENTER EN ENTIER (sélectionner
+ *      tout, Ctrl+/) : deux doPost actifs casseraient le script ;
+ *   2. coller ce fichier dans Code.gs, ENREGISTRER. La propriété
+ *      EMAIL_COACH (v2.4) est déjà en place : rien à ressaisir ;
+ *   3. lancer migrer() : Google redemande une AUTORISATION (à cause de
+ *      @OnlyCurrentDoc, la portée change : « ce classeur » au lieu de
+ *      « tous tes classeurs »). Accepter ; migrer() ajoute « Niveau » et
+ *      « Statut » à la fin de l'onglet Alertes, avec la liste déroulante ;
+ *   4. Gérer les déploiements > crayon du déploiement ACTIF > Version :
+ *      Nouvelle version > Déployer (même adresse /exec : rien à changer
+ *      dans Cloudflare) ;
+ *   5. lancer verifier() (en-têtes, adresse : propriété), puis testerMail()
+ *      (objet « [Coach] ⚠️ … »).
+ *   6. Dashboard : formules dans worker/README.md (« Smart Coach »).
+ * Revenir en arrière : décommenter la sauvegarde, vider Code.gs, nouvelle
+ * version du déploiement. Les colonnes ajoutées peuvent rester.
+ *
  * Version 2.4 (24 octobre 2026) — adresse d'alerte dans les propriétés.
  *
  * La v2.4 lit l'adresse qui reçoit les alertes dans la propriété du script
@@ -133,8 +173,53 @@ var TYPES_AUTORISES = [
   'alerte_decalages',
   'resume_hebdo',
   'alerte_sommeil_stress',
-  'activite'
+  'activite',
+  'alerte_inactivite',
+  'alerte_poids',
+  'alerte_nutrition'
 ];
+
+/** Gravité des alertes (v2.5). Mail seulement pour attention et critique. */
+var NIVEAUX = ['info', 'attention', 'critique'];
+var NIVEAUX_AVEC_MAIL = ['attention', 'critique'];
+
+/** Statuts proposés dans la colonne Statut de l'onglet Alertes. */
+var STATUTS = ['nouveau', 'vu', 'traité', 'ignoré'];
+
+/**
+ * Niveau par défaut, quand l'événement n'en porte pas (application encore
+ * en cache). COPIE de app/src/lib/gravite-alertes.js (TABLE_NIVEAUX) :
+ * tests/gravite-alertes.test.mjs vérifie que les deux rendent la même chose.
+ * Première règle qui correspond.
+ */
+var TABLE_NIVEAUX = [
+  { type: 'alerte_inactivite', champ: 'nbJours', min: 7, niveau: 'critique' },
+  { type: 'alerte_inactivite', niveau: 'attention' },
+  { type: 'alerte_sommeil_stress', niveau: 'critique' },
+  { type: 'alerte_seances_manquees', champ: 'nbManquees', min: 3, niveau: 'critique' },
+  { type: 'alerte_seances_manquees', niveau: 'attention' },
+  { type: 'alerte_poids', champ: 'sousType', egal: 'stagnation', niveau: 'info' },
+  { type: 'alerte_poids', niveau: 'attention' },
+  { type: 'alerte_nutrition', niveau: 'attention' },
+  { type: 'alerte_decalages', niveau: 'attention' },
+  { type: 'alerte_semaines_difficiles', niveau: 'attention' },
+  { type: 'justification', niveau: 'attention' },
+  { type: 'resume_hebdo', niveau: 'attention' },
+  { type: 'semaine_difficile', niveau: 'info' }
+];
+
+function niveauParDefaut(d) {
+  d = d || {};
+  if (NIVEAUX.indexOf(d.niveau) !== -1) return d.niveau;
+  for (var i = 0; i < TABLE_NIVEAUX.length; i++) {
+    var r = TABLE_NIVEAUX[i];
+    if (r.type !== d.type) continue;
+    if (r.min !== undefined && !(Number(d[r.champ]) >= r.min)) continue;
+    if (r.egal !== undefined && d[r.champ] !== r.egal) continue;
+    return r.niveau;
+  }
+  return '';
+}
 
 /** Heures pendant lesquelles on n'envoie pas deux fois la même alerte
  *  pour le même client. Mets 0 pour désactiver l'anti-doublon. */
@@ -157,7 +242,7 @@ var ENTETES_JOURNAL = ['Reçu le', 'Client', 'Type', 'Date séance', 'Créneau',
                        'Détail', 'Statut', 'Motif', 'Message', 'Brut',
                        'Note', 'Semaine', 'Tenus', 'Tranchés', 'Manqués',
                        'Décalés', '% respect (4 sem.)'];
-var ENTETES_ALERTES = ['Reçu le', 'Client', 'Type', 'Détail', 'Traité'];
+var ENTETES_ALERTES = ['Reçu le', 'Client', 'Type', 'Détail', 'Traité', 'Niveau', 'Statut'];
 var ENTETES_ERREURS = ['Recu le', 'Erreur', 'Donnees brutes'];
 var ENTETES_ADHERENCE = ['Reçu le', 'Client', 'Semaine', 'Tenus', 'Tranchés',
                          'Manqués', 'Décalés', '% respect (4 sem.)'];
@@ -221,7 +306,7 @@ function doPost(e) {
         var adresse = adresseCoach();
         if (/@exemple\.com$/.test(adresse)) {
           journaliserErreur('EMAIL_COACH non renseigné : alerte non envoyée', JSON.stringify(data));
-        } else if (doitEnvoyerMail(data) && peutEnvoyerMail(data.client)) {
+        } else if (mailSelonNiveau(data) && doitEnvoyerMail(data) && peutEnvoyerMail(data.client)) {
           var m = composerMail(data);
           MailApp.sendEmail(adresse, m.sujet, m.corps);
           marquerEnvoi(data);
@@ -244,7 +329,7 @@ function doPost(e) {
 
 function doGet() {
   return ContentService.createTextOutput(
-    'Synchro Coach Neiram active (v2.4). Utiliser POST.');
+    'Synchro Coach Neiram active (v2.5). Utiliser POST.');
 }
 
 /* ------------------------------------------------------------------ LECTURE */
@@ -404,10 +489,14 @@ function nettoyer(d) {
     resolved: nombre(d.resolved),
     missed: nombre(d.missed),
     shifted: nombre(d.shifted),
-    pct: nombre(d.pct)
+    pct: nombre(d.pct),
+    nbJours: nombre(d.nbJours)
   };
   propre.creneauxManques = creneauxCourts(d.creneauxManques);
   propre.creneauxDecales = creneauxCourts(d.creneauxDecales);
+  // v2.5 : le niveau reçu s'il est valide, sinon celui de la table.
+  propre.niveau = niveauParDefaut({ type: propre.type, niveau: court(d.niveau),
+                                    nbJours: propre.nbJours, nbManquees: propre.nbManquees });
   return propre;
 }
 
@@ -531,12 +620,16 @@ function doitAlerter(d) {
 
 function consignerAlerte(d) {
   var sh = feuille(F_ALERTES, ENTETES_ALERTES);
+  // Par en-têtes : sur l'onglet du coach (5 colonnes), « Niveau » et
+  // « Statut » se créent à la fin si migrer() n'a pas encore tourné.
   var ligne = ecrireParEntetes(sh, {
     'Reçu le': new Date(),
     'Client': d.client || '',
     'Type': d.type || '',
     'Détail': d.message || d.motif || '',
-    'Traité': false
+    'Traité': false,
+    'Niveau': d.niveau || '',
+    'Statut': 'nouveau'
   });
 
   // Case à cocher, pour que tu puisses pointer ce que tu as traité.
@@ -546,6 +639,22 @@ function consignerAlerte(d) {
       .insertCheckboxes()
       .setValue(false);
   }
+  if ('Statut' in map) {
+    sh.getRange(ligne, map['Statut'] + 1).setDataValidation(regleStatut());
+  }
+}
+
+/** Liste déroulante de la colonne Statut. */
+function regleStatut() {
+  return SpreadsheetApp.newDataValidation()
+    .requireValueInList(STATUTS, true)
+    .setAllowInvalid(false)
+    .build();
+}
+
+/** v2.5 : un mail seulement pour une alerte attention ou critique. */
+function mailSelonNiveau(d) {
+  return NIVEAUX_AVEC_MAIL.indexOf(String(d.niveau || '')) !== -1;
 }
 
 /* ------------------------------------------------------------ ANTI-DOUBLON */
@@ -655,6 +764,26 @@ function composerMail(d) {
       'L\'appli lui a conseillé d\'en parler à son médecin si ça continue. ' +
       'De ton côté : un message bienveillant, et une charge allégée cette semaine si besoin.';
 
+  } else if (t === 'alerte_inactivite') {
+    var nj = d.nbJours || '';
+    sujet = '[Coach] ' + client + ' : aucune saisie depuis ' + nj + ' jours';
+    corps = client + ' n\'a rien noté dans l\'appli (repas, séance, pesée, journal) ' +
+      'depuis ' + nj + ' jours.\n\n' +
+      'Un message court et sans reproche aujourd\'hui : demande-lui comment se passe sa semaine, ' +
+      'pas pourquoi il ne note plus.';
+
+  } else if (t === 'alerte_poids') {
+    sujet = '[Coach] ' + client + ' : tendance du poids';
+    corps = client + ' : ' + (detail || 'tendance du poids à regarder') + '.\n\n' +
+      'Regarde la courbe dans son prochain bilan avant de toucher aux calories : ' +
+      'eau, sel, cycle et sommeil font bouger la balance d\'une semaine à l\'autre.';
+
+  } else if (t === 'alerte_nutrition') {
+    sujet = '[Coach] ' + client + ' : nutrition hors cible';
+    corps = client + ' : ' + (detail || 'nutrition hors cible plusieurs jours') + '.\n\n' +
+      'Une question simple d\'abord : la cible lui paraît-elle tenable ? ' +
+      'Ajuster un repas type vaut mieux qu\'un sermon.';
+
   } else if (t === 'alerte_semaines_difficiles') {
     sujet = '[Coach] ' + client + ' : 2 semaines maintien d\'affilée';
     corps = client + ' est passé en mode maintien deux semaines consécutives' +
@@ -683,8 +812,12 @@ function composerMail(d) {
       'Type : ' + t + '\n\n' + detail;
   }
 
-  corps += '\n\n—\nOnglet Alertes du classeur, colonne Traité : coche la ligne ' +
-           'une fois que tu as écrit au client.';
+  corps += '\n\n—\nOnglet Alertes du classeur, colonne Statut : passe la ligne à ' +
+           '« vu », puis « traité » une fois que tu as écrit au client (ou coche Traité).';
+
+  // v2.5 : le niveau dans l'objet, juste après « [Coach] ».
+  var marque = d.niveau === 'critique' ? '🔴 ' : (d.niveau === 'attention' ? '⚠️ ' : '');
+  if (marque && sujet.indexOf('[Coach] ') === 0) sujet = '[Coach] ' + marque + sujet.slice(8);
 
   return { sujet: sujet, corps: corps };
 }
@@ -783,6 +916,12 @@ function migrer() {
   rapport.push('Adherence : en-têtes mis à jour');
 
   var map = indexEntetes(a);
+  // v2.5 : liste déroulante sur toute la colonne Statut. Les anciennes
+  // lignes restent SANS statut : le Dashboard se rabat sur « Traité ».
+  if ('Statut' in map && a.getMaxRows() > 1) {
+    a.getRange(2, map['Statut'] + 1, a.getMaxRows() - 1, 1).setDataValidation(regleStatut());
+    rapport.push('Alertes : liste déroulante posée sur la colonne Statut');
+  }
   if ('Traité' in map && a.getLastRow() > 1) {
     var plage = a.getRange(2, map['Traité'] + 1, a.getLastRow() - 1, 1);
     plage.insertCheckboxes();

@@ -44,7 +44,8 @@ import {
   verifierRappelHydratation,
   verifierRappelNutrition
 } from "./lib/moteur-rappels.js";
-import { verifierAlertesCoach } from "./lib/moteur-alertes.js";
+import { verifierAlerteNutrition, verifierAlertesCoach, verifierAlertesPoids } from "./lib/moteur-alertes.js";
+import { envoyerPresence } from "./lib/presence.js";
 import { lignesPerformancesBilan } from "./lib/performances-bilan.js";
 import { lirePerformances } from "./lib/performances.js";
 import { lignesHabitudesBilan } from "./lib/habitudes-bilan.js";
@@ -76,6 +77,9 @@ import { publierSiBesoin, statsCommunaute } from "./lib/communaute.js";
 
 /** Duree d'affichage d'une notification passagere, en millisecondes. */
 const DUREE_TOAST = 8000;
+
+/** Attente apres la derniere frappe dans le champ Poids avant l'alerte poids. */
+const DELAI_ALERTE_PESEE_MS = 3000;
 
 /**
  * Charge une liste depuis le stockage.
@@ -483,6 +487,61 @@ export default function App() {
       arrete = true;
     };
   }, [pret, profile, sessions, raisonsCreneaux, dailyForm]);
+
+  /**
+   * Smart Coach (25 octobre 2026), coaching en ligne seulement ; les
+   * decisions sont dans lib/presence.js et lib/alertes-smart.js.
+   *
+   * 1. Presence : a l'ouverture, au plus une fois par jour, la date de la
+   *    derniere saisie part au Worker (alerte d'inactivite, cote serveur).
+   * 2. Nutrition : a l'ouverture, au plus un controle par jour.
+   */
+  useEffect(() => {
+    if (!pret || !profile) return;
+    envoyerPresence({
+      profil: profile,
+      donnees: { repas: logEntries, seances: sessions, pesees: bodyLogs, journal: dailyForm },
+      aujourdhui: todayISO()
+    });
+    // Les donnees sont lues au moment de l'ouverture : les saisies du jour
+    // ne relancent pas l'envoi (une presence par jour suffit).
+  }, [pret, profile]);
+
+  useEffect(() => {
+    if (!pret || !profile || !targets) return;
+    verifierAlerteNutrition({ profile, repas: logEntries, cibles: targets });
+  }, [pret, profile, targets]);
+
+  /**
+   * 3. Poids : a l'enregistrement d'une pesee. Le champ « Poids » enregistre
+   *    a chaque frappe (« 7 », « 78 », « 78,4 ») : on attend que la saisie
+   *    soit posee avant d'evaluer, sinon « 7 kg » passerait pour une
+   *    variation brutale. Les pesees deja la a l'ouverture ne declenchent
+   *    rien.
+   */
+  const signaturePesees = useMemo(
+    () =>
+      bodyLogs
+        .filter((b) => b && Number(b.weightKg) > 0)
+        .map((b) => b.date + ":" + b.weightKg)
+        .sort()
+        .join("|"),
+    [bodyLogs]
+  );
+  const peseesVues = useRef(null);
+  useEffect(() => {
+    if (!pret || !profile) return undefined;
+    if (peseesVues.current === null) {
+      peseesVues.current = signaturePesees;
+      return undefined;
+    }
+    if (peseesVues.current === signaturePesees) return undefined;
+    const minuteur = setTimeout(() => {
+      peseesVues.current = signaturePesees;
+      verifierAlertesPoids({ profile, pesees: bodyLogs });
+    }, DELAI_ALERTE_PESEE_MS);
+    return () => clearTimeout(minuteur);
+  }, [pret, profile, signaturePesees]);
 
   /**
    * Les envois restes en file (hors ligne, proxy ou script indisponible)

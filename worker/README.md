@@ -302,3 +302,107 @@ UPDATE communaute_transformations SET masque = 1 WHERE id = 12;
 UPDATE communaute_transformations SET masque = 0 WHERE id = 12;
 UPDATE communaute_signalements SET traite = 1 WHERE cible_type = 'transformation' AND cible = '12';
 ```
+
+## Smart Coach : gravité, statut et inactivité — ajout du 25 octobre 2026
+
+Validé par le coach le 25/10/2026. Trois nouvelles alertes, un niveau sur
+toutes les alertes, un statut dans l'onglet Alertes.
+
+| Alerte | D'où | Quand | Niveau |
+|---|---|---|---|
+| `alerte_inactivite` | Worker (tâche planifiée) | aucune saisie depuis 4 à 6 jours / 7 jours et plus (une simple ouverture ne compte pas) | attention / critique |
+| `alerte_poids` | appli, à l'enregistrement d'une pesée | moyenne des 7 derniers jours à plus de 2 % des 7 précédents (sauf grossesse ou allaitement) | attention |
+| `alerte_poids` | appli | objectif perte, 2 pesées par semaine sur 3 semaines, baisse ≤ 0,2 kg | info |
+| `alerte_nutrition` | appli, à l'ouverture (1 fois/jour) | 5 jours ou plus hors cible sur les 7 derniers jours notés (au moins 5) | attention |
+
+Coaching en ligne seulement. Rien ne change en présentiel. Table complète des
+niveaux : `app/src/lib/gravite-alertes.js` (copie dans `coach-sync.gs`,
+`niveauParDefaut`, vérifiée par `tests/gravite-alertes.test.mjs`).
+
+Ce qui part chez le coach : le libellé du client, une phrase de tendance
+(« Poids stable depuis 3 semaines en phase de perte », « Variation de +2,4 % en
+une semaine », « Calories hors cible 5 jours sur 7 (moyenne 2 650 kcal pour
+2 200) », « Aucune saisie depuis 5 jours »), un nombre de jours et le niveau.
+Jamais la liste des pesées, jamais le détail des repas, jamais le motif d'une
+exclusion. Grossesse, allaitement, trouble alimentaire, moins de 18 ans : pas
+d'alerte de stagnation. Grossesse ou allaitement : pas d'alerte de variation
+non plus (un changement de poids y est attendu) ; l'antécédent de trouble
+alimentaire garde l'alerte de variation, c'est ce que le coach doit voir
+(décisions du coach du 25/10/2026). Le calcul passe par
+`app/src/lib/eligibilite-perte.js`, qui ne rend qu'un oui ou un non.
+
+### Worker : présence et inactivité
+
+- `POST /presence` `{ derniereSaisie: "AAAA-MM-JJ" }` : jeton client
+  obligatoire, même en mode « transition » ; 6 appels par jour et par client
+  au plus (l'appli en envoie un par jour, à l'ouverture). Table créée toute
+  seule (`SCHEMA`), aucune table existante modifiée :
+
+  ```sql
+  CREATE TABLE IF NOT EXISTS presence (client_id TEXT PRIMARY KEY, vu_le INTEGER NOT NULL, derniere_saisie TEXT, alerte_le INTEGER, niveau TEXT);
+  ```
+
+- Tâche planifiée (même Cron `*/15 * * * *`) : entre 8 h et 9 h, heure de
+  Paris, une seule fois par jour (dernière exécution gardée dans `compteurs`,
+  clé `tache:inactivite`, réservée atomiquement : plus de 20 h d'écart
+  exigées). Jours = jours depuis `derniere_saisie` ; `vu_le` (ouverture) ne
+  compte pas. Une seule alerte par niveau tant que le client ne saisit rien
+  de neuf ; le niveau se remet à zéro quand `derniere_saisie` avance, pas à
+  la simple ouverture. Un client qui n'a jamais envoyé de présence (code pas
+  activé), qui n'a aucune saisie connue, ou révoqué, n'est jamais alerté.
+- L'alerte part à `COACH_SYNC_URL`, signée comme `/coach-sync`. Un téléphone
+  ne peut pas en envoyer (`/coach-sync` répond `400 type-reserve`).
+- `POST /admin/presence` (`ADMIN_SECRET`) : bloc « Présence » de l'Espace coach.
+- Rien à configurer dans Cloudflare : recoller le Worker, Deploy.
+- Tests : `node --test tests/worker-presence.test.mjs`.
+
+### Script Google v2.5
+
+Procédure (aussi dans l'en-tête de `coach-sync.gs`) :
+
+1. Extensions > Apps Script : copier l'ancien `Code.gs` dans un fichier
+   `sauvegarde-v2.4`, **entièrement commenté**.
+2. Coller `coach-sync.gs` dans `Code.gs`, enregistrer. La propriété
+   `EMAIL_COACH` (v2.4) est déjà en place.
+3. Lancer `migrer()`. **Google redemande une autorisation** : la première
+   ligne `/** @OnlyCurrentDoc */` limite le script à ce classeur au lieu de
+   tous tes Google Sheets, la portée change donc. Accepter. `migrer()` ajoute
+   « Niveau » et « Statut » à la fin de l'onglet Alertes (liste : nouveau, vu,
+   traité, ignoré). La colonne E « Traité » ne bouge pas.
+4. Gérer les déploiements > crayon du déploiement **actif** > Nouvelle version
+   > Déployer (même adresse /exec).
+5. `verifier()`, puis `testerMail()` : objet « [Coach] ⚠️ TEST … ».
+
+Mails : seulement attention (« [Coach] ⚠️ … ») et critique (« [Coach] 🔴 … »).
+Une alerte info (stagnation, semaine difficile isolée) s'écrit dans l'onglet
+sans mail. Plafonds (3 mails par client et par jour, 20 au total) et
+anti-doublon (12 h par client et par type) inchangés.
+
+### Dashboard : formules à poser (le classeur n'est pas modifié par le dépôt)
+
+L'onglet Alertes du coach a exactement A:E (Reçu le, Client, Type, Détail,
+Traité, confirmé le 25/10/2026) : `migrer()` met donc **Niveau en F** et
+**Statut en G**. `verifier()` le montre après la migration. Séparateur `;` (classeur
+en français), à poser en ligne 2 puis tirer vers le bas, `Dashboard!A` =
+libellé client.
+
+« Alertes non traitées » (remplace la formule actuelle de `Dashboard!D`) : une
+ligne compte si son statut est « nouveau » ou « vu », ou, pour les anciennes
+lignes sans statut, si « Traité » n'est pas coché. Cocher « Traité » sur une
+ligne neuve la sort aussi du compte (pas de double saisie) :
+
+```
+=COUNTIFS(Alertes!$B$2:$B;$A2;Alertes!$G$2:$G;"nouveau";Alertes!$E$2:$E;FALSE)+COUNTIFS(Alertes!$B$2:$B;$A2;Alertes!$G$2:$G;"vu";Alertes!$E$2:$E;FALSE)+COUNTIFS(Alertes!$B$2:$B;$A2;Alertes!$G$2:$G;"";Alertes!$E$2:$E;FALSE)
+```
+
+« Alerte la plus grave » (nouvelle colonne, par exemple `Dashboard!E`), parmi
+les non traitées, critique > attention > info ; vide s'il n'y en a aucune :
+
+```
+=IFERROR(LET(n;FILTER(Alertes!$F$2:$F;Alertes!$B$2:$B=$A2;Alertes!$E$2:$E<>TRUE;(Alertes!$G$2:$G="nouveau")+(Alertes!$G$2:$G="vu")+(Alertes!$G$2:$G=""));IFS(COUNTIF(n;"critique")>0;"🔴 critique";COUNTIF(n;"attention")>0;"⚠️ attention";COUNTIF(n;"info")>0;"info";TRUE;""));"")
+```
+
+Les anciennes lignes n'ont pas de niveau : elles comptent dans « non
+traitées » mais pas dans « la plus grave ». Mise en forme conseillée :
+Format > Mise en forme conditionnelle sur la colonne, texte contenant
+« critique » en rouge, « attention » en orange.

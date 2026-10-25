@@ -9,6 +9,9 @@
  *
  *   1. mauvais secret → « Secret refusé » ;
  *   2. bon secret → liste des clients, « code pas encore activé » en évidence ;
+ *   2b. bloc « Présence » (Smart Coach, 25/10/2026) : le plus inactif en
+ *      tête (critique), date de dernière saisie et jours, client sans
+ *      présence à la fin ;
  *   3. créer un code → affiché une fois, avec « Copier » et l'expiration ;
  *   4. révoquer (confirmation qui cite défis et communauté) → le client
  *      disparaît de la communauté ;
@@ -89,6 +92,13 @@ try {
   const idPub = sql("SELECT id FROM communaute_transformations")[0].id;
   await commeClient(thomas, "/communaute/signaler", { type: "transformation", cible: String(idPub), motif: "test" });
   await appelWorker("/admin/invitations", { libelle: "Léa R." }, { Authorization: "Bearer " + ADMIN });
+  // Présence : Marc a saisi aujourd'hui ; Thomas ouvre l'appli aujourd'hui
+  // mais sa dernière saisie date de 8 jours (seules les saisies comptent) ;
+  // Léa n'a pas de présence.
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const ilYa8 = new Date(Date.now() - 8 * 86400000).toISOString().slice(0, 10);
+  await commeClient(marc, "/presence", { derniereSaisie: aujourdhui });
+  await commeClient(thomas, "/presence", { derniereSaisie: ilYa8 });
 
   const ctx = await nav.newContext({ ...appareil(), permissions: ["clipboard-read", "clipboard-write"] });
   // Toute ecriture de stockage par la page est comptee.
@@ -148,6 +158,19 @@ try {
     JSON.stringify(clients) === JSON.stringify(["Marc D.:actif", "Thomas B.:actif", "Léa R.:sans-jeton"]) && /code pas encore activé/.test(lea)
       ? `3 clients ; Léa R. : « code pas encore activé »`
       : `*** ${JSON.stringify(clients)} « ${lea} » ***`
+  );
+
+  // 2b. Presence.
+  const blocs = await page.locator("[data-presence]").evaluateAll((l) => l.map((e) => `${e.dataset.presence}:${e.dataset.niveau}:${e.dataset.jours}`));
+  const ligneThomas = net(await page.locator('[data-presence="Thomas B."]').innerText().catch(() => ""));
+  const ligneLea = net(await page.locator('[data-presence="Léa R."]').innerText().catch(() => ""));
+  const dateFr = ilYa8.split("-").reverse().join("/");
+  console.log(
+    "2b. PRÉSENCE            :",
+    JSON.stringify(blocs) === JSON.stringify(["Thomas B.:critique:8", "Marc D.:ok:0", "Léa R.:jamais:"]) &&
+      ligneThomas.includes("dernière saisie le " + dateFr) && /critique/.test(ligneThomas) && /8 jours sans saisie/.test(ligneThomas) && /aucune présence reçue/.test(ligneLea)
+      ? `Thomas B. en tête (🔴 critique, 8 jours, dernière saisie le ${dateFr}), Marc à jour, Léa sans présence`
+      : `*** ${JSON.stringify(blocs)} « ${ligneThomas} » « ${ligneLea} » ***`
   );
 
   // 3. Créer un code.

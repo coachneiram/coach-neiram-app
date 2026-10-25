@@ -143,6 +143,26 @@ describe("parcours sur le vrai Worker", () => {
     await assert.rejects(E.moderation("masquer", "Personne", ADMIN, f), (e) => /introuvable/.test(E.messageErreurAdmin(e)));
   });
 
+  test("présence (Smart Coach) : /admin/presence, les plus inactifs d'abord", async () => {
+    env = { ADMIN_SECRET: ADMIN, DB: fauxD1() };
+    const f = vers(env);
+    await E.creerCode({ libelle: "Thomas B." }, ADMIN, f);
+    const p = await E.presenceClients(ADMIN, f);
+    assert.deepEqual(p.clients.map((c) => [c.libelle, c.jours, c.niveau]), [["Thomas B.", null, null]]);
+    await assert.rejects(E.presenceClients("faux-secret-0123456789-0123456789", f), /401/);
+    const tri = E.trierPresence([
+      { libelle: "Jamais", jours: null, niveau: null },
+      { libelle: "Actif", jours: 1, niveau: null },
+      { libelle: "Attention", jours: 5, niveau: "attention" },
+      { libelle: "Critique", jours: 9, niveau: "critique" },
+      { libelle: "Trois", jours: 3, niveau: null }
+    ]);
+    assert.deepEqual(tri.map((c) => c.libelle), ["Critique", "Attention", "Trois", "Actif", "Jamais"]);
+    assert.equal(E.TEXTES_ESPACE_COACH.joursSansSaisie(0), "actif aujourd'hui");
+    assert.equal(E.TEXTES_ESPACE_COACH.joursSansSaisie(5), "5 jours sans saisie");
+    assert.equal(E.TEXTES_ESPACE_COACH.derniereSaisie("2026-10-21"), "dernière saisie le 21/10/2026");
+  });
+
   test("libellé vérifié avant l'envoi, comme le Worker", () => {
     assert.ok(E.libelleValide("Thomas B."));
     assert.ok(E.libelleValide("Jean-Marc D'A."));

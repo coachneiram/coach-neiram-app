@@ -17,6 +17,8 @@ export const SOURCE_SCRIPT = readFileSync(join(RACINE, "worker", "coach-sync.gs"
 
 function faireFeuille(nom) {
   const cellules = []; // cellules[ligne][colonne], index 0
+  // Validations posees (v2.5, colonne Statut) : { ligne, colonne, nl, nc, regle }.
+  const validations = [];
   const largeur = () => cellules.reduce((m, l) => Math.max(m, l.length), 0);
   const ecrire = (l, c, v) => {
     while (cellules.length <= l) cellules.push([]);
@@ -45,7 +47,11 @@ function faireFeuille(nom) {
       },
       setFontWeight: () => p,
       setNumberFormat: () => p,
-      insertCheckboxes: () => p
+      insertCheckboxes: () => p,
+      setDataValidation: (regle) => {
+        validations.push({ ligne: l, colonne: c, nl, nc, regle });
+        return p;
+      }
     };
     return p;
   };
@@ -54,6 +60,7 @@ function faireFeuille(nom) {
     nom,
     cellules,
     appends,
+    validations,
     getName: () => nom,
     appendRow: (r) => {
       appends.push(r);
@@ -62,6 +69,8 @@ function faireFeuille(nom) {
     getRange: (l, c, nl, nc) => plage(l, c, nl, nc),
     getLastRow: () => cellules.length,
     getLastColumn: () => largeur(),
+    // Comme un onglet neuf de Google Sheets : 1000 lignes au moins.
+    getMaxRows: () => Math.max(1000, cellules.length),
     setFrozenRows() {}
   };
 }
@@ -92,6 +101,23 @@ export function creerScript({ reglages = {}, proprietes = {}, entetesExistants =
   const bac = {
     SpreadsheetApp: {
       getActiveSpreadsheet: () => classeur,
+      // Regle de validation (liste deroulante), telle que le script la construit.
+      newDataValidation: () => {
+        const regle = { liste: null, afficherListe: null, invalideAccepte: true };
+        const constructeur = {
+          requireValueInList: (valeurs, afficher) => {
+            regle.liste = [...valeurs];
+            regle.afficherListe = afficher;
+            return constructeur;
+          },
+          setAllowInvalid: (v) => {
+            regle.invalideAccepte = v;
+            return constructeur;
+          },
+          build: () => ({ ...regle })
+        };
+        return constructeur;
+      },
       getUi: () => {
         throw new Error("pas d'interface en test");
       }
