@@ -224,14 +224,15 @@ export const TUTOS_VIE = [
     onglet: "tendances",
     emoji: "🗓️",
     titre: "Bilan du mois",
-    resume: "Ton poids et tes mesures, mois après mois, et un bilan rédigé si tu le veux.",
+    resume: "Ton poids, tes mesures et tes 3 photos, mois après mois, et un bilan rédigé.",
     etapes: [
       { titre: "Trouve-le", texte: "Tendances, carte « Bilan mensuel » : le nom du mois en cours et ton nombre de séances." },
       { titre: "Ton évolution du mois", texte: "Poids et mensurations du début à la fin du mois. Pense à une « Nouvelle prise » dans Mesures chaque mois pour le nourrir." },
+      { titre: "Tes 3 photos du mois", texte: "« Photos du mois » : face, profil et dos, à côté de celles du mois d'avant. Elles sont obligatoires pour générer le bilan. Même lumière, même tenue, même endroit." },
       { titre: "Un bilan rédigé", texte: "« Générer le bilan mensuel » analyse ton mois et propose des actions concrètes." },
       { titre: "Les mois passés", texte: "« Bilans mensuels précédents » garde tes bilans des mois d'avant." }
     ],
-    libelles: ["Bilan mensuel", "Nouvelle prise", "Générer le bilan mensuel", "Bilans mensuels précédents"]
+    libelles: ["Bilan mensuel", "Photos du mois", "Nouvelle prise", "Générer le bilan mensuel", "Bilans mensuels précédents"]
   },
   {
     id: "declics",

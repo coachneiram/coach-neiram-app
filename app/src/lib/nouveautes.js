@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-26-photos-du-mois",
+    date: "2026-10-26",
+    titre: "Tes 3 photos du mois",
+    texte:
+      "Dans Tendances, le bilan mensuel demande maintenant tes photos du mois (face, profil, dos) et les met à côté de celles du mois d'avant. Même lumière, même tenue, même endroit.",
+    onglet: "tendances",
+    bouton: "Voir mes photos"
+  },
+  {
     id: "2026-10-25-aujourdhui",
     date: "2026-10-25",
     titre: "Ta journée d'un coup d'œil",

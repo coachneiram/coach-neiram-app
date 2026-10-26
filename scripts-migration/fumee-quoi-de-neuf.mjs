@@ -162,13 +162,16 @@ try {
 
   // 10 a 12 : aide et bandeau d'installation.
   {
-    // La communaute Team Neiram, les defis entre amis et les reprises de
+    // Les photos du mois (26 octobre), la carte « Aujourd'hui » (25 octobre),
+    // la communaute Team Neiram, les defis entre amis et les reprises de
     // Neiram (24 octobre) occupent les 5 places : ils sont marques vus ici, pour que
     // l'annonce des tutos (« Voir le guide ») revienne dans la fenetre.
     // L'annonce de l'Aide (7 octobre) passait par le meme chemin.
     const { ctx, page } = await ouvrir({
       profil: PROFIL,
       vues: [
+        "2026-10-26-photos-du-mois",
+        "2026-10-25-aujourdhui",
         "2026-10-24-communaute",
         "2026-10-24-defis-amis",
         "2026-10-24-tutos-raccourcis",

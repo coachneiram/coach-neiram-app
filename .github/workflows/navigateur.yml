@@ -46,7 +46,10 @@ jobs:
   fumee:
     name: ${{ matrix.appareil }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 59 scripts au 26 octobre 2026 : 13 a 20 minutes selon la machine de
+    # GitHub. A 20, une machine lente coupait la passe en plein milieu sans
+    # qu'aucun test n'ait echoue.
+    timeout-minutes: 30
 
     strategy:
       # Une passe qui echoue ne doit pas annuler l'autre : savoir que le bug
