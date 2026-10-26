@@ -80,6 +80,13 @@ await page.addInitScript((auj) => {
   localStorage.setItem("coach_daily_form", JSON.stringify([{ date: auj, energy: 4, stress: 5, steps: 8400, waterMl: 1750 }]));
   localStorage.setItem("coach_reports", JSON.stringify([]));
   localStorage.setItem("coach_reports_monthly", JSON.stringify([]));
+  // Les 3 photos du mois, obligatoires pour le bilan mensuel depuis le
+  // 26 octobre 2026 : semaine en cours (lundi local).
+  const d = new Date(auj + "T00:00:00");
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  const lundi = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const pixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  localStorage.setItem("coach_photos_" + lundi, JSON.stringify({ face: pixel, profil: pixel, dos: pixel }));
   // Une douleur declaree : la consigne de securite doit apparaitre dans le prompt.
   localStorage.setItem("coach_sessions", JSON.stringify([
     { id: "s1", date: auj, durationMin: 60, rpe: 8, pains: [{ zone: "Genou droit", level: 3 }], exercises: [] }
