@@ -15,6 +15,881 @@
 
 export const RECETTES_COACH = [
   {
+    "id": "2026-10-26-socca-courgettes-tomates",
+    "semaine": "2026-10-26",
+    "nom": "Socca aux courgettes et tomates cerises",
+    "description": "Des crêpes de farine de pois chiche dorées à la poêle, garnies de courgettes et de tomates. Sans gluten, 100 % végétales, prêtes en 25 minutes.",
+    "categorie": "dejeuner",
+    "profils": [
+      "perte",
+      "maintien"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 15,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Farine de pois chiche",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Eau",
+        "quantite": "240 ml"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "20 g (1 cuillère à soupe et 1 cuillère à café)"
+      },
+      {
+        "nom": "Courgettes",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Tomates cerises",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "80 g"
+      },
+      {
+        "nom": "Cumin, persil, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Mélange la farine, l'eau, une pincée de sel et de cumin, puis laisse reposer 10 minutes.",
+      "Fais revenir l'oignon et les courgettes en rondelles 6 minutes dans la moitié de l'huile, ajoute les tomates coupées en deux 2 minutes et réserve.",
+      "Fais cuire 4 socca à la poêle huilée, 2 minutes par face, et garnis-les des légumes et du persil."
+    ],
+    "parPortion": {
+      "kcal": 350,
+      "p": 16,
+      "c": 40,
+      "f": 14,
+      "fibres": 10
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : garde 2 socca par portion avec une salade verte. Maintien : ajoute 100 g de pois chiches rincés par portion.",
+    "tags": [
+      "rapide",
+      "economique",
+      "vegetal",
+      "sans-gluten"
+    ]
+  },
+  {
+    "id": "2026-10-26-riz-saute-oeufs-petits-pois",
+    "semaine": "2026-10-26",
+    "nom": "Riz sauté aux œufs, petits pois et carottes",
+    "description": "Un riz sauté façon cantonais avec des œufs brouillés, des petits pois et des carottes. Un plat d'énergie prêt en 20 minutes, idéal avec du riz de la veille.",
+    "categorie": "diner",
+    "profils": [
+      "remise-en-forme",
+      "hyrox"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "oeufs",
+      "soja",
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 10,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Riz basmati cuit (de la veille)",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "4 (220 g)"
+      },
+      {
+        "nom": "Petits pois surgelés",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "60 g"
+      },
+      {
+        "nom": "Sauce soja",
+        "quantite": "30 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Huile de colza",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Gingembre, ail",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Coupe les carottes en petits dés et fais-les sauter 4 minutes avec l'oignon émincé dans l'huile.",
+      "Ajoute les petits pois et le riz froid, puis fais sauter 4 minutes à feu vif en séparant les grains.",
+      "Pousse le riz sur le côté, brouille les œufs 2 minutes dans la poêle, mélange le tout avec la sauce soja, le gingembre et l'ail, et sers aussitôt."
+    ],
+    "parPortion": {
+      "kcal": 572,
+      "p": 25,
+      "c": 73,
+      "f": 20,
+      "fibres": 8
+    },
+    "moment": "avant-entrainement",
+    "adaptations": "Hyrox : ajoute 100 g de riz cuit par portion 2 à 3 heures avant la séance. Remise en forme : garde les quantités indiquées avec des légumes en plus.",
+    "tags": [
+      "rapide",
+      "economique",
+      "meal-prep"
+    ]
+  },
+  {
+    "id": "2026-10-26-merlu-tomate-olives-pommes-de-terre",
+    "semaine": "2026-10-26",
+    "nom": "Merlu à la tomate et aux olives, pommes de terre vapeur",
+    "description": "Des filets de merlu mijotés dans une sauce tomate aux olives noires, servis avec des pommes de terre vapeur. Léger, maigre et plein de saveurs du Sud.",
+    "categorie": "diner",
+    "profils": [
+      "perte",
+      "maintien"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "poisson"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Filets de merlu",
+        "quantite": "360 g"
+      },
+      {
+        "nom": "Pommes de terre",
+        "quantite": "500 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Olives noires dénoyautées",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Ail, thym, laurier, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Épluche les pommes de terre, coupe-les en gros cubes et fais-les cuire 20 minutes à la vapeur.",
+      "Fais revenir l'oignon dans l'huile 3 minutes, ajoute les tomates, l'ail, le thym et le laurier, et laisse mijoter 10 minutes.",
+      "Dépose le merlu dans la sauce avec les olives, couvre et cuis 8 minutes à feu doux, puis sers avec les pommes de terre."
+    ],
+    "parPortion": {
+      "kcal": 500,
+      "p": 38,
+      "c": 51,
+      "f": 16,
+      "fibres": 8
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : réduis les pommes de terre à 250 g par portion et ajoute des haricots verts. Maintien : garde les quantités indiquées avec un fruit en dessert.",
+    "tags": [
+      "economique",
+      "sans-friture"
+    ]
+  },
+  {
+    "id": "2026-10-26-poulet-yassa-riz",
+    "semaine": "2026-10-26",
+    "nom": "Poulet yassa au citron et aux oignons, riz basmati",
+    "description": "Un classique sénégalais simplifié : poulet mariné au citron et à la moutarde, oignons fondants et riz basmati. Dense en protéines et en glucides.",
+    "categorie": "diner",
+    "profils": [
+      "prise",
+      "force"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille",
+      "moutarde"
+    ],
+    "portions": 3,
+    "preparationMin": 15,
+    "cuissonMin": 35,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Hauts de cuisse de poulet sans peau",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Oignons",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Jus de citron",
+        "quantite": "60 g (2 citrons)"
+      },
+      {
+        "nom": "Moutarde",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "30 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Riz basmati cuit",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Olives vertes dénoyautées",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Sel, poivre, piment",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Mélange le citron, la moutarde, le sel et le poivre, et laisse mariner le poulet 20 minutes avec la moitié des oignons émincés.",
+      "Fais dorer le poulet égoutté 5 minutes par face dans l'huile, puis réserve-le.",
+      "Fais revenir le reste des oignons 8 minutes, remets le poulet avec la marinade et les olives, couvre et laisse mijoter 20 minutes, puis sers avec le riz."
+    ],
+    "parPortion": {
+      "kcal": 677,
+      "p": 46,
+      "c": 67,
+      "f": 25,
+      "fibres": 4
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Prise de masse : ajoute 100 g de riz cuit et un filet d'huile par portion. Force : garde les quantités indiquées les jours de grosse séance.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-10-26-penne-complets-haricots-blancs-courgettes",
+    "semaine": "2026-10-26",
+    "nom": "Penne complètes, haricots blancs et courgettes",
+    "description": "Un plat de pâtes végétal et digeste : haricots blancs, courgettes et sauce tomate au basilic. Des glucides lents pour la veille d'une sortie longue.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "ironman"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 20,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Penne complètes cuites",
+        "quantite": "700 g"
+      },
+      {
+        "nom": "Haricots blancs cuits (conserve rincée)",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Courgettes",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "30 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Ail, basilic, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais revenir l'oignon et les courgettes en petits dés 6 minutes dans l'huile.",
+      "Ajoute l'ail, les tomates et les haricots blancs, puis laisse mijoter 10 minutes.",
+      "Mélange avec les penne chaudes, parsème de basilic et sers."
+    ],
+    "parPortion": {
+      "kcal": 443,
+      "p": 18,
+      "c": 68,
+      "f": 11,
+      "fibres": 16
+    },
+    "moment": "veille-de-course",
+    "adaptations": "Veille de sortie longue : ajoute 100 g de penne cuites par portion. Ironman : ajoute une cuillère d'huile d'olive par portion.",
+    "tags": [
+      "meal-prep",
+      "economique",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-10-26-bolognaise-lentilles-soja-texture",
+    "semaine": "2026-10-26",
+    "nom": "Bolognaise de lentilles et soja texturé, spaghetti complets",
+    "description": "Une bolognaise 100 % végétale très riche en protéines : lentilles vertes, soja texturé et sauce tomate, servie sur des spaghetti complets.",
+    "categorie": "diner",
+    "profils": [
+      "bodybuilding",
+      "force"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "soja",
+      "gluten"
+    ],
+    "portions": 3,
+    "preparationMin": 15,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Soja texturé sec",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Lentilles vertes cuites",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "500 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Spaghetti complets cuits",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Ail, origan, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Réhydrate le soja texturé 10 minutes dans de l'eau chaude, puis égoutte-le en le pressant.",
+      "Fais revenir l'oignon et la carotte râpée dans l'huile 5 minutes, ajoute le soja, les lentilles, les tomates et les herbes, et laisse mijoter 15 minutes.",
+      "Sers la sauce sur les spaghetti chauds."
+    ],
+    "parPortion": {
+      "kcal": 601,
+      "p": 40,
+      "c": 90,
+      "f": 9,
+      "fibres": 24
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Bodybuilding : garde les quantités en sèche, ajoute 100 g de spaghetti en prise de masse. Force : ajoute une cuillère d'huile d'olive par portion.",
+    "tags": [
+      "meal-prep",
+      "economique",
+      "vegetal"
+    ]
+  },
+  {
+    "id": "2026-10-26-burger-dinde-pommes-de-terre-rotie",
+    "semaine": "2026-10-26",
+    "nom": "Burger de dinde maison et pommes de terre rôties",
+    "description": "Un burger maison de dinde hachée dans un pain complet, avec sauce au yaourt et pommes de terre rôties au four. Protéines et glucides pour les séances intenses.",
+    "categorie": "diner",
+    "profils": [
+      "hyrox",
+      "bodybuilding"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille",
+      "gluten",
+      "lactose"
+    ],
+    "portions": 2,
+    "preparationMin": 20,
+    "cuissonMin": 30,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Haché de dinde",
+        "quantite": "360 g"
+      },
+      {
+        "nom": "Pains à burger complets",
+        "quantite": "2 (120 g)"
+      },
+      {
+        "nom": "Pommes de terre",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "20 g (4 cuillères à café)"
+      },
+      {
+        "nom": "Tomate",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Salade verte",
+        "quantite": "60 g"
+      },
+      {
+        "nom": "Yaourt nature",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Paprika, ail en poudre, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 220 °C. Coupe les pommes de terre en quartiers, mélange-les avec la moitié de l'huile et enfourne 30 minutes.",
+      "Mélange la dinde avec le paprika, l'ail et le sel, forme 2 steaks et fais-les cuire 5 minutes par face dans le reste d'huile.",
+      "Mélange le yaourt avec du sel et du poivre, puis monte les burgers avec la salade, la tomate, le steak et la sauce, et sers avec les pommes de terre."
+    ],
+    "parPortion": {
+      "kcal": 600,
+      "p": 49,
+      "c": 56,
+      "f": 20,
+      "fibres": 7
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Hyrox : ajoute 100 g de pommes de terre par portion après une séance longue. Bodybuilding : passe à 200 g de dinde par steak en prise de masse.",
+    "tags": [
+      "repas-d-effort",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-10-26-brownie-haricots-rouges-chocolat",
+    "semaine": "2026-10-26",
+    "nom": "Brownie moelleux aux haricots rouges et chocolat",
+    "description": "Un brownie vegan sans farine : haricots rouges, dattes, cacao, avoine et beurre de cacahuète. Dense en glucides, parfait en collation de récupération.",
+    "categorie": "dessert",
+    "profils": [
+      "ironman",
+      "prise"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "arachides"
+    ],
+    "portions": 6,
+    "preparationMin": 15,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Haricots rouges cuits (conserve rincée)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Dattes dénoyautées",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Cacao en poudre non sucré",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "50 g"
+      },
+      {
+        "nom": "Beurre de cacahuète",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Chocolat noir 70 %",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Levure chimique",
+        "quantite": "1 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 180 °C. Mixe les haricots rouges avec les dattes, le beurre de cacahuète et 4 cuillères à soupe d'eau jusqu'à obtenir une pâte lisse.",
+      "Ajoute le cacao, l'avoine, la levure et le chocolat en morceaux, et mélange.",
+      "Verse dans un moule tapissé de papier cuisson, enfourne 25 minutes, laisse refroidir et coupe en 6 parts."
+    ],
+    "parPortion": {
+      "kcal": 200,
+      "p": 7,
+      "c": 25,
+      "f": 8,
+      "fibres": 7
+    },
+    "moment": "recuperation",
+    "adaptations": "Ironman : mange 2 parts après une longue sortie. Prise de masse : accompagne d'un verre de lait de soja.",
+    "tags": [
+      "meal-prep",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-10-26-tartines-saumon-fume-fromage-blanc",
+    "semaine": "2026-10-26",
+    "nom": "Tartines au saumon fumé, fromage blanc et concombre",
+    "description": "Des tartines de pain complet au fromage blanc, saumon fumé et concombre. Une collation salée riche en protéines, sans cuisson, prête en 5 minutes.",
+    "categorie": "collation",
+    "profils": [
+      "force",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "poisson",
+      "gluten",
+      "lactose"
+    ],
+    "portions": 2,
+    "preparationMin": 5,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pain complet",
+        "quantite": "160 g (4 tranches)"
+      },
+      {
+        "nom": "Fromage blanc 0 %",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Saumon fumé",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Concombre",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Citron, ciboulette, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Mélange le fromage blanc avec la ciboulette, le jus de citron et le poivre, puis tartine-le sur les tranches de pain.",
+      "Dépose le saumon fumé et le concombre en rondelles sur le dessus et sers aussitôt."
+    ],
+    "parPortion": {
+      "kcal": 357,
+      "p": 27,
+      "c": 42,
+      "f": 9,
+      "fibres": 6
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Force : ajoute 2 œufs durs par portion. Remise en forme : garde les quantités indiquées avec une crudité.",
+    "tags": [
+      "rapide",
+      "sans-cuisson"
+    ]
+  },
+  {
+    "id": "2026-10-26-couscous-legumes-pois-chiches",
+    "semaine": "2026-10-26",
+    "nom": "Couscous de légumes et pois chiches",
+    "description": "Un couscous végétal familial : semoule, carottes, courgettes, navets, pois chiches et raisins secs. Des glucides à digestion facile pour les sports d'endurance.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "hyrox",
+      "maintien"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 4,
+    "preparationMin": 20,
+    "cuissonMin": 30,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Semoule moyenne (crue)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "480 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Courgettes",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Navets",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Raisins secs",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "30 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Ras-el-hanout, cannelle, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais revenir l'oignon dans l'huile avec les épices, ajoute les carottes et les navets en morceaux, couvre d'eau à hauteur et cuis 15 minutes.",
+      "Ajoute les courgettes, les pois chiches et les raisins secs, puis poursuis 10 minutes.",
+      "Verse la semoule dans un saladier avec un volume d'eau bouillante égal au sien, couvre 5 minutes, égrène-la à la fourchette et sers avec les légumes et le bouillon."
+    ],
+    "parPortion": {
+      "kcal": 508,
+      "p": 19,
+      "c": 81,
+      "f": 12,
+      "fibres": 14
+    },
+    "moment": "veille-de-course",
+    "adaptations": "Marathon : ajoute 50 g de semoule crue par portion la veille d'une sortie longue. Hyrox : garde les quantités indiquées avant une séance.",
+    "tags": [
+      "familial",
+      "economique",
+      "meal-prep"
+    ]
+  },
+  {
+    "id": "2026-10-26-pain-perdu-complet-fromage-blanc",
+    "semaine": "2026-10-26",
+    "nom": "Pain perdu complet au four et fromage blanc",
+    "description": "Un pain perdu complet cuit au four, avec banane et fromage blanc. Un petit-déjeuner protéiné et calorique pour les semaines de prise.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "prise",
+      "force"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "oeufs",
+      "lactose"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 15,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pain complet",
+        "quantite": "200 g (6 tranches)"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "3 (165 g)"
+      },
+      {
+        "nom": "Lait demi-écrémé",
+        "quantite": "250 ml"
+      },
+      {
+        "nom": "Fromage blanc 0 %",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Banane",
+        "quantite": "150 g (1)"
+      },
+      {
+        "nom": "Huile de colza",
+        "quantite": "10 g (1 cuillère à café)"
+      },
+      {
+        "nom": "Cannelle",
+        "quantite": "1 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 200 °C. Bats les œufs avec le lait et la cannelle.",
+      "Trempe les tranches de pain 30 secondes de chaque côté, dépose-les sur une plaque huilée et enfourne 15 minutes en les retournant à mi-cuisson.",
+      "Sers avec le fromage blanc et la banane en rondelles."
+    ],
+    "parPortion": {
+      "kcal": 583,
+      "p": 32,
+      "c": 71,
+      "f": 19,
+      "fibres": 8
+    },
+    "moment": "quotidien",
+    "adaptations": "Prise de masse : ajoute une cuillère de beurre de cacahuète et une seconde banane par portion. Force : garde les quantités indiquées avec un fruit.",
+    "tags": [
+      "economique",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-10-26-salade-lentilles-oeuf-mollet-radis",
+    "semaine": "2026-10-26",
+    "nom": "Salade de lentilles, œufs mollets et radis",
+    "description": "Une salade complète de lentilles vertes, œufs mollets, radis et tomates, avec une vinaigrette moutarde. Rassasiante, riche en fibres et en protéines.",
+    "categorie": "dejeuner",
+    "profils": [
+      "perte",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "oeufs",
+      "moutarde"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 6,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Lentilles vertes cuites",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "4 (220 g)"
+      },
+      {
+        "nom": "Radis",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Tomates",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Oignon rouge",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "20 g (1 cuillère à soupe et 1 cuillère à café)"
+      },
+      {
+        "nom": "Moutarde, vinaigre, persil, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Plonge les œufs 6 minutes dans l'eau bouillante, refroidis-les sous l'eau froide et écale-les.",
+      "Mélange la moutarde, le vinaigre et l'huile, puis ajoute les lentilles, les radis en rondelles, les tomates en dés et l'oignon émincé.",
+      "Dépose les œufs coupés en deux sur la salade et parsème de persil."
+    ],
+    "parPortion": {
+      "kcal": 494,
+      "p": 32,
+      "c": 42,
+      "f": 22,
+      "fibres": 16
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : garde les quantités indiquées avec une salade verte. Remise en forme : ajoute une tranche de pain complet par portion.",
+    "tags": [
+      "rapide",
+      "economique",
+      "meal-prep"
+    ]
+  },
+  {
     "id": "2026-10-05-tofu-brouille-legumes-pain-complet",
     "semaine": "2026-10-05",
     "nom": "Tofu brouillé aux légumes et pain complet",
