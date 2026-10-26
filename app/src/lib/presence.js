@@ -51,10 +51,17 @@ export function derniereSaisie({ repas = [], seances = [], pesees = [], journal 
   return dates.length ? dates.sort().pop() : null;
 }
 
-/** Faut-il envoyer la présence aujourd'hui ? */
-export function decisionPresence({ profil, etat, aujourdhui }) {
+/**
+ * Faut-il envoyer la présence ? Une fois par jour à l'ouverture, et de
+ * nouveau quand la date de la dernière saisie change (25 octobre 2026) :
+ * sans cela, la saisie du jour n'arrivait au Worker que le lendemain, et
+ * l'alerte d'inactivité pouvait partir un jour trop tôt.
+ */
+export function decisionPresence({ profil, etat, aujourdhui, saisie }) {
   if (!enLigne(profil)) return { envoyer: false, raison: "pas en coaching en ligne" };
-  if (etat && etat.jour === aujourdhui) return { envoyer: false, raison: "deja envoyee aujourd'hui" };
+  if (etat && etat.jour === aujourdhui && (!saisie || etat.saisie === saisie)) {
+    return { envoyer: false, raison: "deja envoyee aujourd'hui" };
+  }
   return { envoyer: true, raison: "a envoyer" };
 }
 
@@ -73,7 +80,8 @@ export function envoyerPresence(parametres) {
 let envoiEnCours = null;
 
 async function envoyerMaintenant({ profil, donnees, aujourdhui, envFetch = globalThis.fetch, enTetes = enTetesAcces() }) {
-  const d = decisionPresence({ profil, etat: charger(CLES_ANNEXES.presence, {}), aujourdhui });
+  const saisie = derniereSaisie({ ...donnees, aujourdhui });
+  const d = decisionPresence({ profil, etat: charger(CLES_ANNEXES.presence, {}), aujourdhui, saisie });
   if (!d.envoyer) return false;
   // Application servie en local (fumée) : rien ne part, sauf autorisation
   // explicite (même garde que la synchro coach).
@@ -83,12 +91,12 @@ async function envoyerMaintenant({ profil, donnees, aujourdhui, envFetch = globa
     const r = await envFetch(PROXY_BASE_URL + "/presence", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...enTetes },
-      body: JSON.stringify({ derniereSaisie: derniereSaisie({ ...donnees, aujourdhui }) })
+      body: JSON.stringify({ derniereSaisie: saisie })
     });
     if (!r.ok) return false;
     const corps = await r.json().catch(() => ({}));
     if (corps && corps.ok === false) return false;
-    enregistrer(CLES_ANNEXES.presence, { jour: aujourdhui });
+    enregistrer(CLES_ANNEXES.presence, { jour: aujourdhui, saisie });
     return true;
   } catch (e) {
     return false;

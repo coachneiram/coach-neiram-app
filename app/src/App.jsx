@@ -45,7 +45,7 @@ import {
   verifierRappelNutrition
 } from "./lib/moteur-rappels.js";
 import { verifierAlerteNutrition, verifierAlertesCoach, verifierAlertesPoids } from "./lib/moteur-alertes.js";
-import { envoyerPresence } from "./lib/presence.js";
+import { derniereSaisie, envoyerPresence } from "./lib/presence.js";
 import { lignesPerformancesBilan } from "./lib/performances-bilan.js";
 import { lirePerformances } from "./lib/performances.js";
 import { lignesHabitudesBilan } from "./lib/habitudes-bilan.js";
@@ -492,10 +492,15 @@ export default function App() {
    * Smart Coach (25 octobre 2026), coaching en ligne seulement ; les
    * decisions sont dans lib/presence.js et lib/alertes-smart.js.
    *
-   * 1. Presence : a l'ouverture, au plus une fois par jour, la date de la
-   *    derniere saisie part au Worker (alerte d'inactivite, cote serveur).
+   * 1. Presence : a l'ouverture, une fois par jour, puis quand la date de
+   *    la derniere saisie change, cette date part au Worker (alerte
+   *    d'inactivite, cote serveur).
    * 2. Nutrition : a l'ouverture, au plus un controle par jour.
    */
+  const dateDerniereSaisie = useMemo(
+    () => derniereSaisie({ repas: logEntries, seances: sessions, pesees: bodyLogs, journal: dailyForm, aujourdhui: todayISO() }),
+    [logEntries, sessions, bodyLogs, dailyForm]
+  );
   useEffect(() => {
     if (!pret || !profile) return;
     envoyerPresence({
@@ -503,9 +508,9 @@ export default function App() {
       donnees: { repas: logEntries, seances: sessions, pesees: bodyLogs, journal: dailyForm },
       aujourdhui: todayISO()
     });
-    // Les donnees sont lues au moment de l'ouverture : les saisies du jour
-    // ne relancent pas l'envoi (une presence par jour suffit).
-  }, [pret, profile]);
+    // Relance quand la date de la derniere saisie change (au plus une ou
+    // deux fois par jour) : la saisie du jour arrive le jour meme.
+  }, [pret, profile, dateDerniereSaisie]);
 
   useEffect(() => {
     if (!pret || !profile || !targets) return;
