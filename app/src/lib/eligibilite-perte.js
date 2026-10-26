@@ -51,3 +51,14 @@ export function variationPoidsSurveillee({ profil, reglages = lireReglagesSurMes
   const situation = String(profilPourRepere(profil || {}, reglages).situation || "");
   return !(situation.startsWith("enceinte") || situation === "allaitement");
 }
+
+/**
+ * Bilan mensuel (décision du coach du 26 octobre 2026) : les 3 photos du
+ * mois sont-elles obligatoires ? Oui, SAUF moins de 18 ans, grossesse ou
+ * allaitement, antécédent de trouble alimentaire : pour ces profils, des
+ * photos du corps imposées font plus de mal que de bien, elles restent
+ * facultatives. Oui ou non, jamais la raison, et rien ne quitte le téléphone.
+ */
+export function photosMoisObligatoires({ profil, reglages = lireReglagesSurMesure() }) {
+  return !exclusionPerte(profilPourRepere(profil || {}, reglages), null);
+}

@@ -30,6 +30,8 @@ import { progressionCorps } from "../lib/progression-corps.js";
 import { MonEvolution } from "../ui/Explorateur.jsx";
 import { Camera, Droplet, Dumbbell, Flame, Footprints, Loader2, Moon, Scale, Share, Sparkles } from "../ui/icones.jsx";
 import { ComparateurPhotos } from "../ui/ComparateurPhotos.jsx";
+import { PhotosDuMois } from "../ui/PhotosDuMois.jsx";
+import { etatPhotosMois, semainesPhotographiees } from "../lib/photos-mensuelles.js";
 import { CarteDeclics } from "../ui/CarteDeclics.jsx";
 
 /** Attente et erreur de generation, communes aux deux bilans. */
@@ -191,6 +193,12 @@ export function Tendances({
   erreurGenerationMensuelle,
   iaDisponible = true
 }) {
+  // Photos du mois (26 octobre 2026) : relues quand une photo change.
+  const photosMois = useMemo(
+    () => (monthStats ? etatPhotosMois({ cleMois: monthStats.monthKey, profil: profile, semaines: semainesPhotographiees() }) : null),
+    [monthStats && monthStats.monthKey, profile, JSON.stringify(Object.keys(photos || {})), photos]
+  );
+  const bloqueParPhotos = !!(photosMois && photosMois.bloque);
   const serie = useMemo(
     () => serieHebdomadaire(SEMAINES_AFFICHEES, allData, profile, targets),
     [allData, profile, targets]
@@ -386,6 +394,7 @@ export function Tendances({
             </span>
           </div>
           <EvolutionDuMois monthStats={monthStats} />
+          <PhotosDuMois etat={photosMois} onPrendre={onUploadPhoto} />
           {enGenerationMensuelle ? (
             <p style={styleAttente}>
               <Loader2 size={16} /> Génération du bilan mensuel...
@@ -405,7 +414,7 @@ export function Tendances({
               d'origine (index.html) explique comment debloquer le bilan. */}
           {iaDisponible && (bilanMensuelCourant || monthStats.hasAnyData) && (
             <div style={{ textAlign: "center" }}>
-              <Btn icon={Sparkles} onClick={onGenerateMonthly} disabled={enGenerationMensuelle}>
+              <Btn icon={Sparkles} onClick={onGenerateMonthly} disabled={enGenerationMensuelle || bloqueParPhotos}>
                 {bilanMensuelCourant ? "Régénérer" : "Générer le bilan mensuel"}
               </Btn>
             </div>

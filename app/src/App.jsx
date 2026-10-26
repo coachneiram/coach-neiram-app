@@ -46,6 +46,7 @@ import {
 } from "./lib/moteur-rappels.js";
 import { verifierAlerteNutrition, verifierAlertesCoach, verifierAlertesPoids } from "./lib/moteur-alertes.js";
 import { derniereSaisie, envoyerPresence } from "./lib/presence.js";
+import { TEXTES_PHOTOS_MOIS, etatPhotosMois, semainesPhotographiees } from "./lib/photos-mensuelles.js";
 import { lignesPerformancesBilan } from "./lib/performances-bilan.js";
 import { lirePerformances } from "./lib/performances.js";
 import { lignesHabitudesBilan } from "./lib/habitudes-bilan.js";
@@ -328,6 +329,11 @@ export default function App() {
 
   const genererBilanDuMois = async () => {
     if (!monthStats || !profile || enGenerationMensuelle) return;
+    // Photos du mois obligatoires (26 octobre 2026), sauf exception de santé.
+    if (etatPhotosMois({ cleMois: monthStats.monthKey, profil: profile, semaines: semainesPhotographiees() }).bloque) {
+      setErreurGenerationMensuelle(TEXTES_PHOTOS_MOIS.bloque);
+      return;
+    }
     setEnGenerationMensuelle(true);
     setErreurGenerationMensuelle(null);
     try {
