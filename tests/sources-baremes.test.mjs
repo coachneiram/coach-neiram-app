@@ -82,14 +82,12 @@ describe("calendrier", () => {
     assert.equal(R.echeanceDe({ releveLe: "2026-10-24", verifierTousLesJours: 90 }), "2027-01-22");
     assert.equal(R.echeanceDe({ releveLe: "2026-10-24", verifierTousLesJours: 365 }), "2027-10-24");
   });
-  test("aujourd'hui, 28/10/2026 : tout est valable ; le 16/11, cinq sources entrent dans leur préavis ; la FFForce, revue chaque mois, passe en retard le 24/11", () => {
+  test("aujourd'hui, 28/10/2026 : tout est valable ; le 16/11, cinq sources entrent dans leur préavis ; aucune n'est en retard avant le 31/12", () => {
     assert.deepEqual(R.sourcesATraiter("2026-10-28"), []);
     assert.deepEqual(R.sourcesATraiter("2026-11-15"), []);
     assert.deepEqual(R.sourcesATraiter("2026-11-16").map((x) => x.source.id).sort(), ["ffa-minima-france", "ffforce-niveaux", "ffn-qualifications", "ipf-categories-gl", "world-aquatics-points"]);
-    const retard = R.sourcesATraiter("2026-11-24");
-    assert.equal(retard[0].source.id, "ffforce-niveaux");
-    assert.equal(retard[0].etat, "perimee");
-    assert.ok(retard.slice(1).every((x) => x.etat === "bientot"));
+    assert.ok(R.sourcesATraiter("2026-11-24").every((x) => x.etat === "bientot"));
+    assert.ok(R.sourcesATraiter("2027-01-05").some((x) => x.source.id === "ffforce-niveaux" && x.etat === "perimee"));
   });
   test("à l'approche de 2027, les sources de l'année glissent dans la liste, la plus en retard d'abord", () => {
     const ids = R.sourcesATraiter("2027-01-05").map((x) => x.source.id);
@@ -111,13 +109,13 @@ describe("calendrier", () => {
 describe("ce que l'app dit", () => {
   test("source et date de relevé, sans avertissement quand tout est valable", () => {
     const r = R.resumeSourcesDiscipline("halterophilie", "2026-10-28");
-    assert.equal(r.texte, "Barèmes relevés le 24/10/2026 : FFHM 2026-2027, IWF 2026 et Sinclair 2025-2028.");
+    assert.equal(r.texte, "Barèmes relevés le 28/10/2026 : FFHM 2026-2027, IWF 2026 et Sinclair 2025-2028.");
     assert.equal(r.avertissement, null);
   });
   test("relevé trop ancien : avertissement prudent (« a pu paraître »), jamais d'affirmation", () => {
-    const r = R.resumeSourcesDiscipline("force", "2026-12-01");
+    const r = R.resumeSourcesDiscipline("force", "2027-01-05");
     assert.equal(r.texte, "Barèmes relevés le 24/10/2026 : FFForce 2025-2026 (V03-1) et IPF 2026.");
-    assert.equal(r.avertissement, "Une nouvelle édition a pu paraître depuis (FFForce 2025-2026 (V03-1)). Avant une compétition, vérifie sur le site de la fédération.");
+    assert.equal(r.avertissement, "Une nouvelle édition a pu paraître depuis (FFForce 2025-2026 (V03-1) et IPF 2026). Avant une compétition, vérifie sur le site de la fédération.");
     assert.equal(R.resumeSourcesDiscipline("force", "2026-10-28").avertissement, null);
   });
   test("discipline sans source : rien", () => {
@@ -238,13 +236,13 @@ describe("contrôleur : rapport", () => {
     assert.match(r.markdown, /Rien à faire : tous les barèmes sont à jour/);
     assert.match(r.markdown, /Contrôle hors ligne/);
   });
-  test("le 24/11/2026 avec le vrai registre : la FFForce en retard et quatre échéances proches, tableau de toutes les sources", async () => {
+  test("le 24/11/2026 avec le vrai registre : cinq échéances proches (FFForce comprise), tableau de toutes les sources", async () => {
     const rs = await V.verifierSources({ aujourdhui: "2026-11-24", enLigne: false });
     const r = V.construireRapport(rs, "2026-11-24", { enLigne: false });
     assert.equal(r.aAgir, true);
     assert.match(r.markdown, /\*\*5 jeux de données à vérifier ou à mettre à jour\.\*\*/);
     assert.match(r.markdown, /Échéance le 31\/12\/2026 \(dans 37 jours\) : la nouvelle édition est attendue\./);
-    assert.match(r.markdown, /## FFForce 2025-2026 \(V03-1\)\n\n- \[ \] L'échéance du 23\/11\/2026 est passée/);
+    assert.match(r.markdown, /## FFForce 2025-2026 \(V03-1\)\n\n- \[ \] Échéance le 31\/12\/2026/);
     assert.equal((r.markdown.match(/^\| /gm) || []).length, R.SOURCES_BAREMES.length + 1, "une ligne par source et l'en-tête");
   });
   test("sites inaccessibles sans autre changement : la demande s'ouvre quand même, avec la raison", async () => {
