@@ -139,6 +139,9 @@ export function decisionRappelNutrition({ maintenant, profile, targets, totaux, 
   const non = (raison) => ({ rappeler: false, raison });
   if (!profile || !profile.nutritionRemindersEnabled) return non("rappel desactive");
   if (!targets || !targets.calories) return non("objectifs non calcules");
+  // Jamais de rappel avec un « NaN » : des totaux illisibles valent mieux
+  // qu'un message faux (28 octobre 2026).
+  if (!totaux || ![totaux.kcal, totaux.p, totaux.c, totaux.f].every(Number.isFinite)) return non("totaux illisibles");
 
   const h = maintenant.getHours();
   const debut = profile.nutritionStartHour ?? RAPPEL_NUTRITION.heureDebutDefaut;

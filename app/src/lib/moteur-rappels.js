@@ -28,6 +28,23 @@ import {
   messageNutrition
 } from "./rappels.js";
 
+/**
+ * Les totaux du jour, tels que les rend totauxDuJour (score-jour.js :
+ * calories, protein, carbs, fat), dans la forme que lit le rappel
+ * nutrition (kcal, p, c, f).
+ *
+ * Les deux modules n'avaient pas les memes noms : le rappel recevait des
+ * champs qui n'existaient pas et affichait « Nutrition : NaN / 3010 kcal —
+ * il te reste NaN kcal » (vu le 28 octobre 2026). Cette fonction est le
+ * seul passage de l'un a l'autre.
+ */
+export const totauxPourRappel = (totaux) => ({
+  kcal: Number((totaux && totaux.calories) || 0),
+  p: Number((totaux && totaux.protein) || 0),
+  c: Number((totaux && totaux.carbs) || 0),
+  f: Number((totaux && totaux.fat) || 0)
+});
+
 export const CLE_ETAT_HYDRATATION = "coach_hydration_state";
 export const CLE_ETAT_NUTRITION = "coach_nutrition_state";
 export const CLE_ETAT_CRENEAU = "coach_creneau_reminder_state";
