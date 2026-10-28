@@ -1,0 +1,80 @@
+# Veille des barèmes officiels (28 octobre 2026).
+#
+# Les grilles de niveau et les minima de compétition de l'application
+# (app/src/lib/grille-ffforce.js, grilles-sports.js) viennent de documents
+# de fédérations qui changent à des dates différentes : la FFForce a publié
+# quatre fois en douze mois, la FFHM et la FFN en été, World Aquatics en
+# septembre et en janvier. Une fois par semaine, ce workflow compare le
+# registre des sources (app/src/lib/sources-baremes.js) au calendrier et aux
+# sites des fédérations (scripts-donnees/verifier-sources.mjs).
+#
+# Il NE MODIFIE RIEN : il ouvre une demande GitHub « Barèmes officiels à
+# vérifier » (une seule, mise à jour sur place) quand une saison est
+# terminée, qu'un document a changé, qu'une nouvelle édition apparaît ou
+# qu'un site n'a pas pu être consulté, et la referme quand il n'y a plus
+# rien. Marien valide la mise à jour des données : voir
+# docs/baremes-mise-a-jour.md.
+#
+# Sans risque : ce workflow ne déploie rien et ne touche pas au site. Il
+# lit quelques pages publiques par semaine, avec un agent qui se présente.
+
+name: Veille des barèmes
+
+on:
+  schedule:
+    # Le lundi à 5 h 17 UTC (6 h 17 ou 7 h 17 à Paris), hors des heures rondes.
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: veille-baremes
+  cancel-in-progress: false
+
+jobs:
+  veille:
+    name: Contrôler les sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Contrôler le calendrier et les sites des fédérations
+        id: veille
+        run: node scripts-donnees/verifier-sources.mjs --rapport rapport-baremes.md --json rapport-baremes.json
+
+      - name: Conserver le rapport
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-baremes
+          path: |
+            rapport-baremes.md
+            rapport-baremes.json
+
+      - name: Ouvrir, mettre à jour ou fermer la demande
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUVRIR: ${{ steps.veille.outputs.ouvrir }}
+        run: |
+          titre="Barèmes officiels à vérifier"
+          gh label create baremes --description "Veille des barèmes officiels" --color FBCA04 2>/dev/null || true
+          numero=$(gh issue list --state open --label baremes --json number,title --jq "map(select(.title == \"$titre\")) | .[0].number // empty")
+          if [ "$OUVRIR" = "true" ]; then
+            if [ -n "$numero" ]; then
+              gh issue edit "$numero" --body-file rapport-baremes.md
+            else
+              gh issue create --title "$titre" --label baremes --body-file rapport-baremes.md
+            fi
+          elif [ -n "$numero" ]; then
+            gh issue close "$numero" --comment "Plus rien à vérifier au contrôle du $(date -u +%d/%m/%Y) : demande fermée."
+          fi

@@ -18,7 +18,7 @@ import { COLORS } from "../tokens.js";
 import { fmtWeekShort, round } from "../lib/dates.js";
 import { MOUVEMENTS_FORCE, PALIERS_RPE, RPE_CHART, meilleursMaxis, totalForce } from "../lib/force.js";
 import { Card, SectionTitle } from "../ui/primitives.jsx";
-import { NiveauForce } from "../ui/NiveauPerformances.jsx";
+import { NiveauForce, SourcesBaremes } from "../ui/NiveauPerformances.jsx";
 import { maxisRetenus } from "../lib/performances.js";
 import { TEXTES_PERF } from "../lib/textes-performances.js";
 
@@ -205,6 +205,7 @@ export function ForceAthletique({ maxis, onDefinirMaxi, sessions, profil, poidsK
       <div style={styleBlocNiveau}>
         <div style={styleTitreNiveau}>{TEXTES_PERF.tonNiveauForce}</div>
         <NiveauForce total={retenus.total} bench={retenus.bench} profil={profil || {}} poidsKg={poidsKg} />
+        <SourcesBaremes discipline="force" />
       </div>
 
       <TableRPE />

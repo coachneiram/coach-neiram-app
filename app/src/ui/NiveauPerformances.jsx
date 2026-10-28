@@ -10,6 +10,8 @@
 import { COLORS, POLICES } from "../tokens.js";
 import { LIBELLES_AGE, niveauCourse, niveauFFForce, niveauFFHM, niveauNatation, pointsGL, pointsSinclair } from "../lib/niveaux.js";
 import { TEXTES_PERF as T } from "../lib/textes-performances.js";
+import { resumeSourcesDiscipline } from "../lib/sources-baremes.js";
+import { todayISO } from "../lib/dates.js";
 
 function Ligne({ children, couleur = COLORS.textMuted, gras }) {
   return <div style={{ fontSize: 12, color: couleur, fontWeight: gras ? 700 : 400, lineHeight: 1.5, marginTop: 3 }}>{children}</div>;
@@ -124,6 +126,21 @@ export function NiveauNatation({ id, secondes, profil = {} }) {
           {T.repere(r)}
         </Ligne>
       ))}
+    </div>
+  );
+}
+
+/**
+ * D'où viennent les barèmes de la discipline, quand ils ont été relevés, et
+ * l'avertissement quand une saison a pu changer (lib/sources-baremes.js).
+ */
+export function SourcesBaremes({ discipline }) {
+  const r = resumeSourcesDiscipline(discipline, todayISO());
+  if (!r) return null;
+  return (
+    <div data-sources-baremes={discipline} style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 10.5, color: COLORS.textFaint, lineHeight: 1.5 }}>{r.texte}</div>
+      {r.avertissement && <div style={{ fontSize: 10.5, color: COLORS.warn, lineHeight: 1.5, marginTop: 2 }}>{r.avertissement}</div>}
     </div>
   );
 }
