@@ -40,10 +40,11 @@ import {
   CLE_ETAT_CRENEAU,
   CLE_ETAT_HYDRATATION,
   CLE_ETAT_NUTRITION,
+  totauxPourRappel,
   verifierRappelHydratation,
   verifierRappelNutrition
 } from "../app/src/lib/moteur-rappels.js";
-import { fmtL } from "../app/src/lib/score-jour.js";
+import { fmtL, totauxDuJour } from "../app/src/lib/score-jour.js";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const lire = (c) => readFileSync(join(ICI, "..", c), "utf8");
@@ -329,6 +330,65 @@ describe("declenchement des rappels", () => {
       [RAPPEL_HYDRATATION.tag, RAPPEL_NUTRITION.tag, RAPPEL_CRENEAU.tag],
       ["coach-hydration", "coach-nutrition", "coach-creneau"]
     );
+  });
+});
+
+describe("les nombres affichés par les rappels (28 octobre 2026)", () => {
+  beforeEach(installerStockage);
+  const REPAS = [
+    { date: "2026-09-08", calories: 620.4, protein: 48, carbs: 70, fat: 12 },
+    { date: "2026-09-08", calories: 280, protein: 20, carbs: 30, fat: 8 }
+  ];
+
+  test("nutrition : les totaux du jour passent par l'adaptateur, aucun « NaN » à l'écran", () => {
+    const vus = [];
+    const r = verifierRappelNutrition({
+      profile: PROFIL_NUT,
+      targets: { calories: 3010, protein: 180, carbs: 350, fat: 90 },
+      totaux: totauxPourRappel(totauxDuJour(REPAS)),
+      afficherToast: () => {},
+      maintenant: A(15),
+      suggerer: () => [],
+      montrer: (m) => (vus.push(m.message), true)
+    });
+    assert.equal(r.montre, true);
+    assert.equal(vus[0], "Nutrition : 900 / 3010 kcal — il te reste 2110 kcal (P 112 g · G 250 g · L 70 g) aujourd'hui.");
+    assert.ok(!/NaN/.test(vus[0]));
+  });
+
+  test("nutrition : rien de noté aujourd'hui = 0 kcal, pas NaN", () => {
+    assert.deepEqual(totauxPourRappel(totauxDuJour([])), { kcal: 0, p: 0, c: 0, f: 0 });
+    assert.deepEqual(totauxPourRappel(null), { kcal: 0, p: 0, c: 0, f: 0 });
+  });
+
+  test("nutrition : des totaux illisibles ne produisent jamais de rappel", () => {
+    // Forme de totauxDuJour passée sans adaptateur : c'était la panne.
+    const d = decisionRappelNutrition({ profile: PROFIL_NUT, targets: OBJECTIFS, totaux: totauxDuJour(REPAS), dernierEnvoi: null, maintenant: A(15) });
+    assert.equal(d.rappeler, false);
+    assert.equal(d.raison, "totaux illisibles");
+    assert.equal(decisionRappelNutrition({ profile: PROFIL_NUT, targets: OBJECTIFS, totaux: undefined, dernierEnvoi: null, maintenant: A(15) }).rappeler, false);
+  });
+
+  test("hydratation : litres bus, objectif et reste exacts", () => {
+    const vus = [];
+    verifierRappelHydratation({
+      profile: { hydrationRemindersEnabled: true, targetWaterL: 2.5 },
+      journalDuJour: { waterMl: 750 },
+      afficherToast: () => {},
+      maintenant: A(14),
+      montrer: (m) => (vus.push(m.message), true)
+    });
+    assert.equal(vus[0], `Hydratation : ${fmtL(750)} / ${fmtL(2500)} — il te reste ${fmtL(1750)} à boire aujourd'hui.`);
+    assert.ok(!/NaN/.test(vus[0]));
+  });
+
+  test("hydratation : sans objectif dans le profil, 2 L ; sans saisie, tout reste à boire", () => {
+    const d = decisionRappelHydratation({ maintenant: A(14), profile: { hydrationRemindersEnabled: true }, journalDuJour: undefined, dernierEnvoi: null });
+    assert.deepEqual([d.bu, d.objectif, d.reste], [0, 2000, 2000]);
+  });
+
+  test("App passe les totaux du jour par totauxPourRappel", () => {
+    assert.match(lire("app/src/App.jsx"), /totaux: totauxPourRappel\(totauxDuJour\(logEntries\.filter/);
   });
 });
 

@@ -41,6 +41,7 @@ import {
 } from "./lib/rappel-dimanche.js";
 import {
   verifierRappelCreneau,
+  totauxPourRappel,
   verifierRappelHydratation,
   verifierRappelNutrition
 } from "./lib/moteur-rappels.js";
@@ -457,7 +458,7 @@ export default function App() {
       verifierRappelNutrition({
         profile,
         targets,
-        totaux: totauxDuJour(logEntries.filter((e) => e.date === todayISO())),
+        totaux: totauxPourRappel(totauxDuJour(logEntries.filter((e) => e.date === todayISO()))),
         afficherToast
       });
       verifierRappelCreneau({ profile, seances: sessions, afficherToast });
