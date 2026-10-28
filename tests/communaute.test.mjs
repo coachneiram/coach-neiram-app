@@ -270,3 +270,23 @@ describe("écran : accès depuis Séances, textes en constantes", () => {
     assert.ok(!/ADMIN_SECRET|Bearer [A-Za-z0-9]/.test(lire("app/src/lib/communaute.js")));
   });
 });
+
+describe("classement relu après la publication d'un score (28 octobre 2026)", () => {
+  // Le client qui rejoint un classement publie son score ; la liste lue avant
+  // (ou pendant) la publication ne le contenait pas, et restait ainsi.
+  // La fumée fumee-communaute (étape 10) le vérifie dans un navigateur, avec
+  // une publication retardée de 1,5 s.
+  test("l'écran compte les publications et les passe aux onglets", () => {
+    const ecran = lire("app/src/ui/EcranCommunaute.jsx");
+    assert.match(ecran, /setVersionScores\(\(v\) => v \+ 1\)/);
+    assert.match(ecran, /versionScores=\{versionScores\}/);
+    assert.match(ecran, /if \(await publierSiBesoin\(\{ stats: statsActuelles\(\), force: true \}\)\) setVersionScores/, "accord donné");
+    assert.match(ecran, /publierSiBesoin\(\{ stats: statsActuelles\(\) \}\)\.then\(\(publie\) => \{/, "ouverture de la fenêtre");
+  });
+
+  test("le classement et le podium sont relus quand le compteur change", () => {
+    const onglet = lire("app/src/ui/OngletClassements.jsx");
+    assert.match(onglet, /\}, \[categorie, cleFiltres, accord, versionScores\]\);/);
+    assert.match(onglet, /if \(versionScores\) setPodiums\(null\);/);
+  });
+});

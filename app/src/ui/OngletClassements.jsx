@@ -231,7 +231,7 @@ function AthleteDuMois({ donnees, discipline }) {
   );
 }
 
-export function OngletClassements({ profil, onAccord, envoi, onToast, donnees, disciplineInitiale }) {
+export function OngletClassements({ profil, onAccord, envoi, onToast, donnees, disciplineInitiale, versionScores = 0 }) {
   const groupeDepart = (disciplineInitiale && Object.keys(DISCIPLINE_GROUPE).find((g) => DISCIPLINE_GROUPE[g] === disciplineInitiale)) || GROUPES_COMMUNAUTE[0];
   const [groupe, setGroupe] = useState(groupeDepart);
   const [categorie, setCategorie] = useState(CATEGORIES_COMMUNAUTE.find((c) => c.groupe === groupeDepart).id);
@@ -270,7 +270,13 @@ export function OngletClassements({ profil, onAccord, envoi, onToast, donnees, d
     return () => {
       actif = false;
     };
-  }, [categorie, cleFiltres, accord]);
+    // versionScores : la liste est relue après chaque publication de score.
+  }, [categorie, cleFiltres, accord, versionScores]);
+
+  // Une publication de score change le podium : il est relu lui aussi.
+  useEffect(() => {
+    if (versionScores) setPodiums(null);
+  }, [versionScores]);
 
   // Athlète du mois : une fois, à l'arrivée sur une discipline (accord donné).
   useEffect(() => {

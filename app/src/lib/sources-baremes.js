@@ -35,6 +35,18 @@
 import { SAISON_FFFORCE } from "./grille-ffforce.js";
 
 const PAGE_FFFORCE = "https://www.ffforce.fr/fr/force-athletique-ffforce/national-force-athletique/minimas-force-athletique.html";
+const NIVEAUX_FFFORCE_V03 = "https://www.ffforce.fr/medias/fichiers/Saison%202026/Force%20Athletique/Niveaux/Niveaux%20-%202025-2026%20V03-1.xlsx";
+const IPF_COEFFICIENTS_GL = "https://www.powerlifting.sport/fileadmin/ipf/data/ipf-formula/IPF_GL_Coefficients-2020.pdf";
+const IPF_ANNONCE_GL = "https://www.powerlifting.sport/fileadmin/ipf/data/ipf-formula/Announcement_IPF_GL_Formula_2020_1_.pdf";
+// Tables de points World Aquatics publiées sur la page « points » (relevé du 28/10/2026).
+const WA_TABLES = [
+  "https://resources.fina.org/fina/document/2026/03/02/2ff83c61-de9d-4b14-8e66-dafd60974e07/World-Aquatics-Points-LCM_2026_Male-1-.pdf",
+  "https://resources.fina.org/fina/document/2026/03/02/ae522afa-e03f-417e-9169-c39e868af9a6/World-Aquatics-Points-LCM_2026_Female-1-.pdf",
+  "https://resources.fina.org/fina/document/2026/03/02/e7b71339-5788-493d-802f-7f992c6ea85d/World-Aquatics-Points-LCM_2026_Relay-1-.pdf",
+  "https://resources.fina.org/fina/document/2026/09/05/eb72585f-25af-4ac7-b052-d72a3d51ddf0/World-Aquatics-Points-SCM_2026_Male.pdf",
+  "https://resources.fina.org/fina/document/2026/09/05/38f8e66d-8c33-45cc-a39c-150bbe69f43d/World-Aquatics-Points-SCM_2026_Female.pdf",
+  "https://resources.fina.org/fina/document/2026/09/05/b7fc9f8b-20a1-4470-bd6f-89318e0297b4/World-Aquatics-Points-SCM_2026_Relay.pdf"
+];
 const LIVRET_FFA_2026 = "https://www.athle.fr/Reglement/livret_2026_running.pdf";
 const REGLEMENT_FFHM_2026 = "https://www.ffhaltero.fr/wp-content/uploads/2026/07/Reglement-sport-halterophilie-2026-2027.pdf";
 const ANNUEL_FFN_2026 = "https://www.ffnatation.fr/sites/default/files/2026-09/26_VPUB_260907_0.pdf";
@@ -52,7 +64,8 @@ export const RELEVE_INITIAL = "2026-10-24";
  * 45 par défaut). `decalage` : l'année du fichier cherché est l'année de
  * l'échéance + `decalage` (0 pour une saison qui démarre l'année de
  * l'échéance, 1 pour un millésime de l'année suivante).
- * `documentsConnus` : fichiers d'où viennent les valeurs ; un fichier
+ * `references` : adresses citées pour mémoire, jamais lues par la veille (site
+ * qui bloque les machines de GitHub). `documentsConnus` : fichiers d'où viennent les valeurs ; un fichier
  * modifié après `releveLe` est à relire. `motsCles` : un lien de page qui
  * en contient un et qui n'est pas connu est signalé comme nouveau document.
  */
@@ -70,7 +83,8 @@ export const SOURCES_BAREMES = [
     echeanceNote:
       "Pas de calendrier fixe : la FFForce publie par morceaux (subjuniors et juniors 02/2025, masters 04/2025, seniors 11/2025, développé couché N1 01/2026), et au relevé du 24/10/2026 la grille 2025-2026 était encore la plus récente. Revue tous les mois ; la page est lue chaque semaine.",
     pages: [PAGE_FFFORCE],
-    documentsConnus: [],
+    // Le fichier d'où viennent les valeurs ; la page n'en proposait pas d'autre au 28/10/2026.
+    documentsConnus: [NIVEAUX_FFFORCE_V03],
     motsCles: ["niveau", "minima", "minimas", "reglement"],
     sondes: []
   },
@@ -85,7 +99,7 @@ export const SOURCES_BAREMES = [
     echeance: "2026-12-31",
     echeanceNote: "Supposée : le règlement technique IPF porte le millésime de l'année ; les coefficients GL n'ont pas changé depuis 2020.",
     pages: ["https://www.powerlifting.sport/rules/codes/info/ipf-formula"],
-    documentsConnus: [],
+    documentsConnus: [IPF_COEFFICIENTS_GL, IPF_ANNONCE_GL],
     motsCles: ["gl", "coefficient", "technical", "rulebook"],
     sondes: []
   },
@@ -117,8 +131,9 @@ export const SOURCES_BAREMES = [
     saison: "cycle olympique 2028",
     releveLe: RELEVE_INITIAL,
     verifierTousLesJours: 365,
-    echeanceNote: "Pas de date officielle : revue une fois par an.",
-    pages: ["https://iwf.sport/2025/11/03/bodyweight-categories-for-the-2028-olympics-in-los-angeles-are-defined/"],
+    echeanceNote: "Pas de date officielle : revue une fois par an. Le site de l'IWF répond 403 aux machines de GitHub (28/10/2026) : l'article est cité en référence, il n'est pas lu par la veille.",
+    pages: [],
+    references: ["https://iwf.sport/2025/11/03/bodyweight-categories-for-the-2028-olympics-in-los-angeles-are-defined/"],
     documentsConnus: [],
     motsCles: ["categories", "bodyweight"],
     sondes: []
@@ -215,7 +230,7 @@ export const SOURCES_BAREMES = [
     echeance: "2026-12-31",
     echeanceNote: "Bassin de 50 m : valable du 01/01 au 31/12/2026 ; bassin de 25 m : du 01/09/2026 au 31/08/2027. Les deux sont revus à la première échéance.",
     pages: ["https://www.worldaquatics.com/swimming/points"],
-    documentsConnus: [BASES_WA_2026],
+    documentsConnus: [BASES_WA_2026, ...WA_TABLES],
     motsCles: ["points", "base"],
     sondes: []
   }

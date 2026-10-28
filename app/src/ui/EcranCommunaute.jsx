@@ -135,6 +135,10 @@ export function EcranCommunaute({ open, onClose, ongletInitial, onToast: toastEx
   const [erreur, setErreur] = useState(null);
   const [envoi, setEnvoi] = useState(false);
   const [changer, setChanger] = useState(false);
+  // Compte les publications de scores : le classement se relit après chacune.
+  // Sans cela, la liste lue en même temps que la publication (ou avant elle)
+  // restait sans le client qui venait de rejoindre un classement (28 octobre 2026).
+  const [versionScores, setVersionScores] = useState(0);
 
   const statsActuelles = () => statsCommunaute({ date: todayISO(), ...donnees, accords: lireCommunaute() });
 
@@ -146,7 +150,11 @@ export function EcranCommunaute({ open, onClose, ongletInitial, onToast: toastEx
       .then((r) => {
         if (!vivant) return;
         setProfil(r.profil);
-        if (r.profil) publierSiBesoin({ stats: statsActuelles() });
+        if (r.profil) {
+          publierSiBesoin({ stats: statsActuelles() }).then((publie) => {
+            if (publie && vivant) setVersionScores((v) => v + 1);
+          });
+        }
       })
       .catch((e) => vivant && setErreur(messageErreurCommunaute(e)));
     return () => {
@@ -164,8 +172,9 @@ export function EcranCommunaute({ open, onClose, ongletInitial, onToast: toastEx
       const p = await changerAccord(type, oui);
       setProfil(p);
       // Chiffres de l'accord donné : publiés tout de suite.
-      if (oui) await publierSiBesoin({ stats: statsActuelles(), force: true });
-      else if (onToast) onToast(type === "disciplines" ? T.disciplinesRetirees : T.transformationRetiree);
+      if (oui) {
+        if (await publierSiBesoin({ stats: statsActuelles(), force: true })) setVersionScores((v) => v + 1);
+      } else if (onToast) onToast(type === "disciplines" ? T.disciplinesRetirees : T.transformationRetiree);
     } catch (e) {
       setErreur(messageErreurCommunaute(e));
     } finally {
@@ -222,7 +231,7 @@ export function EcranCommunaute({ open, onClose, ongletInitial, onToast: toastEx
             </button>
           ))}
         </div>
-        <Composant profil={profil} onAccord={accorder} envoi={envoi} onToast={onToast} donnees={donnees} />
+        <Composant profil={profil} onAccord={accorder} envoi={envoi} onToast={onToast} donnees={donnees} versionScores={versionScores} />
         <Card style={{ marginTop: 14 }}>
           <div data-mon-profil-communaute style={STYLE_DISCRET}>
             {T.tonPseudo} <strong style={{ color: COLORS.text }}>{profil.pseudo}</strong>

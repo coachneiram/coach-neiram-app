@@ -26,7 +26,10 @@
  *   8. SUPPRESSION : Marc « Supprimer mon profil de la communauté » : plus
  *      rien de lui sur le serveur, le formulaire de pseudo revient ;
  *   9. SANS CODE D'ACCÈS : la fenêtre renvoie aux Réglages ; le Worker
- *      refuse /communaute/* sans jeton (même en transition).
+ *      refuse /communaute/* sans jeton (même en transition) ;
+ *  10. ORDRE DES APPELS : la publication du score arrive APRÈS la lecture
+ *      du classement (1,5 s de retard simulé) : le client doit quand même se
+ *      voir dans la liste, sans rouvrir la fenêtre (28 octobre 2026).
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-communaute.mjs
@@ -88,7 +91,7 @@ const aujourdhui = new Date().toISOString().slice(0, 10);
 const jour = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 
 /** Un téléphone : profil, maxis (datés du jour), pesées, réponses de santé. */
-async function telephone({ prenom, sexe = "homme", acces, maxis = null, corps = [], sante = null, seances = [] }) {
+async function telephone({ prenom, sexe = "homme", acces, maxis = null, corps = [], sante = null, seances = [], delaiStatsMs = 0 }) {
   const ctx = await nav.newContext(appareil());
   await ctx.addInitScript(sansAides);
   const page = await ctx.newPage();
@@ -97,6 +100,8 @@ async function telephone({ prenom, sexe = "homme", acces, maxis = null, corps = 
   await page.route("**/communaute/**", async (route) => {
     const req = route.request();
     const url = new URL(req.url());
+    // Publication des scores ralentie : la lecture du classement passe avant.
+    if (delaiStatsMs && url.pathname.endsWith("/communaute/stats")) await new Promise((fin) => setTimeout(fin, delaiStatsMs));
     const r = await silencieux(() =>
       worker.fetch(new Request("https://proxy.test" + url.pathname, { method: req.method(), headers: req.headers(), body: req.method() === "POST" ? req.postData() || "" : undefined }), env)
     );
@@ -205,6 +210,10 @@ try {
   await rejoindre(B.page);
   await accordDisciplines(B.page);
   await accordDisciplines(A.page);
+  // Le classement se rafraîchit après l'accord : on attend la deuxième ligne
+  // (Marc), au lieu de compter sur 1,2 s qui ne suffit pas quand la machine
+  // est chargée (28 octobre 2026).
+  await fenetre(A.page).locator("[data-ligne-classement]").nth(1).waitFor({ timeout: 15000 });
   const classeA = await lignesClassement(A.page);
   await B.page.reload({ waitUntil: "domcontentloaded" });
   await B.page.waitForTimeout(1200);
@@ -367,6 +376,22 @@ try {
       ? "la carte et la fenêtre renvoient aux Réglages ; le Worker refuse sans jeton (401, même en transition)"
       : `*** fenêtre ${sansAcces}, « ${texteCarte.slice(0, 80)} », Worker ${anonyme} ***`
   );
+
+  // 10. Ordre des appels : le score est publié 1,5 s après la lecture du classement.
+  const lucas = await jetonClient("Lucas T.");
+  const E = await telephone({ prenom: "Lucas", acces: lucas, maxis: { squat: 200, bench: 130, deadlift: 230 }, corps: [{ date: jour(-1), weightKg: 80 }], delaiStatsMs: 1500 });
+  await ouvrirCommunaute(E.page);
+  await rejoindre(E.page);
+  await accordDisciplines(E.page);
+  const sonLigne = fenetre(E.page).locator('[data-ligne-classement][data-pseudo="Lucas"]');
+  const vuTot = await sonLigne.count();
+  let vuAvecDelai = true;
+  await sonLigne.waitFor({ timeout: 12000 }).catch(() => (vuAvecDelai = false));
+  console.log(
+    "10. ORDRE DES APPELS    :",
+    vuAvecDelai ? `publication 1,5 s après la lecture : le client se voit dans le classement${vuTot ? "" : " (liste rafraîchie après la publication)"}` : "*** le client ne se voit pas dans le classement : la liste lue avant la publication n'a pas été rafraîchie ***"
+  );
+  await E.ctx.close();
 } catch (e) {
   console.log("ECHEC :", e.message.split("\n")[0]);
 }
