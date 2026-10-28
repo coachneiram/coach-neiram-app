@@ -9,6 +9,7 @@
 
 import { num, round } from "./dates.js";
 import { GRILLE_FFFORCE, NIVEAUX_FFFORCE, SAISON_FFFORCE } from "./grille-ffforce.js";
+import { sourceParId } from "./sources-baremes.js";
 import { BAREME_FFA, BASES_WORLD_AQUATICS, CATEGORIES_IWF, GRILLE_FFHM, MINIMA_FRANCE_COURSE, NIVEAUX_FFA, QUALIF_FFN_50, RECORDS_ROUTE, SERIES_FFHM, SINCLAIR } from "./grilles-sports.js";
 
 /* ------------------------------------------------------------------ */
@@ -193,7 +194,7 @@ export function niveauFFHM({ sexe, age, poids, valeur }) {
   const atteint = atteints.length ? atteints[atteints.length - 1] : null;
   const suivant = paliers.find((p) => !p.atteint);
   return {
-    saison: "2026-2027",
+    saison: sourceParId("ffhm-series").saison,
     categorie,
     categorieAge,
     atteint: atteint ? { id: atteint.id, libelle: atteint.libelle } : null,

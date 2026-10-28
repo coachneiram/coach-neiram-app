@@ -69,11 +69,13 @@ try {
   for (const [id, v] of [["squat", "180"], ["bench", "120"], ["deadlift", "220"]]) await carte.locator(`[data-perf="pl_${id}"]`).fill(v);
   await page.waitForTimeout(300);
   const t1 = net(await carte.locator("[data-niveau-force]").innerText().catch(() => ""));
+  // Source des barèmes (28 octobre 2026) : fédération, saison et date de relevé.
+  const sourceForce = net(await carte.locator('[data-sources-baremes="force"]').first().innerText().catch(() => ""));
   console.log(
     "1. FORCE ATHLÉTIQUE     :",
-    /Total 520 kg : niveau/.test(t1) && /grille FFForce/.test(t1) && /Points IPF GL : \d/.test(t1)
-      ? t1.split(" Catégorie")[0]
-      : `*** « ${t1.slice(0, 200)} » ***`
+    /Total 520 kg : niveau/.test(t1) && /grille FFForce/.test(t1) && /Points IPF GL : \d/.test(t1) && /^Barèmes relevés le \d{2}\/\d{2}\/\d{4} : FFForce .+ et IPF 2026\./.test(sourceForce)
+      ? `${t1.split(" Catégorie")[0]} · « ${sourceForce.slice(0, 60)}… »`
+      : `*** « ${t1.slice(0, 200)} » · source « ${sourceForce} » ***`
   );
 
   // 2. Course.
@@ -89,9 +91,12 @@ try {
   await page.waitForTimeout(200);
   const erreur = /Temps à écrire comme 24:35/.test(net(await carte.innerText()));
   const garde = await page.evaluate(() => JSON.parse(localStorage.getItem("cn_performances") || "{}").course_10k?.valeur);
+  const sourceCourse = net(await carte.locator('[data-sources-baremes="course"]').first().innerText().catch(() => ""));
   console.log(
     "2. COURSE 10 KM         :",
-    /^Niveau FFA : /.test(t2) && erreur && garde === 2700 ? `« ${t2} », faute signalée, chrono gardé` : `*** « ${t2} », erreur ${erreur}, gardé ${garde} ***`
+    /^Niveau FFA : /.test(t2) && erreur && garde === 2700 && /^Barèmes relevés le \d{2}\/\d{2}\/\d{4} : FFA barème 2010, FFA running .+ et records du monde World Athletics\./.test(sourceCourse)
+      ? `« ${t2} », faute signalée, chrono gardé, source FFA affichée`
+      : `*** « ${t2} », erreur ${erreur}, gardé ${garde}, source « ${sourceCourse} » ***`
   );
 
   // 3. Transformation.

@@ -15,7 +15,7 @@ import { DISCIPLINES_PERF, EPREUVES, enregistrerPerformance, fmtTemps, lirePerfo
 import { MOUVEMENTS_FORCE } from "../lib/force.js";
 import { TEXTES_PERF as T } from "../lib/textes-performances.js";
 import { Card, SectionTitle } from "./primitives.jsx";
-import { NiveauCourse, NiveauForce, NiveauHalterophilie, NiveauNatation } from "./NiveauPerformances.jsx";
+import { NiveauCourse, NiveauForce, NiveauHalterophilie, NiveauNatation, SourcesBaremes } from "./NiveauPerformances.jsx";
 
 const champ = {
   width: "100%",
@@ -164,6 +164,7 @@ export function CartePerformances({ profil = {}, poidsKg, maxisForce, onDefinirM
           )}
           {discipline === "course" && <ListeNiveaux epreuves={epreuves} perfs={perfs} profil={profil} Niveau={NiveauCourse} vide={T.courseVide} />}
           {discipline === "natation" && <ListeNiveaux epreuves={epreuves} perfs={perfs} profil={profil} Niveau={NiveauNatation} vide={T.natationVide} />}
+          <SourcesBaremes discipline={discipline} />
         </div>
       </div>
     </Card>
