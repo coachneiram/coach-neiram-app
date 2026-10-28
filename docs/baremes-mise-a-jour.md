@@ -1,6 +1,6 @@
 # Barèmes officiels : veille et mise à jour
 
-Dernière mise à jour de ce document : 28 octobre 2026.
+Dernière mise à jour de ce document : 28 octobre 2026 (contrôle Chrome).
 
 ## Ce que fait la veille
 
@@ -31,7 +31,7 @@ barème faux peut coûter une qualification manquée.
 
 | Jeu de données | Fédération | Saison actuelle | À revoir |
 |---|---|---|---|
-| Niveaux de force athlétique | FFForce | 2025-2026 (V03-1) | chaque mois (publications sans calendrier fixe) |
+| Niveaux de force athlétique | FFForce | 2025-2026 (V03-1) | fin 2026 (la page annonce la révision Senior/Open pour 2027) |
 | Catégories IPF, coefficients GL | IPF | 2026 | fin 2026 |
 | Séries d'haltérophilie | FFHM | 2026-2027 | 90 jours avant le 31/08/2027 (parution habituelle : juillet) |
 | Catégories de poids IWF | IWF | cycle 2028 | chaque année |
@@ -76,7 +76,7 @@ cohérentes entre elles.
 
 Sous « Ton niveau » (Mes performances, Force athlétique), une ligne dit d'où
 viennent les barèmes : « Barèmes relevés le 24/10/2026 : FFForce 2025-2026
-(V03-1) et IPF 2026. » Quand l'échéance d'une source est passée sans que le
+(V03-1) et IPF 2026. » (la date la plus ancienne des sources citées) Quand l'échéance d'une source est passée sans que le
 relevé ait été renouvelé, une seconde ligne ajoute : « Une nouvelle édition a
 pu paraître depuis… Avant une compétition, vérifie sur le site de la
 fédération. » L'app n'affirme jamais qu'une édition existe : elle dit que la
@@ -97,3 +97,24 @@ saison est finie.
 - Sur un dépôt public, GitHub désactive les workflows planifiés après 60 jours
   sans aucune activité ; il écrit alors au propriétaire, qui peut les réactiver
   (onglet Actions).
+
+## Réserves au 28 octobre 2026 (contrôle sur les sites par Claude in Chrome)
+
+Aucune valeur n'a changé sur les sources lisibles : FFHM, FFN, World Aquatics,
+IPF, IWF et Sinclair ont leur `releveLe` au 28/10/2026. Quatre points restent
+**non vérifiés** et gardent la date du 24/10/2026 :
+
+1. **Cellules Excel FFForce** : seule l'édition (V03-1) est confirmée. La page
+   annonce la révision des niveaux Senior/Open de force athlétique fin 2026 pour
+   2027 (échéance du registre : 31/12/2026). Les dates de publication de la page
+   (13/11/2025, 24/01/2026, 04/04/2025, 16/06/2025) diffèrent de celles du commentaire
+   du code (26/01/2026, 18/02/2025, 07/04/2025) : à trancher avec le fichier.
+2. **Barème FFA (niveaux R1 à D7)** : les pages 125 et 122 archivées ne permettent pas
+   de relire D7. Une troisième page citée (`contenu/classement-des-clubs-reglementbaremes/62`)
+   reste à lire.
+3. **Minima FFA 10 km seniors** : le livret 2025-2026 lu ne les contient pas (critère
+   « Nationale 3 »). Valeur à confirmer avant de la montrer.
+4. **Records du monde hommes World Athletics** : le site n'a pas pu être lu.
+
+Pour lever 1 à 3 : joindre le fichier Excel FFForce et le livret PDF FFA, ce qui
+permet de relire les cellules par programme.

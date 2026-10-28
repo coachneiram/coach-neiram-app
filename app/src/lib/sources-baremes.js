@@ -54,6 +54,8 @@ const BASES_WA_2026 =
   "https://resources.fina.org/fina/document/2026/09/05/9b48fb98-233c-4ce9-b67b-bc6163319bbd/Points-Base-times-SCM-and-LCM-2026_09.2026.pdf";
 
 export const RELEVE_INITIAL = "2026-10-24";
+// Contrôle sur les sites par Claude in Chrome : valeurs de contrôle identiques, édition inchangée.
+const RELEVE_CHROME_28_10 = "2026-10-28";
 
 /**
  * `verifierTousLesJours` : sans date de fin officielle, le jeu de données
@@ -78,10 +80,9 @@ export const SOURCES_BAREMES = [
     libelle: "Niveaux de force athlétique (total et développé couché)",
     saison: SAISON_FFFORCE,
     releveLe: RELEVE_INITIAL,
-    verifierTousLesJours: 30,
-    preavisJours: 7,
+    echeance: "2026-12-31",
     echeanceNote:
-      "Pas de calendrier fixe : la FFForce publie par morceaux (subjuniors et juniors 02/2025, masters 04/2025, seniors 11/2025, développé couché N1 01/2026), et au relevé du 24/10/2026 la grille 2025-2026 était encore la plus récente. Revue tous les mois ; la page est lue chaque semaine.",
+      "Au 28/10/2026 la page FFForce annonce la révision des niveaux Senior/Open de force athlétique fin 2026 pour 2027 ; Subjunior, Junior et Masters restent inchangés en 2026-2027. Les cellules du fichier Excel n'ont pas pu être relues à cette date : seule l'édition (V03-1) est confirmée.",
     pages: [PAGE_FFFORCE],
     // Le fichier d'où viennent les valeurs ; la page n'en proposait pas d'autre au 28/10/2026.
     documentsConnus: [NIVEAUX_FFFORCE_V03],
@@ -95,7 +96,7 @@ export const SOURCES_BAREMES = [
     organisme: "IPF",
     libelle: "Catégories de poids IPF et coefficients GL",
     saison: "IPF Technical Rulebook 2026 ; coefficients GL 2020",
-    releveLe: RELEVE_INITIAL,
+    releveLe: RELEVE_CHROME_28_10,
     echeance: "2026-12-31",
     echeanceNote: "Supposée : le règlement technique IPF porte le millésime de l'année ; les coefficients GL n'ont pas changé depuis 2020.",
     pages: ["https://www.powerlifting.sport/rules/codes/info/ipf-formula"],
@@ -110,7 +111,7 @@ export const SOURCES_BAREMES = [
     organisme: "FFHM",
     libelle: "Séries de haltérophilie (total olympique minimal)",
     saison: "2026-2027",
-    releveLe: RELEVE_INITIAL,
+    releveLe: RELEVE_CHROME_28_10,
     echeance: "2027-08-31",
     echeanceNote: "Supposée : fin de la saison 2026-2027 ; le règlement 2026-2027 a été mis en ligne en juillet 2026.",
     pages: [],
@@ -129,7 +130,7 @@ export const SOURCES_BAREMES = [
     organisme: "IWF",
     libelle: "Catégories de poids IWF (en vigueur depuis le 01/08/2026)",
     saison: "cycle olympique 2028",
-    releveLe: RELEVE_INITIAL,
+    releveLe: RELEVE_CHROME_28_10,
     verifierTousLesJours: 365,
     echeanceNote: "Pas de date officielle : revue une fois par an. Le site de l'IWF répond 403 aux machines de GitHub (28/10/2026) : l'article est cité en référence, il n'est pas lu par la veille.",
     pages: [],
@@ -145,7 +146,7 @@ export const SOURCES_BAREMES = [
     organisme: "IWF",
     libelle: "Coefficients Sinclair 2025-2028",
     saison: "2025-2028",
-    releveLe: RELEVE_INITIAL,
+    releveLe: RELEVE_CHROME_28_10,
     echeance: "2028-12-31",
     echeanceNote: "Les coefficients sont publiés pour quatre ans.",
     pages: [],
@@ -209,7 +210,7 @@ export const SOURCES_BAREMES = [
     organisme: "FFN",
     libelle: "Temps de qualification France Élite et Challenge National (50 m)",
     saison: "2026",
-    releveLe: RELEVE_INITIAL,
+    releveLe: RELEVE_CHROME_28_10,
     echeance: "2026-12-31",
     echeanceNote:
       "Supposée : « Annuel Règlements 2026 », publié en septembre 2026. Si la FFN le rattache à la saison 2026-2027, l'alerte de janvier est une fausse alerte à lever.",
@@ -226,7 +227,7 @@ export const SOURCES_BAREMES = [
     organisme: "World Aquatics",
     libelle: "Temps de base des points World Aquatics",
     saison: "2026 (50 m) · 09/2026-08/2027 (25 m)",
-    releveLe: RELEVE_INITIAL,
+    releveLe: RELEVE_CHROME_28_10,
     echeance: "2026-12-31",
     echeanceNote: "Bassin de 50 m : valable du 01/01 au 31/12/2026 ; bassin de 25 m : du 01/09/2026 au 31/08/2027. Les deux sont revus à la première échéance.",
     pages: ["https://www.worldaquatics.com/swimming/points"],

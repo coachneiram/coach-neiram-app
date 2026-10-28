@@ -94,7 +94,8 @@ export const RECETTES_COACH = [
       "sans-porc"
     ],
     "contient": [
-      "gluten"
+      "gluten",
+      "sesame"
     ],
     "portions": 2,
     "preparationMin": 20,
