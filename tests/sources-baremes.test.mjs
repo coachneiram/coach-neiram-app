@@ -33,12 +33,25 @@ describe("registre", () => {
       assert.match(s.releveLe, ISO);
       assert.ok(s.echeance ? ISO.test(s.echeance) : s.verifierTousLesJours > 0, `${s.id} : échéance ou cadence de revue`);
       assert.ok(R.echeanceDe(s) >= s.releveLe, `${s.id} : échéance avant le relevé`);
-      for (const u of [...s.pages, ...s.documentsConnus]) assert.match(u, /^https:\/\//, `${s.id} : adresse non sécurisée ${u}`);
+      for (const u of [...s.pages, ...s.documentsConnus, ...(s.references || [])]) assert.match(u, /^https:\/\//, `${s.id} : adresse non sécurisée ${u}`);
       for (const sonde of s.sondes) {
         assert.match(sonde.modele, /^https:\/\//);
         assert.match(sonde.modele, /\{an\}/);
       }
     }
+  });
+
+  test("les fichiers d'où viennent les données sont déclarés connus (première veille réelle, 28/10/2026)", () => {
+    const ffforce = R.sourceParId("ffforce-niveaux");
+    assert.ok(ffforce.documentsConnus.some((u) => /Niveaux%20-%202025-2026%20V03-1\.xlsx$/.test(u)), "FFForce : fichier V03-1");
+    assert.ok(R.sourceParId("ipf-categories-gl").documentsConnus.some((u) => /IPF_GL_Coefficients-2020\.pdf$/.test(u)), "IPF : coefficients GL");
+    assert.equal(R.sourceParId("world-aquatics-points").documentsConnus.length, 7, "World Aquatics : base 2026 et six tables");
+  });
+
+  test("une source que GitHub ne peut pas lire n'est pas interrogée (sinon la demande ne se refermerait jamais)", () => {
+    const iwf = R.sourceParId("iwf-categories");
+    assert.deepEqual([iwf.pages, iwf.documentsConnus], [[], []]);
+    assert.equal(iwf.references.length, 1);
   });
 
   test("chaque discipline de « Mes performances » a au moins une source", () => {
