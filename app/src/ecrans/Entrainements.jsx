@@ -21,6 +21,7 @@ import { enLigne } from "../lib/semaine.js";
 import { SEANCE_TEMPLATES } from "../lib/catalogues.js";
 import { ConstructeurSeances } from "./ConstructeurSeances.jsx";
 import { ImportSeancesSheets } from "./ImportSeancesSheets.jsx";
+import { CarteImporterProgramme } from "./ImporterProgramme.jsx";
 import { Seances } from "./Seances.jsx";
 import { Trophees } from "./Trophees.jsx";
 import { Creneaux } from "./Creneaux.jsx";
@@ -226,6 +227,9 @@ export function Entrainements({
             onEnregistrerLien={onEnregistrerLienSheets}
           />
         </div>
+        <div style={{ marginTop: 20 }}>
+          <CarteImporterProgramme routinesApi={routinesApi} />
+        </div>
         {!importees && <div style={{ marginTop: 20 }}>{communaute}</div>}
         {importees && (
           <div style={{ marginTop: 20 }}>
@@ -271,6 +275,9 @@ export function Entrainements({
       {forme}
       {enTete}
       {sports}
+      <div style={{ marginBottom: 20 }}>
+        <CarteImporterProgramme routinesApi={routinesApi} />
+      </div>
       <ProgressionCharges sessions={sessionsApi.items} />
       <Records sessions={sessionsApi.items} />
       {performances}

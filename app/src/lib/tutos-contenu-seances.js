@@ -18,6 +18,20 @@
 
 export const TUTOS_SEANCES = [
   {
+    id: "importer-programme",
+    onglet: "entrainements",
+    emoji: "📄",
+    titre: "Importer mon programme",
+    resume: "Ton programme est sur une photo, un PDF ou dans ta tête : il devient des séances types.",
+    etapes: [
+      { titre: "Ouvre l'import", texte: "Dans Séances, carte « Importer mon programme », touche « Photo, PDF ou dictée »." },
+      { titre: "Donne ton programme", texte: "Photographie chaque page, choisis un PDF dans tes fichiers, ou dicte et tape le texte. Tu peux mélanger, jusqu'à 6 pages." },
+      { titre: "Lance la lecture", texte: "Touche « Lire mon programme ». Compte jusqu'à une minute pour un programme de plusieurs séances." },
+      { titre: "Vérifie avant d'enregistrer", texte: "Décoche les séances en trop, corrige leur nom, lis les avertissements : rien n'est enregistré avant d'avoir touché le bouton d'ajout, en bas." }
+    ],
+    libelles: ["Importer mon programme", "Photo, PDF ou dictée", "Lire mon programme", "Garder cette séance"]
+  },
+  {
     id: "minuteur-repos",
     onglet: "entrainements",
     emoji: "⏱️",

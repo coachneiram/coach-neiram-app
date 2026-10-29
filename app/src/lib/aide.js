@@ -164,6 +164,16 @@ export const AIDE = [
     titre: "Séances et trophées",
     questions: [
       {
+        id: "importer-programme",
+        question: "Puis-je importer mon programme depuis une photo ou un PDF ?",
+        reponse: [
+          "Oui. Séances → carte « Importer mon programme » → « Photo, PDF ou dictée ». Photographie chaque page (6 au maximum), choisis un PDF dans tes fichiers, ou dicte ou tape le programme, puis touche « Lire mon programme ».",
+          "Vérifie chaque séance avant d'enregistrer : tu peux écarter celles en trop et corriger leur nom. Les séances arrivent dans tes séances types, que tu peux ensuite lancer et modifier.",
+          "Le document est envoyé à l'IA pour la lecture, puis n'est pas conservé. Au plus 5 lectures par jour."
+        ],
+        libelles: ["Importer mon programme", "Photo, PDF ou dictée", "Lire mon programme"]
+      },
+      {
         id: "suivi-coach",
         question: "Comment indiquer depuis quand je suis suivi(e) ?",
         reponse: [

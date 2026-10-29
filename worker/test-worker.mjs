@@ -108,6 +108,61 @@ console.log("\n--- Route /ai ---");
   verifie("corps de Google non transmis", (await r.json()).error === "quota-fournisseur");
 }
 
+console.log("\n--- Route /ai : lecture de programme (fonction « programme ») ---");
+{
+  // Chaque bloc prend un client neuf : les plafonds par minute (8) et par
+  // jour sont comptes par client, et ceux des tests ci-dessus ne doivent
+  // pas fausser ceux-ci.
+  const clientNeuf = async () => {
+    const e = { ...env, DB: fauxD1() };
+    const inv = await (await worker.fetch(new Request("https://proxy.test/admin/invitations", {
+      method: "POST", headers: { Authorization: "Bearer " + e.ADMIN_SECRET }, body: JSON.stringify({ libelle: "Test programme" })
+    }), e)).json();
+    const act = await (await worker.fetch(req("/auth/activer", { code: inv.code }), e)).json();
+    return { e, jeton: act.jeton };
+  };
+  const ancien = jeton;
+  const pdf = { inlineData: { mimeType: "application/pdf", data: "QUJDRA==" } };
+  const corps = (extra = {}, parts = [pdf, { text: "lis ce programme" }]) => ({
+    model: "gemini-3.6-flash", messages: [{ role: "user", parts }], ...extra
+  });
+
+  {
+    const { e, jeton: j } = await clientNeuf();
+    jeton = j;
+    appelsSortants = [];
+    stubFetch(() => new Response(JSON.stringify({ candidates: [] }), { status: 200 }));
+    const ok = await worker.fetch(req("/ai", corps({ fonction: "programme", maxTokens: 999999 })), e);
+    verifie("PDF accepte pour la fonction « programme » (200)", ok.status === 200, "statut " + ok.status);
+    const charge = appelsSortants[0] ? JSON.parse(appelsSortants[0].init.body) : {};
+    verifie("PDF relaye a Gemini en application/pdf", charge.contents?.[0]?.parts?.[0]?.inlineData?.mimeType === "application/pdf");
+    verifie("programme : sortie plafonnee a 8192 jetons", charge.generationConfig?.maxOutputTokens === 8192, "recu " + charge.generationConfig?.maxOutputTokens);
+
+    const sans = await worker.fetch(req("/ai", corps()), e);
+    verifie("PDF refuse sans fonction (400)", sans.status === 400 && (await sans.json()).error === "image-invalide", "statut " + sans.status);
+    const zip = await worker.fetch(req("/ai", corps({ fonction: "programme" }, [{ inlineData: { mimeType: "application/zip", data: "QUJDRA==" } }, { text: "x" }])), e);
+    verifie("application/zip refuse meme pour « programme » (400)", zip.status === 400 && (await zip.json()).error === "image-invalide", "statut " + zip.status);
+    const inconnue = await worker.fetch(req("/ai", corps({ fonction: "pirate" })), e);
+    verifie("fonction inconnue refusee (400)", inconnue.status === 400 && (await inconnue.json()).error === "fonction-invalide", "statut " + inconnue.status);
+
+    appelsSortants = [];
+    const autre = await worker.fetch(req("/ai", { model: "gemini-3.6-flash", messages: [{ role: "user", parts: [{ text: "salut" }] }], maxTokens: 999999 }), e);
+    const chargeAutre = appelsSortants[0] ? JSON.parse(appelsSortants[0].init.body) : {};
+    verifie("sans fonction : toujours 4096 jetons au plus", autre.status === 200 && chargeAutre.generationConfig?.maxOutputTokens === 4096, "recu " + chargeAutre.generationConfig?.maxOutputTokens);
+  }
+  {
+    const { e, jeton: j } = await clientNeuf();
+    jeton = j;
+    stubFetch(() => new Response(JSON.stringify({ candidates: [] }), { status: 200 }));
+    const statuts = [];
+    for (let i = 0; i < 6; i++) statuts.push((await worker.fetch(req("/ai", corps({ fonction: "programme" })), e)).status);
+    verifie("5 lectures de programme par jour, la 6e refusee (429)", statuts.slice(0, 5).every((s) => s === 200) && statuts[5] === 429, statuts.join(","));
+    const chat = await worker.fetch(req("/ai", { model: "gemini-3.6-flash", messages: [{ role: "user", parts: [{ text: "salut" }] }] }), e);
+    verifie("le plafond « programme » ne bloque pas les autres usages IA", chat.status === 200, "statut " + chat.status);
+  }
+  jeton = ancien;
+}
+
 console.log("\n--- Route /coach-sync ---");
 {
   const r = await worker.fetch(req("/coach-sync", { type: "type_invente", client: "X" }), env);
