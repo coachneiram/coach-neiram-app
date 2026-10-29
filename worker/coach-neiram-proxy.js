@@ -97,6 +97,18 @@ const IA_TYPES_IMAGE = ["image/jpeg", "image/png", "image/webp"];
 const IA_JETONS_SORTIE_MAX = 4096;
 const IA_DELAI_MS = 60000;
 
+/**
+ * Fonctions nommees par l'application (champ facultatif `fonction`). Seule
+ * « programme » (lecture d'un programme sur photo, PDF ou texte dicte)
+ * obtient un traitement propre : un PDF n'est accepte que pour elle, et
+ * ses reponses ont 8 192 jetons de sortie (un programme de plusieurs
+ * semaines tient rarement dans 4 096). Les autres appels n'ont pas de
+ * fonction et gardent exactement les regles d'avant.
+ */
+const IA_FONCTIONS = ["programme"];
+const IA_TYPES_DOCUMENT = { programme: ["application/pdf"] };
+const IA_JETONS_SORTIE_PAR_FONCTION = { programme: 8192 };
+
 // Origines autorisees quand ALLOWED_ORIGINS n'est pas renseignee.
 const ORIGINES_PAR_DEFAUT = ["https://coachneiram.github.io"];
 
@@ -109,6 +121,7 @@ const PLAFONDS = {
   iaParMinute: 8,
   iaParJour: 80,
   iaGlobalParJour: 800,      // remplacable par PLAFOND_IA_JOUR
+  programmeParJour: 5,       // lectures de programme (photo/PDF), par client : un appel coute plusieurs fois une photo de repas
   iaAnonymeParHeure: 20,     // par adresse IP (empreinte), mode transition
   iaAnonymeParJour: 200,     // toutes adresses confondues, mode transition
   syncParMinute: 20,
@@ -410,11 +423,18 @@ async function lireJson(route, request, cors, tailleMax) {
 /**
  * Valide une requete /ai champ par champ. Rend { charge } (ce qui partira
  * chez Gemini) ou { erreur }. Seuls les champs que l'application envoie
- * sont acceptes : model, messages, systemPrompt, maxTokens.
+ * sont acceptes : model, messages, systemPrompt, maxTokens, et fonction
+ * (facultative, voir IA_FONCTIONS).
  */
 function validerRequeteIa(corps) {
-  const permis = ["model", "messages", "systemPrompt", "maxTokens"];
+  const permis = ["model", "messages", "systemPrompt", "maxTokens", "fonction"];
   if (Object.keys(corps).some((k) => !permis.includes(k))) return { erreur: "champ-inconnu" };
+
+  let fonction = null;
+  if (corps.fonction !== undefined && corps.fonction !== null) {
+    if (typeof corps.fonction !== "string" || !IA_FONCTIONS.includes(corps.fonction)) return { erreur: "fonction-invalide" };
+    fonction = corps.fonction;
+  }
 
   const modele = String(corps.model || "");
   if (!MODELES_AUTORISES.includes(modele)) return { erreur: "modele-non-autorise" };
@@ -440,7 +460,7 @@ function validerRequeteIa(corps) {
       const img = p.inlineData || p.inline_data;
       if (img && Object.keys(p).length === 1) {
         const type = img.mimeType || img.mime_type;
-        if (!IA_TYPES_IMAGE.includes(type)) return { erreur: "image-invalide" };
+        if (!IA_TYPES_IMAGE.includes(type) && !((fonction && IA_TYPES_DOCUMENT[fonction]) || []).includes(type)) return { erreur: "image-invalide" };
         if (typeof img.data !== "string" || !img.data || img.data.length > IA_IMAGE_MAX || !/^[A-Za-z0-9+/=]+$/.test(img.data)) {
           return { erreur: "image-invalide" };
         }
@@ -463,7 +483,7 @@ function validerRequeteIa(corps) {
   if (corps.maxTokens !== undefined && corps.maxTokens !== null) {
     const n = Number(corps.maxTokens);
     if (!Number.isInteger(n) || n < 1) return { erreur: "max-tokens-invalide" };
-    sortie = Math.min(n, IA_JETONS_SORTIE_MAX);
+    sortie = Math.min(n, (fonction && IA_JETONS_SORTIE_PAR_FONCTION[fonction]) || IA_JETONS_SORTIE_MAX);
   }
 
   const charge = {
@@ -471,7 +491,7 @@ function validerRequeteIa(corps) {
     generationConfig: { maxOutputTokens: sortie, thinkingConfig: { thinkingLevel: "low" } }
   };
   if (corps.systemPrompt) charge.systemInstruction = { parts: [{ text: corps.systemPrompt }] };
-  return { charge, modele };
+  return { charge, modele, fonction };
 }
 
 /** Plafonds a appliquer a un appel /ai, selon qu'on sait qui appelle. */
@@ -512,6 +532,15 @@ async function relaiIa(request, env, cors, ip) {
   if (lu.reponse) return lu.reponse;
   const v = validerRequeteIa(lu.corps);
   if (v.erreur) return refus(route, 400, v.erreur, cors, client);
+
+  // Lecture de programme : un plafond du jour a part, par client (ou par
+  // adresse en mode transition), en plus des plafonds generaux ci-dessus.
+  if (v.fonction === "programme" && db) {
+    const jour = jourUtc(maintenant);
+    const qui = client ? client.id : (await hachage(ip)).slice(0, 16);
+    const raison = await depasse(db, [{ cle: `ia:programme:${qui}:${jour}`, limite: PLAFONDS.programmeParJour, dureeMs: 2 * 86400000, raison: "quota-client" }], maintenant);
+    if (raison) return refus(route, 429, raison, cors, client);
+  }
 
   const cible = "https://generativelanguage.googleapis.com/v1beta/models/" + v.modele + ":generateContent";
   let amont;
