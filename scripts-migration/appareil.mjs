@@ -66,7 +66,7 @@ export function sansAides() {
       );
     }
     if (localStorage.getItem("cn_consentement_ia") === null) {
-      localStorage.setItem("cn_consentement_ia", JSON.stringify({ accepte: true, version: 1, le: "2026-10-24T00:00:00.000Z" }));
+      localStorage.setItem("cn_consentement_ia", JSON.stringify({ accepte: true, version: 2, le: "2026-10-24T00:00:00.000Z" }));
     }
   } catch (e) {
     // Page sans stockage : rien a preparer.
