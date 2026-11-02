@@ -15,6 +15,870 @@
 
 export const RECETTES_COACH = [
   {
+    "id": "2026-11-02-poke-bowl-thon-edamame-riz",
+    "semaine": "2026-11-02",
+    "nom": "Poke bowl au thon, edamame et avocat",
+    "description": "Un bol façon poke : riz, thon au naturel, edamame, concombre et avocat, relevé de sauce soja. Sans cuisson, prêt en 10 minutes avec du riz déjà cuit.",
+    "categorie": "dejeuner",
+    "profils": [
+      "hyrox",
+      "bodybuilding"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "poisson",
+      "soja",
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Riz basmati cuit",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Thon au naturel égoutté",
+        "quantite": "280 g"
+      },
+      {
+        "nom": "Edamame décortiqués (surgelés, décongelés)",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Concombre",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Carotte",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Avocat",
+        "quantite": "100 g (un demi)"
+      },
+      {
+        "nom": "Sauce soja",
+        "quantite": "30 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Citron vert, ciboulette",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Répartis le riz tiède ou froid dans deux bols. Émince le concombre, râpe la carotte et coupe l'avocat en lamelles.",
+      "Dispose le thon émietté, les edamame, le concombre, la carotte et l'avocat par-dessus le riz.",
+      "Arrose de sauce soja et de jus de citron vert, parsème de ciboulette et sers aussitôt."
+    ],
+    "moment": "apres-entrainement",
+    "adaptations": "Hyrox : ajoute 100 g de riz cuit par portion après une séance longue. Bodybuilding en sèche : retire l'avocat et garde 300 g de riz au total.",
+    "tags": [
+      "rapide",
+      "sans-cuisson",
+      "repas-d-effort"
+    ],
+    "parPortion": {
+      "kcal": 620,
+      "p": 51,
+      "c": 68,
+      "f": 16,
+      "fibres": 9
+    }
+  },
+  {
+    "id": "2026-11-02-granola-maison-avoine-noisettes",
+    "semaine": "2026-11-02",
+    "nom": "Granola maison avoine, noisettes et raisins secs",
+    "description": "Un granola croustillant fait au four avec avoine, noisettes, graines de courge et sirop d'érable. À préparer pour la semaine, à manger avec ton lait végétal.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "fruits-a-coque"
+    ],
+    "portions": 8,
+    "preparationMin": 10,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Noisettes concassées",
+        "quantite": "60 g"
+      },
+      {
+        "nom": "Graines de courge",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Sirop d'érable",
+        "quantite": "60 g (3 cuillères à soupe)"
+      },
+      {
+        "nom": "Huile de colza",
+        "quantite": "30 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Raisins secs",
+        "quantite": "50 g"
+      },
+      {
+        "nom": "Cannelle",
+        "quantite": "1 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 160 °C. Mélange l'avoine, les noisettes, les graines de courge et la cannelle dans un saladier.",
+      "Ajoute le sirop d'érable et l'huile, mélange bien, étale sur une plaque tapissée de papier cuisson et enfourne 25 minutes en remuant à mi-cuisson.",
+      "Laisse refroidir complètement, ajoute les raisins secs et garde dans un bocal fermé. Compte une portion de 45 g avec du lait végétal ou un fruit."
+    ],
+    "moment": "quotidien",
+    "adaptations": "Remise en forme : une portion avec un fruit frais suffit au petit-déjeuner. Maintien : ajoute un yaourt végétal ou une banane pour plus de volume.",
+    "tags": [
+      "meal-prep",
+      "economique"
+    ],
+    "parPortion": {
+      "kcal": 257,
+      "p": 7,
+      "c": 28,
+      "f": 13,
+      "fibres": 4
+    }
+  },
+  {
+    "id": "2026-11-02-mafe-patate-douce-cacahuete-riz",
+    "semaine": "2026-11-02",
+    "nom": "Mafé végétal patate douce, cacahuète et riz",
+    "description": "Un mafé sans viande : patate douce, pois chiches et épinards dans une sauce tomate-cacahuète. Dense en énergie, parfait pour les semaines d'endurance.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "ironman",
+      "prise"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "arachides"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 35,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Patate douce",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Beurre de cacahuète",
+        "quantite": "60 g (4 cuillères à soupe)"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Épinards frais",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Riz basmati (sec)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Gingembre, ail, piment, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais cuire le riz selon le paquet. Pendant ce temps, épluche la patate douce et coupe-la en cubes de 2 cm.",
+      "Fais revenir l'oignon émincé dans l'huile 4 minutes avec le gingembre et l'ail, ajoute les tomates, la patate douce, les pois chiches et 200 ml d'eau, puis laisse mijoter 20 minutes à couvert.",
+      "Délaie le beurre de cacahuète avec une louche de sauce, verse-le dans la casserole avec les épinards et cuis 5 minutes de plus. Sers sur le riz."
+    ],
+    "moment": "veille-de-course",
+    "adaptations": "Veille de sortie longue : ajoute 50 g de riz cuit par portion. Prise de masse : ajoute une cuillère de beurre de cacahuète par portion. Sèche : garde la moitié du riz.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "repas-d-effort"
+    ],
+    "parPortion": {
+      "kcal": 574,
+      "p": 18,
+      "c": 94,
+      "f": 14,
+      "fibres": 13
+    }
+  },
+  {
+    "id": "2026-11-02-salade-pois-chiches-roties-chou-rouge",
+    "semaine": "2026-11-02",
+    "nom": "Salade de pois chiches rôtis, chou rouge et quinoa",
+    "description": "Une salade croquante : pois chiches rôtis au cumin, chou rouge, carottes et quinoa, assaisonnée au citron. Rassasiante et très riche en fibres.",
+    "categorie": "dejeuner",
+    "profils": [
+      "perte",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 20,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Quinoa cuit",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Chou rouge",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "25 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Jus de citron",
+        "quantite": "40 g (1 citron)"
+      },
+      {
+        "nom": "Cumin, persil, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 200 °C. Sèche les pois chiches, mélange-les avec la moitié de l'huile, le cumin et le sel, puis enfourne 20 minutes sur une plaque.",
+      "Émince finement le chou rouge et râpe les carottes dans un saladier avec le quinoa.",
+      "Ajoute les pois chiches tièdes, le reste de l'huile, le citron et le persil, mélange et sers."
+    ],
+    "moment": "quotidien",
+    "adaptations": "Perte : garde les quantités indiquées. Remise en forme : ajoute une tranche de pain complet ou 100 g de quinoa cuit en plus par portion.",
+    "tags": [
+      "rapide",
+      "economique",
+      "vegetal"
+    ],
+    "parPortion": {
+      "kcal": 475,
+      "p": 20,
+      "c": 56,
+      "f": 19,
+      "fibres": 17
+    }
+  },
+  {
+    "id": "2026-11-02-poulet-basquaise-pommes-de-terre",
+    "semaine": "2026-11-02",
+    "nom": "Poulet basquaise et pommes de terre",
+    "description": "Des hauts de cuisse de poulet mijotés avec poivrons, tomates et piment d'Espelette, servis avec des pommes de terre. Un plat complet qui se réchauffe très bien.",
+    "categorie": "diner",
+    "profils": [
+      "maintien",
+      "marathon"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille"
+    ],
+    "portions": 3,
+    "preparationMin": 15,
+    "cuissonMin": 45,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Hauts de cuisse de poulet sans peau",
+        "quantite": "480 g"
+      },
+      {
+        "nom": "Poivrons rouges et verts",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Pommes de terre",
+        "quantite": "500 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "20 g (1 cuillère à soupe et demie)"
+      },
+      {
+        "nom": "Ail, piment d'Espelette, thym, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais dorer le poulet 4 minutes par face dans l'huile, puis réserve-le. Épluche les pommes de terre et coupe-les en gros cubes.",
+      "Fais revenir l'oignon et les poivrons en lanières 8 minutes dans la même cocotte, ajoute l'ail, le piment, le thym et les tomates.",
+      "Remets le poulet avec les pommes de terre, couvre d'un verre d'eau et laisse mijoter 30 minutes à feu doux. Sers bien chaud."
+    ],
+    "moment": "quotidien",
+    "adaptations": "Marathon, veille de sortie longue : ajoute 100 g de pommes de terre par portion. Maintien : garde les quantités indiquées avec une salade verte.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "economique"
+    ],
+    "parPortion": {
+      "kcal": 472,
+      "p": 38,
+      "c": 44,
+      "f": 16,
+      "fibres": 9
+    }
+  },
+  {
+    "id": "2026-11-02-chili-con-carne-boeuf-riz",
+    "semaine": "2026-11-02",
+    "nom": "Chili con carne de bœuf et riz",
+    "description": "Un chili de bœuf haché 5 %, haricots rouges et poivrons, mijoté à la tomate et servi avec du riz basmati. Se prépare en grande quantité et se congèle.",
+    "categorie": "diner",
+    "profils": [
+      "prise",
+      "force"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "viande"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 40,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Bœuf haché 5 % de matière grasse",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Haricots rouges cuits (conserve rincée)",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Riz basmati (sec)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Cumin, paprika, piment, ail, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais revenir l'oignon et le poivron en dés dans l'huile 5 minutes, ajoute le bœuf et émiette-le 5 minutes à feu vif.",
+      "Ajoute les épices, les tomates, les haricots rouges et un demi-verre d'eau, puis laisse mijoter 30 minutes à feu doux.",
+      "Fais cuire le riz selon le paquet et sers le chili dessus."
+    ],
+    "moment": "apres-entrainement",
+    "adaptations": "Prise de masse : ajoute 100 g de riz cuit par portion et un filet d'huile d'olive. Force : garde les quantités indiquées les jours de grosse séance.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "repas-d-effort"
+    ],
+    "parPortion": {
+      "kcal": 523,
+      "p": 36,
+      "c": 70,
+      "f": 11,
+      "fibres": 11
+    }
+  },
+  {
+    "id": "2026-11-02-muffins-banane-avoine-pepites-chocolat",
+    "semaine": "2026-11-02",
+    "nom": "Muffins moelleux banane, avoine et pépites de chocolat",
+    "description": "Des muffins sans farine : banane, avoine, œufs et fromage blanc, avec quelques pépites de chocolat. Une collation de prise de masse facile à emporter.",
+    "categorie": "collation",
+    "profils": [
+      "prise",
+      "ironman"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "oeufs",
+      "lactose"
+    ],
+    "portions": 6,
+    "preparationMin": 10,
+    "cuissonMin": 22,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Bananes mûres",
+        "quantite": "300 g (3 bananes)"
+      },
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "3 (165 g)"
+      },
+      {
+        "nom": "Lait demi-écrémé",
+        "quantite": "150 ml"
+      },
+      {
+        "nom": "Fromage blanc 0 %",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Pépites de chocolat noir",
+        "quantite": "50 g"
+      },
+      {
+        "nom": "Huile de colza",
+        "quantite": "20 g (1 cuillère à soupe et demie)"
+      },
+      {
+        "nom": "Levure chimique",
+        "quantite": "1 sachet (11 g)"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 180 °C. Écrase les bananes à la fourchette et mélange-les avec les œufs, le lait, le fromage blanc et l'huile.",
+      "Ajoute l'avoine, la levure et les pépites de chocolat, puis mélange jusqu'à obtenir une pâte homogène.",
+      "Répartis dans 6 moules à muffins et enfourne 22 minutes. Laisse refroidir avant de démouler. Une portion correspond à un muffin."
+    ],
+    "moment": "recuperation",
+    "adaptations": "Prise de masse : mange 2 muffins par portion avec un verre de lait. Ironman : emporte-les en collation de sortie longue.",
+    "tags": [
+      "meal-prep",
+      "economique",
+      "transportable"
+    ],
+    "parPortion": {
+      "kcal": 263,
+      "p": 10,
+      "c": 31,
+      "f": 11,
+      "fibres": 4
+    }
+  },
+  {
+    "id": "2026-11-02-clafoutis-leger-poires-vanille",
+    "semaine": "2026-11-02",
+    "nom": "Clafoutis léger aux poires et à la vanille",
+    "description": "Un clafoutis tendre aux poires, peu sucré, avec un peu de fromage blanc pour les protéines. Un dessert de semaine qui reste léger.",
+    "categorie": "dessert",
+    "profils": [
+      "perte",
+      "maintien"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "oeufs",
+      "lactose"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 35,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Poires",
+        "quantite": "500 g (3 poires)"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "3 (165 g)"
+      },
+      {
+        "nom": "Lait demi-écrémé",
+        "quantite": "250 ml"
+      },
+      {
+        "nom": "Farine de blé",
+        "quantite": "50 g"
+      },
+      {
+        "nom": "Sucre",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Fromage blanc 0 %",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Extrait de vanille",
+        "quantite": "1 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 180 °C. Épluche les poires, coupe-les en lamelles et dispose-les dans un plat légèrement beurré ou chemisé de papier cuisson.",
+      "Fouette les œufs avec le sucre, ajoute la farine, le lait, le fromage blanc et la vanille jusqu'à obtenir une pâte lisse.",
+      "Verse la pâte sur les poires et enfourne 35 minutes, jusqu'à ce que le dessus soit doré. Sers tiède ou froid."
+    ],
+    "moment": "quotidien",
+    "adaptations": "Perte : une part par jour, sans sucre ajouté si tes poires sont bien mûres. Maintien : ajoute une cuillère de fromage blanc sur la part.",
+    "tags": [
+      "economique",
+      "familial"
+    ],
+    "parPortion": {
+      "kcal": 250,
+      "p": 11,
+      "c": 38,
+      "f": 6,
+      "fibres": 4
+    }
+  },
+  {
+    "id": "2026-11-02-boules-de-riz-patate-douce-nori",
+    "semaine": "2026-11-02",
+    "nom": "Boules de riz patate douce et nori",
+    "description": "Des boules de riz façon onigiri mélangées à de la patate douce, enroulées dans du nori. Faciles à manger pendant l'effort, sans fourchette ni couverts.",
+    "categorie": "collation",
+    "profils": [
+      "ironman",
+      "marathon"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [],
+    "portions": 4,
+    "preparationMin": 25,
+    "cuissonMin": 10,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Riz rond cuit",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Patate douce cuite à la vapeur",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Feuilles de nori",
+        "quantite": "4"
+      },
+      {
+        "nom": "Vinaigre de riz",
+        "quantite": "1 cuillère à soupe"
+      },
+      {
+        "nom": "Sel",
+        "quantite": "1 pincée"
+      }
+    ],
+    "etapes": [
+      "Écrase la patate douce tiède à la fourchette et mélange-la avec le riz, le vinaigre et le sel.",
+      "Mouille-toi les mains, forme 8 boules ou petits triangles en pressant bien, puis enroule chacun dans une bande de nori.",
+      "Emballe-les dans du papier film ou du papier alu. Compte 2 boules par portion, à manger dans les 24 heures."
+    ],
+    "moment": "pendant-effort",
+    "adaptations": "Sortie longue : 2 à 3 boules par heure d'effort selon ta tolérance. Récupération : ajoute une source de protéines après la séance.",
+    "tags": [
+      "meal-prep",
+      "repas-d-effort",
+      "transportable"
+    ],
+    "parPortion": {
+      "kcal": 249,
+      "p": 5,
+      "c": 55,
+      "f": 1,
+      "fibres": 2
+    }
+  },
+  {
+    "id": "2026-11-02-pates-completes-epinards-ricotta",
+    "semaine": "2026-11-02",
+    "nom": "Pâtes complètes aux épinards, ricotta et parmesan",
+    "description": "Des pâtes complètes avec une sauce crémeuse d'épinards, de ricotta et de parmesan. Prêtes en 20 minutes, riches en protéines et en fibres.",
+    "categorie": "diner",
+    "profils": [
+      "force",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "lactose"
+    ],
+    "portions": 3,
+    "preparationMin": 10,
+    "cuissonMin": 15,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pâtes complètes (sèches)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Épinards frais",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Ricotta",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Parmesan râpé",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "80 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "10 g (2 cuillères à café)"
+      },
+      {
+        "nom": "Ail, noix de muscade, poivre, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais cuire les pâtes selon le paquet et garde un demi-verre d'eau de cuisson.",
+      "Fais revenir l'oignon et l'ail dans l'huile 3 minutes, ajoute les épinards et laisse-les tomber 3 minutes.",
+      "Mélange la ricotta et un peu d'eau de cuisson avec les épinards pour faire une sauce, ajoute les pâtes, la muscade et le poivre, parsème de parmesan et sers."
+    ],
+    "moment": "apres-entrainement",
+    "adaptations": "Force : ajoute 100 g de pâtes cuites par portion les jours de grosse séance. Remise en forme : garde les quantités indiquées avec une salade.",
+    "tags": [
+      "rapide",
+      "familial"
+    ],
+    "parPortion": {
+      "kcal": 469,
+      "p": 24,
+      "c": 55,
+      "f": 17,
+      "fibres": 10
+    }
+  },
+  {
+    "id": "2026-11-02-soupe-thai-poulet-coco-nouilles",
+    "semaine": "2026-11-02",
+    "nom": "Soupe thaï au poulet, lait de coco et nouilles de riz",
+    "description": "Une soupe parfumée au lait de coco, citron vert et gingembre, avec du poulet, des champignons et des nouilles de riz. Réconfortante et rapide.",
+    "categorie": "diner",
+    "profils": [
+      "remise-en-forme",
+      "maintien"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 15,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Blanc de poulet",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Lait de coco",
+        "quantite": "200 ml"
+      },
+      {
+        "nom": "Vermicelles de riz (secs)",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Champignons de Paris",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Bouillon de volaille chaud",
+        "quantite": "800 ml"
+      },
+      {
+        "nom": "Citron vert, gingembre, coriandre, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Coupe le poulet en lamelles fines, émince les champignons et les carottes en rondelles.",
+      "Porte le bouillon à frémissement avec le gingembre, ajoute le lait de coco, les carottes et les champignons, puis laisse cuire 6 minutes.",
+      "Ajoute le poulet et les vermicelles de riz, cuis 5 minutes de plus, puis relève avec le jus d'un citron vert et de la coriandre."
+    ],
+    "moment": "quotidien",
+    "adaptations": "Remise en forme : garde les quantités indiquées. Maintien : ajoute une poignée de pousses de soja ou un œuf mollet.",
+    "tags": [
+      "rapide",
+      "economique"
+    ],
+    "parPortion": {
+      "kcal": 585,
+      "p": 42,
+      "c": 57,
+      "f": 21,
+      "fibres": 5
+    }
+  },
+  {
+    "id": "2026-11-02-galettes-thon-pommes-de-terre-salade",
+    "semaine": "2026-11-02",
+    "nom": "Galettes de thon et pommes de terre, salade de haricots verts",
+    "description": "Des galettes dorées au thon, pommes de terre et œuf, servies avec une salade de haricots verts et tomates. Riches en protéines pour peu de calories.",
+    "categorie": "diner",
+    "profils": [
+      "bodybuilding",
+      "perte"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "poisson",
+      "oeufs"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 20,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Thon au naturel égoutté",
+        "quantite": "280 g"
+      },
+      {
+        "nom": "Pommes de terre cuites à la vapeur",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "2 (110 g)"
+      },
+      {
+        "nom": "Haricots verts cuits",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Tomates",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "20 g (1 cuillère à soupe et demie)"
+      },
+      {
+        "nom": "Persil, citron, ail, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Écrase les pommes de terre à la fourchette et mélange-les avec le thon émietté, les œufs, le persil et l'ail pour former une pâte ferme.",
+      "Forme 4 galettes et fais-les dorer 4 à 5 minutes par face dans la moitié de l'huile, à feu moyen.",
+      "Mélange les haricots verts et les tomates en dés avec le reste de l'huile et du jus de citron, et sers avec les galettes."
+    ],
+    "moment": "apres-entrainement",
+    "adaptations": "Bodybuilding en sèche : retire 100 g de pommes de terre par portion. Perte : garde les quantités indiquées avec davantage de légumes.",
+    "tags": [
+      "economique",
+      "rapide"
+    ],
+    "parPortion": {
+      "kcal": 526,
+      "p": 50,
+      "c": 41,
+      "f": 18,
+      "fibres": 10
+    }
+  },
+  {
     "id": "2026-10-19-porridge-chaud-pomme-cannelle-noix",
     "semaine": "2026-10-19",
     "nom": "Porridge chaud pomme-cannelle et noix",
