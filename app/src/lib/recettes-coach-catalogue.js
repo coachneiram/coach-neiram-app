@@ -15,6 +15,872 @@
 
 export const RECETTES_COACH = [
   {
+    "id": "2026-11-09-pudding-chia-mangue-coco",
+    "semaine": "2026-11-09",
+    "nom": "Pudding de chia, mangue et coco",
+    "description": "Un pudding de chia préparé la veille avec du lait de soja et du lait de coco, nappé de mangue et de coco râpée. Sans cuisson, vegan, riche en fibres.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "soja"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Graines de chia",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Lait de soja nature non sucré",
+        "quantite": "300 ml"
+      },
+      {
+        "nom": "Lait de coco",
+        "quantite": "100 ml"
+      },
+      {
+        "nom": "Mangue mûre",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Noix de coco râpée",
+        "quantite": "10 g"
+      }
+    ],
+    "etapes": [
+      "Mélange les graines de chia avec le lait de soja et le lait de coco dans un bocal. Remue bien, attends 5 minutes, remue encore pour éviter les grumeaux, puis place au frais au moins 4 heures ou toute la nuit.",
+      "Le lendemain, coupe la mangue en petits dés. Répartis le pudding dans deux bols, ajoute la mangue et parsème de noix de coco râpée."
+    ],
+    "parPortion": {
+      "kcal": 301,
+      "p": 10,
+      "c": 18,
+      "f": 21,
+      "fibres": 10
+    },
+    "moment": "quotidien",
+    "adaptations": "Remise en forme : garde les quantités indiquées. Maintien : ajoute une banane en rondelles ou une poignée de flocons d'avoine par portion si tu as faim avant midi.",
+    "tags": [
+      "sans-cuisson",
+      "meal-prep",
+      "rapide"
+    ]
+  },
+  {
+    "id": "2026-11-09-tofu-croustillant-quinoa-poivrons",
+    "semaine": "2026-11-09",
+    "nom": "Tofu croustillant au four, quinoa et poêlée de poivrons",
+    "description": "Des cubes de tofu enrobés de fécule et dorés au four, avec du quinoa et une poêlée de poivrons et champignons au tamari. Vegan, très riche en protéines.",
+    "categorie": "diner",
+    "profils": [
+      "bodybuilding",
+      "perte"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "soja"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Tofu ferme",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Fécule de maïs",
+        "quantite": "20 g"
+      },
+      {
+        "nom": "Tamari",
+        "quantite": "20 g (1 cuillère à soupe, sans gluten)"
+      },
+      {
+        "nom": "Huile de colza",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Quinoa cuit",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Poivrons rouges et jaunes",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Champignons de Paris",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "80 g"
+      },
+      {
+        "nom": "Ail, paprika, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 200 °C. Presse le tofu dans un torchon 10 minutes, coupe-le en cubes, enrobe-le de fécule et de la moitié du tamari, puis dépose-le sur une plaque huilée avec la moitié de l'huile.",
+      "Enfourne 25 minutes en retournant les cubes à mi-cuisson, jusqu'à ce qu'ils soient bien dorés.",
+      "Pendant ce temps, fais revenir l'oignon, les poivrons en lanières et les champignons émincés 10 minutes dans le reste de l'huile avec l'ail et le paprika, puis ajoute le reste du tamari. Sers avec le quinoa tiède et le tofu."
+    ],
+    "parPortion": {
+      "kcal": 526,
+      "p": 30,
+      "c": 52,
+      "f": 22,
+      "fibres": 10
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Bodybuilding : en prise, ajoute 100 g de quinoa cuit par portion ; en sèche, garde les quantités indiquées. Perte : réduis le quinoa à 100 g par portion et double les légumes.",
+    "tags": [
+      "repas-d-effort",
+      "vegetal"
+    ]
+  },
+  {
+    "id": "2026-11-09-galettes-lentilles-corail-patate-douce",
+    "semaine": "2026-11-09",
+    "nom": "Galettes de lentilles corail et avoine, patate douce rôtie",
+    "description": "Des galettes moelleuses de lentilles corail et de flocons d'avoine, poêlées, servies avec de la patate douce rôtie. Un repas végétal dense en énergie.",
+    "categorie": "dejeuner",
+    "profils": [
+      "force",
+      "prise"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 3,
+    "preparationMin": 20,
+    "cuissonMin": 35,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Lentilles corail cuites",
+        "quantite": "360 g"
+      },
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "90 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Patate douce",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "25 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Concentré de tomate",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Cumin, paprika, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 210 °C. Coupe la patate douce en bâtonnets, mélange-la avec la moitié de l'huile, du sel et du paprika, et enfourne 30 à 35 minutes.",
+      "Écrase les lentilles à la fourchette avec l'avoine, l'oignon haché finement, le concentré de tomate et le cumin. Laisse reposer 10 minutes pour que l'avoine gonfle, puis forme 6 galettes.",
+      "Fais dorer les galettes 4 minutes par face dans le reste de l'huile et sers-les avec la patate douce."
+    ],
+    "parPortion": {
+      "kcal": 495,
+      "p": 17,
+      "c": 82,
+      "f": 11,
+      "fibres": 15
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Prise de masse : ajoute une cuillère d'huile d'olive et 100 g de patate douce par portion. Force : garde les quantités indiquées les jours de grosse séance.",
+    "tags": [
+      "meal-prep",
+      "economique",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-11-09-risotto-champignons-petits-pois",
+    "semaine": "2026-11-09",
+    "nom": "Risotto crémeux aux champignons et petits pois",
+    "description": "Un risotto onctueux aux champignons, petits pois et parmesan. Des glucides faciles à digérer, parfait la veille d'une sortie longue ou d'une course.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "ironman"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "lactose"
+    ],
+    "portions": 3,
+    "preparationMin": 15,
+    "cuissonMin": 30,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Riz arborio (cru)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Champignons de Paris",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Petits pois surgelés",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Parmesan râpé",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "20 g (1 cuillère à soupe et demie)"
+      },
+      {
+        "nom": "Bouillon de légumes chaud",
+        "quantite": "800 ml"
+      },
+      {
+        "nom": "Ail, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais revenir l'oignon haché et les champignons émincés 6 minutes dans l'huile, jusqu'à ce que l'eau des champignons s'évapore. Ajoute l'ail et le riz et remue 2 minutes.",
+      "Verse le bouillon chaud louche par louche en remuant, en attendant que chaque louche soit absorbée avant la suivante. Compte 18 à 20 minutes.",
+      "Ajoute les petits pois les 5 dernières minutes. Hors du feu, incorpore le parmesan et le poivre, couvre 2 minutes et sers."
+    ],
+    "parPortion": {
+      "kcal": 460,
+      "p": 17,
+      "c": 71,
+      "f": 12,
+      "fibres": 7
+    },
+    "moment": "veille-de-course",
+    "adaptations": "Veille de sortie longue : ajoute 50 g de riz cru par portion. Ironman : ajoute une cuillère d'huile d'olive par portion. Reste digeste : évite d'ajouter trop de fibres la veille d'une compétition.",
+    "tags": [
+      "repas-d-effort",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-11-09-tagliatelles-saumon-epinards",
+    "semaine": "2026-11-09",
+    "nom": "Tagliatelles crémeuses au saumon et aux épinards",
+    "description": "Des tagliatelles avec du saumon poêlé, des épinards frais et une sauce légère à la crème et au citron. Riche en protéines et en glucides, prêt en 25 minutes.",
+    "categorie": "diner",
+    "profils": [
+      "prise",
+      "force"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "poisson",
+      "lactose"
+    ],
+    "portions": 3,
+    "preparationMin": 10,
+    "cuissonMin": 15,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Tagliatelles (sèches)",
+        "quantite": "270 g"
+      },
+      {
+        "nom": "Pavé de saumon sans peau",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Épinards frais",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Crème fraîche légère",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Citron",
+        "quantite": "1 (jus et zeste)"
+      },
+      {
+        "nom": "Aneth, ail, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais cuire les tagliatelles selon le paquet et garde un demi-verre d'eau de cuisson. Coupe le saumon en cubes.",
+      "Fais saisir le saumon 3 minutes dans une poêle antiadhésive sans matière grasse, ajoute les épinards et laisse-les tomber 2 minutes.",
+      "Verse la crème, le jus et le zeste de citron, l'ail et un peu d'eau de cuisson, laisse chauffer 2 minutes, puis mélange avec les pâtes égouttées et l'aneth."
+    ],
+    "parPortion": {
+      "kcal": 606,
+      "p": 35,
+      "c": 67,
+      "f": 22,
+      "fibres": 5
+    },
+    "moment": "apres-entrainement",
+    "adaptations": "Prise de masse : ajoute 100 g de pâtes cuites par portion et un filet d'huile d'olive. Force : garde les quantités indiquées avec une salade verte.",
+    "tags": [
+      "rapide",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-11-09-boeuf-mijote-carottes-pommes-de-terre",
+    "semaine": "2026-11-09",
+    "nom": "Bœuf mijoté aux carottes et pommes de terre",
+    "description": "Un plat unique de bœuf à braiser mijoté tout doucement avec carottes, oignons et pommes de terre. Se prépare en grande quantité et se réchauffe très bien.",
+    "categorie": "diner",
+    "profils": [
+      "ironman",
+      "maintien"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "viande"
+    ],
+    "portions": 4,
+    "preparationMin": 20,
+    "cuissonMin": 120,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Bœuf à braiser (paleron ou macreuse)",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Pommes de terre",
+        "quantite": "800 g"
+      },
+      {
+        "nom": "Oignons",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Concentré de tomate",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Huile de colza",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Pain complet",
+        "quantite": "160 g (4 tranches)"
+      },
+      {
+        "nom": "Thym, laurier, ail, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Coupe le bœuf en gros cubes et fais-le dorer sur toutes les faces dans l'huile, dans une cocotte. Réserve-le.",
+      "Fais revenir les oignons émincés 4 minutes, ajoute le concentré de tomate, l'ail, le thym et le laurier, remets le bœuf et couvre d'eau à hauteur. Laisse mijoter 1 h 15 à feu doux, à couvert.",
+      "Ajoute les carottes en rondelles et les pommes de terre en gros morceaux, puis poursuis 35 à 40 minutes. Sers avec une tranche de pain complet."
+    ],
+    "parPortion": {
+      "kcal": 552,
+      "p": 39,
+      "c": 63,
+      "f": 16,
+      "fibres": 10
+    },
+    "moment": "recuperation",
+    "adaptations": "Ironman : ajoute 100 g de pommes de terre par portion les jours de longue sortie. Maintien : garde les quantités indiquées ou remplace le pain par une salade verte.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "repas-d-effort"
+    ]
+  },
+  {
+    "id": "2026-11-09-roti-dinde-puree-butternut-lentilles",
+    "semaine": "2026-11-09",
+    "nom": "Rôti de dinde au thym, purée de butternut et lentilles",
+    "description": "Un rôti de dinde cuit au four sur un lit d'oignons, servi avec une purée de courge butternut à l'huile d'olive et des lentilles vertes. Maigre et rassasiant.",
+    "categorie": "dejeuner",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille"
+    ],
+    "portions": 4,
+    "preparationMin": 20,
+    "cuissonMin": 45,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Rôti de dinde",
+        "quantite": "500 g"
+      },
+      {
+        "nom": "Courge butternut",
+        "quantite": "800 g"
+      },
+      {
+        "nom": "Lentilles vertes cuites",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "30 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Thym, ail, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 190 °C. Dépose le rôti sur les oignons émincés, arrose-le de la moitié de l'huile et parsème de thym, de sel et de poivre. Enfourne 45 minutes en arrosant à mi-cuisson.",
+      "Pendant ce temps, épluche la butternut, coupe-la en cubes et fais-la cuire 20 minutes à la vapeur ou à l'eau. Écrase-la avec le reste de l'huile.",
+      "Réchauffe les lentilles, laisse reposer le rôti 5 minutes, tranche-le et sers avec la purée et les lentilles."
+    ],
+    "parPortion": {
+      "kcal": 378,
+      "p": 37,
+      "c": 35,
+      "f": 10,
+      "fibres": 9
+    },
+    "moment": "quotidien",
+    "adaptations": "Remise en forme : garde les quantités indiquées. Maintien : ajoute une tranche de pain complet ou 50 g de lentilles en plus par portion.",
+    "tags": [
+      "meal-prep",
+      "familial"
+    ]
+  },
+  {
+    "id": "2026-11-09-mug-cake-chocolat-banane-avoine",
+    "semaine": "2026-11-09",
+    "nom": "Mug cake chocolat, banane et avoine",
+    "description": "Un gâteau minute au micro-ondes avec banane, avoine, œuf, cacao et fromage blanc, sans sucre ajouté. Un dessert protéiné prêt en 5 minutes.",
+    "categorie": "dessert",
+    "profils": [
+      "bodybuilding",
+      "maintien"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "oeufs",
+      "lactose"
+    ],
+    "portions": 1,
+    "preparationMin": 5,
+    "cuissonMin": 2,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Banane mûre",
+        "quantite": "100 g (1 petite)"
+      },
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Œuf",
+        "quantite": "1 (60 g)"
+      },
+      {
+        "nom": "Cacao en poudre non sucré",
+        "quantite": "8 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Fromage blanc 0 %",
+        "quantite": "50 g"
+      },
+      {
+        "nom": "Levure chimique",
+        "quantite": "1/2 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Écrase la banane à la fourchette dans un grand mug, puis ajoute l'œuf, le fromage blanc, le cacao, l'avoine et la levure. Mélange jusqu'à obtenir une pâte homogène.",
+      "Fais cuire 1 minute 30 à 2 minutes au micro-ondes, jusqu'à ce que le gâteau soit pris. Laisse tiédir 1 minute avant de déguster."
+    ],
+    "parPortion": {
+      "kcal": 313,
+      "p": 18,
+      "c": 40,
+      "f": 9,
+      "fibres": 7
+    },
+    "moment": "quotidien",
+    "adaptations": "Bodybuilding : ajoute une mesure de whey ou 100 g de fromage blanc en plus en prise de masse. Maintien : garde la recette telle quelle, avec un fruit.",
+    "tags": [
+      "rapide",
+      "micro-ondes",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-11-09-houmous-betterave-crudites-pita",
+    "semaine": "2026-11-09",
+    "nom": "Houmous de betterave, crudités et pain pita",
+    "description": "Un houmous rose à la betterave cuite et au tahini, servi avec des bâtonnets de concombre et de carotte et du pain pita. Une collation végétale rassasiante.",
+    "categorie": "collation",
+    "profils": [
+      "perte",
+      "maintien"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "sesame",
+      "gluten"
+    ],
+    "portions": 3,
+    "preparationMin": 10,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pois chiches cuits (conserve rincée)",
+        "quantite": "240 g"
+      },
+      {
+        "nom": "Betterave cuite",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Purée de sésame (tahini)",
+        "quantite": "30 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Jus de citron",
+        "quantite": "20 g (1/2 citron)"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "10 g (2 cuillères à café)"
+      },
+      {
+        "nom": "Concombre",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Pain pita",
+        "quantite": "120 g (2 pitas)"
+      },
+      {
+        "nom": "Ail, cumin, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Mixe les pois chiches avec la betterave, le tahini, le citron, l'huile, l'ail, le cumin et le sel, en ajoutant 2 à 3 cuillères à soupe d'eau, jusqu'à obtenir une texture lisse.",
+      "Coupe le concombre et les carottes en bâtonnets, réchauffe les pitas 1 minute et coupe-les en lanières. Sers le houmous dans un bol avec les crudités et le pain."
+    ],
+    "parPortion": {
+      "kcal": 340,
+      "p": 13,
+      "c": 45,
+      "f": 12,
+      "fibres": 10
+    },
+    "moment": "quotidien",
+    "adaptations": "Perte : garde une demi-pita par portion et double les crudités. Maintien : garde les quantités indiquées.",
+    "tags": [
+      "sans-cuisson",
+      "rapide",
+      "economique"
+    ]
+  },
+  {
+    "id": "2026-11-09-porridge-sale-avoine-oeuf-poche-epinards",
+    "semaine": "2026-11-09",
+    "nom": "Porridge salé à l'avoine, œuf poché et épinards",
+    "description": "Un porridge d'avoine cuit au bouillon, avec des épinards, du parmesan et un œuf poché. Un petit-déjeuner salé, chaud et riche en protéines.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "bodybuilding",
+      "hyrox"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "oeufs",
+      "lactose"
+    ],
+    "portions": 2,
+    "preparationMin": 5,
+    "cuissonMin": 10,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Bouillon de légumes chaud",
+        "quantite": "400 ml"
+      },
+      {
+        "nom": "Épinards frais",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "4 (220 g)"
+      },
+      {
+        "nom": "Parmesan râpé",
+        "quantite": "20 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "10 g (2 cuillères à café)"
+      },
+      {
+        "nom": "Poivre, piment doux",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais chauffer l'huile, ajoute les épinards et laisse-les tomber 2 minutes. Verse l'avoine et le bouillon chaud, puis cuis 5 minutes à feu doux en remuant, jusqu'à ce que le porridge épaississe.",
+      "Pendant ce temps, fais pocher les œufs 3 minutes dans une eau frémissante vinaigrée, ou cuis-les au plat.",
+      "Répartis le porridge dans deux bols, pose les œufs dessus, parsème de parmesan, de poivre et de piment doux."
+    ],
+    "parPortion": {
+      "kcal": 431,
+      "p": 26,
+      "c": 30,
+      "f": 23,
+      "fibres": 7
+    },
+    "moment": "avant-entrainement",
+    "adaptations": "Bodybuilding : ajoute un œuf par portion en prise, garde les quantités indiquées en sèche. Hyrox : ajoute 30 g d'avoine par portion avant une séance longue.",
+    "tags": [
+      "rapide",
+      "salé"
+    ]
+  },
+  {
+    "id": "2026-11-09-soupe-lentilles-corail-carottes-coco",
+    "semaine": "2026-11-09",
+    "nom": "Soupe de lentilles corail, carottes et lait de coco",
+    "description": "Une soupe veloutée de lentilles corail, carottes, cumin et lait de coco, servie avec du pain complet. Vegan, riche en fibres et en protéines végétales.",
+    "categorie": "dejeuner",
+    "profils": [
+      "hyrox",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 3,
+    "preparationMin": 10,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Lentilles corail (sèches)",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Lait de coco",
+        "quantite": "200 ml"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "10 g (2 cuillères à café)"
+      },
+      {
+        "nom": "Pain complet",
+        "quantite": "150 g (3 tranches)"
+      },
+      {
+        "nom": "Eau ou bouillon de légumes",
+        "quantite": "900 ml"
+      },
+      {
+        "nom": "Cumin, curcuma, gingembre, sel",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais revenir l'oignon et les carottes en rondelles 5 minutes dans l'huile avec le cumin, le curcuma et le gingembre.",
+      "Ajoute les lentilles rincées et l'eau, puis laisse cuire 20 minutes à feu moyen. Verse le lait de coco, mixe la soupe selon la texture voulue et rectifie l'assaisonnement.",
+      "Sers bien chaud avec une tranche de pain complet par portion."
+    ],
+    "parPortion": {
+      "kcal": 513,
+      "p": 23,
+      "c": 67,
+      "f": 17,
+      "fibres": 14
+    },
+    "moment": "quotidien",
+    "adaptations": "Hyrox : ajoute une tranche de pain et 50 g de lentilles cuites par portion avant une séance. Remise en forme : garde les quantités indiquées.",
+    "tags": [
+      "meal-prep",
+      "economique",
+      "vegetal"
+    ]
+  },
+  {
+    "id": "2026-11-09-pizzas-tortilla-legumes-mozzarella",
+    "semaine": "2026-11-09",
+    "nom": "Pizzas-tortilla aux légumes et à la mozzarella",
+    "description": "Des tortillas croustillantes garnies de sauce tomate, poivron, champignons et mozzarella, gratinées au four. Un repas d'énergie prêt en 20 minutes.",
+    "categorie": "dejeuner",
+    "profils": [
+      "marathon",
+      "ironman"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "lactose"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 10,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Tortillas de blé",
+        "quantite": "4 petites (160 g)"
+      },
+      {
+        "nom": "Passata de tomates",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Mozzarella",
+        "quantite": "125 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Champignons de Paris",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Oignon rouge",
+        "quantite": "50 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "10 g (2 cuillères à café)"
+      },
+      {
+        "nom": "Origan, basilic, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 220 °C. Dépose les tortillas sur une plaque et fais-les cuire 2 minutes pour les raffermir.",
+      "Étale la passata assaisonnée d'origan, ajoute les légumes émincés finement et la mozzarella en lamelles, puis arrose d'huile.",
+      "Enfourne 8 minutes, jusqu'à ce que le fromage soit doré et les bords croustillants. Parsème de basilic et sers."
+    ],
+    "parPortion": {
+      "kcal": 478,
+      "p": 21,
+      "c": 49,
+      "f": 22,
+      "fibres": 6
+    },
+    "moment": "quotidien",
+    "adaptations": "Marathon : ajoute une 5e tortilla à partager la veille d'une sortie longue. Ironman : ajoute un œuf ou 50 g de thon par pizza.",
+    "tags": [
+      "rapide",
+      "familial"
+    ]
+  },
+  {
     "id": "2026-10-19-porridge-chaud-pomme-cannelle-noix",
     "semaine": "2026-10-19",
     "nom": "Porridge chaud pomme-cannelle et noix",
