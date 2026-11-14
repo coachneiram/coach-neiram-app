@@ -37,7 +37,9 @@ export const TYPES_EVENEMENTS = [
   // nutrition partent de l'application (lib/alertes-smart.js).
   "alerte_inactivite",
   "alerte_poids",
-  "alerte_nutrition"
+  "alerte_nutrition",
+  // Feu Vert (14 novembre 2026) : check-in du lundi (lib/feu-vert.js).
+  "checkin_feu_vert"
 ];
 
 /**
@@ -52,7 +54,9 @@ const REMPLACABLES = [
   "alerte_seances_manquees",
   "alerte_decalages",
   "resume_hebdo",
-  "alerte_sommeil_stress"
+  "alerte_sommeil_stress",
+  // Un check-in renvoye pour la meme semaine remplace celui qui attend.
+  "checkin_feu_vert"
 ];
 
 /**
@@ -66,7 +70,9 @@ const REMPLACABLES = [
  */
 export function synchroActive(profil) {
   if (enTestLocal() && !synchroLocaleAutorisee()) return false;
-  return !!profil && (enLigne(profil) || !!profil.coachSyncUrl);
+  // Feu Vert (coaching collectif en ligne, 14 novembre 2026) : pointages et
+  // check-ins partent au coach comme en coaching en ligne individuel.
+  return !!profil && (enLigne(profil) || profil.formule === "feuvert" || !!profil.coachSyncUrl);
 }
 
 /**

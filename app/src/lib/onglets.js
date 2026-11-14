@@ -27,6 +27,23 @@ export const ONGLETS = [
 ];
 
 /**
+ * Onglets selon la formule du client.
+ *
+ * Feu Vert (coaching collectif, 14 novembre 2026) : l'onglet « Feu Vert »
+ * passe en tete, et la barre se limite a ce que la formule utilise. La
+ * nutrition detaillee, les mensurations et les tendances (poids, photos)
+ * sont hors du perimetre vendu : elles sortent de la barre, sans que rien
+ * ne soit efface. Revenir a la formule individuelle les rend.
+ */
+export const ONGLET_FEU_VERT = { id: "feuvert", label: "Feu Vert", short: "Feu Vert" };
+const IDS_FEU_VERT = ["entrainements", "journal", "sommeil"];
+
+export function ongletsPour(profil) {
+  if (!profil || profil.formule !== "feuvert") return ONGLETS;
+  return [ONGLET_FEU_VERT, ...ONGLETS.filter((o) => IDS_FEU_VERT.includes(o.id))];
+}
+
+/**
  * Sections de repas d'une journee.
  *
  * Repris de MEAL_SECTIONS (index.html, ligne ~1638). Les emojis font partie
