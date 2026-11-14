@@ -52,7 +52,11 @@ export const TABLE_NIVEAUX = [
   { type: "alerte_semaines_difficiles", niveau: "attention" },
   { type: "justification", niveau: "attention" },
   { type: "resume_hebdo", niveau: "attention" },
-  { type: "semaine_difficile", niveau: "info" }
+  { type: "semaine_difficile", niveau: "info" },
+  // Feu Vert (14 novembre 2026) : un check-in n'est pas un incident. Niveau
+  // info : il entre dans l'onglet Alertes (colonne Statut, pour pointer les
+  // réponses de la journée) sans déclencher de mail.
+  { type: "checkin_feu_vert", niveau: "info" }
 ];
 
 /**

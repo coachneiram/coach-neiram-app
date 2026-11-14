@@ -21,6 +21,10 @@
  *   POST /presence        -> « je suis la, derniere saisie le … » (Smart Coach,
  *                            jeton client obligatoire, quelques appels par jour)
  *   POST /admin/presence  -> presence des clients, pour l'Espace coach
+ *   POST /feuvert/...     -> Feu Vert (coaching collectif) : Passeport fixe par le
+ *                            coach, missions validees, tableau de regularite de
+ *                            la cohorte (jeton client obligatoire)
+ *   POST /admin/feuvert   -> le coach inscrit une membre et met a jour son Passeport
  * Et une tache planifiee (Cron Trigger, toutes les 15 minutes) qui envoie
  * les rappels arrives a echeance, meme application fermee, efface les
  * defis termines depuis plus de 60 jours et fait le menage de la
@@ -232,6 +236,7 @@ export default {
       if (url.pathname.startsWith("/push/")) return await routePush(url.pathname, request, env, cors, ip);
       if (url.pathname.startsWith("/defis/")) return await routeDefis(url.pathname, request, env, cors);
       if (url.pathname.startsWith("/communaute/")) return await routeCommunaute(url.pathname, request, env, cors);
+      if (url.pathname.startsWith("/feuvert/")) return await routeFeuVert(url.pathname, request, env, cors);
     } catch (e) {
       // Jamais de detail interne dans la reponse.
       return refus(url.pathname, 500, "erreur-interne", cors);
@@ -280,7 +285,11 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS communaute_bravos (transformation INTEGER NOT NULL, client_id TEXT NOT NULL, le INTEGER NOT NULL, PRIMARY KEY (transformation, client_id))",
   "CREATE TABLE IF NOT EXISTS communaute_signalements (id INTEGER PRIMARY KEY AUTOINCREMENT, cible_type TEXT NOT NULL, cible TEXT NOT NULL, motif TEXT, auteur TEXT NOT NULL, cree_le INTEGER NOT NULL, traite INTEGER NOT NULL DEFAULT 0, UNIQUE (cible_type, cible, auteur))",
   // Presence (Smart Coach, 25 octobre 2026) : voir la section dediee plus bas.
-  "CREATE TABLE IF NOT EXISTS presence (client_id TEXT PRIMARY KEY, vu_le INTEGER NOT NULL, derniere_saisie TEXT, alerte_le INTEGER, niveau TEXT)"
+  "CREATE TABLE IF NOT EXISTS presence (client_id TEXT PRIMARY KEY, vu_le INTEGER NOT NULL, derniere_saisie TEXT, alerte_le INTEGER, niveau TEXT)",
+  // Feu Vert (coaching collectif, 14 novembre 2026) : voir la section dediee plus bas.
+  "CREATE TABLE IF NOT EXISTS feuvert (client_id TEXT PRIMARY KEY, cohorte TEXT NOT NULL, passeport TEXT NOT NULL DEFAULT '{}', missions TEXT NOT NULL DEFAULT '{}', maj_le INTEGER NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS feuvert_videos (cohorte TEXT NOT NULL, semaine INTEGER NOT NULL, url TEXT NOT NULL, maj_le INTEGER NOT NULL, PRIMARY KEY (cohorte, semaine))",
+  "CREATE TABLE IF NOT EXISTS feuvert_tableau (client_id TEXT PRIMARY KEY, cohorte TEXT NOT NULL, pseudo TEXT NOT NULL, pseudo_norme TEXT NOT NULL, semaines TEXT NOT NULL DEFAULT '{}', maj_le INTEGER NOT NULL, UNIQUE (cohorte, pseudo_norme))"
 ];
 
 // Schema cree une fois par base et par instance du Worker.
@@ -721,7 +730,10 @@ async function routeAdmin(chemin, request, env, cors, ip) {
       db.prepare("DELETE FROM defis_participants WHERE client_id = ?1").bind(clientId),
       // ... et de la communaute : profil, scores, transformations, bravos,
       // signalements (requetesEffacementCommunaute, section Communaute).
-      ...requetesEffacementCommunaute(db, clientId)
+      ...requetesEffacementCommunaute(db, clientId),
+      // ... et de Feu Vert : Passeport et ligne du tableau de regularite.
+      db.prepare("DELETE FROM feuvert WHERE client_id = ?1").bind(clientId),
+      db.prepare("DELETE FROM feuvert_tableau WHERE client_id = ?1").bind(clientId)
     ]);
     return reponseJson({ ok: true }, 200, cors);
   }
@@ -729,6 +741,12 @@ async function routeAdmin(chemin, request, env, cors, ip) {
   if (chemin === "/admin/communaute") return reponseJson(await adminCommunaute(db, corps), 200, cors);
 
   if (chemin === "/admin/presence") return reponseJson({ ok: true, clients: await adminPresence(db, maintenant) }, 200, cors);
+
+  if (chemin === "/admin/feuvert") {
+    const r = await adminFeuVert(db, corps, maintenant);
+    if (r.erreur) return refus(route, r.statut || 400, r.erreur, cors);
+    return reponseJson({ ok: true, ...r }, 200, cors);
+  }
 
   return reponseJson({ ok: false, error: "not-found" }, 404, cors);
 }
@@ -759,7 +777,10 @@ const TYPES_AUTORISES = [
   // planifiee) : un telephone ne peut pas l'envoyer (TYPES_SERVEUR).
   "alerte_inactivite",
   "alerte_poids",
-  "alerte_nutrition"
+  "alerte_nutrition",
+  // Feu Vert (14 novembre 2026) : check-in du lundi. Semaine dans weekKey,
+  // resume dans message, victoire dans note, blocage dans motif.
+  "checkin_feu_vert"
 ];
 
 /** Types que seul le Worker emet : refuses sur /coach-sync. */
@@ -2372,6 +2393,262 @@ async function nettoyerCommunaute(env, maintenant) {
   ]);
 }
 
+/* ------------------------------------------------------------------ */
+/* Feu Vert : coaching collectif debutants (14 novembre 2026)          */
+/* ------------------------------------------------------------------ */
+/*
+ * Cohortes de 12, cycles de 6 semaines. Trois choses vivent ici, dans la
+ * base D1 deja liee (aucune nouvelle liaison, aucun nouveau secret) :
+ *
+ * 1. LE PASSEPORT (table feuvert), fixe par le coach seul, depuis l'Espace
+ *    coach (POST /admin/feuvert, ADMIN_SECRET). Pour chacun des 8 gestes :
+ *    rouge / orange / vert et la date de la derniere correction. Plus les
+ *    missions validees ({ "1": { semaine: 2 } }) et le numero de cohorte.
+ *    Le membre ne peut que LIRE le sien (POST /feuvert/etat) : aucune
+ *    route client n'ecrit dans cette table.
+ *
+ * 2. LE TABLEAU DE REGULARITE (table feuvert_tableau), sur ACCORD seulement
+ *    (case « tableau » du questionnaire, reprise dans l'application). La
+ *    membre publie son pseudo et, par semaine, ses seances faites,
+ *    sa seance bonus et son check-in envoye (declaratif, comme le check-in).
+ *    Retirer l'accord efface la ligne. La cohorte est celle fixee par le
+ *    coach, jamais celle annoncee par le telephone.
+ *
+ * 3. La lecture du tableau (POST /feuvert/tableau) ne rend, pour chaque
+ *    membre de la MEME cohorte ayant donne son accord : que le pseudo, les
+ *    compteurs par semaine et les numeros de missions validees. Ni libelle,
+ *    ni identifiant, ni charge, ni poids, ni photo. Les points (1 par
+ *    seance, max 2 ; 1 bonus S4-S6 ; 1 check-in ; 2 par mission validee)
+ *    se calculent dans l'application (app/src/lib/feu-vert.js).
+ *
+ * 4. LA SEANCE DE LA SEMAINE (table feuvert_videos) : chaque semaine, le
+ *    coach filme sa propre seance A et colle le lien de la video dans
+ *    l'Espace coach, par cohorte et par semaine. Seul un lien https est
+ *    garde. /feuvert/etat le rend avec le Passeport.
+ *
+ * Le check-in du lundi, lui, part par /coach-sync (type checkin_feu_vert),
+ * comme les pointages : il arrive dans le classeur du coach.
+ */
+
+const FV_GESTES = ["squat", "rdl", "rowing", "developpe", "fente", "gainage", "tirage", "hipthrust"];
+const FV_ETATS = ["rouge", "orange", "vert"];
+const FV_SEMAINES = 6;
+const FV_MISSIONS = 4;
+const FV_COHORTE = /^[A-Za-z0-9-]{1,12}$/;
+const FV_APPELS_PAR_JOUR = 60;
+const TAILLE_MAX_FEUVERT = 2 * 1024;
+const FV_URL_MAX = 300;
+
+/** Lien de video : https seulement (jamais javascript: ni data:), 300 caracteres au plus. */
+function urlVideoPropre(brut) {
+  const u = String(brut || "").trim();
+  if (!u || u.length > FV_URL_MAX) return "";
+  try {
+    const x = new URL(u);
+    return x.protocol === "https:" && !x.username && !x.password ? x.toString() : "";
+  } catch (e) {
+    return "";
+  }
+}
+
+async function videosCohorte(db, cohorte) {
+  const r = await db.prepare("SELECT semaine, url FROM feuvert_videos WHERE cohorte = ?1").bind(cohorte).all();
+  const sortie = {};
+  for (const l of r.results || []) {
+    const url = urlVideoPropre(l.url);
+    if (url && l.semaine >= 1 && l.semaine <= FV_SEMAINES) sortie[String(l.semaine)] = url;
+  }
+  return sortie;
+}
+
+const jsonOu = (texte, repli) => {
+  try {
+    const v = JSON.parse(texte);
+    return v && typeof v === "object" && !Array.isArray(v) ? v : repli;
+  } catch (e) {
+    return repli;
+  }
+};
+
+/** Passeport propre : seuls les 8 gestes connus, etat connu, date AAAA-MM-JJ ou vide. */
+function passeportPropre(brut) {
+  const sortie = {};
+  if (!brut || typeof brut !== "object") return sortie;
+  for (const id of FV_GESTES) {
+    const g = brut[id];
+    if (!g || !FV_ETATS.includes(g.etat)) continue;
+    sortie[id] = { etat: g.etat, date: DATE_ISO.test(String(g.date || "")) ? String(g.date) : "" };
+  }
+  return sortie;
+}
+
+/** Missions validees : { "1".."4": { semaine: 1..6 } }. */
+function missionsPropres(brut) {
+  const sortie = {};
+  if (!brut || typeof brut !== "object") return sortie;
+  for (let n = 1; n <= FV_MISSIONS; n++) {
+    const m = brut[String(n)];
+    const semaine = Number(m && m.semaine);
+    if (Number.isInteger(semaine) && semaine >= 1 && semaine <= FV_SEMAINES) sortie[String(n)] = { semaine };
+  }
+  return sortie;
+}
+
+/** Compteurs d'un membre : { "1".."6": { seances 0-2, bonus 0-1, checkin 0-1 } }. */
+function semainesPropres(brut) {
+  const sortie = {};
+  if (!brut || typeof brut !== "object") return sortie;
+  const borne = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
+  for (let n = 1; n <= FV_SEMAINES; n++) {
+    const s = brut[String(n)];
+    if (!s || typeof s !== "object") continue;
+    sortie[String(n)] = { seances: borne(s.seances, 2), bonus: n >= 4 ? borne(s.bonus, 1) : 0, checkin: borne(s.checkin, 1) };
+  }
+  return sortie;
+}
+
+async function tableauCohorte(db, cohorte) {
+  const r = await db
+    .prepare("SELECT t.pseudo AS pseudo, t.semaines AS semaines, f.missions AS missions FROM feuvert_tableau t JOIN feuvert f ON f.client_id = t.client_id WHERE t.cohorte = ?1 AND f.cohorte = ?1")
+    .bind(cohorte)
+    .all();
+  return (r.results || [])
+    .map((l) => ({ pseudo: l.pseudo, semaines: semainesPropres(jsonOu(l.semaines, {})), missions: missionsPropres(jsonOu(l.missions, {})) }))
+    .sort((a, b) => a.pseudo.localeCompare(b.pseudo, "fr", { sensitivity: "base" }));
+}
+
+async function routeFeuVert(chemin, request, env, cors) {
+  const route = "/feuvert";
+  const id = await identifier(route, request, env, cors);
+  if (id.reponse) return id.reponse;
+  const { client, db } = id;
+  // Jeton obligatoire, meme en mode transition : le Passeport est personnel.
+  if (!client) return refus(route, 401, "acces-requis", cors);
+  if (!db) return refus(route, 503, "acces-non-configure", cors);
+  const maintenant = Date.now();
+  const lent = await depasse(db, [{ cle: `feuvert:${client.id}:${jourUtc(maintenant)}`, limite: FV_APPELS_PAR_JOUR, dureeMs: 2 * MS_JOUR, raison: "trop-de-requetes" }], maintenant);
+  if (lent) return refus(route, 429, lent, cors, client);
+  const lu = await lireJson(route, request, cors, TAILLE_MAX_FEUVERT);
+  if (lu.reponse) return lu.reponse;
+  const corps = lu.corps;
+
+  const fiche = await db.prepare("SELECT cohorte, passeport, missions, maj_le FROM feuvert WHERE client_id = ?1").bind(client.id).first();
+
+  if (chemin === "/feuvert/etat") {
+    journal(route, 200, null, client);
+    if (!fiche) return reponseJson({ ok: true, inscrit: false }, 200, cors);
+    return reponseJson(
+      {
+        ok: true,
+        inscrit: true,
+        cohorte: fiche.cohorte,
+        passeport: passeportPropre(jsonOu(fiche.passeport, {})),
+        missions: missionsPropres(jsonOu(fiche.missions, {})),
+        videos: await videosCohorte(db, fiche.cohorte),
+        majLe: Number(fiche.maj_le)
+      },
+      200,
+      cors
+    );
+  }
+
+  if (chemin === "/feuvert/tableau") {
+    if (!fiche) return refus(route, 404, "non-inscrit", cors, client);
+    if (corps.accord === false) {
+      await db.prepare("DELETE FROM feuvert_tableau WHERE client_id = ?1").bind(client.id).run();
+    } else if (corps.accord === true) {
+      const v = validerPseudo(corps.pseudo);
+      if (v.erreur) return refus(route, 400, v.erreur, cors, client);
+      const pris = await db
+        .prepare("SELECT client_id FROM feuvert_tableau WHERE cohorte = ?1 AND pseudo_norme = ?2 AND client_id != ?3")
+        .bind(fiche.cohorte, v.norme, client.id)
+        .first();
+      if (pris) return refus(route, 409, "pseudo-pris", cors, client);
+      await db
+        .prepare(
+          "INSERT INTO feuvert_tableau (client_id, cohorte, pseudo, pseudo_norme, semaines, maj_le) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(client_id) DO UPDATE SET cohorte = ?2, pseudo = ?3, pseudo_norme = ?4, semaines = ?5, maj_le = ?6"
+        )
+        .bind(client.id, fiche.cohorte, v.pseudo, v.norme, JSON.stringify(semainesPropres(corps.semaines)), maintenant)
+        .run();
+    }
+    const moi = await db.prepare("SELECT pseudo FROM feuvert_tableau WHERE client_id = ?1").bind(client.id).first();
+    journal(route, 200, null, client);
+    return reponseJson({ ok: true, accord: Boolean(moi), pseudo: moi ? moi.pseudo : null, tableau: await tableauCohorte(db, fiche.cohorte) }, 200, cors);
+  }
+
+  return reponseJson({ ok: false, error: "not-found" }, 404, cors);
+}
+
+/**
+ * Espace coach : { action: "liste" } (tous les membres inscrits, ou ceux
+ * d'une cohorte), { action: "enregistrer", client, cohorte, passeport,
+ * missions }, { action: "retirer", client }, { action: "video", cohorte,
+ * semaine, url } (url vide : lien retire).
+ */
+async function adminFeuVert(db, corps, maintenant) {
+  const action = String(corps.action || "");
+  if (action === "liste") {
+    const cohorte = corps.cohorte ? String(corps.cohorte) : null;
+    const r = await db
+      .prepare(
+        "SELECT c.id AS id, c.libelle AS libelle, f.cohorte AS cohorte, f.passeport AS passeport, f.missions AS missions, f.maj_le AS maj_le, t.pseudo AS pseudo FROM feuvert f JOIN clients c ON c.id = f.client_id LEFT JOIN feuvert_tableau t ON t.client_id = f.client_id WHERE c.revoque_le IS NULL ORDER BY c.libelle"
+      )
+      .all();
+    const membres = (r.results || [])
+      .filter((l) => !cohorte || l.cohorte === cohorte)
+      .map((l) => ({ id: l.id, libelle: l.libelle, cohorte: l.cohorte, passeport: passeportPropre(jsonOu(l.passeport, {})), missions: missionsPropres(jsonOu(l.missions, {})), majLe: Number(l.maj_le), pseudo: l.pseudo || null }));
+    // Videos de la seance de la semaine, par cohorte (celles des membres listees).
+    const videos = {};
+    for (const c of new Set(membres.map((m) => m.cohorte).concat(cohorte ? [cohorte] : []))) videos[c] = await videosCohorte(db, c);
+    return { membres, videos };
+  }
+  if (action === "video") {
+    const cohorteVideo = String(corps.cohorte || "").trim();
+    const semaine = Number(corps.semaine);
+    if (!FV_COHORTE.test(cohorteVideo)) return { erreur: "cohorte-invalide" };
+    if (!Number.isInteger(semaine) || semaine < 1 || semaine > FV_SEMAINES) return { erreur: "semaine-invalide" };
+    const url = urlVideoPropre(corps.url);
+    if (String(corps.url || "").trim() && !url) return { erreur: "lien-invalide" };
+    if (url) {
+      await db
+        .prepare("INSERT INTO feuvert_videos (cohorte, semaine, url, maj_le) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(cohorte, semaine) DO UPDATE SET url = ?3, maj_le = ?4")
+        .bind(cohorteVideo, semaine, url, maintenant)
+        .run();
+    } else {
+      await db.prepare("DELETE FROM feuvert_videos WHERE cohorte = ?1 AND semaine = ?2").bind(cohorteVideo, semaine).run();
+    }
+    return { videos: await videosCohorte(db, cohorteVideo) };
+  }
+  const clientId = String(corps.client || "");
+  const c = await db.prepare("SELECT id FROM clients WHERE id = ?1 AND revoque_le IS NULL").bind(clientId).first();
+  if (!c) return { erreur: "client-inconnu", statut: 404 };
+  if (action === "retirer") {
+    await db.batch([
+      db.prepare("DELETE FROM feuvert WHERE client_id = ?1").bind(clientId),
+      db.prepare("DELETE FROM feuvert_tableau WHERE client_id = ?1").bind(clientId)
+    ]);
+    return {};
+  }
+  if (action === "enregistrer") {
+    const cohorte = String(corps.cohorte || "").trim();
+    if (!FV_COHORTE.test(cohorte)) return { erreur: "cohorte-invalide" };
+    const passeport = passeportPropre(corps.passeport);
+    const missions = missionsPropres(corps.missions);
+    await db.batch([
+      db
+        .prepare(
+          "INSERT INTO feuvert (client_id, cohorte, passeport, missions, maj_le) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(client_id) DO UPDATE SET cohorte = ?2, passeport = ?3, missions = ?4, maj_le = ?5"
+        )
+        .bind(clientId, cohorte, JSON.stringify(passeport), JSON.stringify(missions), maintenant),
+      // Changement de cohorte : la ligne du tableau suit (ou disparait si le pseudo y est deja pris).
+      db.prepare("UPDATE OR IGNORE feuvert_tableau SET cohorte = ?2 WHERE client_id = ?1").bind(clientId, cohorte),
+      db.prepare("DELETE FROM feuvert_tableau WHERE client_id = ?1 AND cohorte != ?2").bind(clientId, cohorte)
+    ]);
+    return { passeport, missions, cohorte };
+  }
+  return { erreur: "action-inconnue" };
+}
+
 // Acces des tests aux fonctions internes (sans effet en production).
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
   Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
@@ -2381,6 +2658,10 @@ if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) 
     validerTransformationCommunaute,
     contientCoordonnees,
     nettoyerCommunaute,
+    passeportPropre,
+    missionsPropres,
+    semainesPropres,
+    urlVideoPropre,
     COMMUNAUTE: { CATEGORIES: COMMUNAUTE_CATEGORIES, FILTRES: COMMUNAUTE_FILTRES, SCORES_MOIS: COMMUNAUTE_SCORES_MOIS, PERIODES: COMMUNAUTE_PERIODES, SIGNALEMENTS_POUR_MASQUER, COMMUNAUTE_APPELS_PAR_MINUTE, COMMUNAUTE_ECRITURES_PAR_JOUR, COMMUNAUTE_SIGNALEMENTS_PAR_JOUR, COMMUNAUTE_BRAVOS_PAR_JOUR, DELAI_TRANSFORMATION_MS }
   });
 }
