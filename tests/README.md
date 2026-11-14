@@ -17,6 +17,8 @@ Google Apps Script, ni Open Food Facts.
 | `synchro-coach.test.mjs` | File d'attente : aucun pointage perdu |
 | `ia.test.mjs` | Routage vers le proxy, repli, traduction des erreurs |
 | `../worker/test-worker.mjs` | Proxy Cloudflare : validation, plafonds, secrets |
+| `feu-vert.test.mjs` | Feu Vert : contenu vendu, semaines, niveaux, charge bloquée, check-in, régularité, jamais de poids |
+| `worker-feu-vert.test.mjs` | Worker Feu Vert : Passeport écrit par le coach seul, tableau par accord, vidéos de la semaine |
 
 ## Comment ça marche
 

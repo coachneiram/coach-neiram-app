@@ -10,6 +10,11 @@ connexion passe souvent mal.
 - Les catalogues alimentaires locaux
 - Tout ce qui est déjà enregistré sur l'appareil
 
+- Feu Vert (14 novembre 2026) : programme des 6 semaines, fiches des
+  8 gestes, missions, module mental, pointage des séances, compteur de
+  régularité, et le **Passeport tel qu'il était à la dernière synchro** (avec
+  le message « Pas de connexion : dernière version connue affichée »)
+
 ## Ce qui ne fonctionne pas sans réseau
 
 Ces fonctions ont besoin d'un serveur, et affichent leur message d'erreur
@@ -18,7 +23,10 @@ habituel :
 - Photo de repas, chatbot nutrition, lecture de code-barres, bilans IA
 - Recherche Open Food Facts
 - Envoi des pointages au coach — **ils ne sont pas perdus** : ils restent en
-  file d'attente et repartent dès le retour du réseau
+  file d'attente et repartent dès le retour du réseau (de même pour le
+  check-in Feu Vert du lundi)
+- Feu Vert : mise à jour du Passeport, tableau de régularité de la cohorte,
+  bouton WhatsApp des vidéos de correction
 
 ## Vérifier que ça marche
 
