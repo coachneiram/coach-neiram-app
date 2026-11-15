@@ -26,6 +26,9 @@ export const ERREURS_ESPACE_COACH = {
   404: "L'espace coach n'est pas activé sur le serveur (ADMIN_SECRET absent ou trop court dans Cloudflare).",
   "libelle-invalide": "Libellé refusé : prénom et initiale, 40 caractères au plus (ex. « Thomas B. »).",
   "client-inconnu": "Client inconnu ou révoqué.",
+  "lien-invalide": "Lien refusé : il doit commencer par https:// (300 caractères au plus).",
+  "semaine-invalide": "Semaine inconnue (1 à 6).",
+  "cohorte-invalide": "Cohorte : lettres, chiffres ou tiret, 12 caractères au plus (ex. « 1 »).",
   introuvable: "Pseudo ou publication introuvable.",
   reseau: "Pas de connexion au serveur : réessaie.",
   indisponible: "Le serveur ne répond pas comme prévu : réessaie plus tard."
@@ -67,6 +70,12 @@ export const listeClients = (secret, env) => appelerAdmin("/admin/clients", {}, 
 export const creerCode = ({ libelle, client }, secret, env) => appelerAdmin("/admin/invitations", client ? { client } : { libelle }, secret, env);
 export const revoquerClient = (client, secret, env) => appelerAdmin("/admin/revoquer", { client }, secret, env);
 export const presenceClients = (secret, env) => appelerAdmin("/admin/presence", {}, secret, env);
+// Feu Vert (14 novembre 2026) : inscription des membres et Passeport.
+export const feuVertListe = (secret, env) => appelerAdmin("/admin/feuvert", { action: "liste" }, secret, env);
+export const feuVertEnregistrer = ({ client, cohorte, passeport, missions }, secret, env) =>
+  appelerAdmin("/admin/feuvert", { action: "enregistrer", client, cohorte, passeport, missions }, secret, env);
+export const feuVertRetirer = (client, secret, env) => appelerAdmin("/admin/feuvert", { action: "retirer", client }, secret, env);
+export const feuVertVideo = ({ cohorte, semaine, url }, secret, env) => appelerAdmin("/admin/feuvert", { action: "video", cohorte, semaine, url }, secret, env);
 export const moderation = (action, cible, secret, env) => appelerAdmin("/admin/communaute", { action, ...(cible != null ? { cible: String(cible) } : {}) }, secret, env);
 
 /** Libellé attendu par le Worker (LIBELLE_VALIDE) : on prévient avant l'envoi. */

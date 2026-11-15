@@ -44,7 +44,8 @@ export function Bienvenue({ onSave }) {
   const champFichier = useRef(null);
 
   // Age, taille et poids : sans eux, computeTargets n'a rien a calculer.
-  const peutEnregistrer = valeur.age && valeur.heightCm && valeur.startWeightKg;
+  // Feu Vert (14/11/2026) : jamais de poids corporel, le profil s'enregistre sans.
+  const peutEnregistrer = valeur.formule === "feuvert" || (valeur.age && valeur.heightCm && valeur.startWeightKg);
 
   const restaurer = async (evenement) => {
     const fichier = evenement.target.files[0];

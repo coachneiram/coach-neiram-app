@@ -176,7 +176,8 @@ var TYPES_AUTORISES = [
   'activite',
   'alerte_inactivite',
   'alerte_poids',
-  'alerte_nutrition'
+  'alerte_nutrition',
+  'checkin_feu_vert'
 ];
 
 /** Gravité des alertes (v2.5). Mail seulement pour attention et critique. */
@@ -205,7 +206,8 @@ var TABLE_NIVEAUX = [
   { type: 'alerte_semaines_difficiles', niveau: 'attention' },
   { type: 'justification', niveau: 'attention' },
   { type: 'resume_hebdo', niveau: 'attention' },
-  { type: 'semaine_difficile', niveau: 'info' }
+  { type: 'semaine_difficile', niveau: 'info' },
+  { type: 'checkin_feu_vert', niveau: 'info' }
 ];
 
 function niveauParDefaut(d) {
@@ -615,7 +617,10 @@ function doitAlerter(d) {
   if (t === 'resume_hebdo') return d.pct !== '' && d.pct < SEUIL_RESPECT_MAIL_PCT;
   return t.indexOf('alerte') === 0 ||
          t === 'semaine_difficile' ||
-         t === 'justification';
+         t === 'justification' ||
+         // Feu Vert : chaque check-in du lundi entre dans l'onglet Alertes
+         // (niveau info, donc sans mail) pour pointer les réponses du jour.
+         t === 'checkin_feu_vert';
 }
 
 function consignerAlerte(d) {

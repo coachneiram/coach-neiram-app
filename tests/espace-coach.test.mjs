@@ -23,7 +23,9 @@ const { PROXY_BASE_URL } = await import("../app/src/lib/config.js");
 const RACINE = new URL("../", import.meta.url).pathname;
 const lire = (c) => readFileSync(join(RACINE, c), "utf8");
 const sansCommentaires = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
-const FICHIERS = ["app/src/lib/espace-coach.js", "app/src/ui/EspaceCoach.jsx", "app/src/espace-coach.jsx", "app/espace-coach.html"];
+// FeuVertCoach.jsx (14 novembre 2026) : carte Feu Vert de l'Espace coach,
+// soumise aux mêmes règles (ni stockage, ni console, secret en mémoire).
+const FICHIERS = ["app/src/lib/espace-coach.js", "app/src/ui/EspaceCoach.jsx", "app/src/ui/FeuVertCoach.jsx", "app/src/espace-coach.jsx", "app/espace-coach.html"];
 const ADMIN = "admin-secret-de-test-0123456789-abcdef";
 
 describe("page à part, jamais reliée à l'app des clients", () => {

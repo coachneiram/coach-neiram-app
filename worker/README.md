@@ -406,3 +406,57 @@ Les anciennes lignes n'ont pas de niveau : elles comptent dans « non
 traitées » mais pas dans « la plus grave ». Mise en forme conseillée :
 Format > Mise en forme conditionnelle sur la colonne, texte contenant
 « critique » en rouge, « attention » en orange.
+
+## Feu Vert (coaching collectif débutants) — ajout du 14 novembre 2026
+
+Cohortes de 12, cycles de 6 semaines (cohorte 1 : lundi 18 janvier 2027).
+Mode « Feu Vert » de l'application existante, pas de nouvelle application.
+Section « Feu Vert » de `coach-neiram-proxy.js`. **Aucun nouveau secret,
+aucune nouvelle liaison** : les routes utilisent la base `DB` et le secret
+`ADMIN_SECRET` déjà en place. Les tables se créent seules à la première
+requête (aucune table existante n'est touchée) :
+
+```sql
+CREATE TABLE IF NOT EXISTS feuvert (client_id TEXT PRIMARY KEY, cohorte TEXT NOT NULL, passeport TEXT NOT NULL DEFAULT '{}', missions TEXT NOT NULL DEFAULT '{}', maj_le INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS feuvert_videos (cohorte TEXT NOT NULL, semaine INTEGER NOT NULL, url TEXT NOT NULL, maj_le INTEGER NOT NULL, PRIMARY KEY (cohorte, semaine));
+CREATE TABLE IF NOT EXISTS feuvert_tableau (client_id TEXT PRIMARY KEY, cohorte TEXT NOT NULL, pseudo TEXT NOT NULL, pseudo_norme TEXT NOT NULL, semaines TEXT NOT NULL DEFAULT '{}', maj_le INTEGER NOT NULL, UNIQUE (cohorte, pseudo_norme));
+```
+
+| Route | Qui | Rôle |
+|---|---|---|
+| `/feuvert/etat` | membre (jeton) | **lire** son Passeport (8 gestes rouge/orange/vert + date), ses missions validées, les liens « Ma séance de la semaine, par Marien » de sa cohorte |
+| `/feuvert/tableau` | membre (jeton) | `{ accord: true, pseudo, semaines }` publie ses compteurs ; `{ accord: false }` efface sa ligne ; `{}` lit seulement. Rend le tableau de **sa** cohorte : pseudo, compteurs, missions validées, par ordre alphabétique |
+| `/admin/feuvert` `liste` | coach | membres inscrits (libellé, cohorte, Passeport, missions, pseudo) et liens vidéo |
+| `/admin/feuvert` `enregistrer` | coach | `{ client, cohorte, passeport, missions }` : inscrire un membre, fixer ses états et ses missions validées (`{ "1": { semaine: 2 } }`) |
+| `/admin/feuvert` `retirer` | coach | efface Passeport et ligne du tableau |
+| `/admin/feuvert` `video` | coach | `{ cohorte, semaine, url }` : lien https de la séance filmée de la semaine (url vide : retiré) |
+
+- **Le Passeport n'est écrit que par le coach** (Espace coach, carte « Feu Vert ·
+  Passeports »). Aucune route membre n'écrit dans `feuvert`.
+- Jeton client obligatoire, **même en mode « transition »** ; 60 appels par jour
+  et par membre.
+- Tableau de régularité : seulement les membres qui ont donné leur accord ; la
+  cohorte est celle fixée par le coach, jamais celle annoncée par le téléphone ;
+  ni libellé ni identifiant renvoyés ; pseudo filtré (même filtre que les défis)
+  et unique dans la cohorte. Compteurs bornés : 2 séances, 1 bonus (S4-S6),
+  1 check-in par semaine. Les points se calculent dans l'application.
+- `/admin/revoquer` efface aussi les données Feu Vert du client.
+- Check-in du lundi : par `/coach-sync`, type `checkin_feu_vert` (semaine dans
+  `weekKey`, résumé dans `message`, victoire dans `note`, blocage dans `motif`).
+  Niveau **info** : une ligne dans le Journal et dans l'onglet Alertes (colonne
+  Statut pour pointer les réponses de la journée), **sans mail**.
+- Tests : `node --test tests/worker-feu-vert.test.mjs tests/feu-vert.test.mjs` ;
+  fumée navigateur : `node scripts-migration/fumee-feu-vert.mjs`.
+
+### Mise en service
+
+1. Fusionner la PR, puis **redéployer le Worker** (coller
+   `coach-neiram-proxy.js` dans Cloudflare > Workers > coach-neiram-proxy >
+   Edit code > Deploy). Rien à ajouter dans Settings.
+2. **Script Google** : coller `coach-sync.gs` dans `Code.gs`, enregistrer, puis
+   Gérer les déploiements > crayon du déploiement actif > Nouvelle version >
+   Déployer (même adresse /exec). Sans cette étape, les check-ins sont
+   refusés par le script (« type-inconnu ») et restent en file sur le
+   téléphone, sans être perdus.
+3. Espace coach : créer un code d'accès par membre, puis « Inscrire » chaque
+   membre dans la cohorte 1 (carte « Feu Vert · Passeports »).
