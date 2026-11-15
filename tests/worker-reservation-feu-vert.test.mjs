@@ -269,6 +269,8 @@ describe("Script Google (coach-sync.gs v2.6) : de bout en bout", () => {
     assert.equal(l["Prénom"], "Julie");
     assert.equal(l["Email"], "julie@exemple.fr");
     assert.equal(l["Parcours indicatif"], "Reprise");
+    // Apostrophe : le classeur garde le 0 initial du numero.
+    assert.equal(l["Téléphone"], "'06 12 34 56 78");
     assert.equal(l["Contre-indication (oui/non)"], "Oui");
     assert.equal(l["Blocages"], "Le regard des autres ; Autre : Les machines");
     assert.equal(l["Tableau de régularité"], "Oui");
