@@ -460,3 +460,40 @@ CREATE TABLE IF NOT EXISTS feuvert_tableau (client_id TEXT PRIMARY KEY, cohorte 
    téléphone, sans être perdus.
 3. Espace coach : créer un code d'accès par membre, puis « Inscrire » chaque
    membre dans la cohorte 1 (carte « Feu Vert · Passeports »).
+
+## Réservations Feu Vert (questionnaire de la page publique) — ajout du 15 novembre 2026
+
+Remplace FormSubmit : son éditeur (Devro LABS) ne publie ni la localisation
+des serveurs ni les garanties de transfert, alors que le questionnaire
+contient une donnée de santé (question 7, contre-indication : oui / non).
+
+Chemin : `coachneiram.github.io/feu-vert.html` → Worker `POST /reservation-feu-vert`
+→ script Google (même `COACH_SYNC_URL`, même signature HMAC) → onglet
+« Feu Vert – Réservations » du classeur « Suivi Coaching en ligne » + mail
+court au coach (prénom, parcours indicatif, lien ; ni coordonnées ni
+réponse santé). Cloudflare et Google : Data Privacy Framework UE–États-Unis
+et clauses contractuelles types.
+
+- Aucune variable, aucun secret, aucune liaison nouvelle.
+- Origine exacte `https://coachneiram.github.io` exigée (indépendante
+  d'`ALLOWED_ORIGINS`), corps de 8 Ko au plus, champs connus seulement,
+  choix vérifiés contre les listes de la page, consentement obligatoire.
+- Anti-spam : champ piège `site_web`, durée de remplissage d'au moins 3 s
+  (un robot reçoit `{ ok: true }` mais rien ne part), 5 envois par heure et
+  par adresse IP (empreinte tronquée), 60 par jour au total.
+- Le Worker ne garde rien des réponses : D1 ne voit que des compteurs.
+- Conservation : `purgerReservationsFeuVert()` efface les lignes de plus de
+  365 jours, à chaque réservation et chaque jour (déclencheur).
+- Si le Worker ou le script répond une erreur, la page ouvre l'email de la
+  personne avec ses réponses (repli `mailto:`) : rien n'est perdu.
+
+### Mise en service (Marien, 10 minutes)
+
+1. Script Google : Code.gs actuel copié dans un fichier entièrement
+   commenté, `worker/coach-sync.gs` collé dans Code.gs, Enregistrer ;
+   Gérer les déploiements > crayon > Nouvelle version > Déployer.
+2. Déclencheurs > Ajouter : `purgerReservationsFeuVert`, horaire, Jour.
+3. Cloudflare > Workers > coach-neiram-proxy > Edit code : coller
+   `worker/coach-neiram-proxy.js`, Deploy.
+4. Test : `node --test tests/worker-reservation-feu-vert.test.mjs`, puis un
+   vrai envoi depuis la page (voir la PR du site).
