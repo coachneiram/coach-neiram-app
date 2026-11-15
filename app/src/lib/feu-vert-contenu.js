@@ -64,7 +64,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "angle 3/4 avant (45°), à 2-3 m, téléphone à hauteur de hanche, corps entier dans le cadre, pieds visibles.",
       "facilitee": "squat sur banc (tu t'assois brièvement sur un banc ou un box, puis tu te relèves), sans charge ou avec un haltère léger.",
-      "video": "https://youtube.com/shorts/Q_5o2CrwiTQ"
+      "video": "https://youtube.com/shorts/NCDdI_ZzxXY"
     },
     {
       "id": "rdl",
@@ -259,7 +259,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "de face à 2-3 m pour l'alignement du genou, téléphone à hauteur de hanche. Si tu n'as qu'une prise : 3/4 avant.",
       "facilitee": "fente statique (pieds déjà écartés, tu montes et descends sur place) en tenant un support (poteau, rack) d'une main.",
-      "video": "https://youtube.com/shorts/Zmid_VKImlo"
+      "video": "https://youtube.com/shorts/r3aZfPPVmQg"
     },
     {
       "id": "gainage",
@@ -302,7 +302,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "profil strict, téléphone posé au sol à 1,5-2 m.",
       "facilitee": "planche sur les genoux, ou planche mains sur un banc (corps incliné).",
-      "video": "https://youtube.com/shorts/9N0txxUKrmo"
+      "video": "https://youtube.com/shorts/XLDAZHTMdyE"
     },
     {
       "id": "tirage",
@@ -349,7 +349,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "3/4 arrière à 2 m, téléphone à hauteur d'épaules si possible (posé sur une machine voisine libre). Profil accepté.",
       "facilitee": "tirage avec un élastique accroché en hauteur, à genoux, ou charge minimale de la machine avec un temps de 3 s à la remontée.",
-      "video": "https://youtube.com/shorts/cV5pPnnJgBk"
+      "video": "https://youtube.com/shorts/JdN64Ad98W8"
     },
     {
       "id": "hipthrust",
@@ -396,7 +396,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "profil strict, téléphone au sol ou sur un support bas, à 2 m.",
       "facilitee": "pont fessier au sol (dos au sol, pas de banc), sans charge puis avec un haltère sur les hanches.",
-      "video": "https://youtube.com/shorts/a0pL0JnWIOA"
+      "video": "https://youtube.com/shorts/rA6QacIDBPE"
     }
   ],
   "semaines": [
