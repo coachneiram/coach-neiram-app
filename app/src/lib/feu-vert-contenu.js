@@ -162,7 +162,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "3/4 arrière du côté du bras qui tire, à 2 m, téléphone à hauteur du banc.",
       "facilitee": "rowing poitrine appuyée sur un banc incliné (deux haltères, le banc porte ton buste) : le dos n'a plus à se stabiliser seul.",
-      "video": ""
+      "video": "https://youtube.com/shorts/97bGsPyUikA"
     },
     {
       "id": "developpe",
