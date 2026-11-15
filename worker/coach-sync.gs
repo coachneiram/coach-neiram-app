@@ -1,6 +1,28 @@
 /** @OnlyCurrentDoc */
 /**
  * Coach Neiram — synchro et alertes du coaching en ligne
+ * Version 2.6 (15 novembre 2026) — réservations Feu Vert (remplace FormSubmit).
+ *
+ * La v2.6 reçoit, par le Worker (route /reservation-feu-vert, même enveloppe
+ * signée), le questionnaire d'admission de la page Feu Vert :
+ *  - une ligne dans l'onglet « Feu Vert – Réservations » (créé tout seul au
+ *    premier envoi), colonne Statut à « nouvelle » ;
+ *  - un mail court « [Feu Vert] Nouvelle réservation : Prénom » avec le
+ *    parcours indicatif et le lien de l'onglet, SANS email, téléphone ni
+ *    réponse santé ; 30 mails par jour au plus, séparés des alertes ;
+ *  - rien dans Journal, Alertes ou Erreurs (donnée de santé) ;
+ *  - purgerReservationsFeuVert() efface les lignes de plus de 12 mois, à
+ *    chaque réservation et chaque jour par déclencheur.
+ * Mise en place (5 minutes) :
+ *   1. sauvegarder l'ancien Code.gs dans un fichier ENTIÈREMENT COMMENTÉ,
+ *      coller ce fichier dans Code.gs, ENREGISTRER ;
+ *   2. Gérer les déploiements > crayon du déploiement ACTIF > Version :
+ *      Nouvelle version > Déployer (même adresse /exec) ;
+ *   3. Déclencheurs (icône réveil) > Ajouter un déclencheur :
+ *      purgerReservationsFeuVert, « Déclencheur horaire », « Jour »,
+ *      entre 3 h et 4 h ;
+ *   4. coller le nouveau Worker dans Cloudflare (aucune variable à ajouter).
+ *
  * Version 2.5 (25 octobre 2026) — Smart Coach : gravité et statut des alertes.
  *
  * La v2.5 :
@@ -176,7 +198,8 @@ var TYPES_AUTORISES = [
   'activite',
   'alerte_inactivite',
   'alerte_poids',
-  'alerte_nutrition'
+  'alerte_nutrition',
+  'checkin_feu_vert'
 ];
 
 /** Gravité des alertes (v2.5). Mail seulement pour attention et critique. */
@@ -205,7 +228,8 @@ var TABLE_NIVEAUX = [
   { type: 'alerte_semaines_difficiles', niveau: 'attention' },
   { type: 'justification', niveau: 'attention' },
   { type: 'resume_hebdo', niveau: 'attention' },
-  { type: 'semaine_difficile', niveau: 'info' }
+  { type: 'semaine_difficile', niveau: 'info' },
+  { type: 'checkin_feu_vert', niveau: 'info' }
 ];
 
 function niveauParDefaut(d) {
@@ -287,6 +311,9 @@ function doPost(e) {
     var auth = authentifier(lireCorps(e));
     if (!auth.ok) return reponse(false, auth.erreur);
     var recu = auth.recu;
+    // v2.6 : questionnaire Feu Vert. Traité À PART : jamais dans le Journal,
+    // les Alertes ni l'onglet Erreurs (il contient une donnée de santé).
+    if (recu.type === TYPE_RESERVATION_FV) return reponse(enregistrerReservationFeuVert(recu));
     if (TYPES_AUTORISES.indexOf(String(recu.type || '')) === -1) {
       journaliserErreur('Type inconnu : ' + court(recu.type), JSON.stringify(nettoyer(recu)));
       return reponse(false, 'type-inconnu');
@@ -329,7 +356,7 @@ function doPost(e) {
 
 function doGet() {
   return ContentService.createTextOutput(
-    'Synchro Coach Neiram active (v2.5). Utiliser POST.');
+    'Synchro Coach Neiram active (v2.6). Utiliser POST.');
 }
 
 /* ------------------------------------------------------------------ LECTURE */
@@ -615,7 +642,10 @@ function doitAlerter(d) {
   if (t === 'resume_hebdo') return d.pct !== '' && d.pct < SEUIL_RESPECT_MAIL_PCT;
   return t.indexOf('alerte') === 0 ||
          t === 'semaine_difficile' ||
-         t === 'justification';
+         t === 'justification' ||
+         // Feu Vert : chaque check-in du lundi entre dans l'onglet Alertes
+         // (niveau info, donc sans mail) pour pointer les réponses du jour.
+         t === 'checkin_feu_vert';
 }
 
 function consignerAlerte(d) {
@@ -890,6 +920,165 @@ function texteSemaine(v) {
 function testerAdherence() {
   var n = majAdherence();
   afficher('Adherence : ' + n + ' ligne(s) recalculée(s)');
+}
+
+/* ---------------------------------------------- RÉSERVATIONS FEU VERT (v2.6) */
+
+/**
+ * Questionnaire d'admission de la page Feu Vert, relayé par le Worker
+ * (route /reservation-feu-vert, déjà validé champ par champ là-bas, revalidé
+ * ici). Une ligne dans l'onglet « Feu Vert – Réservations » et un mail
+ * court au coach : prénom et parcours indicatif, plus le lien de l'onglet.
+ * Le mail ne contient NI email, NI téléphone, NI la réponse à la question 7
+ * (contre-indication médicale) : ces données restent dans le classeur.
+ *
+ * Conservation : 12 mois au plus après l'envoi (politique de
+ * confidentialité Feu Vert, point 2.1). purgerReservationsFeuVert() efface
+ * les lignes plus anciennes ; elle tourne à chaque réservation et, en plus,
+ * chaque jour grâce au déclencheur à créer une fois (voir worker/README.md).
+ */
+var TYPE_RESERVATION_FV = 'reservation_feu_vert';
+var F_RESERVATIONS_FV = 'Feu Vert – Réservations';
+var CONSERVATION_RESERVATIONS_JOURS = 365;
+var MAX_MAILS_RESERVATION_PAR_JOUR = 30;
+var ENTETES_RESERVATIONS_FV = ['Reçu le', 'Prénom', 'Parcours indicatif', 'Email', 'Téléphone',
+  'Instagram', 'Niveau', 'Blocages', 'Objectif', 'Créneaux', 'Lieu', 'Salle / matériel',
+  'Contre-indication (oui/non)', 'Suivi présentiel', 'Tableau de régularité', 'Pseudo',
+  'Binôme', 'Consentement', 'Statut'];
+
+var CHOIX_RESERVATION_FV = {
+  niveau: ["Je n'ai jamais pratiqué", "J'ai arrêté depuis plus d'un an", 'Je pratique depuis moins de 6 mois', 'Je pratique depuis plus de 6 mois'],
+  objectif: ['Apprendre les bons gestes', "Me sentir à l'aise en salle", 'Reprendre une routine', 'Me renforcer', 'Autre'],
+  lieu: ['En salle, abonnement en cours', 'En salle, abonnement prévu avant janvier', 'À la maison uniquement'],
+  contreIndication: ['Oui', 'Non']
+};
+
+function texteResa(v, max) {
+  if (v === undefined || v === null) return '';
+  return String(v).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, max);
+}
+
+function listeResa(v) {
+  if (Object.prototype.toString.call(v) !== '[object Array]') return '';
+  return v.slice(0, 10).map(function (x) { return texteResa(x, 120); }).join(' ; ');
+}
+
+/** Rend true si la réservation est écrite (le Worker répond alors ok). */
+function enregistrerReservationFeuVert(r) {
+  try {
+    var prenom = texteResa(r.prenom, 60);
+    if (!prenom || !/@/.test(String(r.email || '')) || r.consentement !== true ||
+        CHOIX_RESERVATION_FV.niveau.indexOf(r.niveau) === -1 ||
+        CHOIX_RESERVATION_FV.objectif.indexOf(r.objectif) === -1 ||
+        CHOIX_RESERVATION_FV.lieu.indexOf(r.lieu) === -1 ||
+        CHOIX_RESERVATION_FV.contreIndication.indexOf(r.contreIndication) === -1) {
+      journaliserErreur('Réservation Feu Vert refusée : champs invalides (détail non conservé)', '');
+      return false;
+    }
+    var blocages = listeResa(r.blocage);
+    if (r.blocageAutre) blocages = blocages.replace('Autre', 'Autre : ' + texteResa(r.blocageAutre, 200));
+    var objectif = r.objectif === 'Autre' && r.objectifAutre ? 'Autre : ' + texteResa(r.objectifAutre, 200) : r.objectif;
+    var parcours = texteResa(r.parcoursIndicatif, 60);
+
+    var sh = feuille(F_RESERVATIONS_FV, ENTETES_RESERVATIONS_FV);
+    ecrireParEntetes(sh, {
+      'Reçu le': new Date(),
+      'Prénom': prenom,
+      'Parcours indicatif': parcours,
+      'Email': texteResa(r.email, 254),
+      // Apostrophe : le classeur garde le 0 initial (sinon 0600… devient 600…).
+      'Téléphone': r.telephone ? "'" + texteResa(r.telephone, 30) : '',
+      'Instagram': texteResa(r.instagram, 60),
+      'Niveau': r.niveau,
+      'Blocages': blocages,
+      'Objectif': objectif,
+      'Créneaux': listeResa(r.creneaux),
+      'Lieu': r.lieu,
+      'Salle / matériel': texteResa(r.salle, 200),
+      'Contre-indication (oui/non)': r.contreIndication,
+      'Suivi présentiel': r.presentiel === true ? 'Oui' : 'Non',
+      'Tableau de régularité': r.tableau === true ? 'Oui' : 'Non',
+      'Pseudo': texteResa(r.pseudo, 40),
+      'Binôme': r.binome === true ? 'Oui' : 'Non',
+      'Consentement': 'Oui (dont question 7)',
+      'Statut': 'nouvelle'
+    });
+  } catch (err) {
+    // Message seul : jamais les réponses (donnée de santé) dans Erreurs.
+    journaliserErreur('Réservation Feu Vert non écrite : ' + String(err && err.message || err).slice(0, 200), '');
+    return false;
+  }
+
+  // La ligne est écrite : la purge et le mail ne doivent plus faire échouer.
+  try { purgerReservationsFeuVert(); } catch (err) { journaliserErreur('Purge Feu Vert : ' + err, ''); }
+  try {
+    var adresse = adresseCoach();
+    if (/@exemple\.com$/.test(adresse)) {
+      journaliserErreur('EMAIL_COACH non renseigné : notification Feu Vert non envoyée', '');
+    } else if (peutNotifierReservation()) {
+      var m = composerMailReservation(prenom, parcours, sh);
+      MailApp.sendEmail(adresse, m.sujet, m.corps);
+    }
+  } catch (err) {
+    journaliserErreur('Notification Feu Vert non envoyée : ' + err, '');
+  }
+  return true;
+}
+
+/** Mail de notification : prénom, parcours indicatif, lien. Rien d'autre. */
+function composerMailReservation(prenom, parcours, sh) {
+  var lien = '';
+  try { lien = SpreadsheetApp.getActiveSpreadsheet().getUrl() + '#gid=' + sh.getSheetId(); } catch (err) { lien = ''; }
+  return {
+    sujet: '[Feu Vert] Nouvelle réservation : ' + prenom,
+    corps: 'Nouvelle réservation Feu Vert.\n\n' +
+      'Prénom : ' + prenom + '\n' +
+      'Parcours indicatif : ' + (parcours || '—') + '\n\n' +
+      'Réponses complètes dans l\'onglet « ' + F_RESERVATIONS_FV + ' »' + (lien ? ' :\n' + lien : '.') + '\n\n' +
+      'Ce mail ne contient volontairement ni coordonnées ni réponse à la question santé.\n' +
+      'Pense à passer la colonne Statut à « contactée », « inscrite » ou « refusée ».'
+  };
+}
+
+/** Plafond propre aux notifications Feu Vert (séparé des alertes clients). */
+function peutNotifierReservation() {
+  var props = PropertiesService.getScriptProperties();
+  var aujourdHui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var etat;
+  try { etat = JSON.parse(props.getProperty('quota_mails_feu_vert') || '{}'); } catch (err) { etat = {}; }
+  if (etat.jour !== aujourdHui) etat = { jour: aujourdHui, n: 0 };
+  if (etat.n >= MAX_MAILS_RESERVATION_PAR_JOUR) return false;
+  etat.n += 1;
+  props.setProperty('quota_mails_feu_vert', JSON.stringify(etat));
+  return true;
+}
+
+/**
+ * Efface les réservations reçues il y a plus de 12 mois (365 jours).
+ * À brancher sur un déclencheur quotidien (Déclencheurs > Ajouter >
+ * purgerReservationsFeuVert, « Déclencheur horaire », « Jour »). Rend le
+ * nombre de lignes effacées. Une ligne dont la date est illisible est gardée
+ * et signalée dans Erreurs : à vérifier à la main.
+ */
+function purgerReservationsFeuVert() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(F_RESERVATIONS_FV);
+  if (!sh || sh.getLastRow() < 2) return 0;
+  var map = indexEntetes(sh);
+  if (!('Reçu le' in map)) return 0;
+  var col = map['Reçu le'];
+  var limite = new Date().getTime() - CONSERVATION_RESERVATIONS_JOURS * 86400000;
+  var valeurs = sh.getRange(2, col + 1, sh.getLastRow() - 1, 1).getValues();
+  var effacees = 0;
+  var illisibles = 0;
+  // Du bas vers le haut : effacer une ligne ne décale pas celles qui restent à lire.
+  for (var i = valeurs.length - 1; i >= 0; i--) {
+    var v = valeurs[i][0];
+    var t = v instanceof Date ? v.getTime() : (v === '' ? NaN : new Date(v).getTime());
+    if (isNaN(t)) { illisibles++; continue; }
+    if (t < limite) { sh.deleteRow(i + 2); effacees++; }
+  }
+  if (illisibles) journaliserErreur('Purge Feu Vert : ' + illisibles + ' ligne(s) sans date lisible, à vérifier', '');
+  return effacees;
 }
 
 /* ------------------------------------------------------- OUTILS À LANCER À LA MAIN */

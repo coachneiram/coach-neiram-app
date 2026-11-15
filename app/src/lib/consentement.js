@@ -4,7 +4,7 @@
  * Regle Apple 5.1.2 (i) : dire clairement quand des donnees personnelles
  * partent chez un tiers, IA comprise, et obtenir une permission explicite
  * AVANT. Le RGPD demande la meme transparence. Ce qui part : la photo, le
- * texte saisi, ou le resume de la semaine (moyennes de poids, calories,
+ * texte saisi, le PDF d'un programme, ou le resume de la semaine (moyennes de poids, calories,
  * pas, sommeil...) pour un bilan. Destinataire : Google (Gemini), via le
  * proxy de Coach Neiram, qui ne garde rien. Repris de l'app Neiram le 24
  * octobre 2026 : des donnees de sante (poids, sommeil, douleurs) peuvent
@@ -18,12 +18,14 @@
  *
  * VERSION : a incrementer si ce qui part change de nature (nouveau
  * destinataire, nouvelle donnee) : l'accord sera redemande.
+ * Version 2 (29 octobre 2026) : le programme d'entrainement du client, en
+ * photo, en PDF ou en texte, part aussi a Google pour etre lu.
  */
 
 import { definirConsentementIa } from "./ia.js";
 
 export const CLE = "cn_consentement_ia";
-export const VERSION = 1;
+export const VERSION = 2;
 
 function lire(stockage = globalThis.localStorage) {
   try {
@@ -91,7 +93,7 @@ export const TEXTES_ACCORD = {
   titre: "Ton accord pour l'IA",
   intro: "Pour te répondre, cette fonction envoie au service d'IA de Google (Gemini) :",
   envoye: [
-    "la photo ou le texte que tu soumets (repas, recette, séance, question) ;",
+    "la photo, le PDF ou le texte que tu soumets (repas, recette, séance, programme d'entraînement, question) ;",
     "pour un bilan : le résumé chiffré de ta semaine ou de ton mois (poids, calories, séances, pas, sommeil…) ;",
     "ton profil utile à la réponse (objectif, régime, allergies)."
   ],

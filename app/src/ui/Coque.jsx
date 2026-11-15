@@ -13,6 +13,7 @@
 import { COLORS, POLICES } from "../tokens.js";
 import { ONGLETS as LISTE_ONGLETS } from "../lib/onglets.js";
 import { Apple, BookOpen, Dumbbell, Moon, Ruler, Settings, TrendingUp, UtensilsCrossed, X } from "./icones.jsx";
+import { FeuTricolore } from "./icones-feu-vert.jsx";
 import { TEXTES_TUTOS } from "../lib/tutos.js";
 
 /** Icone de chaque onglet. La liste elle-meme vit dans lib/onglets.js. */
@@ -23,10 +24,14 @@ const ICONES = {
   sommeil: Moon,
   mensurations: Ruler,
   journal: BookOpen,
-  tendances: TrendingUp
+  tendances: TrendingUp,
+  feuvert: FeuTricolore
 };
 
 export const ONGLETS = LISTE_ONGLETS.map((o) => ({ ...o, icon: ICONES[o.id] }));
+
+/** Onglets d'une liste (lib/onglets.js, ongletsPour) avec leurs icones. */
+export const avecIcones = (liste) => liste.map((o) => ({ ...o, icon: ICONES[o.id] }));
 
 function Marque({ taille, tailleTitre, tailleSurtitre }) {
   return (
@@ -89,7 +94,7 @@ const styleBoutonEntete = {
   display: "flex"
 };
 
-export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, onOuvrirTuto, toast, onFermerToast, iconeToast, children }) {
+export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, onOuvrirTuto, toast, onFermerToast, iconeToast, onglets = ONGLETS, children }) {
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: POLICES.texte, color: COLORS.text }}>
       <Toast message={toast} onClose={onFermerToast} icone={iconeToast} />
@@ -101,7 +106,7 @@ export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, onOuvrir
           </div>
 
           <nav className="nav-list">
-            {ONGLETS.map((o) => (
+            {onglets.map((o) => (
               <button
                 key={o.id}
                 onClick={() => onChangerOnglet(o.id)}
@@ -152,7 +157,7 @@ export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, onOuvrir
         </div>
 
         <nav className="bottom-nav">
-          {ONGLETS.map((o) => (
+          {onglets.map((o) => (
             <button
               key={o.id}
               onClick={() => onChangerOnglet(o.id)}

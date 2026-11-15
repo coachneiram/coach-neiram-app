@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-10-29-importer-programme",
+    date: "2026-10-29",
+    titre: "Importe ton programme",
+    texte:
+      "Dans Séances, carte « Importer mon programme » : photographie ton programme, dépose son PDF ou dicte-le. Il devient des séances types que tu vérifies avant de les enregistrer.",
+    onglet: "entrainements",
+    bouton: "Importer mon programme"
+  },
+  {
     id: "2026-10-26-photos-du-mois",
     date: "2026-10-26",
     titre: "Tes 3 photos du mois",

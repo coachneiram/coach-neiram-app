@@ -26,6 +26,7 @@ import {
   ERREURS_ESPACE_COACH
 } from "../lib/espace-coach.js";
 import { Btn, Card, SectionTitle, TextInput } from "./primitives.jsx";
+import { CarteFeuVertCoach } from "./FeuVertCoach.jsx";
 
 const STYLE_PAGE = {
   maxWidth: 560,
@@ -352,6 +353,9 @@ export function EspaceCoach() {
           })
         )}
       </Card>
+
+      {/* Feu Vert (14 novembre 2026) : Passeport et missions des participantes. */}
+      <CarteFeuVertCoach secret={secret} clients={clients} agir={agir} />
 
       <Card>
         <SectionTitle>{T.presenceTitre}</SectionTitle>

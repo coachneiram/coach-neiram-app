@@ -54,44 +54,50 @@ describe("les annonces", () => {
     }
   });
 
-  test("les photos du mois (26 octobre 2026) en tete, dans Tendances", () => {
-    assert.equal(NOUVEAUTES[0].id, "2026-10-26-photos-du-mois");
-    assert.equal(NOUVEAUTES[0].onglet, "tendances");
-    assert.equal(NOUVEAUTES[0].bouton, "Voir mes photos");
+  test("l'import du programme (29 octobre 2026) en tete, dans Séances", () => {
+    assert.equal(NOUVEAUTES[0].id, "2026-10-29-importer-programme");
+    assert.equal(NOUVEAUTES[0].onglet, "entrainements");
+    assert.equal(NOUVEAUTES[0].bouton, "Importer mon programme");
+  });
+
+  test("les photos du mois (26 octobre 2026), dans Tendances", () => {
+    assert.equal(NOUVEAUTES[1].id, "2026-10-26-photos-du-mois");
+    assert.equal(NOUVEAUTES[1].onglet, "tendances");
+    assert.equal(NOUVEAUTES[1].bouton, "Voir mes photos");
   });
 
   test("puis la carte « Aujourd'hui » du Journal (25 octobre 2026)", () => {
-    assert.equal(NOUVEAUTES[1].id, "2026-10-25-aujourdhui");
-    assert.equal(NOUVEAUTES[1].onglet, "journal");
-    assert.equal(NOUVEAUTES[1].bouton, "Voir ma journée");
+    assert.equal(NOUVEAUTES[2].id, "2026-10-25-aujourdhui");
+    assert.equal(NOUVEAUTES[2].onglet, "journal");
+    assert.equal(NOUVEAUTES[2].bouton, "Voir ma journée");
   });
 
   test("puis la communaute Team Neiram (24 octobre 2026), dans Séances, sans notification push", () => {
-    assert.equal(NOUVEAUTES[2].id, "2026-10-24-communaute");
-    assert.equal(NOUVEAUTES[2].onglet, "entrainements");
-    assert.equal(NOUVEAUTES[2].titre, "La communauté Team Neiram");
-    assert.equal(NOUVEAUTES[2].bouton, "Voir la communauté");
+    assert.equal(NOUVEAUTES[3].id, "2026-10-24-communaute");
+    assert.equal(NOUVEAUTES[3].onglet, "entrainements");
+    assert.equal(NOUVEAUTES[3].titre, "La communauté Team Neiram");
+    assert.equal(NOUVEAUTES[3].bouton, "Voir la communauté");
     // Annonce dans l'app seulement : la liste ANNONCES du Worker ne change pas.
     const worker = readFileSync(new URL("../worker/coach-neiram-proxy.js", import.meta.url), "utf8");
     assert.ok(!/communaut/i.test(worker.slice(worker.indexOf("const ANNONCES = ["), worker.indexOf("async function envoyerAnnonces"))));
   });
 
   test("puis les defis entre amis (24 octobre 2026), dans le Journal", () => {
-    assert.equal(NOUVEAUTES[3].id, "2026-10-24-defis-amis");
-    assert.equal(NOUVEAUTES[3].onglet, "journal");
-    assert.equal(NOUVEAUTES[3].titre, "Défis entre amis");
+    assert.equal(NOUVEAUTES[4].id, "2026-10-24-defis-amis");
+    assert.equal(NOUVEAUTES[4].onglet, "journal");
+    assert.equal(NOUVEAUTES[4].titre, "Défis entre amis");
   });
 
   test("puis les reprises de Neiram (24 octobre 2026), en cinq entrees", () => {
     assert.deepEqual(
-      NOUVEAUTES.slice(4, 9).map((n) => n.id),
+      NOUVEAUTES.slice(5, 10).map((n) => n.id),
       ["2026-10-24-tutos-raccourcis", "2026-10-24-menu-nutrition", "2026-10-24-tous-sports", "2026-10-24-habitudes", "2026-10-24-sommeil-stress"]
     );
-    assert.deepEqual(NOUVEAUTES.slice(4, 9).map((n) => n.onglet || n.ouvre), ["guide", "repas", "entrainements", "journal", "sommeil"]);
+    assert.deepEqual(NOUVEAUTES.slice(5, 10).map((n) => n.onglet || n.ouvre), ["guide", "repas", "entrainements", "journal", "sommeil"]);
   });
 
   test("puis : seance guidee, forme et consignes, defis, tutos, repos et barre, carnet, puis diete flexible", () => {
-    const NOUVEAUTES_AVANT = NOUVEAUTES.slice(9);
+    const NOUVEAUTES_AVANT = NOUVEAUTES.slice(10);
     assert.equal(NOUVEAUTES_AVANT[0].id, "2026-10-24-seance-guidee");
     assert.equal(NOUVEAUTES_AVANT[0].onglet, "entrainements");
     assert.equal(NOUVEAUTES_AVANT[1].id, "2026-10-24-forme-consignes");

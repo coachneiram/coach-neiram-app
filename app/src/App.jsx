@@ -54,7 +54,10 @@ import { lignesHabitudesBilan } from "./lib/habitudes-bilan.js";
 import { CLE_HABITUDES } from "./lib/habitudes.js";
 import { viderFile } from "./lib/synchro-coach.js";
 import { totauxDuJour } from "./lib/score-jour.js";
-import { Coque } from "./ui/Coque.jsx";
+import { Coque, avecIcones } from "./ui/Coque.jsx";
+import { ongletsPour } from "./lib/onglets.js";
+import { FeuVert } from "./ecrans/FeuVert.jsx";
+import { feuVertActif } from "./lib/feu-vert.js";
 import { ChoixPhoto } from "./ui/ChoixPhoto.jsx";
 import { Modal } from "./ui/primitives.jsx";
 import { Droplet, Loader2 } from "./ui/icones.jsx";
@@ -100,8 +103,13 @@ function listeStockee(cle) {
 export default function App() {
   const [pret, setPret] = useState(false);
   const [profile, setProfile] = useState(null);
-  const [ongletActif, setOngletActif] = useState("journal");
+  const [ongletChoisi, setOngletActif] = useState("journal");
   const [reglagesOuverts, setReglagesOuverts] = useState(false);
+  // Onglets selon la formule (lib/onglets.js, Feu Vert du 14/11/2026). Un
+  // onglet sorti de la barre (formule changee dans les reglages) renvoie
+  // sur le premier de la liste.
+  const listeOnglets = ongletsPour(profile);
+  const ongletActif = listeOnglets.some((o) => o.id === ongletChoisi) ? ongletChoisi : listeOnglets[0].id;
   const [toast, setToast] = useState(null);
   // « Quoi de neuf » (7 octobre 2026) : annonces non vues, montrees a l'ouverture.
   const [nouveautes, setNouveautes] = useState([]);
@@ -167,6 +175,8 @@ export default function App() {
     setMaxisForce(charger(CLES_ANNEXES.maxisForce, {}) || {});
     // Sports crees par le client (autres sports, 24/10/2026).
     definirSportsPerso(charger(CLE_SPORTS_PERSO, []));
+    // Feu Vert : l'application s'ouvre sur l'onglet du programme collectif.
+    if (feuVertActif(charger(STORAGE_KEYS.profile, null))) setOngletActif("feuvert");
     setPret(true);
   }, []);
 
@@ -722,6 +732,8 @@ export default function App() {
   };
 
   const enregistrerProfil = (suivant) => {
+    // Passage en Feu Vert (accueil ou réglages) : on ouvre son onglet.
+    if (feuVertActif(suivant) && !feuVertActif(profile)) setOngletActif("feuvert");
     setProfile(suivant);
     enregistrer(STORAGE_KEYS.profile, suivant);
   };
@@ -771,7 +783,12 @@ export default function App() {
     enregistrerProfil(n > 0 ? { ...reste, seancesAvantApp: n } : reste);
   };
 
+  const onglets = avecIcones(listeOnglets);
+
   const ecrans = {
+    feuvert: feuVertActif(profil) ? (
+      <FeuVert profile={profil} sessionsApi={sessionsApi} onToast={afficherToast} onOuvrirReglages={() => setReglagesOuverts(true)} />
+    ) : null,
     journal: (
       <Journal
         logEntriesApi={logEntriesApi}
@@ -898,6 +915,7 @@ export default function App() {
       {/* FIN-TEXTE-NOUVEAU */}
 
       <Coque
+        onglets={onglets}
         ongletActif={ongletActif}
         onChangerOnglet={setOngletActif}
         onOuvrirReglages={() => setReglagesOuverts(true)}

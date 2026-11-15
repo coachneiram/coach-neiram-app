@@ -29,6 +29,49 @@ import { TOUS_LES_ALLERGENES } from "../lib/allergenes.js";
 import { TEXTES_CONTRAINTES_ALIM } from "../lib/textes-nutrition-perso.js";
 import { Btn, Field, IconBtn, NumberInput, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { Plus, Trash2 } from "../ui/icones.jsx";
+import { FORMULES, FORMULE_FEU_VERT, PARCOURS_FEU_VERT, reglagesFeuVert } from "../lib/feu-vert.js";
+import { TEXTES_FEU_VERT as TFV } from "../lib/textes-feu-vert.js";
+
+/**
+ * Formule Feu Vert (coaching collectif, 14 novembre 2026) : parcours,
+ * cohorte et date de debut. Le programme vit dans l'onglet Feu Vert : le
+ * choix « Où se passent tes séances » disparait tant que la formule est
+ * active (il reste enregistre, et revient si on la quitte).
+ */
+function ChampsFormule({ value, set }) {
+  const actif = value.formule === FORMULE_FEU_VERT;
+  const r = reglagesFeuVert(value);
+  const poser = (modif) => set({ feuVert: { ...r, ...modif } });
+  return (
+    <>
+      <Field label={TFV.formule}>
+        <SelectInput
+          data-formule
+          options={FORMULES}
+          value={actif ? FORMULE_FEU_VERT : ""}
+          onChange={(e) => set(e.target.value === FORMULE_FEU_VERT ? { formule: FORMULE_FEU_VERT, feuVert: r } : { formule: "" })}
+        />
+        <p style={styleAide}>{TFV.formuleAide(actif)}</p>
+      </Field>
+      {actif && (
+        <>
+          <Field label={TFV.parcours}>
+            <SelectInput data-parcours options={PARCOURS_FEU_VERT} value={r.parcours} onChange={(e) => poser({ parcours: e.target.value })} />
+            <p style={styleAide}>{TFV.parcoursAide((PARCOURS_FEU_VERT.find((p) => p.id === r.parcours) || {}).aide || "")}</p>
+          </Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label={TFV.cohorte}>
+              <TextInput data-cohorte value={r.cohorte} maxLength={12} onChange={(e) => poser({ cohorte: e.target.value.replace(/[^A-Za-z0-9-]/g, "") })} />
+            </Field>
+            <Field label={TFV.debut}>
+              <TextInput data-debut-cohorte type="date" value={r.debut} onChange={(e) => e.target.value && poser({ debut: e.target.value })} />
+            </Field>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
 
 /** Types de metier : l'activite professionnelle entre dans la depense. */
 const TYPES_METIER = [
@@ -198,6 +241,9 @@ export function ChampsProfil({ value, onChange }) {
         <TextInput value={value.name || ""} onChange={(e) => set({ name: e.target.value })} />
       </Field>
 
+      {/* Feu Vert : la formule se choisit en premier, elle retire les champs de poids. */}
+      <ChampsFormule value={value} set={set} />
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label="Sexe">
           <SelectInput
@@ -218,13 +264,15 @@ export function ChampsProfil({ value, onChange }) {
         <Field label="Taille (cm)">
           <NumberInput value={value.heightCm || ""} onChange={(e) => set({ heightCm: nombre(parseInt)(e) })} />
         </Field>
-        <Field label="Poids de départ (kg)">
-          <NumberInput
-            step="0.1"
-            value={value.startWeightKg || ""}
-            onChange={(e) => set({ startWeightKg: nombre(parseFloat)(e) })}
-          />
-        </Field>
+        {value.formule !== FORMULE_FEU_VERT && (
+          <Field label="Poids de départ (kg)">
+            <NumberInput
+              step="0.1"
+              value={value.startWeightKg || ""}
+              onChange={(e) => set({ startWeightKg: nombre(parseFloat)(e) })}
+            />
+          </Field>
+        )}
       </div>
 
       <Field label="Activité sportive (hors métier)">
@@ -282,13 +330,15 @@ export function ChampsProfil({ value, onChange }) {
       {/* FIN-TEXTE-NOUVEAU */}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <Field label="Poids objectif (kg, optionnel)">
-          <NumberInput
-            step="0.1"
-            value={value.targetWeightKg || ""}
-            onChange={(e) => set({ targetWeightKg: nombre(parseFloat)(e) })}
-          />
-        </Field>
+        {value.formule !== FORMULE_FEU_VERT && (
+          <Field label="Poids objectif (kg, optionnel)">
+            <NumberInput
+              step="0.1"
+              value={value.targetWeightKg || ""}
+              onChange={(e) => set({ targetWeightKg: nombre(parseFloat)(e) })}
+            />
+          </Field>
+        )}
         <Field label="Séances / semaine visées">
           <NumberInput
             value={value.weeklyWorkoutTarget || ""}
@@ -297,6 +347,7 @@ export function ChampsProfil({ value, onChange }) {
         </Field>
       </div>
 
+      {value.formule !== FORMULE_FEU_VERT && (
       <Field label="Où se passent tes séances">
         <SelectInput
           options={TRAINING_MODES}
@@ -310,7 +361,9 @@ export function ChampsProfil({ value, onChange }) {
         </p>
       </Field>
 
-      {value.trainingMode === "sheets" && (
+      )}
+
+      {value.formule !== FORMULE_FEU_VERT && value.trainingMode === "sheets" && (
         <Field label="Lien Google Sheets de mon programme">
           <TextInput
             value={value.sheetsUrl || ""}

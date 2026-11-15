@@ -203,8 +203,10 @@ describe("les ajouts posterieurs a la bascule restent visibles", () => {
     // Puis a 40 pour les deux libelles d'accessibilite du calcul de charge
     // en mode Force (CalculCharge.jsx, 22 octobre 2026) : la fonction est
     // rebranchee depuis index.html, mais ses champs n'y avaient aucun
-    // libelle pour lecteur d'ecran.
-    assert.ok(blocs < 40, `${blocs} blocs de texte nouveau : la couverture se dilue`);
+    // libelle pour lecteur d'ecran. Puis a 41 pour l'import du programme
+    // depuis une photo, un PDF ou la voix (ImporterProgramme.jsx, 29 octobre
+    // 2026), absent d'index.html.
+    assert.ok(blocs < 41, `${blocs} blocs de texte nouveau : la couverture se dilue`);
   });
 });
 

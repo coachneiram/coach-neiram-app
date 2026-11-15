@@ -57,7 +57,7 @@ export function messageErreur(erreur, repli) {
  * et l'erreur « delai » remonte. Sans lui, un reseau qui accepte la requete
  * mais ne repond jamais laissait l'ecran en attente pour toujours.
  */
-async function appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs }) {
+async function appelerModele({ fonction, model, systemPrompt, messages, maxTokens, delaiMs }) {
   let reponse;
   const annulation = delaiMs && typeof AbortController !== "undefined" ? new AbortController() : null;
   const minuterie = annulation ? setTimeout(() => annulation.abort(), delaiMs) : null;
@@ -65,7 +65,7 @@ async function appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs
     reponse = await fetch(PROXY_BASE_URL + "/ai", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...enTetesAcces() },
-      body: JSON.stringify({ model, systemPrompt, messages, maxTokens }),
+      body: JSON.stringify({ fonction, model, systemPrompt, messages, maxTokens }),
       ...(annulation ? { signal: annulation.signal } : {})
     });
   } catch (e) {
@@ -129,11 +129,14 @@ async function appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs
 /**
  * Genere du texte, en essayant les modeles dans l'ordre.
  *
+ * `fonction` (facultatif) nomme l'usage aupres du proxy : seul « programme »
+ * existe, il autorise un PDF et une reponse plus longue (worker/).
+ *
  * Une cle invalide interrompt tout de suite : reessayer sur un autre modele
  * ne ferait que repeter la meme erreur. Un quota atteint laisse une seconde
  * chance apres une courte pause, comme dans la version d'origine.
  */
-export async function genererTexte({ prompt, images, history, systemPrompt, maxTokens, delaiMs }) {
+export async function genererTexte({ fonction, prompt, images, history, systemPrompt, maxTokens, delaiMs }) {
   // Rien ne part sans l'accord explicite du client.
   if (!(await verifierConsentement())) throw new Error("consentement");
   const messages = construireMessages({ prompt, images, history });
@@ -141,7 +144,7 @@ export async function genererTexte({ prompt, images, history, systemPrompt, maxT
 
   for (const model of GEMINI_MODELS) {
     try {
-      return await appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs });
+      return await appelerModele({ fonction, model, systemPrompt, messages, maxTokens, delaiMs });
     } catch (e) {
       derniereErreur = e;
       // Un delai depasse ne se rattrape pas en essayant le modele suivant :
@@ -150,7 +153,7 @@ export async function genererTexte({ prompt, images, history, systemPrompt, maxT
       if (e.message === "quota") {
         await new Promise((r) => setTimeout(r, 1600));
         try {
-          return await appelerModele({ model, systemPrompt, messages, maxTokens, delaiMs });
+          return await appelerModele({ fonction, model, systemPrompt, messages, maxTokens, delaiMs });
         } catch (e2) {
           derniereErreur = e2;
         }
@@ -179,8 +182,11 @@ export function construireMessages({ prompt, images, history }) {
   (images || []).forEach((img) => {
     if (!img) return;
     if (img.label) parts.push({ text: img.label });
-    // L'entete « data:image/jpeg;base64, » doit etre retiree.
-    parts.push({ inlineData: { mimeType: "image/jpeg", data: (img.dataUrl || img).split(",")[1] } });
+    // L'entete « data:image/jpeg;base64, » doit etre retiree. Son type est
+    // conserve : un PDF (programme d'entrainement) part en application/pdf.
+    const url = String(img.dataUrl || img);
+    const type = /^data:([\w.+-]+\/[\w.+-]+);base64,/.exec(url);
+    parts.push({ inlineData: { mimeType: type ? type[1] : "image/jpeg", data: url.split(",")[1] } });
   });
   parts.push({ text: prompt });
   return [{ role: "user", parts }];
