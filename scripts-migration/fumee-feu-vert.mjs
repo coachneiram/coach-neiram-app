@@ -239,7 +239,7 @@ try {
   await page.locator('[data-exercice="rowing"] button').first().click();
   await page.waitForTimeout(400);
   const fiche = page.locator("[data-fiche-geste='rowing']");
-  verifier("fiche : critères S et Q, vidéo de démo « bientôt »", /S1/.test(await fiche.textContent()) && /Q1/.test(await fiche.textContent()) && (await fiche.locator("[data-video-vide]").count()) === 1);
+  verifier("fiche : critères S et Q, lien vers la vidéo de démonstration", /S1/.test(await fiche.textContent()) && /Q1/.test(await fiche.textContent()) && (await fiche.locator("[data-video-vide]").count()) === 0 && (await fiche.locator('a[href^="https://youtube.com/shorts/"]').count()) === 1);
   await capture(page, "fiche-geste");
   const lien = await page.locator("[data-whatsapp-video]").getAttribute("href");
   verifier("bouton WhatsApp : numéro de la configuration, message pré-rempli", /^https:\/\/wa\.me\/\d+\?text=/.test(lien) && decodeURIComponent(lien.split("text=")[1]) === "Feu Vert — vidéo Rowing haltère, semaine 4", lien);
