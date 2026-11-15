@@ -49,6 +49,7 @@ import { verifierAlerteNutrition, verifierAlertesCoach, verifierAlertesPoids } f
 import { derniereSaisie, envoyerPresence } from "./lib/presence.js";
 import { TEXTES_PHOTOS_MOIS, etatPhotosMois, semainesPhotographiees } from "./lib/photos-mensuelles.js";
 import { lignesPerformancesBilan } from "./lib/performances-bilan.js";
+import { lireCompetitions } from "./lib/competitions.js";
 import { lirePerformances } from "./lib/performances.js";
 import { lignesHabitudesBilan } from "./lib/habitudes-bilan.js";
 import { CLE_HABITUDES } from "./lib/habitudes.js";
@@ -259,7 +260,8 @@ export default function App() {
         profil: profile,
         poidsKg: poidsCourant,
         bodyLogs,
-        date: todayISO()
+        date: todayISO(),
+        competitions: lireCompetitions()
       }),
       // Habitudes et déclics (24 octobre 2026).
       habitudes: lignesHabitudesBilan({

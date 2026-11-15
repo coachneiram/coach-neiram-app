@@ -7,6 +7,9 @@
  *
  * Force athlétique : les maxis sont ceux de la carte « Force athlétique »
  * (même stockage, cn_pl_1rm) ; à défaut, le meilleur 1RM estimé.
+ *
+ * Sous la saisie, « Mes compétitions » (ui/CarteCompetitions.jsx) garde les
+ * résultats compétition par compétition.
  */
 
 import { useState } from "react";
@@ -15,6 +18,7 @@ import { DISCIPLINES_PERF, EPREUVES, enregistrerPerformance, fmtTemps, lirePerfo
 import { MOUVEMENTS_FORCE } from "../lib/force.js";
 import { TEXTES_PERF as T } from "../lib/textes-performances.js";
 import { Card, SectionTitle } from "./primitives.jsx";
+import { CarteCompetitions } from "./CarteCompetitions.jsx";
 import { NiveauCourse, NiveauForce, NiveauHalterophilie, NiveauNatation, SourcesBaremes } from "./NiveauPerformances.jsx";
 
 const champ = {
@@ -151,7 +155,9 @@ export function CartePerformances({ profil = {}, poidsKg, maxisForce, onDefinirM
         {discipline !== "force" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {epreuves.map((e) => (
-              <ChampEpreuve key={e.id} epreuve={e} perf={perfs[e.id]} onChange={enregistrer} />
+              // La clé suit la valeur : un chrono mis à jour ailleurs (une compétition)
+              // doit réapparaître dans le champ, sinon sa sortie l'effacerait.
+              <ChampEpreuve key={`${e.id}:${perfs[e.id] ? perfs[e.id].valeur : ""}`} epreuve={e} perf={perfs[e.id]} onChange={enregistrer} />
             ))}
           </div>
         )}
@@ -166,6 +172,16 @@ export function CartePerformances({ profil = {}, poidsKg, maxisForce, onDefinirM
           {discipline === "natation" && <ListeNiveaux epreuves={epreuves} perfs={perfs} profil={profil} Niveau={NiveauNatation} vide={T.natationVide} />}
           <SourcesBaremes discipline={discipline} />
         </div>
+
+        <CarteCompetitions
+          key={discipline}
+          discipline={discipline}
+          bassin={bassin}
+          maxisForce={maxisForce}
+          seances={seances}
+          onDefinirMaxiForce={onDefinirMaxiForce}
+          onMisAJour={() => setPerfs(lirePerformances())}
+        />
       </div>
     </Card>
   );
