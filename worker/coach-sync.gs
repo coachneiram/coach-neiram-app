@@ -986,7 +986,8 @@ function enregistrerReservationFeuVert(r) {
       'Prénom': prenom,
       'Parcours indicatif': parcours,
       'Email': texteResa(r.email, 254),
-      'Téléphone': texteResa(r.telephone, 30),
+      // Apostrophe : le classeur garde le 0 initial (sinon 0600… devient 600…).
+      'Téléphone': r.telephone ? "'" + texteResa(r.telephone, 30) : '',
       'Instagram': texteResa(r.instagram, 60),
       'Niveau': r.niveau,
       'Blocages': blocages,
