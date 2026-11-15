@@ -10,11 +10,16 @@
 import { EPREUVES, fmtTemps, maxisRetenus } from "./performances.js";
 import { niveauCourse, niveauFFForce, niveauFFHM, niveauNatation, pointsGL, pointsSinclair } from "./niveaux.js";
 import { periodes, transformation } from "./transformation.js";
+import { epreuveCompetition, totalForce } from "./competitions.js";
+import { TEXTES_COMP } from "./textes-performances.js";
 
 const kg = (v) => `${String(v).replace(".", ",")} kg`;
 const pts = (v) => String(v).replace(".", ",");
 
-export function lignesPerformancesBilan({ performances = {}, maxisForce, seances, profil = {}, poidsKg, bodyLogs, date }) {
+/** Compétitions rappelées dans le bilan : les plus récentes seulement. */
+export const COMPETITIONS_DANS_LE_BILAN = 3;
+
+export function lignesPerformancesBilan({ performances = {}, maxisForce, seances, profil = {}, poidsKg, bodyLogs, date, competitions = [] }) {
   const lignes = [];
   const sexe = profil.sex === "femme" ? "femme" : "homme";
 
@@ -53,6 +58,14 @@ export function lignesPerformancesBilan({ performances = {}, maxisForce, seances
       const n = niveauNatation(ep.id, p.valeur, sexe);
       lignes.push(`Natation ${ep.label} (bassin ${ep.bassin} m) : ${fmtTemps(p.valeur)}${n ? ` · ${n.points} pts World Aquatics` : ""}`);
     }
+  }
+
+  for (const c of (competitions || []).slice(0, COMPETITIONS_DANS_LE_BILAN)) {
+    const morceaux = Object.entries(c.resultats || {}).map(([id, v]) => {
+      const e = epreuveCompetition(id);
+      return e ? TEXTES_COMP.resultat(e.label + (e.bassin ? ` (${e.bassin} m)` : ""), e.type, v) : null;
+    });
+    if (morceaux.every(Boolean) && morceaux.length) lignes.push(TEXTES_COMP.bilan(c, morceaux, c.discipline === "force" ? totalForce(c.resultats) : null));
   }
 
   if (date) {

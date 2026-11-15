@@ -88,3 +88,37 @@ export const TEXTES_COMPARATEUR = {
     { id: "dos", label: "Dos" }
   ]
 };
+
+/** « Mes compétitions » (15 novembre 2026) : un journal, compétition par compétition. */
+const jourFr = (iso) => String(iso).split("-").reverse().join("/");
+const valeurComp = (type, v) => (type === "temps" ? fmtTemps(v) : kg(v));
+
+export const TEXTES_COMP = {
+  titre: "Mes compétitions",
+  intro: "Note chaque compétition avec ses résultats : tu gardes l'historique, et tes meilleures performances se mettent à jour seulement si tu as fait mieux.",
+  vide: "Aucune compétition notée pour cette discipline.",
+  ajouter: "Ajouter une compétition",
+  nom: "Nom de la compétition",
+  nomPlaceholder: "Ex. Championnat régional",
+  date: "Date",
+  resultats: "Résultats",
+  placeholderKg: "kg",
+  enregistrer: "Enregistrer la compétition",
+  annuler: "Annuler",
+  supprimer: "Supprimer",
+  confirmerSuppression: "Confirmer la suppression",
+  erreurNom: "Donne un nom à la compétition.",
+  erreurDate: "Choisis une date qui n'est pas dans le futur.",
+  erreurVide: "Note au moins un résultat.",
+  erreurValeur: "Un résultat n'est pas reconnu : vérifie les champs signalés.",
+  enregistree: "Compétition enregistrée.",
+  ligne: (c) => `${jourFr(c.date)} · ${c.nom}`,
+  resultat: (label, type, v) => `${label} ${valeurComp(type, v)}`,
+  total: (v) => `Total ${kg(v)}`,
+  recordsMaj: (records) =>
+    `Meilleures performances mises à jour : ${records
+      .map((r) => (r.ancien == null ? `${r.label} ${valeurComp(r.type, r.nouveau)}` : `${r.label} ${valeurComp(r.type, r.ancien)} → ${valeurComp(r.type, r.nouveau)}`))
+      .join(", ")}.`,
+  aucunRecord: "Tes meilleures performances n'ont pas changé : elles restent meilleures que ces résultats.",
+  bilan: (c, morceaux, total) => `Compétition du ${jourFr(c.date)}, ${c.nom} : ${morceaux.join(", ")}${total ? ` · total ${kg(total)}` : ""}`
+};
