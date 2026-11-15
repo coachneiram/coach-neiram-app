@@ -62,6 +62,11 @@ function faireFeuille(nom) {
     appends,
     validations,
     getName: () => nom,
+    getSheetId: () => 4242,
+    // Comme Google Sheets : la ligne disparait, celles du dessous remontent.
+    deleteRow: (l) => {
+      cellules.splice(l - 1, 1);
+    },
     appendRow: (r) => {
       appends.push(r);
       cellules.push([...r]);
@@ -93,7 +98,8 @@ export function creerScript({ reglages = {}, proprietes = {}, entetesExistants =
       feuilles.set(n, f);
       return f;
     },
-    getSheets: () => [...feuilles.values()]
+    getSheets: () => [...feuilles.values()],
+    getUrl: () => "https://docs.google.com/spreadsheets/d/CLASSEUR-DE-TEST/edit"
   };
   if (entetesExistants) {
     for (const [nom, entetes] of Object.entries(entetesExistants)) classeur.insertSheet(nom).appendRow(entetes);

@@ -25,6 +25,11 @@
  *                            coach, missions validees, tableau de regularite de
  *                            la cohorte (jeton client obligatoire)
  *   POST /admin/feuvert   -> le coach inscrit une membre et met a jour son Passeport
+ *   POST /reservation-feu-vert -> questionnaire d'admission de la page publique
+ *                            Feu Vert (sans jeton, origine coachneiram.github.io
+ *                            seulement) : valide, puis remet au script Google
+ *                            (onglet « Feu Vert – Réservations ») ; rien n'est
+ *                            garde dans D1 hormis des compteurs anti-abus
  * Et une tache planifiee (Cron Trigger, toutes les 15 minutes) qui envoie
  * les rappels arrives a echeance, meme application fermee, efface les
  * defis termines depuis plus de 60 jours et fait le menage de la
@@ -212,8 +217,20 @@ function refus(route, statut, erreur, cors, client) {
 
 export default {
   async fetch(request, env, ctx) {
-    const cors = enTetesCors(request, env);
     const url = new URL(request.url);
+
+    // Questionnaire public de la page Feu Vert : origine unique, verifiee a
+    // part (voir la section « Reservation Feu Vert »), quel que soit
+    // ALLOWED_ORIGINS.
+    if (url.pathname === ROUTE_RESERVATION_FV) {
+      try {
+        return await routeReservationFeuVert(request, env);
+      } catch (e) {
+        return refus(ROUTE_RESERVATION_FV, 500, "erreur-interne", corsReservation());
+      }
+    }
+
+    const cors = enTetesCors(request, env);
 
     if (!origineAcceptee(request, env)) {
       return refus(url.pathname, 403, "origine-refusee", cors);
@@ -2649,8 +2666,181 @@ async function adminFeuVert(db, corps, maintenant) {
   return { erreur: "action-inconnue" };
 }
 
+/* ------------------------------------------------------------------ */
+/* Reservation Feu Vert : questionnaire d'admission (15 novembre 2026) */
+/* ------------------------------------------------------------------ */
+/*
+ * Remplace FormSubmit (editeur sans localisation ni garanties de transfert
+ * publiees), alors que le questionnaire contient une donnee de sante
+ * (question 7, contre-indication medicale : oui / non).
+ *
+ * Chemin : page coachneiram.github.io/feu-vert.html -> ce Worker (Cloudflare)
+ * -> script Google (coach-sync.gs, meme adresse COACH_SYNC_URL, meme
+ * enveloppe signee HMAC) -> onglet « Feu Vert – Réservations » du classeur
+ * + mail de notification au coach SANS donnee de sante ni coordonnees.
+ *
+ * Aucune nouvelle variable, aucun nouveau secret, aucune nouvelle liaison.
+ * Le Worker NE GARDE RIEN des reponses : la base D1 ne sert qu'aux
+ * compteurs anti-abus (empreinte tronquee de l'adresse IP, effacee par la
+ * tache planifiee). Le classeur est le seul lieu de conservation, purge a
+ * 12 mois par le script (politique de confidentialite, point 2.1).
+ *
+ * Anti-spam, sans captcha tiers :
+ *   - origine exacte https://coachneiram.github.io (un navigateur ailleurs
+ *     est refuse ; un script peut mentir sur l'origine, d'ou la suite) ;
+ *   - corps de 8 Ko au plus, champs connus seulement, valeurs des choix
+ *     dans les listes de la page, textes plafonnes ;
+ *   - champ piege « site_web » (invisible pour un humain) et duree de
+ *     remplissage : un robot recoit { ok: true } mais rien n'est transmis ;
+ *   - 5 envois par heure et par adresse IP, 60 par jour au total.
+ */
+
+const ROUTE_RESERVATION_FV = "/reservation-feu-vert";
+const ORIGINE_RESERVATION_FV = "https://coachneiram.github.io";
+const TAILLE_MAX_RESERVATION = 8 * 1024;
+const RESA_PAR_IP_PAR_HEURE = 5;
+const RESA_PAR_JOUR = 60;
+const RESA_DUREE_MIN_MS = 3000; // moins de 3 s pour 9 questions : un robot
+
+const RESA_CHOIX = {
+  niveau: ["Je n'ai jamais pratiqué", "J'ai arrêté depuis plus d'un an", "Je pratique depuis moins de 6 mois", "Je pratique depuis plus de 6 mois"],
+  blocage: ["Je ne sais pas quoi faire", "J'ai peur de mal faire un mouvement", "Le regard des autres", "Je ne sais pas utiliser les machines ou les haltères", "Je manque de régularité", "Mes horaires", "Autre"],
+  objectif: ["Apprendre les bons gestes", "Me sentir à l'aise en salle", "Reprendre une routine", "Me renforcer", "Autre"],
+  creneaux: ["Tôt le matin (avant 9 h)", "Midi (11 h 30-14 h)", "Après-midi (14 h-17 h)", "Soir (17 h-20 h)", "Tard le soir (après 20 h)", "Week-end", "Je ne suis pas sûr de pouvoir bloquer 2 séances"],
+  lieu: ["En salle, abonnement en cours", "En salle, abonnement prévu avant janvier", "À la maison uniquement"],
+  contreIndication: ["Oui", "Non"]
+};
+
+// Textes libres : longueur maximale de chacun.
+const RESA_TEXTES = { prenom: 60, email: 254, telephone: 30, instagram: 60, blocageAutre: 200, objectifAutre: 200, salle: 200, pseudo: 40 };
+const RESA_BOOLEENS = ["presentiel", "consentement", "tableau", "binome"];
+const RESA_CHAMPS = new Set([...Object.keys(RESA_TEXTES), ...RESA_BOOLEENS, "niveau", "blocage", "objectif", "creneaux", "lieu", "contreIndication", "site_web", "dureeMs"]);
+
+const RESA_EMAIL = /^[^\s@<>"(),;:]+@[^\s@<>"(),;:]+\.[^\s@<>"(),;:]{2,}$/;
+const RESA_TELEPHONE = /^[0-9+ ().-]{6,30}$/;
+
+/** Parcours indique au coach, d'apres la question 2 (le coach decide). */
+function parcoursIndicatif(niveau) {
+  if (niveau === RESA_CHOIX.niveau[0] || niveau === RESA_CHOIX.niveau[1]) return "Reprise";
+  if (niveau === RESA_CHOIX.niveau[2]) return "Bases+";
+  return "À étudier (plus de 6 mois de pratique)";
+}
+
+/** Texte d'une ligne : sans caracteres de controle, espaces resserres. */
+function texteLigne(v) {
+  return String(v).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Valide le questionnaire champ par champ. Rend { reponse } (pret a partir
+ * vers le script) ou { erreur }. Rien d'autre que ces champs ne passe.
+ */
+function validerReservation(corps) {
+  for (const cle of Object.keys(corps)) if (!RESA_CHAMPS.has(cle)) return { erreur: "champ-inconnu" };
+
+  const r = { type: "reservation_feu_vert" };
+  for (const [cle, max] of Object.entries(RESA_TEXTES)) {
+    const v = corps[cle];
+    if (v !== undefined && v !== null && typeof v !== "string") return { erreur: "champ-invalide" };
+    const t = texteLigne(v || "");
+    if (t.length > max) return { erreur: "texte-trop-long" };
+    r[cle] = t;
+  }
+  if (!r.prenom) return { erreur: "prenom-requis" };
+  if (!RESA_EMAIL.test(r.email)) return { erreur: "email-invalide" };
+  if (r.telephone && !RESA_TELEPHONE.test(r.telephone)) return { erreur: "telephone-invalide" };
+
+  for (const cle of ["niveau", "objectif", "lieu", "contreIndication"]) {
+    if (!RESA_CHOIX[cle].includes(corps[cle])) return { erreur: "choix-invalide" };
+    r[cle] = corps[cle];
+  }
+  for (const cle of ["blocage", "creneaux"]) {
+    const v = corps[cle] === undefined ? [] : corps[cle];
+    if (!Array.isArray(v) || v.length > RESA_CHOIX[cle].length) return { erreur: "choix-invalide" };
+    if (!v.every((x) => RESA_CHOIX[cle].includes(x)) || new Set(v).size !== v.length) return { erreur: "choix-invalide" };
+    r[cle] = v.slice();
+  }
+  if (r.blocage.length > 3) return { erreur: "choix-invalide" };
+
+  for (const cle of RESA_BOOLEENS) {
+    if (corps[cle] !== undefined && typeof corps[cle] !== "boolean") return { erreur: "champ-invalide" };
+    r[cle] = corps[cle] === true;
+  }
+  // Consentement obligatoire (art. 9.2.a RGPD pour la question 7) : sans lui, rien ne part.
+  if (!r.consentement) return { erreur: "consentement-requis" };
+  // Textes « Autre » et pseudo : seulement si la case correspondante est cochee.
+  if (!r.blocage.includes("Autre")) r.blocageAutre = "";
+  if (r.objectif !== "Autre") r.objectifAutre = "";
+  if (!r.tableau) r.pseudo = "";
+
+  r.parcoursIndicatif = parcoursIndicatif(r.niveau);
+  return { reponse: r };
+}
+
+function corsReservation() {
+  return {
+    "Access-Control-Allow-Origin": ORIGINE_RESERVATION_FV,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin"
+  };
+}
+
+async function routeReservationFeuVert(request, env) {
+  const route = ROUTE_RESERVATION_FV;
+  const cors = corsReservation();
+
+  // Origine OBLIGATOIRE et exacte : la page publique, rien d'autre.
+  if (request.headers.get("Origin") !== ORIGINE_RESERVATION_FV) return refus(route, 403, "origine-refusee", cors);
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (request.method !== "POST") return reponseJson({ ok: false, error: "method-not-allowed" }, 405, cors);
+  if (!env.COACH_SYNC_URL || !env.COACH_SYNC_SECRET) return refus(route, 503, "proxy-non-configure", cors);
+
+  const maintenant = Date.now();
+  const ip = request.headers.get("CF-Connecting-IP") || "inconnue";
+  let db = null;
+  try {
+    db = await base(env);
+  } catch (e) {
+    db = null;
+  }
+  if (db) {
+    const raison = await depasse(
+      db,
+      [
+        { cle: `resa:ip:${(await hachage(ip)).slice(0, 16)}:${heureUtc(maintenant)}`, limite: RESA_PAR_IP_PAR_HEURE, dureeMs: 2 * 3600000, raison: "trop-de-requetes" },
+        { cle: `resa:jour:${jourUtc(maintenant)}`, limite: RESA_PAR_JOUR, dureeMs: 2 * MS_JOUR, raison: "trop-de-requetes" }
+      ],
+      maintenant
+    );
+    if (raison) return refus(route, 429, raison, cors);
+  } else if (tropDeRequetes("resa:" + ip, "sync")) {
+    return refus(route, 429, "trop-de-requetes", cors);
+  }
+
+  const lu = await lireJson(route, request, cors, TAILLE_MAX_RESERVATION);
+  if (lu.reponse) return lu.reponse;
+  const corps = lu.corps;
+
+  // Pieges : reponse normale, mais rien ne part (le robot n'apprend rien).
+  const duree = Number(corps.dureeMs);
+  if ((corps.site_web !== undefined && corps.site_web !== "") || !Number.isFinite(duree) || duree < RESA_DUREE_MIN_MS) {
+    journal(route, 200, "piege", null);
+    return reponseJson({ ok: true }, 200, cors);
+  }
+
+  const v = validerReservation(corps);
+  if (v.erreur) return refus(route, 400, v.erreur, cors);
+
+  const remise = await remettreAuScript(env, v.reponse, maintenant);
+  journal(route, remise ? 200 : 502, remise ? null : "destination-refus", null);
+  return reponseJson({ ok: remise }, remise ? 200 : 502, cors);
+}
+
 // Acces des tests aux fonctions internes (sans effet en production).
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
+  Object.assign(globalThis.__COACH_TEST__, { validerReservation, parcoursIndicatif, RESERVATION_FV: { ROUTE_RESERVATION_FV, RESA_CHOIX, RESA_PAR_IP_PAR_HEURE, RESA_PAR_JOUR, RESA_DUREE_MIN_MS } });
   Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
   Object.assign(globalThis.__COACH_TEST__, { alerterInactivite, joursInactivite, niveauInactivite, dateParis, INACTIVITE: { INACTIVITE_ATTENTION_JOURS, INACTIVITE_CRITIQUE_JOURS, PRESENCE_PAR_JOUR: PLAFONDS.presenceParJour } });
   Object.assign(globalThis.__COACH_TEST__, {
