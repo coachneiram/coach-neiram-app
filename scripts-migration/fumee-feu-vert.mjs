@@ -358,6 +358,13 @@ try {
     await p2.waitForTimeout(700);
     verifier("onglet « " + onglet + " » sans poids : pas de plantage", (await p2.locator("[data-filet-ecran]").count()) === 0);
   }
+  // Réglages → « Accès de ton coach » : où le nouveau membre saisit son code.
+  await p2.locator(".mobile-header button[aria-label='Réglages']").click();
+  await p2.waitForTimeout(500);
+  const acces = p2.getByText("Accès de ton coach", { exact: true });
+  verifier("réglages : carte « Accès de ton coach » avant le profil", (await acces.count()) === 1);
+  await acces.scrollIntoViewIfNeeded();
+  await capture(p2, "reglages-acces-coach");
   await neuf.close();
 } catch (e) {
   erreurs.push("script : " + e.message);
