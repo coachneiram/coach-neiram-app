@@ -64,7 +64,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "angle 3/4 avant (45°), à 2-3 m, téléphone à hauteur de hanche, corps entier dans le cadre, pieds visibles.",
       "facilitee": "squat sur banc (tu t'assois brièvement sur un banc ou un box, puis tu te relèves), sans charge ou avec un haltère léger.",
-      "video": ""
+      "video": "https://youtube.com/shorts/Q_5o2CrwiTQ"
     },
     {
       "id": "rdl",
@@ -115,7 +115,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "profil strict (90°), à 2-3 m, téléphone à hauteur de hanche, de la tête aux pieds.",
       "facilitee": "charnière de hanche avec un bâton (ou un manche de balai) posé le long du dos : 3 points de contact (tête, haut du dos, bas du dos) qui ne doivent pas se décoller. Puis haltères légers.",
-      "video": ""
+      "video": "https://youtube.com/shorts/OVYq-Gi0A28"
     },
     {
       "id": "rowing",
@@ -213,7 +213,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "depuis le pied du banc, en léger surplomb (téléphone posé sur un support ou une marche, à 1,5-2 m), pour voir les deux bras. Option : profil pour la profondeur.",
       "facilitee": "développé au sol (floor press) : le sol limite l'amplitude et rend la mise en place plus simple. Ou pompes inclinées mains sur un banc.",
-      "video": ""
+      "video": "https://youtube.com/shorts/nXM5LBIkwCY"
     },
     {
       "id": "fente",
@@ -259,7 +259,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "de face à 2-3 m pour l'alignement du genou, téléphone à hauteur de hanche. Si tu n'as qu'une prise : 3/4 avant.",
       "facilitee": "fente statique (pieds déjà écartés, tu montes et descends sur place) en tenant un support (poteau, rack) d'une main.",
-      "video": ""
+      "video": "https://youtube.com/shorts/Zmid_VKImlo"
     },
     {
       "id": "gainage",
@@ -302,7 +302,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "profil strict, téléphone posé au sol à 1,5-2 m.",
       "facilitee": "planche sur les genoux, ou planche mains sur un banc (corps incliné).",
-      "video": ""
+      "video": "https://youtube.com/shorts/9N0txxUKrmo"
     },
     {
       "id": "tirage",
@@ -349,7 +349,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "3/4 arrière à 2 m, téléphone à hauteur d'épaules si possible (posé sur une machine voisine libre). Profil accepté.",
       "facilitee": "tirage avec un élastique accroché en hauteur, à genoux, ou charge minimale de la machine avec un temps de 3 s à la remontée.",
-      "video": ""
+      "video": "https://youtube.com/shorts/cV5pPnnJgBk"
     },
     {
       "id": "hipthrust",
@@ -396,7 +396,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "profil strict, téléphone au sol ou sur un support bas, à 2 m.",
       "facilitee": "pont fessier au sol (dos au sol, pas de banc), sans charge puis avec un haltère sur les hanches.",
-      "video": ""
+      "video": "https://youtube.com/shorts/a0pL0JnWIOA"
     }
   ],
   "semaines": [
