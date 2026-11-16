@@ -15,6 +15,868 @@
 
 export const RECETTES_COACH = [
   {
+    "id": "2026-11-16-tartines-avocat-oeuf-mollet-graines",
+    "semaine": "2026-11-16",
+    "nom": "Tartines avocat, œuf mollet et graines de courge",
+    "description": "Du pain complet, de l'avocat écrasé au citron, un œuf mollet et des graines de courge. Un petit-déjeuner salé, rassasiant, prêt en 12 minutes.",
+    "categorie": "petit-dejeuner",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "oeufs"
+    ],
+    "portions": 2,
+    "preparationMin": 7,
+    "cuissonMin": 6,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pain complet",
+        "quantite": "120 g (4 tranches)"
+      },
+      {
+        "nom": "Avocat mûr",
+        "quantite": "150 g (1 gros)"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "4 (environ 200 g)"
+      },
+      {
+        "nom": "Tomates cerises",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Graines de courge",
+        "quantite": "20 g"
+      },
+      {
+        "nom": "Citron, sel, piment d'Espelette",
+        "quantite": "1/2 citron et 1 pincée"
+      }
+    ],
+    "etapes": [
+      "Plonge les œufs 6 minutes dans l'eau bouillante, puis passe-les sous l'eau froide et écale-les.",
+      "Écrase l'avocat à la fourchette avec le jus de citron et une pincée de sel, puis tartine-le sur le pain grillé.",
+      "Coupe les tomates cerises en deux, répartis-les sur les tartines avec les œufs coupés en deux et les graines de courge, puis saupoudre de piment."
+    ],
+    "moment": "quotidien",
+    "adaptations": "Remise en forme : garde les quantités indiquées. Maintien : ajoute une tranche de pain complet par portion ou un fruit à côté.",
+    "tags": [
+      "rapide",
+      "economique"
+    ],
+    "parPortion": {
+      "kcal": 488,
+      "p": 22,
+      "c": 28,
+      "f": 32,
+      "fibres": 9
+    }
+  },
+  {
+    "id": "2026-11-16-minestrone-haricots-blancs-petites-pates",
+    "semaine": "2026-11-16",
+    "nom": "Minestrone aux haricots blancs et petites pâtes",
+    "description": "Une soupe-repas de légumes, de haricots blancs et de petites pâtes, mijotée 25 minutes. Beaucoup de volume et de fibres pour peu de calories.",
+    "categorie": "diner",
+    "profils": [
+      "perte",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Oignon",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Carottes",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Courgettes",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Haricots blancs (conserve égouttée et rincée)",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Petites pâtes (coquillettes ou macaronis, crues)",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "20 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Bouillon de légumes chaud",
+        "quantite": "1 litre"
+      },
+      {
+        "nom": "Basilic, ail, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Coupe l'oignon, les carottes et les courgettes en petits dés et fais-les revenir 5 minutes dans l'huile d'olive.",
+      "Ajoute les tomates concassées, les haricots blancs et le bouillon chaud, puis laisse mijoter 15 minutes à feu moyen.",
+      "Verse les petites pâtes et poursuis 8 à 10 minutes, jusqu'à ce qu'elles soient tendres.",
+      "Termine avec le basilic ciselé, du poivre et rectifie le sel."
+    ],
+    "moment": "quotidien",
+    "adaptations": "Perte : garde les quantités et ajoute des légumes à volonté. Remise en forme : ajoute une tranche de pain complet à côté si tu as faim.",
+    "tags": [
+      "meal-prep",
+      "economique",
+      "familial"
+    ],
+    "parPortion": {
+      "kcal": 295,
+      "p": 13,
+      "c": 45,
+      "f": 7,
+      "fibres": 11
+    }
+  },
+  {
+    "id": "2026-11-16-pates-completes-pesto-cajou-petits-pois",
+    "semaine": "2026-11-16",
+    "nom": "Pâtes complètes, pesto de basilic-cajou et petits pois",
+    "description": "Des pâtes complètes, un pesto maison basilic-cajou, des petits pois et de l'edamame. Un plat 100 % végétal, dense en énergie et en protéines.",
+    "categorie": "dejeuner",
+    "profils": [
+      "force",
+      "prise"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "fruits-a-coque",
+      "soja"
+    ],
+    "portions": 2,
+    "preparationMin": 10,
+    "cuissonMin": 12,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Pâtes complètes (crues)",
+        "quantite": "160 g"
+      },
+      {
+        "nom": "Basilic frais",
+        "quantite": "30 g (1 gros bouquet)"
+      },
+      {
+        "nom": "Noix de cajou",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "30 g (3 cuillères à soupe)"
+      },
+      {
+        "nom": "Petits pois surgelés",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Edamame décortiqués (surgelés)",
+        "quantite": "160 g"
+      },
+      {
+        "nom": "Ail, citron, sel, poivre",
+        "quantite": "1 gousse et 1/2 citron"
+      }
+    ],
+    "etapes": [
+      "Fais cuire les pâtes selon le paquet et ajoute les petits pois et l'edamame dans l'eau pour les 3 dernières minutes.",
+      "Mixe le basilic avec les noix de cajou, l'huile, l'ail, le jus de citron, le sel, le poivre et 3 cuillères à soupe d'eau de cuisson.",
+      "Égoutte les pâtes et les légumes, mélange-les au pesto et sers aussitôt."
+    ],
+    "moment": "apres-entrainement",
+    "adaptations": "Prise de masse : ajoute 40 g de pâtes crues par portion et un filet d'huile d'olive. Force : garde les quantités, c'est un bon repas après la séance.",
+    "tags": [
+      "rapide",
+      "repas-d-effort"
+    ],
+    "parPortion": {
+      "kcal": 675,
+      "p": 29,
+      "c": 70,
+      "f": 31,
+      "fibres": 17
+    }
+  },
+  {
+    "id": "2026-11-16-curry-poulet-coco-riz-basmati",
+    "semaine": "2026-11-16",
+    "nom": "Curry de poulet au lait de coco et riz basmati",
+    "description": "Du poulet mijoté avec poivrons, tomates et lait de coco, relevé au curry, servi sur du riz basmati. Un plat d'énergie pour les grosses semaines d'entraînement.",
+    "categorie": "diner",
+    "profils": [
+      "ironman",
+      "prise"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "volaille"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Blanc de poulet",
+        "quantite": "560 g"
+      },
+      {
+        "nom": "Lait de coco",
+        "quantite": "300 ml"
+      },
+      {
+        "nom": "Oignons",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Poivrons rouges",
+        "quantite": "250 g"
+      },
+      {
+        "nom": "Tomates concassées",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Riz basmati (cru)",
+        "quantite": "280 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Curry en poudre, gingembre, ail, sel",
+        "quantite": "2 cuillères à café de curry"
+      }
+    ],
+    "etapes": [
+      "Coupe le poulet en dés et fais-le dorer 5 minutes dans l'huile avec les oignons émincés, puis réserve-le.",
+      "Ajoute les poivrons en lanières, le curry, le gingembre et l'ail, et laisse revenir 3 minutes.",
+      "Verse les tomates et le lait de coco, remets le poulet et laisse mijoter 15 minutes à feu doux.",
+      "Pendant ce temps, fais cuire le riz basmati selon le paquet et sers-le avec le curry."
+    ],
+    "moment": "apres-entrainement",
+    "adaptations": "Ironman : ajoute 30 g de riz cru par portion les jours de longue sortie. Prise de masse : ajoute un filet d'huile d'olive et 50 g de riz cru par portion.",
+    "tags": [
+      "meal-prep",
+      "familial",
+      "repas-d-effort"
+    ],
+    "parPortion": {
+      "kcal": 600,
+      "p": 40,
+      "c": 65,
+      "f": 20,
+      "fibres": 3
+    }
+  },
+  {
+    "id": "2026-11-16-brandade-lieu-noir-pommes-de-terre",
+    "semaine": "2026-11-16",
+    "nom": "Brandade de lieu noir et pommes de terre",
+    "description": "Un gratin de lieu noir effeuillé, de purée de pommes de terre à l'huile d'olive et d'emmental. Doux, économique, riche en protéines maigres.",
+    "categorie": "diner",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "poisson",
+      "lactose"
+    ],
+    "portions": 4,
+    "preparationMin": 20,
+    "cuissonMin": 35,
+    "difficulte": "moyenne",
+    "ingredients": [
+      {
+        "nom": "Filets de lieu noir",
+        "quantite": "500 g"
+      },
+      {
+        "nom": "Pommes de terre",
+        "quantite": "700 g"
+      },
+      {
+        "nom": "Lait demi-écrémé",
+        "quantite": "200 ml"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "30 g (3 cuillères à soupe)"
+      },
+      {
+        "nom": "Emmental râpé",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Ail, persil, poivre, muscade",
+        "quantite": "1 gousse et 1 petit bouquet"
+      }
+    ],
+    "etapes": [
+      "Épluche les pommes de terre, coupe-les en morceaux et fais-les cuire 20 minutes à l'eau salée, puis écrase-les en purée avec l'huile d'olive.",
+      "Fais chauffer le lait avec l'ail, plonge le lieu noir dedans et laisse pocher 8 minutes à feu doux, puis effeuille-le.",
+      "Mélange le poisson, la purée, le persil, le poivre et la muscade, répartis dans un plat, parsème d'emmental et gratine 10 minutes à 200 °C."
+    ],
+    "moment": "quotidien",
+    "adaptations": "Remise en forme : garde les quantités et ajoute des haricots verts à volonté. Maintien : ajoute une salade verte et un fruit.",
+    "tags": [
+      "economique",
+      "familial",
+      "meal-prep"
+    ],
+    "parPortion": {
+      "kcal": 360,
+      "p": 30,
+      "c": 33,
+      "f": 12,
+      "fibres": 4
+    }
+  },
+  {
+    "id": "2026-11-16-pan-bagnat-thon-oeuf-legumes",
+    "semaine": "2026-11-16",
+    "nom": "Pan bagnat au thon, œuf dur et légumes croquants",
+    "description": "Un petit pain rond garni de thon, d'œuf dur, de tomate, de poivron et d'olives, arrosé d'huile d'olive. Facile à préparer la veille et à emporter.",
+    "categorie": "dejeuner",
+    "profils": [
+      "hyrox",
+      "marathon"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "poisson",
+      "oeufs"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 10,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Petits pains ronds",
+        "quantite": "250 g (2 pains)"
+      },
+      {
+        "nom": "Thon au naturel (conserve égouttée)",
+        "quantite": "160 g"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "2 (environ 110 g)"
+      },
+      {
+        "nom": "Tomates",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Poivron rouge",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Concombre",
+        "quantite": "100 g"
+      },
+      {
+        "nom": "Olives noires dénoyautées",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Oignon rouge",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "20 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Basilic, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais cuire les œufs 10 minutes dans l'eau bouillante, refroidis-les et écale-les.",
+      "Coupe les tomates, le poivron, le concombre et l'oignon en fines tranches.",
+      "Ouvre les pains en deux, arrose chaque face d'huile d'olive, puis garnis de thon émietté, de légumes, d'œuf en rondelles, d'olives et de basilic.",
+      "Referme, presse un peu et emballe : le pain s'imprègne encore mieux si tu attends 30 minutes."
+    ],
+    "moment": "apres-entrainement",
+    "adaptations": "Hyrox : mange-le après une séance mixte, avec un fruit. Marathon : retire l'huile d'olive supplémentaire et ajoute une banane pour plus de glucides avant une sortie.",
+    "tags": [
+      "meal-prep",
+      "repas-d-effort",
+      "sans-cuisson"
+    ],
+    "parPortion": {
+      "kcal": 650,
+      "p": 38,
+      "c": 75,
+      "f": 22,
+      "fibres": 8
+    }
+  },
+  {
+    "id": "2026-11-16-smoothie-mangue-banane-soja",
+    "semaine": "2026-11-16",
+    "nom": "Smoothie mangue, banane et lait de soja",
+    "description": "Un smoothie onctueux mangue-banane monté avec du lait de soja et du tofu soyeux. Des glucides rapides et des protéines végétales pour récupérer après l'effort.",
+    "categorie": "collation",
+    "profils": [
+      "marathon",
+      "ironman"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "soja"
+    ],
+    "portions": 2,
+    "preparationMin": 5,
+    "cuissonMin": 0,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Mangue (fraîche ou surgelée)",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Bananes mûres",
+        "quantite": "240 g (2 bananes)"
+      },
+      {
+        "nom": "Lait de soja nature",
+        "quantite": "400 ml"
+      },
+      {
+        "nom": "Tofu soyeux",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Jus de citron vert",
+        "quantite": "1/2 citron vert"
+      }
+    ],
+    "etapes": [
+      "Épluche les bananes et coupe-les en morceaux, avec la mangue.",
+      "Mets tous les ingrédients dans un blender et mixe 1 minute, jusqu'à obtenir une texture lisse.",
+      "Verse dans deux grands verres et bois dans les 30 minutes qui suivent l'effort."
+    ],
+    "moment": "recuperation",
+    "adaptations": "Marathon : garde les quantités après une sortie longue. Ironman : ajoute 30 g de flocons d'avoine par portion pour plus d'énergie.",
+    "tags": [
+      "rapide",
+      "sans-cuisson",
+      "repas-d-effort"
+    ],
+    "parPortion": {
+      "kcal": 279,
+      "p": 12,
+      "c": 42,
+      "f": 7,
+      "fibres": 5
+    }
+  },
+  {
+    "id": "2026-11-16-crumble-poires-flocons-yaourt-grec",
+    "semaine": "2026-11-16",
+    "nom": "Crumble de poires aux flocons d'avoine et yaourt grec",
+    "description": "Des poires tendres sous un crumble croustillant d'avoine et de cannelle, servi avec du yaourt grec. Un dessert de saison, simple et peu sucré.",
+    "categorie": "dessert",
+    "profils": [
+      "maintien",
+      "remise-en-forme"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "lactose"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 25,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Poires",
+        "quantite": "600 g (4 poires)"
+      },
+      {
+        "nom": "Flocons d'avoine",
+        "quantite": "80 g"
+      },
+      {
+        "nom": "Beurre",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Sucre roux",
+        "quantite": "30 g"
+      },
+      {
+        "nom": "Yaourt grec nature",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Cannelle",
+        "quantite": "1 cuillère à café"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 180 °C. Épluche les poires, coupe-les en dés et répartis-les dans un plat avec la moitié de la cannelle.",
+      "Du bout des doigts, mélange l'avoine, le beurre froid en morceaux, le sucre roux et le reste de cannelle jusqu'à obtenir un sable grossier.",
+      "Étale le crumble sur les poires et enfourne 25 minutes, jusqu'à ce que le dessus soit doré.",
+      "Sers tiède avec 100 g de yaourt grec par portion."
+    ],
+    "moment": "recuperation",
+    "adaptations": "Remise en forme : supprime le sucre roux, les poires suffisent. Maintien : garde les quantités indiquées.",
+    "tags": [
+      "economique",
+      "familial"
+    ],
+    "parPortion": {
+      "kcal": 306,
+      "p": 11,
+      "c": 43,
+      "f": 10,
+      "fibres": 6
+    }
+  },
+  {
+    "id": "2026-11-16-tacos-haricots-noirs-mais-guacamole",
+    "semaine": "2026-11-16",
+    "nom": "Tacos de haricots noirs, maïs et guacamole",
+    "description": "Des tortillas garnies de haricots noirs épicés, de maïs, de salade et de guacamole maison. Un repas 100 % végétal, riche en fibres, prêt en 20 minutes.",
+    "categorie": "dejeuner",
+    "profils": [
+      "bodybuilding",
+      "hyrox"
+    ],
+    "regimes": [
+      "vegan",
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 8,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Tortillas de blé",
+        "quantite": "4 petites (160 g)"
+      },
+      {
+        "nom": "Haricots noirs (conserve égouttée et rincée)",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Maïs en conserve égoutté",
+        "quantite": "80 g"
+      },
+      {
+        "nom": "Avocat mûr",
+        "quantite": "150 g (1 gros)"
+      },
+      {
+        "nom": "Tomates",
+        "quantite": "150 g"
+      },
+      {
+        "nom": "Oignon rouge",
+        "quantite": "50 g"
+      },
+      {
+        "nom": "Salade (laitue ou mâche)",
+        "quantite": "60 g"
+      },
+      {
+        "nom": "Citron vert, cumin, paprika, coriandre, sel",
+        "quantite": "1 citron vert"
+      }
+    ],
+    "etapes": [
+      "Fais chauffer les haricots noirs et le maïs 5 minutes à la poêle avec le cumin, le paprika et une pincée de sel.",
+      "Écrase l'avocat avec le jus de citron vert, la moitié de l'oignon haché, la moitié des tomates en dés et la coriandre pour faire le guacamole.",
+      "Réchauffe les tortillas 30 secondes par face dans une poêle sèche.",
+      "Garnis chaque tortilla de salade, de haricots, de guacamole et du reste de tomates et d'oignon, puis plie-les."
+    ],
+    "moment": "apres-entrainement",
+    "adaptations": "Bodybuilding : ajoute 50 g de haricots noirs par portion en prise de masse, ou retire la moitié de l'avocat en sèche. Hyrox : ajoute une tortilla par portion avant une séance longue.",
+    "tags": [
+      "rapide",
+      "economique"
+    ],
+    "parPortion": {
+      "kcal": 574,
+      "p": 21,
+      "c": 73,
+      "f": 22,
+      "fibres": 19
+    }
+  },
+  {
+    "id": "2026-11-16-saute-boeuf-oignons-pommes-de-terre-roties",
+    "semaine": "2026-11-16",
+    "nom": "Sauté de bœuf, champignons et pommes de terre rôties",
+    "description": "Des lanières de bœuf saisies avec oignons et champignons, servies avec des pommes de terre rôties au four. Un plat dense en protéines et en glucides.",
+    "categorie": "diner",
+    "profils": [
+      "force",
+      "bodybuilding"
+    ],
+    "regimes": [
+      "sans-porc"
+    ],
+    "contient": [
+      "viande"
+    ],
+    "portions": 2,
+    "preparationMin": 15,
+    "cuissonMin": 30,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Rumsteck de bœuf",
+        "quantite": "320 g"
+      },
+      {
+        "nom": "Pommes de terre",
+        "quantite": "500 g"
+      },
+      {
+        "nom": "Oignons",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Champignons de Paris",
+        "quantite": "200 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "20 g (2 cuillères à soupe)"
+      },
+      {
+        "nom": "Ail, persil, paprika, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 210 °C. Coupe les pommes de terre en quartiers, mélange-les avec la moitié de l'huile, le paprika et le sel, et enfourne 30 minutes en les retournant à mi-cuisson.",
+      "Coupe le bœuf en lanières, émince les oignons et les champignons.",
+      "Fais saisir le bœuf 2 minutes à feu vif dans le reste d'huile, puis réserve-le.",
+      "Fais revenir les oignons et les champignons 6 minutes, remets le bœuf avec l'ail et le persil et sers avec les pommes de terre."
+    ],
+    "moment": "apres-entrainement",
+    "adaptations": "Force : ajoute 100 g de pommes de terre par portion les jours de grosse séance. Bodybuilding : en sèche, réduis les pommes de terre à 150 g par portion et ajoute des haricots verts.",
+    "tags": [
+      "repas-d-effort",
+      "familial"
+    ],
+    "parPortion": {
+      "kcal": 555,
+      "p": 43,
+      "c": 53,
+      "f": 19,
+      "fibres": 9
+    }
+  },
+  {
+    "id": "2026-11-16-gnocchis-poeles-tomates-mozzarella",
+    "semaine": "2026-11-16",
+    "nom": "Gnocchis poêlés, tomates cerises et mozzarella",
+    "description": "Des gnocchis dorés à la poêle avec des tomates cerises, du basilic et de la mozzarella fondante. Riche en glucides, léger à digérer, prêt en 15 minutes.",
+    "categorie": "diner",
+    "profils": [
+      "marathon",
+      "prise"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "lactose"
+    ],
+    "portions": 3,
+    "preparationMin": 5,
+    "cuissonMin": 12,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Gnocchis de pommes de terre (frais)",
+        "quantite": "600 g"
+      },
+      {
+        "nom": "Tomates cerises",
+        "quantite": "300 g"
+      },
+      {
+        "nom": "Mozzarella",
+        "quantite": "150 g (1 boule)"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "15 g (1 cuillère à soupe)"
+      },
+      {
+        "nom": "Basilic, ail, sel, poivre",
+        "quantite": "selon goût"
+      }
+    ],
+    "etapes": [
+      "Fais chauffer l'huile dans une grande poêle et fais dorer les gnocchis 6 à 8 minutes en les remuant.",
+      "Ajoute les tomates cerises coupées en deux et l'ail, et laisse cuire 4 minutes.",
+      "Coupe la mozzarella en morceaux, ajoute-la hors du feu avec le basilic, et laisse-la fondre 1 minute avant de servir."
+    ],
+    "moment": "veille-de-course",
+    "adaptations": "Veille de course : réduis la mozzarella à 30 g par portion pour une digestion plus légère. Prise de masse : ajoute 100 g de gnocchis par portion.",
+    "tags": [
+      "rapide",
+      "repas-d-effort"
+    ],
+    "parPortion": {
+      "kcal": 475,
+      "p": 17,
+      "c": 68,
+      "f": 15,
+      "fibres": 5
+    }
+  },
+  {
+    "id": "2026-11-16-cake-sale-courgettes-feta-olives",
+    "semaine": "2026-11-16",
+    "nom": "Cake salé courgettes, feta et olives",
+    "description": "Un cake moelleux aux courgettes, à la feta et aux olives, cuit au four. Il se garde 4 jours au frais : parfait en meal-prep avec une salade verte.",
+    "categorie": "dejeuner",
+    "profils": [
+      "perte",
+      "maintien"
+    ],
+    "regimes": [
+      "vegetarien",
+      "sans-porc"
+    ],
+    "contient": [
+      "gluten",
+      "oeufs",
+      "lactose"
+    ],
+    "portions": 4,
+    "preparationMin": 15,
+    "cuissonMin": 40,
+    "difficulte": "facile",
+    "ingredients": [
+      {
+        "nom": "Courgettes",
+        "quantite": "400 g"
+      },
+      {
+        "nom": "Œufs",
+        "quantite": "3 (environ 165 g)"
+      },
+      {
+        "nom": "Farine de blé",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Yaourt nature",
+        "quantite": "125 g"
+      },
+      {
+        "nom": "Huile d'olive",
+        "quantite": "40 g (4 cuillères à soupe)"
+      },
+      {
+        "nom": "Feta",
+        "quantite": "120 g"
+      },
+      {
+        "nom": "Olives vertes dénoyautées",
+        "quantite": "40 g"
+      },
+      {
+        "nom": "Levure chimique, menthe, sel, poivre",
+        "quantite": "1 sachet de levure"
+      }
+    ],
+    "etapes": [
+      "Préchauffe le four à 180 °C. Râpe les courgettes, presse-les dans un torchon pour retirer l'eau et émiette la feta.",
+      "Fouette les œufs avec le yaourt et l'huile, puis ajoute la farine mélangée à la levure, le sel, le poivre et la menthe.",
+      "Incorpore les courgettes, la feta et les olives, verse dans un moule à cake chemisé et enfourne 40 minutes.",
+      "Laisse tiédir avant de démouler, coupe en 4 parts et sers avec une salade verte."
+    ],
+    "moment": "quotidien",
+    "adaptations": "Perte : garde les quantités et ajoute une grande salade verte. Maintien : ajoute une tranche de pain complet ou un fruit.",
+    "tags": [
+      "meal-prep",
+      "economique"
+    ],
+    "parPortion": {
+      "kcal": 380,
+      "p": 15,
+      "c": 26,
+      "f": 24,
+      "fibres": 2
+    }
+  },
+  {
     "id": "2026-10-19-porridge-chaud-pomme-cannelle-noix",
     "semaine": "2026-10-19",
     "nom": "Porridge chaud pomme-cannelle et noix",
