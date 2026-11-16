@@ -101,10 +101,10 @@ try {
   const aide = net(await page.locator("[data-carte-plateforme]").innerText().catch(() => ""));
   const champ = page.locator("[data-code-plateforme]");
   await champ.fill("pas un code");
-  await page.locator("[data-carte-plateforme]").getByRole("button", { name: "Enregistrer", exact: true }).click();
+  await page.locator("[data-carte-plateforme]").getByRole("button", { name: "Valider", exact: true }).click();
   const refus = net(await page.locator("[data-carte-plateforme]").innerText());
   await champ.fill("  neiram test12 ");
-  await page.locator("[data-carte-plateforme]").getByRole("button", { name: "Enregistrer", exact: true }).click();
+  await page.locator("[data-carte-plateforme]").getByRole("button", { name: "Valider", exact: true }).click();
   await page.waitForTimeout(200);
   const accepte = net(await page.locator("[data-carte-plateforme]").innerText());
   const stocke = await page.evaluate(() => localStorage.getItem("acces_plateforme"));

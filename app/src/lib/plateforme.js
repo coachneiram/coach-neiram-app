@@ -256,7 +256,7 @@ export const TEXTES_PLATEFORME = {
   titreReglages: "Code plateforme Coach Neiram",
   aideReglages: "C'est le code reçu dans ton invitation à la plateforme. À coller une seule fois.",
   champCode: "NEIRAM-XXXXXX",
-  enregistrerCode: "Enregistrer",
+  enregistrerCode: "Valider",
   codeInvalide: "Ce code n'a pas le bon format : il ressemble à NEIRAM-AB12CD.",
   codeEnregistre: "Code enregistré sur ce téléphone.",
   retirerCode: "Retirer le code de ce téléphone",
