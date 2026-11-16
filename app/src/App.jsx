@@ -50,6 +50,7 @@ import { derniereSaisie, envoyerPresence } from "./lib/presence.js";
 import { TEXTES_PHOTOS_MOIS, etatPhotosMois, semainesPhotographiees } from "./lib/photos-mensuelles.js";
 import { lignesPerformancesBilan } from "./lib/performances-bilan.js";
 import { lireCompetitions } from "./lib/competitions.js";
+import { construirePayloadPlateforme } from "./lib/plateforme.js";
 import { lirePerformances } from "./lib/performances.js";
 import { lignesHabitudesBilan } from "./lib/habitudes-bilan.js";
 import { CLE_HABITUDES } from "./lib/habitudes.js";
@@ -77,7 +78,7 @@ import { CLE_INSTALLATION, bandeauInstallationVisible, estInstallee, finMasquage
 import { NOUVEAUTES_MAX, annoncesAutorisees, lireVues, marquerToutVu, nouveautesAMontrer, nouveautesPour } from "./lib/nouveautes.js";
 import { CLE_SPORTS_PERSO, definirSportsPerso } from "./lib/activites.js";
 import { messageEau } from "./lib/raccourcis.js";
-import { brancherRaccourcis, ecouterRaccourcis, poserIntention } from "./lib/reception-raccourcis.js";
+import { brancherMessagesSW, brancherRaccourcis, ecouterRaccourcis, poserIntention } from "./lib/reception-raccourcis.js";
 import { brancherInvitationDefi } from "./lib/defis-amis.js";
 import { publierSiBesoin, statsCommunaute } from "./lib/communaute.js";
 
@@ -244,6 +245,35 @@ export default function App() {
    * « Bilan envoye » n'est note que si le partage a abouti : un partage
    * annule doit laisser le rappel du dimanche revenir.
    */
+  const lignesPerformances = () =>
+    lignesPerformancesBilan({
+      performances: lirePerformances(),
+      maxisForce,
+      seances: sessions,
+      profil: profile,
+      poidsKg: poidsCourant,
+      bodyLogs,
+      date: todayISO(),
+      competitions: lireCompetitions()
+    });
+
+  /**
+   * Envoi du bilan a la plateforme Coach Neiram (16 novembre 2026,
+   * lib/plateforme.js) : en plus du fichier, jamais a sa place.
+   */
+  const construirePlateforme = () =>
+    construirePayloadPlateforme({
+      weekStats,
+      profil: profile,
+      mesures: measurements,
+      bilan: bilanCourant,
+      performances: lignesPerformances()
+    });
+  const bilanEnvoyePlateforme = () => {
+    marquerBilanEnvoye(weekStats.weekKey);
+    synchroniserPush({ profil: profile, seances: sessions, bilanEnvoye: weekStats.weekKey });
+  };
+
   const envoyerBilan = async () => {
     if (!profile || !weekStats) return;
     const resultat = await partagerBilan({
@@ -253,16 +283,7 @@ export default function App() {
       photos,
       targets,
       // Performances, niveau et transformation (24 octobre 2026).
-      performances: lignesPerformancesBilan({
-        performances: lirePerformances(),
-        maxisForce,
-        seances: sessions,
-        profil: profile,
-        poidsKg: poidsCourant,
-        bodyLogs,
-        date: todayISO(),
-        competitions: lireCompetitions()
-      }),
+      performances: lignesPerformances(),
       // Habitudes et déclics (24 octobre 2026).
       habitudes: lignesHabitudesBilan({
         habitudes: charger(CLE_HABITUDES, null),
@@ -403,14 +424,17 @@ export default function App() {
       afficherToast(messageEau(action.ml, avant + action.ml));
       return;
     }
-    if (action.id === "seance" || action.id === "repas") poserIntention(action.id);
+    if (action.id === "seance" || action.id === "repas" || action.id === "bilan") poserIntention(action.id);
     setOngletActif(action.onglet);
   };
   useEffect(() => {
     brancherRaccourcis();
+    // Appui sur le rappel du dimanche, application deja ouverte (public/sw.js).
+    const retirerMessagesSW = brancherMessagesSW();
     // Lien d'invitation a un defi entre amis (?defi=CODE) : code retenu
     // pour la carte du Journal, adresse nettoyee.
     brancherInvitationDefi();
+    return retirerMessagesSW;
   }, []);
   useEffect(() => {
     if (!pret || !profile) return undefined;
@@ -871,6 +895,9 @@ export default function App() {
         onDebutCoaching={definirDebutCoaching}
         onSeancesAvantApp={definirSeancesAvantApp}
         onPartager={envoyerBilan}
+        onConstruirePlateforme={construirePlateforme}
+        onEnvoyePlateforme={bilanEnvoyePlateforme}
+        onOuvrirReglages={() => setReglagesOuverts(true)}
         onGenerate={genererBilan}
         onGenerateMonthly={genererBilanDuMois}
         bilanCourant={bilanCourant}

@@ -13,6 +13,7 @@
  *   ?raccourci=repas        ouvre l'ajout d'un aliment au repas de l'heure
  *   ?raccourci=poids        ouvre Mesures
  *   ?raccourci=sommeil      ouvre Sommeil
+ *   ?raccourci=bilan        ouvre le bilan de la semaine (Tendances), au bouton « Envoyer à mon coach »
  *
  * En interne, l'adresse devient un lien « raccourci://<action>?… » (simple
  * représentation, aucun schéma déclaré au téléphone). Un lien inconnu ou
@@ -33,6 +34,12 @@ export const ACTIONS_RACCOURCIS = [
   { id: "sommeil", titre: "Noter mon sommeil", court: "Sommeil", onglet: "sommeil", adresse: "./?raccourci=sommeil" }
 ];
 
+/**
+ * Actions qui n'ont pas leur entrée dans le manifeste (Android n'affiche que
+ * quatre raccourcis sur l'icône) : on y arrive par le rappel du dimanche.
+ */
+export const ACTIONS_INTERNES = [{ id: "bilan", onglet: "tendances", adresse: "./?raccourci=bilan" }];
+
 export const EAU_PAR_DEFAUT_ML = 250;
 const EAU_MIN_ML = 50;
 const EAU_MAX_ML = 1000;
@@ -46,7 +53,7 @@ export function lireAction(lien) {
   const m = lien.match(/^raccourci:\/\/([a-z]+)\/?(?:\?(.*))?$/i);
   if (!m) return null;
   const id = m[1].toLowerCase();
-  const action = ACTIONS_RACCOURCIS.find((a) => a.id === id);
+  const action = ACTIONS_RACCOURCIS.find((a) => a.id === id) || ACTIONS_INTERNES.find((a) => a.id === id);
   if (!action) return null;
   const params = new URLSearchParams(m[2] || "");
   if (id === "eau") {

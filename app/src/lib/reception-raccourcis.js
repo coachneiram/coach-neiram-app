@@ -85,3 +85,20 @@ export function brancherRaccourcis(env = typeof window !== "undefined" ? window 
   }
   return recevoirLien(lien);
 }
+
+/**
+ * Un appui sur une notification, application déjà ouverte : le service
+ * worker ne peut pas changer l'adresse, il envoie le lien par message
+ * (public/sw.js, « cn-lien »). Seuls les liens de raccourci sont acceptés.
+ * Rend le désabonnement.
+ */
+export function brancherMessagesSW(env = typeof window !== "undefined" ? window : null) {
+  const sw = env && env.navigator && env.navigator.serviceWorker;
+  if (!sw || typeof sw.addEventListener !== "function") return () => {};
+  const ecoute = (e) => {
+    const d = e && e.data;
+    if (d && d.type === "cn-lien" && typeof d.lien === "string") recevoirLien(d.lien);
+  };
+  sw.addEventListener("message", ecoute);
+  return () => sw.removeEventListener("message", ecoute);
+}

@@ -144,7 +144,7 @@ try {
   );
 
   // 6. Le bilan envoye au coach.
-  await page.getByRole("button", { name: /Envoyer sans bilan IA/ }).click();
+  await page.getByRole("button", { name: /Partager le fichier du bilan/ }).click();
   await page.waitForTimeout(1200);
   const envoi = (await page.evaluate(() => window.__partages)).find((p) => p.fichier) || {};
   const html = envoi.texte || "";

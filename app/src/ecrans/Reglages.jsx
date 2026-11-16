@@ -35,6 +35,7 @@ import { ChampsProfil } from "./ChampsProfil.jsx";
 import { avecAllergiesDeclarees } from "../lib/consigne-coach.js";
 import { Btn, Field, LienTuto, Modal, STYLE_ENTETE_TUTO, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { MSG_ACTIVATION, TEXTES_ACCES, accesActuel, activerCode, oublierAcces } from "../lib/acces.js";
+import { TEXTES_PLATEFORME, enregistrerCodePlateforme, lireCodePlateforme, oublierCodePlateforme } from "../lib/plateforme.js";
 import { LienAide, LienNouveautes, RappelsAppFermee, TestNotifications } from "../ui/Annonces.jsx";
 import { TEXTES_TUTOS } from "../lib/tutos.js";
 import { accordDonne, enregistrerAccord, TEXTES_ACCORD } from "../lib/consentement.js";
@@ -268,6 +269,78 @@ function CarteAcces() {
   );
 }
 
+/**
+ * Code plateforme Coach Neiram (16 novembre 2026) : sert à envoyer le bilan
+ * de la semaine à la plateforme, depuis Tendances. Voir lib/plateforme.js.
+ */
+function CartePlateforme() {
+  const [code, setCode] = useState(() => lireCodePlateforme());
+  const [saisie, setSaisie] = useState("");
+  const [message, setMessage] = useState(null);
+
+  const enregistrer = () => {
+    const r = enregistrerCodePlateforme(saisie);
+    if (r.ok) {
+      setCode(r.code);
+      setSaisie("");
+      setMessage(null);
+    } else {
+      setMessage(TEXTES_PLATEFORME.codeInvalide);
+    }
+  };
+  const retirer = () => {
+    if (!window.confirm(TEXTES_PLATEFORME.confirmationRetrait)) return;
+    oublierCodePlateforme();
+    setCode(null);
+  };
+
+  return (
+    <div data-carte-plateforme style={styleSection}>
+      <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>{TEXTES_PLATEFORME.titreReglages}</div>
+      <p style={styleAide}>{TEXTES_PLATEFORME.aideReglages}</p>
+      {code ? (
+        <>
+          <p style={{ ...styleAide, color: COLORS.good }}>{TEXTES_PLATEFORME.codeActif(code)}</p>
+          <button
+            onClick={retirer}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              color: COLORS.textMuted,
+              fontSize: 11.5,
+              textDecoration: "underline",
+              cursor: "pointer"
+            }}
+          >
+            {TEXTES_PLATEFORME.retirerCode}
+          </button>
+        </>
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <TextInput
+              data-code-plateforme
+              value={saisie}
+              onChange={(e) => setSaisie(e.target.value)}
+              placeholder={TEXTES_PLATEFORME.champCode}
+              aria-label={TEXTES_PLATEFORME.titreReglages}
+              autoCapitalize="characters"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <Btn onClick={enregistrer} disabled={saisie.trim().length < 6}>
+              {TEXTES_PLATEFORME.enregistrerCode}
+            </Btn>
+          </div>
+          {message && <p style={{ ...styleAide, color: COLORS.bad, marginTop: 6 }}>{message}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Accord pour l'IA : date, et retrait possible (lib/consentement.js). */
 function BlocAccordIa() {
   const [accord, setAccord] = useState(() => accordDonne());
@@ -383,6 +456,7 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
             </Btn>
           )}
           {PROXY_BASE_URL && <CarteAcces />}
+          <CartePlateforme />
           <div style={styleLienTutoReglages}>
             <LienTuto id="profil-objectifs" />
           </div>

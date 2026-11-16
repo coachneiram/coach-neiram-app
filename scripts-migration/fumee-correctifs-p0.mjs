@@ -192,7 +192,7 @@ try {
     await page.waitForTimeout(900);
     const [telechargement] = await Promise.all([
       page.waitForEvent("download", { timeout: 8000 }),
-      page.getByRole("button", { name: /Envoyer à mon coach/ }).click()
+      page.getByRole("button", { name: /Partager le fichier du bilan/ }).click()
     ]);
     const chemin = join(mkdtempSync(join(tmpdir(), "p0-")), "bilan.html");
     await telechargement.saveAs(chemin);
