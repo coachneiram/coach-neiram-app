@@ -33,6 +33,8 @@ import { ComparateurPhotos } from "../ui/ComparateurPhotos.jsx";
 import { PhotosDuMois } from "../ui/PhotosDuMois.jsx";
 import { etatPhotosMois, semainesPhotographiees } from "../lib/photos-mensuelles.js";
 import { CarteDeclics } from "../ui/CarteDeclics.jsx";
+import { BilanPlateforme } from "../ui/BilanPlateforme.jsx";
+import { TEXTES_PLATEFORME } from "../lib/plateforme.js";
 
 /** Attente et erreur de generation, communes aux deux bilans. */
 const styleAttente = {
@@ -183,6 +185,9 @@ export function Tendances({
   onGenerate,
   onGenerateMonthly,
   onPartager,
+  onConstruirePlateforme,
+  onEnvoyePlateforme,
+  onOuvrirReglages,
   bilanCourant,
   bilanMensuelCourant,
   bilans,
@@ -351,10 +356,23 @@ export function Tendances({
                     {bilanCourant ? "Régénérer" : "Bilan IA (optionnel)"}
                   </Btn>
                 )}
+              </div>
+
+              <div style={{ marginTop: 14 }}>
+                <BilanPlateforme
+                  cleSemaine={weekStats.weekKey}
+                  construire={onConstruirePlateforme}
+                  onEnvoye={onEnvoyePlateforme}
+                  onReglages={onOuvrirReglages}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
                 <Btn variant="ghost" icon={Share} onClick={onPartager}>
-                  {bilanCourant ? "Envoyer à mon coach" : "Envoyer sans bilan IA"}
+                  {TEXTES_PLATEFORME.partagerFichier}
                 </Btn>
               </div>
+              <p style={{ fontSize: 11.5, color: COLORS.textFaint, textAlign: "center", margin: "6px 0 0" }}>{TEXTES_PLATEFORME.aideFichier}</p>
             </div>
           ) : (
             <p style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", margin: 0 }}>

@@ -81,11 +81,11 @@ console.log("2e OUVERTURE", /C'est dimanche/.test(await page.locator("body").inn
 await page.getByRole("button", { name: "Tendances", exact: true }).first().click();
 await page.waitForTimeout(500);
 const tend = await page.locator("body").innerText();
-console.log("BOUTON ENVOI", /Envoyer sans bilan IA/.test(tend) ? "present" : "ABSENT");
+console.log("BOUTON ENVOI", /Partager le fichier du bilan/.test(tend) ? "present" : "ABSENT");
 console.log("BOUTON IA", /Bilan IA/.test(tend) ? "AFFICHE (non branche)" : "masque tant qu'il n'est pas branche");
 
 const telechargement = page.waitForEvent("download", { timeout: 8000 }).catch(() => null);
-await page.getByRole("button", { name: /Envoyer sans bilan IA/ }).click();
+await page.getByRole("button", { name: /Partager le fichier du bilan/ }).click();
 const dl = await telechargement;
 console.log("FICHIER", dl ? dl.suggestedFilename() : "AUCUN TELECHARGEMENT");
 if (dl) {

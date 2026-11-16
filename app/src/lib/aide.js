@@ -259,9 +259,10 @@ export const AIDE = [
         id: "bilan",
         question: "Comment envoyer mon bilan de la semaine ?",
         reponse: [
-          "Le dimanche, dans Tendances, carte « Bilan de la semaine » : ajoute tes photos si tu veux, puis « Envoyer sans bilan IA » (ou génère d'abord le bilan IA). Choisis WhatsApp ou ton mail."
+          "Le dimanche, dans Tendances, carte « Bilan de la semaine » : ajoute tes photos si tu veux (et génère le bilan IA si tu le souhaites), puis touche « Envoyer à mon coach » : le bilan part directement sur la plateforme Coach Neiram, après avoir collé une seule fois ton « Code plateforme Coach Neiram » (reçu dans ton invitation) dans les Réglages.",
+          "Tu peux aussi « Partager le fichier du bilan » par WhatsApp ou par mail."
         ],
-        libelles: ["Bilan de la semaine", "Envoyer sans bilan IA"]
+        libelles: ["Bilan de la semaine", "Envoyer à mon coach", "Code plateforme Coach Neiram", "Partager le fichier du bilan"]
       },
       {
         id: "parrainage",

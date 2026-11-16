@@ -230,13 +230,26 @@ self.addEventListener("push", (evenement) => {
   );
 });
 
+/**
+ * Lien ouvert par un appui sur la notification : le rappel du dimanche
+ * (tag « coach-report ») amene au bouton « Envoyer à mon coach » du bilan.
+ * Les autres notifications ouvrent l'application telle qu'elle est.
+ */
+const LIENS_NOTIFICATIONS = { "coach-report": "bilan" };
+
 self.addEventListener("notificationclick", (evenement) => {
   evenement.notification.close();
+  const action = LIENS_NOTIFICATIONS[evenement.notification.tag];
   evenement.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((fenetres) => {
       const fenetre = fenetres.find((f) => typeof f.focus === "function");
-      if (fenetre) return fenetre.focus();
-      return self.clients.openWindow ? self.clients.openWindow(self.registration.scope) : undefined;
+      if (fenetre) {
+        // Application deja ouverte : elle recoit le lien par message.
+        if (action && typeof fenetre.postMessage === "function") fenetre.postMessage({ type: "cn-lien", lien: "raccourci://" + action });
+        return fenetre.focus();
+      }
+      if (!self.clients.openWindow) return undefined;
+      return self.clients.openWindow(self.registration.scope + (action ? "?raccourci=" + action : ""));
     })
   );
 });
