@@ -224,7 +224,7 @@ export default {
     // ALLOWED_ORIGINS.
     if (url.pathname === ROUTE_RESERVATION_FV) {
       try {
-        return await routeReservationFeuVert(request, env);
+        return await routeReservationFeuVert(request, env, ctx);
       } catch (e) {
         return refus(ROUTE_RESERVATION_FV, 500, "erreur-interne", corsReservation());
       }
@@ -2787,7 +2787,7 @@ function corsReservation() {
   };
 }
 
-async function routeReservationFeuVert(request, env) {
+async function routeReservationFeuVert(request, env, ctx) {
   const route = ROUTE_RESERVATION_FV;
   const cors = corsReservation();
 
@@ -2836,7 +2836,12 @@ async function routeReservationFeuVert(request, env) {
   const remise = await remettreAuScript(env, v.reponse, maintenant);
   journal(route, remise ? 200 : 502, remise ? null : "destination-refus", null);
   // Copie au CRM (16/11/2026) seulement quand le classeur a bien recu la demande.
-  if (remise) await transmettreAuCrm(env, v.reponse);
+  // En tâche de fond quand c'est possible : la page n'attend pas le CRM.
+  if (remise) {
+    const copie = transmettreAuCrm(env, v.reponse);
+    if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(copie);
+    else await copie;
+  }
   return reponseJson({ ok: remise }, remise ? 200 : 502, cors);
 }
 
@@ -2865,8 +2870,9 @@ function chargeCrm(r) {
     tags: "Feu Vert",
     niveau: r.niveau,
     parcours: r.parcoursIndicatif,
-    objectif: r.objectif === "Autre" ? r.objectifAutre || "Autre" : r.objectif,
-    blocages: r.blocage.map((b) => (b === "Autre" ? r.blocageAutre || "Autre" : b)).join(", "),
+    // Textes libres « Autre » : jamais au CRM (ils peuvent contenir de la sante), seulement dans le classeur.
+    objectif: r.objectif,
+    blocages: r.blocage.join(", "),
     creneaux: r.creneaux.join(", "),
     lieu: r.lieu,
     salle: r.salle || undefined,
@@ -2881,7 +2887,8 @@ async function transmettreAuCrm(env, reponse) {
   try {
     const r = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-crm-token": jeton },
+      // Meme personne, meme jour : un seul lead (le CRM ignore les doublons de cle).
+      headers: { "Content-Type": "application/json", "x-crm-token": jeton, "Idempotency-Key": "fv-" + (await hachage(String(reponse.email).toLowerCase() + ":" + jourUtc(Date.now()))).slice(0, 32) },
       body: JSON.stringify(chargeCrm(reponse)),
       ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(8000) } : {})
     });

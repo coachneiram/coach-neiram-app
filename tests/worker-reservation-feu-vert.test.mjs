@@ -391,7 +391,9 @@ describe("copie au CRM de l'equipe (16/11/2026)", () => {
     assert.equal(corps.first_name, "Julie");
     assert.equal(corps.email, "julie@exemple.fr");
     assert.equal(corps.source, "feu-vert");
-    assert.equal(corps.blocages, "Le regard des autres, Les machines");
+    assert.equal(corps.blocages, "Le regard des autres, Autre");
+    assert.ok(!JSON.stringify(corps).includes("Les machines"), "texte libre jamais envoye");
+    assert.match(entetes[1]["Idempotency-Key"], /^fv-[0-9a-f]{32}$/);
     for (const interdit of ["contreIndication", "consentement", "binome", "tableau", "pseudo"]) assert.ok(!(interdit in corps), interdit);
     assert.ok(!JSON.stringify(corps).includes("contre"), "aucune trace de la question 7");
   });
