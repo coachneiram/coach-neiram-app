@@ -2835,12 +2835,67 @@ async function routeReservationFeuVert(request, env) {
 
   const remise = await remettreAuScript(env, v.reponse, maintenant);
   journal(route, remise ? 200 : 502, remise ? null : "destination-refus", null);
+  // Copie au CRM (16/11/2026) seulement quand le classeur a bien recu la demande.
+  if (remise) await transmettreAuCrm(env, v.reponse);
   return reponseJson({ ok: remise }, remise ? 200 : 502, cors);
+}
+
+/**
+ * Copie d'une reservation au CRM de l'equipe commerciale (16 novembre 2026),
+ * pour que la setteuse ou la closeuse recontacte la personne.
+ *
+ * JAMAIS la reponse sante (question 7, contreIndication), ni les choix de
+ * binome / tableau / pseudo : seulement le contact et les reponses utiles a
+ * la prise de contact. Le classeur reste le seul lieu de la reponse sante
+ * (politique de confidentialite, CGV Feu Vert 1.1).
+ *
+ * Variables (Settings > Variables and Secrets) :
+ *   CRM_LEAD_URL    (variable) adresse /api/hooks/lead du CRM
+ *   CRM_LEAD_TOKEN  (secret)   jeton d'entree du CRM (Reglages > Integrations)
+ * Sans l'une des deux : rien n'est envoye. Un echec ne change pas la reponse
+ * faite a la page (la demande est deja dans le classeur).
+ */
+function chargeCrm(r) {
+  return {
+    first_name: r.prenom,
+    email: r.email,
+    phone: r.telephone || undefined,
+    instagram: r.instagram || undefined,
+    source: "feu-vert",
+    tags: "Feu Vert",
+    niveau: r.niveau,
+    parcours: r.parcoursIndicatif,
+    objectif: r.objectif === "Autre" ? r.objectifAutre || "Autre" : r.objectif,
+    blocages: r.blocage.map((b) => (b === "Autre" ? r.blocageAutre || "Autre" : b)).join(", "),
+    creneaux: r.creneaux.join(", "),
+    lieu: r.lieu,
+    salle: r.salle || undefined,
+    interesse_presentiel: r.presentiel ? "Oui" : "Non"
+  };
+}
+
+async function transmettreAuCrm(env, reponse) {
+  const url = String(env.CRM_LEAD_URL || "").trim();
+  const jeton = String(env.CRM_LEAD_TOKEN || "").trim();
+  if (!url || !jeton || !/^https:\/\//.test(url)) return false;
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-crm-token": jeton },
+      body: JSON.stringify(chargeCrm(reponse)),
+      ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(8000) } : {})
+    });
+    journal(ROUTE_RESERVATION_FV + ":crm", r.status, r.ok ? null : "crm-refus", null);
+    return r.ok;
+  } catch (e) {
+    journal(ROUTE_RESERVATION_FV + ":crm", 502, "crm-injoignable", null);
+    return false;
+  }
 }
 
 // Acces des tests aux fonctions internes (sans effet en production).
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
-  Object.assign(globalThis.__COACH_TEST__, { validerReservation, parcoursIndicatif, RESERVATION_FV: { ROUTE_RESERVATION_FV, RESA_CHOIX, RESA_PAR_IP_PAR_HEURE, RESA_PAR_JOUR, RESA_DUREE_MIN_MS } });
+  Object.assign(globalThis.__COACH_TEST__, { validerReservation, parcoursIndicatif, chargeCrm, RESERVATION_FV: { ROUTE_RESERVATION_FV, RESA_CHOIX, RESA_PAR_IP_PAR_HEURE, RESA_PAR_JOUR, RESA_DUREE_MIN_MS } });
   Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
   Object.assign(globalThis.__COACH_TEST__, { alerterInactivite, joursInactivite, niveauInactivite, dateParis, INACTIVITE: { INACTIVITE_ATTENTION_JOURS, INACTIVITE_CRITIQUE_JOURS, PRESENCE_PAR_JOUR: PLAFONDS.presenceParJour } });
   Object.assign(globalThis.__COACH_TEST__, {

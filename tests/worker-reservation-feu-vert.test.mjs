@@ -364,3 +364,60 @@ describe("Script Google (coach-sync.gs v2.6) : de bout en bout", () => {
     assert.ok(!s.contexte.TYPES_AUTORISES.includes("reservation_feu_vert"));
   });
 });
+
+describe("copie au CRM de l'equipe (16/11/2026)", () => {
+  test("sans CRM_LEAD_URL / CRM_LEAD_TOKEN : seul le script est appele", async () => {
+    const r = await envoyer(reponsesValides());
+    assert.equal(r.status, 200);
+    assert.equal(sortants.length, 1);
+  });
+
+  test("avec les deux : copie au CRM, jeton en en-tete, SANS la question 7", async () => {
+    env.CRM_LEAD_URL = "https://crm.test/api/hooks/lead";
+    env.CRM_LEAD_TOKEN = "jeton-crm-de-test";
+    const entetes = [];
+    globalThis.fetch = async (url, init) => {
+      sortants.push({ url: String(url), corps: init.body });
+      entetes.push(init.headers || {});
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    };
+    const r = await envoyer(reponsesValides());
+    assert.equal(r.status, 200);
+    assert.equal(sortants.length, 2);
+    const crm = sortants[1];
+    assert.equal(crm.url, "https://crm.test/api/hooks/lead");
+    assert.equal(entetes[1]["x-crm-token"], "jeton-crm-de-test");
+    const corps = JSON.parse(crm.corps);
+    assert.equal(corps.first_name, "Julie");
+    assert.equal(corps.email, "julie@exemple.fr");
+    assert.equal(corps.source, "feu-vert");
+    assert.equal(corps.blocages, "Le regard des autres, Les machines");
+    for (const interdit of ["contreIndication", "consentement", "binome", "tableau", "pseudo"]) assert.ok(!(interdit in corps), interdit);
+    assert.ok(!JSON.stringify(corps).includes("contre"), "aucune trace de la question 7");
+  });
+
+  test("le script refuse : rien n'est copie au CRM", async () => {
+    env.CRM_LEAD_URL = "https://crm.test/api/hooks/lead";
+    env.CRM_LEAD_TOKEN = "jeton-crm-de-test";
+    globalThis.fetch = async (url, init) => {
+      sortants.push({ url: String(url), corps: init.body });
+      return new Response(JSON.stringify({ ok: false }), { status: 200 });
+    };
+    const r = await envoyer(reponsesValides());
+    assert.equal(r.status, 502);
+    assert.equal(sortants.length, 1);
+  });
+
+  test("CRM en panne : la page recoit quand meme ok: true", async () => {
+    env.CRM_LEAD_URL = "https://crm.test/api/hooks/lead";
+    env.CRM_LEAD_TOKEN = "jeton-crm-de-test";
+    globalThis.fetch = async (url, init) => {
+      sortants.push({ url: String(url), corps: init.body });
+      if (String(url).startsWith("https://crm.test")) throw new Error("panne");
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    };
+    const r = await envoyer(reponsesValides());
+    assert.equal(r.status, 200);
+    assert.deepEqual(await r.json(), { ok: true });
+  });
+});
