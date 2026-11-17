@@ -394,7 +394,7 @@ describe("copie au CRM de l'equipe (16/11/2026)", () => {
     assert.equal(corps.blocages, "Le regard des autres, Autre");
     assert.ok(!JSON.stringify(corps).includes("Les machines"), "texte libre jamais envoye");
     assert.match(entetes[1]["Idempotency-Key"], /^fv-[0-9a-f]{32}$/);
-    for (const interdit of ["contreIndication", "consentement", "binome", "tableau", "pseudo"]) assert.ok(!(interdit in corps), interdit);
+    for (const interdit of ["contreIndication", "consentement", "binome", "tableau", "pseudo", "salle"]) assert.ok(!(interdit in corps), interdit);
     assert.ok(!JSON.stringify(corps).includes("contre"), "aucune trace de la question 7");
   });
 
@@ -422,4 +422,15 @@ describe("copie au CRM de l'equipe (16/11/2026)", () => {
     assert.equal(r.status, 200);
     assert.deepEqual(await r.json(), { ok: true });
   });
+});
+
+test("liaison de service CRM utilisee quand elle existe", async () => {
+  env.CRM_LEAD_URL = "https://crm.test/api/hooks/lead";
+  env.CRM_LEAD_TOKEN = "jeton-crm-de-test";
+  const viaLiaison = [];
+  env.CRM = { fetch: async (url, init) => { viaLiaison.push(String(url)); return new Response("{}", { status: 200 }); } };
+  const r = await envoyer(reponsesValides());
+  assert.equal(r.status, 200);
+  assert.deepEqual(viaLiaison, ["https://crm.test/api/hooks/lead"]);
+  assert.equal(sortants.length, 1);
 });
