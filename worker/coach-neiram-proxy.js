@@ -2877,7 +2877,6 @@ function chargeCrm(r) {
     blocages: r.blocage.join(", "),
     creneaux: r.creneaux.join(", "),
     lieu: r.lieu,
-    salle: r.salle || undefined,
     interesse_presentiel: r.presentiel ? "Oui" : "Non"
   };
 }
