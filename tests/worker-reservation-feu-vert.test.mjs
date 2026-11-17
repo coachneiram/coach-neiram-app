@@ -423,3 +423,14 @@ describe("copie au CRM de l'equipe (16/11/2026)", () => {
     assert.deepEqual(await r.json(), { ok: true });
   });
 });
+
+test("liaison de service CRM utilisee quand elle existe", async () => {
+  env.CRM_LEAD_URL = "https://crm.test/api/hooks/lead";
+  env.CRM_LEAD_TOKEN = "jeton-crm-de-test";
+  const viaLiaison = [];
+  env.CRM = { fetch: async (url, init) => { viaLiaison.push(String(url)); return new Response("{}", { status: 200 }); } };
+  const r = await envoyer(reponsesValides());
+  assert.equal(r.status, 200);
+  assert.deepEqual(viaLiaison, ["https://crm.test/api/hooks/lead"]);
+  assert.equal(sortants.length, 1);
+});

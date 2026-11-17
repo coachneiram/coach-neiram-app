@@ -2857,6 +2857,8 @@ async function routeReservationFeuVert(request, env, ctx) {
  * Variables (Settings > Variables and Secrets) :
  *   CRM_LEAD_URL    (variable) adresse /api/hooks/lead du CRM
  *   CRM_LEAD_TOKEN  (secret)   jeton d'entree du CRM (Reglages > Integrations)
+ *   CRM             (liaison de service vers coach-neiram-crm) : obligatoire en pratique,
+ *                   un Worker ne peut pas appeler un autre Worker du compte par son URL
  * Sans l'une des deux : rien n'est envoye. Un echec ne change pas la reponse
  * faite a la page (la demande est deja dans le classeur).
  */
@@ -2885,7 +2887,9 @@ async function transmettreAuCrm(env, reponse) {
   const jeton = String(env.CRM_LEAD_TOKEN || "").trim();
   if (!url || !jeton || !/^https:\/\//.test(url)) return false;
   try {
-    const r = await fetch(url, {
+    // Liaison de service CRM si elle existe : l'URL *.workers.dev d'un autre Worker du compte renvoie l'erreur 1042.
+    const envoi = env.CRM && typeof env.CRM.fetch === "function" ? (u, o) => env.CRM.fetch(u, o) : fetch;
+    const r = await envoi(url, {
       method: "POST",
       // Meme personne, meme jour : un seul lead (le CRM ignore les doublons de cle).
       headers: { "Content-Type": "application/json", "x-crm-token": jeton, "Idempotency-Key": "fv-" + (await hachage(String(reponse.email).toLowerCase() + ":" + jourUtc(Date.now()))).slice(0, 32) },
