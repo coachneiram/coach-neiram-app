@@ -35,10 +35,12 @@ function tirage(graine) {
   };
 }
 
+// Date LOCALE : toISOString() repassait par l'UTC et rendait la veille a
+// l'est de Greenwich (TZ=Europe/Paris), faussant le scenario.
 function decaler(iso, jours) {
   const d = new Date(iso + "T00:00:00");
   d.setDate(d.getDate() + jours);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 const ROUTINES = [{ id: "r1", name: "Haut du corps" }, { id: "r2", name: "Bas du corps" }];

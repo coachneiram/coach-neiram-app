@@ -480,7 +480,20 @@ et clauses contractuelles types.
   choix vérifiés contre les listes de la page, consentement obligatoire.
 - Anti-spam : champ piège `site_web`, durée de remplissage d'au moins 3 s
   (un robot reçoit `{ ok: true }` mais rien ne part), 5 envois par heure et
-  par adresse IP (empreinte tronquée), 60 par jour au total.
+  par adresse IP (empreinte tronquée ; une IPv6 compte pour tout son /64).
+  Plafond global du jour (17/11/2026) : 500 réservations VALIDES réellement
+  transmises au script (requêtes invalides, pièges et échecs exclus), avec une
+  ligne `alerte-volume` dans le journal du Worker à la 60e.
+- Le script Google n'est réputé avoir reçu la demande que s'il répond un JSON
+  `{ ok: true }` (une page HTML en 200 = échec, la page bascule sur son repli),
+  et dans les 15 s.
+- Le texte libre « salle / matériel » ne part jamais au CRM (classeur seul).
+- `idDemande` (17/11/2026, facultatif, `[A-Za-z0-9-]{8,64}`) : identifiant
+  généré par la page à l'ouverture du formulaire. Mal formé : 400. Il part au
+  script (clé anti-doublon en plus de email + jour, coach-sync.gs v2.7), jamais
+  au CRM. **Le proxy qui l'accepte doit être déployé AVANT la version du site
+  qui l'envoie** : l'ancien proxy refuse tout champ inconnu (400
+  `champ-inconnu`).
 - Le Worker ne garde rien des réponses : D1 ne voit que des compteurs.
 - Conservation : `purgerReservationsFeuVert()` efface les lignes de plus de
   365 jours, à chaque réservation et chaque jour (déclencheur).

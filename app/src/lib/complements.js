@@ -21,6 +21,8 @@
  * traitement : avis médical.
  */
 
+import { addDays } from "./dates.js";
+
 /**
  * Familles de sport (lib/activites.js de l'app grand public) ramenees aux
  * disciplines des complements. L'app coach n'a pas encore le module « Tous
@@ -184,7 +186,8 @@ export const A_EVITER = [
 /** Discipline principale sur 60 jours, d'après les séances. */
 export function disciplinePrincipale(seances, aujourdhui) {
   const compte = {};
-  const depuis = aujourdhui ? new Date(new Date(aujourdhui + "T12:00:00") - 60 * 86400000).toISOString().slice(0, 10) : "";
+  // addDays (heure locale) : toISOString() decalait d'un jour loin a l'est de Greenwich.
+  const depuis = aujourdhui ? addDays(aujourdhui, -60) : "";
   for (const s of seances || []) {
     if (!s || (depuis && s.date < depuis)) continue;
     let d = null;

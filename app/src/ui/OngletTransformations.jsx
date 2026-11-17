@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { COLORS } from "../tokens.js";
-import { fmtDateShort, todayISO } from "../lib/dates.js";
+import { fmtDateShort, toLocalISODate, todayISO } from "../lib/dates.js";
 import {
   TEXTES_COMMUNAUTE as T,
   bravoTransformation,
@@ -174,7 +174,7 @@ export function OngletTransformations({ profil, onAccord, envoi, onToast, donnee
                     {" · "}
                     {T.enSemaines(x.jours)}
                     {" · "}
-                    {fmtDateShort(new Date(x.le).toISOString().slice(0, 10))}
+                    {fmtDateShort(toLocalISODate(new Date(x.le)))}
                   </span>
                 </div>
                 <div style={STYLE_CHIFFRES}>

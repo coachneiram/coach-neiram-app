@@ -1,6 +1,24 @@
 /** @OnlyCurrentDoc */
 /**
  * Coach Neiram — synchro et alertes du coaching en ligne
+ * Version 2.7 (17 novembre 2026) — réservations Feu Vert : robustesse.
+ *
+ * La v2.7 :
+ *  - une même adresse email ne crée qu'UNE ligne par jour (double clic,
+ *    renvoi de la page, robot) : empreinte SHA-256 de « email:jour » gardée
+ *    dans les propriétés du script le temps de la journée (jamais l'email
+ *    en clair), sous le verrou du script déjà pris par doPost ; le doublon
+ *    reçoit ok: true (la page n'a rien à refaire), sans ligne ni mail ;
+ *    si la page envoie un identifiant de demande (idDemande, généré à
+ *    l'ouverture du formulaire), son empreinte sert AUSSI de clé : un renvoi
+ *    de la même demande est reconnu même si l'email a été corrigé ;
+ *  - le prénom est neutralisé avant le sujet et le corps du mail (lettres,
+ *    espaces, tirets, apostrophes seulement) : plus de lien cliquable
+ *    glissé dans un prénom.
+ * Mise en place : coller ce fichier dans Code.gs, ENREGISTRER, puis
+ *   Gérer les déploiements > crayon du déploiement ACTIF > Version :
+ *   Nouvelle version > Déployer (même adresse /exec). Rien d'autre.
+ *
  * Version 2.6 (15 novembre 2026) — réservations Feu Vert (remplace FormSubmit).
  *
  * La v2.6 reçoit, par le Worker (route /reservation-feu-vert, même enveloppe
@@ -356,7 +374,7 @@ function doPost(e) {
 
 function doGet() {
   return ContentService.createTextOutput(
-    'Synchro Coach Neiram active (v2.6). Utiliser POST.');
+    'Synchro Coach Neiram active (v2.7). Utiliser POST.');
 }
 
 /* ------------------------------------------------------------------ LECTURE */
@@ -963,8 +981,54 @@ function listeResa(v) {
   return v.slice(0, 10).map(function (x) { return texteResa(x, 120); }).join(' ; ');
 }
 
+/**
+ * Prénom pour le mail (v2.7) : lettres (accents compris), espaces, tirets et
+ * apostrophes. Tout ce qui ressemble à un lien (http, www, ://) est retiré
+ * AVANT le filtrage, pour qu'un « www.site.fr » ne devienne pas « wwwsitefr ».
+ */
+function prenomPourMail(prenom) {
+  var t = String(prenom || '')
+    .replace(/[a-z][a-z0-9+.-]*:\/\/\S*/gi, ' ')
+    .replace(/:\/\//g, ' ')
+    .replace(/https?/gi, ' ')
+    .replace(/www\.?\S*/gi, ' ');
+  t = t.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' -]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+  return t || '(prénom illisible)';
+}
+
+var CLE_EMPREINTES_RESA = 'resa_fv_empreintes';
+// 250 empreintes de 24 caractères ≈ 7 Ko : sous la limite de 9 Ko d'une propriété de script.
+var MAX_EMPREINTES_RESA = 250;
+
+/** Empreinte hexadécimale (SHA-256 tronqué à 24 caractères) de « email:jour ». Jamais l'email en clair. */
+function empreinteReservation(email, jour) {
+  var octets = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,
+    String(email || '').trim().toLowerCase() + ':' + jour, Utilities.Charset.UTF_8);
+  return octets.map(function (o) { return ('0' + (o & 0xff).toString(16)).slice(-2); }).join('').slice(0, 24);
+}
+
+/** Empreinte de l'identifiant de demande envoyé par la page ('' si absent ou mal formé). */
+function empreinteIdDemande(id, jour) {
+  var t = String(id || '');
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(t)) return '';
+  var octets = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,
+    'id:' + t + ':' + jour, Utilities.Charset.UTF_8);
+  return octets.map(function (o) { return ('0' + (o & 0xff).toString(16)).slice(-2); }).join('').slice(0, 24);
+}
+
+/** Empreintes du jour (les jours précédents sont oubliés). */
+function lireEmpreintesResa(jour) {
+  var etat;
+  try { etat = JSON.parse(PropertiesService.getScriptProperties().getProperty(CLE_EMPREINTES_RESA) || '{}'); } catch (err) { etat = {}; }
+  if (!etat || etat.jour !== jour || Object.prototype.toString.call(etat.e) !== '[object Array]') etat = { jour: jour, e: [] };
+  return etat;
+}
+
 /** Rend true si la réservation est écrite (le Worker répond alors ok). */
 function enregistrerReservationFeuVert(r) {
+  var empreinte = '';
+  var empreinteId = '';
+  var empreintes = null;
   try {
     var prenom = texteResa(r.prenom, 60);
     if (!prenom || !/@/.test(String(r.email || '')) || r.consentement !== true ||
@@ -974,6 +1038,23 @@ function enregistrerReservationFeuVert(r) {
         CHOIX_RESERVATION_FV.contreIndication.indexOf(r.contreIndication) === -1) {
       journaliserErreur('Réservation Feu Vert refusée : champs invalides (détail non conservé)', '');
       return false;
+    }
+    // v2.7 — doublon (même email, même jour, ou même identifiant de demande
+    // envoyé par la page) : déjà dans l'onglet, rien à réécrire ni à notifier. doPost tient déjà le verrou du script
+    // (LockService) : pas de course entre la lecture et l'écriture des
+    // empreintes. Sans empreinte lisible, on écrit (un doublon vaut mieux
+    // qu'une demande perdue).
+    try {
+      var jour = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      empreinte = empreinteReservation(r.email, jour);
+      empreinteId = empreinteIdDemande(r.idDemande, jour);
+      empreintes = lireEmpreintesResa(jour);
+      if (empreintes.e.indexOf(empreinte) !== -1) return true;
+      if (empreinteId && empreintes.e.indexOf(empreinteId) !== -1) return true;
+    } catch (err) {
+      empreinte = '';
+      empreinteId = '';
+      empreintes = null;
     }
     var blocages = listeResa(r.blocage);
     if (r.blocageAutre) blocages = blocages.replace('Autre', 'Autre : ' + texteResa(r.blocageAutre, 200));
@@ -1003,6 +1084,14 @@ function enregistrerReservationFeuVert(r) {
       'Consentement': 'Oui (dont question 7)',
       'Statut': 'nouvelle'
     });
+    if (empreinte && empreintes) {
+      try {
+        empreintes.e.push(empreinte);
+        if (empreinteId) empreintes.e.push(empreinteId);
+        if (empreintes.e.length > MAX_EMPREINTES_RESA) empreintes.e = empreintes.e.slice(-MAX_EMPREINTES_RESA);
+        PropertiesService.getScriptProperties().setProperty(CLE_EMPREINTES_RESA, JSON.stringify(empreintes));
+      } catch (err) { /* la ligne est écrite : un doublon possible, pas une perte */ }
+    }
   } catch (err) {
     // Message seul : jamais les réponses (donnée de santé) dans Erreurs.
     journaliserErreur('Réservation Feu Vert non écrite : ' + String(err && err.message || err).slice(0, 200), '');
@@ -1027,6 +1116,8 @@ function enregistrerReservationFeuVert(r) {
 
 /** Mail de notification : prénom, parcours indicatif, lien. Rien d'autre. */
 function composerMailReservation(prenom, parcours, sh) {
+  // v2.7 : le prénom vient d'un formulaire public ; jamais de lien dans le mail.
+  prenom = prenomPourMail(prenom);
   var lien = '';
   try { lien = SpreadsheetApp.getActiveSpreadsheet().getUrl() + '#gid=' + sh.getSheetId(); } catch (err) { lien = ''; }
   return {

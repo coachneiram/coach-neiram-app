@@ -161,3 +161,17 @@ describe("semaine active (OMS)", () => {
     assert.match(conseilSedentarite({ equivalent: 200, manque: 0, joursRenfo: 1 }, 9000), /renforcement/);
   });
 });
+
+describe("todayISO : date LOCALE (17/11/2026)", () => {
+  test("ne passe plus par toISOString() (UTC), qui rendait la veille entre minuit et 1-2 h en France", () => {
+    const origine = Date.prototype.toISOString;
+    Date.prototype.toISOString = () => "1999-01-01T00:00:00.000Z";
+    try {
+      const d = new Date();
+      const attendu = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      assert.equal(todayISO(), attendu);
+    } finally {
+      Date.prototype.toISOString = origine;
+    }
+  });
+});
