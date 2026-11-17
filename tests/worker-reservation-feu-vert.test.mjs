@@ -398,6 +398,20 @@ describe("copie au CRM de l'equipe (16/11/2026)", () => {
     assert.ok(!JSON.stringify(corps).includes("contre"), "aucune trace de la question 7");
   });
 
+  test("jeton colle sous forme d'URL du CRM : seul le jeton part en en-tete", async () => {
+    env.CRM_LEAD_URL = "https://crm.test/api/hooks/lead";
+    env.CRM_LEAD_TOKEN = " https://crm.test/api/hooks/lead?token=abc123DEF456 ";
+    const entetes = [];
+    globalThis.fetch = async (url, init) => {
+      sortants.push({ url: String(url), corps: init.body });
+      entetes.push(init.headers || {});
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    };
+    const r = await envoyer(reponsesValides());
+    assert.equal(r.status, 200);
+    assert.equal(entetes[1]["x-crm-token"], "abc123DEF456");
+  });
+
   test("le script refuse : rien n'est copie au CRM", async () => {
     env.CRM_LEAD_URL = "https://crm.test/api/hooks/lead";
     env.CRM_LEAD_TOKEN = "jeton-crm-de-test";
