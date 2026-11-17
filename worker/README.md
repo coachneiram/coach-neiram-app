@@ -480,7 +480,14 @@ et clauses contractuelles types.
   choix vérifiés contre les listes de la page, consentement obligatoire.
 - Anti-spam : champ piège `site_web`, durée de remplissage d'au moins 3 s
   (un robot reçoit `{ ok: true }` mais rien ne part), 5 envois par heure et
-  par adresse IP (empreinte tronquée), 60 par jour au total.
+  par adresse IP (empreinte tronquée ; une IPv6 compte pour tout son /64).
+  Plafond global du jour (17/11/2026) : 500 réservations VALIDES réellement
+  transmises au script (requêtes invalides, pièges et échecs exclus), avec une
+  ligne `alerte-volume` dans le journal du Worker à la 60e.
+- Le script Google n'est réputé avoir reçu la demande que s'il répond un JSON
+  `{ ok: true }` (une page HTML en 200 = échec, la page bascule sur son repli),
+  et dans les 15 s.
+- Le texte libre « salle / matériel » ne part jamais au CRM (classeur seul).
 - Le Worker ne garde rien des réponses : D1 ne voit que des compteurs.
 - Conservation : `purgerReservationsFeuVert()` efface les lignes de plus de
   365 jours, à chaque réservation et chaque jour (déclencheur).

@@ -130,7 +130,7 @@ node worker/invitations.mjs revoquer <id-client>  → coupe tous ses accès
 | IA tous clients | 800 par jour | variable `PLAFOND_IA_JOUR` |
 | IA anonyme (mode transition) | 20 par heure et par adresse IP, 200 par jour | `PLAFONDS` |
 | Synchro par client | 20 par minute, 200 par jour | `PLAFONDS` |
-| Essais de code | 10 par heure et par adresse IP, 60 par heure au total | `PLAFONDS` |
+| Essais de code | 10 par heure et par adresse IP (IPv6 : par /64), 300 par heure au total en ne comptant que les codes bien formés | `PLAFONDS` |
 
 Ces plafonds ne sont actifs **qu'une fois le Worker collé et la base D1 liée**. Un appel compte dès qu'il est reçu, même s'il est refusé ensuite.
 

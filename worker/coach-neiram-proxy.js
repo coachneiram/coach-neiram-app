@@ -137,7 +137,9 @@ const PLAFONDS = {
   syncParJour: 200,
   syncAnonymeParHeure: 30,
   activationParHeure: 10,    // codes essayes, par adresse IP
-  activationGlobaleParHeure: 60,
+  // Global : ne compte que les codes bien formes (17/11/2026). A 60, une
+  // rafale de requetes invalides bloquait toutes les vraies activations.
+  activationGlobaleParHeure: 300,
   adminEchecsParHeure: 10,
   presenceParJour: 6         // l'application en envoie une par jour
 };
@@ -242,7 +244,8 @@ export default {
       return reponseJson({ ok: false, error: "method-not-allowed" }, 405, cors);
     }
 
-    const ip = request.headers.get("CF-Connecting-IP") || "inconnue";
+    // Compteurs par IP : une IPv6 compte pour tout son /64.
+    const ip = ipPourCompteur(request.headers.get("CF-Connecting-IP"));
 
     try {
       if (url.pathname === "/ai") return await relaiIa(request, env, cors, ip);
@@ -361,6 +364,50 @@ function egaliteConstante(a, b) {
 const jourUtc = (maintenant) => new Date(maintenant).toISOString().slice(0, 10);
 const heureUtc = (maintenant) => new Date(maintenant).toISOString().slice(0, 13);
 const minute = (maintenant) => Math.floor(maintenant / 60000);
+
+/**
+ * Adresse servant aux compteurs par IP (17 novembre 2026). Une IPv6 est
+ * ramenee a son prefixe /64 : un abonne en recoit en general tout un /64
+ * (2^64 adresses), et compter adresse par adresse le laissait contourner
+ * chaque plafond « par IP » a volonte. Une IPv4 (ou IPv4 dans IPv6,
+ * ::ffff:a.b.c.d) reste telle quelle. Une valeur illisible est gardee.
+ */
+function ipPourCompteur(ip) {
+  const brut = String(ip || "").trim().toLowerCase();
+  if (!brut.includes(":")) return brut || "inconnue";
+  const a = brut.split("%")[0];
+  const v4 = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(a);
+  if (v4) return v4[1];
+  const morceaux = a.split("::");
+  if (morceaux.length > 2) return a;
+  const tete = morceaux[0] ? morceaux[0].split(":") : [];
+  let groupes = tete;
+  if (morceaux.length === 2) {
+    const queue = morceaux[1] ? morceaux[1].split(":") : [];
+    groupes = [...tete, ...Array(Math.max(0, 8 - tete.length - queue.length)).fill("0"), ...queue];
+  }
+  const quatre = groupes.slice(0, 4);
+  if (quatre.length < 4 || quatre.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return a;
+  return quatre.map((g) => g.padStart(4, "0")).join(":") + "::/64";
+}
+
+/** Incremente un compteur seul et rend sa nouvelle valeur (NaN si illisible). */
+async function incrementer(db, cle, dureeMs, maintenant) {
+  const r = await db
+    .prepare("INSERT INTO compteurs (cle, n, expire_le) VALUES (?1, 1, ?2) ON CONFLICT(cle) DO UPDATE SET n = n + 1 RETURNING n")
+    .bind(cle, maintenant + dureeMs)
+    .first();
+  return Number(r && r.n);
+}
+
+/** Rend une unite a un compteur (demande finalement non transmise). */
+async function decrementer(db, cle) {
+  try {
+    await db.prepare("UPDATE compteurs SET n = n - 1 WHERE cle = ?1 AND n > 0").bind(cle).run();
+  } catch (e) {
+    // Au pire, le compteur surestime d'une unite.
+  }
+}
 
 /**
  * Incremente des compteurs en une seule transaction et dit si l'un
@@ -622,15 +669,13 @@ async function activerCode(request, env, cors, ip) {
 
   const maintenant = Date.now();
   const heure = heureUtc(maintenant);
-  const raison = await depasse(
+  // Par adresse (prefixe /64 en IPv6) : chaque requete compte, meme illisible.
+  const raisonIp = await depasse(
     db,
-    [
-      { cle: `act:ip:${(await hachage(ip)).slice(0, 16)}:${heure}`, limite: PLAFONDS.activationParHeure, dureeMs: 2 * 3600000, raison: "trop-de-tentatives" },
-      { cle: `act:global:${heure}`, limite: PLAFONDS.activationGlobaleParHeure, dureeMs: 2 * 3600000, raison: "trop-de-tentatives" }
-    ],
+    [{ cle: `act:ip:${(await hachage(ip)).slice(0, 16)}:${heure}`, limite: PLAFONDS.activationParHeure, dureeMs: 2 * 3600000, raison: "trop-de-tentatives" }],
     maintenant
   );
-  if (raison) return refus(route, 429, raison, cors);
+  if (raisonIp) return refus(route, 429, raisonIp, cors);
 
   const lu = await lireJson(route, request, cors, TAILLE_MAX_AUTH);
   if (lu.reponse) return lu.reponse;
@@ -638,6 +683,16 @@ async function activerCode(request, env, cors, ip) {
   if (code.length !== LONGUEUR_CODE || [...code].some((c) => !ALPHABET_CODE.includes(c))) {
     return refus(route, 400, "code-invalide", cors);
   }
+
+  // Global (17/11/2026) : seulement les codes bien formes, ceux qui touchent
+  // la table des invitations. Le JSON illisible ou un code mal forme ne
+  // consomme plus le plafond commun a tous les clients.
+  const raisonGlobale = await depasse(
+    db,
+    [{ cle: `act:global:${heure}`, limite: PLAFONDS.activationGlobaleParHeure, dureeMs: 2 * 3600000, raison: "trop-de-tentatives" }],
+    maintenant
+  );
+  if (raisonGlobale) return refus(route, 429, raisonGlobale, cors);
 
   const empreinte = await hachage("code:" + code);
   // Usage unique, sans course possible : la mise a jour ne touche la ligne
@@ -958,7 +1013,8 @@ async function relaiCoachSync(request, env, cors, ip) {
     amont = await fetch(env.COACH_SYNC_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: await signerEvenement(propre, env.COACH_SYNC_SECRET, maintenant)
+      body: await signerEvenement(propre, env.COACH_SYNC_SECRET, maintenant),
+      ...signalScript()
     });
   } catch (e) {
     return refus(route, 502, "amont-injoignable", cors, client);
@@ -967,13 +1023,7 @@ async function relaiCoachSync(request, env, cors, ip) {
   // Apps Script repond 200 avec { ok: true } ou { ok: false, error }.
   // On transmet la reponse pour que l'application sache si l'evenement est
   // reellement arrive — c'est ce qui evite de perdre un pointage en silence.
-  const texte = await amont.text();
-  let ok = amont.ok;
-  try {
-    ok = amont.ok && JSON.parse(texte).ok !== false;
-  } catch (e) {
-    // Reponse non JSON : on se fie au statut HTTP.
-  }
+  const ok = await reponseScriptOk(amont);
   journal(route, ok ? 200 : 502, ok ? null : "destination-refus", client);
   return reponseJson({ ok, verifie: Boolean(client) }, ok ? 200 : 502, cors);
 }
@@ -1123,21 +1173,44 @@ async function adminPresence(db, maintenant) {
   });
 }
 
+/** Delai maximal accorde au script Google (17/11/2026). */
+const DELAI_SCRIPT_MS = 15000;
+
+/** Option `signal` de fetch : abandon apres DELAI_SCRIPT_MS, si disponible. */
+function signalScript() {
+  return typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(DELAI_SCRIPT_MS) } : {};
+}
+
+/**
+ * Le script Google a-t-il VRAIMENT accepte ? (17 novembre 2026)
+ *
+ * Seul un JSON dont `ok` vaut exactement true compte. Une page HTML servie
+ * en 200 (connexion Google, « script introuvable », quota, deploiement
+ * retire) etait prise pour un succes : la reservation ou le pointage etait
+ * perdu en silence, et la page ne basculait pas sur son repli.
+ */
+async function reponseScriptOk(amont) {
+  if (!amont || !amont.ok) return false;
+  try {
+    const d = JSON.parse(await amont.text());
+    return Boolean(d) && typeof d === "object" && d.ok === true;
+  } catch (e) {
+    return false;
+  }
+}
+
 /** Envoie un evenement au script Google, signe. Rend true si accepte. */
 async function remettreAuScript(env, propre, maintenant) {
   try {
     const amont = await fetch(env.COACH_SYNC_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: await signerEvenement(propre, env.COACH_SYNC_SECRET, maintenant)
+      body: await signerEvenement(propre, env.COACH_SYNC_SECRET, maintenant),
+      ...signalScript()
     });
-    const texte = await amont.text();
-    try {
-      return amont.ok && JSON.parse(texte).ok !== false;
-    } catch (e) {
-      return amont.ok;
-    }
+    return await reponseScriptOk(amont);
   } catch (e) {
+    // Reseau coupe ou delai depasse (AbortSignal.timeout).
     return false;
   }
 }
@@ -2692,14 +2765,19 @@ async function adminFeuVert(db, corps, maintenant) {
  *     dans les listes de la page, textes plafonnes ;
  *   - champ piege « site_web » (invisible pour un humain) et duree de
  *     remplissage : un robot recoit { ok: true } mais rien n'est transmis ;
- *   - 5 envois par heure et par adresse IP, 60 par jour au total.
+ *   - 5 envois par heure et par adresse IP (prefixe /64 en IPv6) ;
+ *   - plafond global du jour (17/11/2026) : seules les reservations
+ *     VALIDES transmises au script comptent, plafond releve a 500, alerte
+ *     dans le journal du Worker a 60. Avant, 60 requetes invalides suffisaient
+ *     a bloquer toutes les vraies reservations jusqu'a minuit (UTC).
  */
 
 const ROUTE_RESERVATION_FV = "/reservation-feu-vert";
 const ORIGINE_RESERVATION_FV = "https://coachneiram.github.io";
 const TAILLE_MAX_RESERVATION = 8 * 1024;
 const RESA_PAR_IP_PAR_HEURE = 5;
-const RESA_PAR_JOUR = 60;
+const RESA_PAR_JOUR = 500; // reservations valides transmises, toutes adresses
+const RESA_ALERTE_JOUR = 60; // au-dela : ligne « alerte-volume » dans le journal
 const RESA_DUREE_MIN_MS = 3000; // moins de 3 s pour 9 questions : un robot
 
 const RESA_CHOIX = {
@@ -2798,7 +2876,7 @@ async function routeReservationFeuVert(request, env, ctx) {
   if (!env.COACH_SYNC_URL || !env.COACH_SYNC_SECRET) return refus(route, 503, "proxy-non-configure", cors);
 
   const maintenant = Date.now();
-  const ip = request.headers.get("CF-Connecting-IP") || "inconnue";
+  const ip = ipPourCompteur(request.headers.get("CF-Connecting-IP"));
   let db = null;
   try {
     db = await base(env);
@@ -2806,12 +2884,10 @@ async function routeReservationFeuVert(request, env, ctx) {
     db = null;
   }
   if (db) {
+    // Par adresse : chaque requete compte, meme invalide (c'est le frein du robot).
     const raison = await depasse(
       db,
-      [
-        { cle: `resa:ip:${(await hachage(ip)).slice(0, 16)}:${heureUtc(maintenant)}`, limite: RESA_PAR_IP_PAR_HEURE, dureeMs: 2 * 3600000, raison: "trop-de-requetes" },
-        { cle: `resa:jour:${jourUtc(maintenant)}`, limite: RESA_PAR_JOUR, dureeMs: 2 * MS_JOUR, raison: "trop-de-requetes" }
-      ],
+      [{ cle: `resa:ip:${(await hachage(ip)).slice(0, 16)}:${heureUtc(maintenant)}`, limite: RESA_PAR_IP_PAR_HEURE, dureeMs: 2 * 3600000, raison: "trop-de-requetes" }],
       maintenant
     );
     if (raison) return refus(route, 429, raison, cors);
@@ -2833,7 +2909,20 @@ async function routeReservationFeuVert(request, env, ctx) {
   const v = validerReservation(corps);
   if (v.erreur) return refus(route, 400, v.erreur, cors);
 
+  // Plafond global : compte seulement ce qui part reellement vers le script
+  // (requetes invalides, pieges et echecs du script exclus).
+  const cleJour = `resa:jour:${jourUtc(maintenant)}`;
+  if (db) {
+    const n = await incrementer(db, cleJour, 2 * MS_JOUR, maintenant);
+    if (!Number.isFinite(n) || n > RESA_PAR_JOUR) {
+      await decrementer(db, cleJour);
+      return refus(route, 429, "trop-de-requetes", cors);
+    }
+    if (n === RESA_ALERTE_JOUR) journal(route, 200, "alerte-volume", null);
+  }
+
   const remise = await remettreAuScript(env, v.reponse, maintenant);
+  if (!remise && db) await decrementer(db, cleJour);
   journal(route, remise ? 200 : 502, remise ? null : "destination-refus", null);
   // Copie au CRM (16/11/2026) seulement quand le classeur a bien recu la demande.
   // En tâche de fond quand c'est possible : la page n'attend pas le CRM.
@@ -2872,11 +2961,13 @@ function chargeCrm(r) {
     tags: "Feu Vert",
     niveau: r.niveau,
     parcours: r.parcoursIndicatif,
-    // Textes libres « Autre » : jamais au CRM (ils peuvent contenir de la sante), seulement dans le classeur.
+    // Textes libres (« Autre », salle / matériel) : jamais au CRM (ils peuvent contenir de la sante), seulement dans le classeur.
     objectif: r.objectif,
     blocages: r.blocage.join(", "),
     creneaux: r.creneaux.join(", "),
     lieu: r.lieu,
+    // « Salle / matériel » (texte libre) : jamais au CRM non plus (17/11/2026),
+    // il peut contenir une donnee de sante (« kiné », « genou opéré »...).
     interesse_presentiel: r.presentiel ? "Oui" : "Non"
   };
 }
@@ -2908,7 +2999,7 @@ async function transmettreAuCrm(env, reponse) {
 
 // Acces des tests aux fonctions internes (sans effet en production).
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
-  Object.assign(globalThis.__COACH_TEST__, { validerReservation, parcoursIndicatif, chargeCrm, RESERVATION_FV: { ROUTE_RESERVATION_FV, RESA_CHOIX, RESA_PAR_IP_PAR_HEURE, RESA_PAR_JOUR, RESA_DUREE_MIN_MS } });
+  Object.assign(globalThis.__COACH_TEST__, { validerReservation, parcoursIndicatif, chargeCrm, ipPourCompteur, reponseScriptOk, DELAI_SCRIPT_MS, PLAFONDS, RESERVATION_FV: { ROUTE_RESERVATION_FV, RESA_CHOIX, RESA_PAR_IP_PAR_HEURE, RESA_PAR_JOUR, RESA_ALERTE_JOUR, RESA_DUREE_MIN_MS } });
   Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
   Object.assign(globalThis.__COACH_TEST__, { alerterInactivite, joursInactivite, niveauInactivite, dateParis, INACTIVITE: { INACTIVITE_ATTENTION_JOURS, INACTIVITE_CRITIQUE_JOURS, PRESENCE_PAR_JOUR: PLAFONDS.presenceParJour } });
   Object.assign(globalThis.__COACH_TEST__, {

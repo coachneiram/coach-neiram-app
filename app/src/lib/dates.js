@@ -11,8 +11,6 @@
  * et fausserait l'affectation des repas au bon jour.
  */
 
-export const todayISO = () => new Date().toISOString().slice(0, 10);
-
 export const parseISO = (s) => new Date(s + "T00:00:00");
 
 export const toLocalISODate = (d) => {
@@ -21,6 +19,17 @@ export const toLocalISODate = (d) => {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
+
+/**
+ * Date du jour, EN HEURE LOCALE (17 novembre 2026).
+ *
+ * L'ancienne version (comme index.html) passait par toISOString(), donc par
+ * l'UTC : en France, entre minuit et 1 h (2 h l'ete), « aujourd'hui » etait
+ * encore la veille. Un repas note a 0 h 30 partait sur le jour precedent,
+ * et la carte du jour, les series et les rappels raisonnaient sur hier.
+ * Ecart volontaire avec index.html (l'ancienne application, figee).
+ */
+export const todayISO = () => toLocalISODate(new Date());
 
 export const addDays = (dateStr, n) => {
   const d = parseISO(dateStr);
