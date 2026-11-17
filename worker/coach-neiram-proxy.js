@@ -2883,7 +2883,10 @@ function chargeCrm(r) {
 
 async function transmettreAuCrm(env, reponse) {
   const url = String(env.CRM_LEAD_URL || "").trim();
-  const jeton = String(env.CRM_LEAD_TOKEN || "").trim();
+  let jeton = String(env.CRM_LEAD_TOKEN || "").trim();
+  // Le bouton « Copier » du CRM copie l'URL entiere (…/api/hooks/lead?token=…) : on en extrait le jeton.
+  const dansUrl = /[?&]token=([^&#\s]+)/.exec(jeton);
+  if (dansUrl) jeton = decodeURIComponent(dansUrl[1]);
   if (!url || !jeton || !/^https:\/\//.test(url)) return false;
   try {
     // Liaison de service CRM si elle existe : l'URL *.workers.dev d'un autre Worker du compte renvoie l'erreur 1042.
