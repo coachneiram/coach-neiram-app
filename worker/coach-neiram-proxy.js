@@ -2792,7 +2792,11 @@ const RESA_CHOIX = {
 // Textes libres : longueur maximale de chacun.
 const RESA_TEXTES = { prenom: 60, email: 254, telephone: 30, instagram: 60, blocageAutre: 200, objectifAutre: 200, salle: 200, pseudo: 40 };
 const RESA_BOOLEENS = ["presentiel", "consentement", "tableau", "binome"];
-const RESA_CHAMPS = new Set([...Object.keys(RESA_TEXTES), ...RESA_BOOLEENS, "niveau", "blocage", "objectif", "creneaux", "lieu", "contreIndication", "site_web", "dureeMs"]);
+const RESA_CHAMPS = new Set([...Object.keys(RESA_TEXTES), ...RESA_BOOLEENS, "niveau", "blocage", "objectif", "creneaux", "lieu", "contreIndication", "site_web", "dureeMs", "idDemande"]);
+// Identifiant de demande (17/11/2026), genere par la page a l'ouverture du
+// formulaire : facultatif. Sert au script a reconnaitre un renvoi de la meme
+// demande ; il part au classeur, jamais au CRM.
+const RESA_ID_DEMANDE = /^[A-Za-z0-9-]{8,64}$/;
 
 const RESA_EMAIL = /^[^\s@<>"(),;:]+@[^\s@<>"(),;:]+\.[^\s@<>"(),;:]{2,}$/;
 const RESA_TELEPHONE = /^[0-9+ ().-]{6,30}$/;
@@ -2827,6 +2831,10 @@ function validerReservation(corps) {
   if (!r.prenom) return { erreur: "prenom-requis" };
   if (!RESA_EMAIL.test(r.email)) return { erreur: "email-invalide" };
   if (r.telephone && !RESA_TELEPHONE.test(r.telephone)) return { erreur: "telephone-invalide" };
+  if (corps.idDemande !== undefined && corps.idDemande !== null) {
+    if (typeof corps.idDemande !== "string" || !RESA_ID_DEMANDE.test(corps.idDemande)) return { erreur: "champ-invalide" };
+    r.idDemande = corps.idDemande;
+  }
 
   for (const cle of ["niveau", "objectif", "lieu", "contreIndication"]) {
     if (!RESA_CHOIX[cle].includes(corps[cle])) return { erreur: "choix-invalide" };
@@ -2966,6 +2974,7 @@ function chargeCrm(r) {
     blocages: r.blocage.join(", "),
     creneaux: r.creneaux.join(", "),
     lieu: r.lieu,
+    // idDemande : jamais au CRM (cle anti-doublon du classeur seulement).
     // « Salle / matériel » (texte libre) : jamais au CRM non plus (17/11/2026),
     // il peut contenir une donnee de sante (« kiné », « genou opéré »...).
     interesse_presentiel: r.presentiel ? "Oui" : "Non"

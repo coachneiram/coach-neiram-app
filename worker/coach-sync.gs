@@ -9,6 +9,9 @@
  *    dans les propriétés du script le temps de la journée (jamais l'email
  *    en clair), sous le verrou du script déjà pris par doPost ; le doublon
  *    reçoit ok: true (la page n'a rien à refaire), sans ligne ni mail ;
+ *    si la page envoie un identifiant de demande (idDemande, généré à
+ *    l'ouverture du formulaire), son empreinte sert AUSSI de clé : un renvoi
+ *    de la même demande est reconnu même si l'email a été corrigé ;
  *  - le prénom est neutralisé avant le sujet et le corps du mail (lettres,
  *    espaces, tirets, apostrophes seulement) : plus de lien cliquable
  *    glissé dans un prénom.
@@ -1003,6 +1006,15 @@ function empreinteReservation(email, jour) {
   return octets.map(function (o) { return ('0' + (o & 0xff).toString(16)).slice(-2); }).join('');
 }
 
+/** Empreinte de l'identifiant de demande envoyé par la page ('' si absent ou mal formé). */
+function empreinteIdDemande(id, jour) {
+  var t = String(id || '');
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(t)) return '';
+  var octets = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,
+    'id:' + t + ':' + jour, Utilities.Charset.UTF_8);
+  return octets.map(function (o) { return ('0' + (o & 0xff).toString(16)).slice(-2); }).join('');
+}
+
 /** Empreintes du jour (les jours précédents sont oubliés). */
 function lireEmpreintesResa(jour) {
   var etat;
@@ -1014,6 +1026,7 @@ function lireEmpreintesResa(jour) {
 /** Rend true si la réservation est écrite (le Worker répond alors ok). */
 function enregistrerReservationFeuVert(r) {
   var empreinte = '';
+  var empreinteId = '';
   var empreintes = null;
   try {
     var prenom = texteResa(r.prenom, 60);
@@ -1025,18 +1038,21 @@ function enregistrerReservationFeuVert(r) {
       journaliserErreur('Réservation Feu Vert refusée : champs invalides (détail non conservé)', '');
       return false;
     }
-    // v2.7 — doublon (même email, même jour) : déjà dans l'onglet, rien à
-    // réécrire ni à notifier. doPost tient déjà le verrou du script
+    // v2.7 — doublon (même email, même jour, ou même identifiant de demande
+    // envoyé par la page) : déjà dans l'onglet, rien à réécrire ni à notifier. doPost tient déjà le verrou du script
     // (LockService) : pas de course entre la lecture et l'écriture des
     // empreintes. Sans empreinte lisible, on écrit (un doublon vaut mieux
     // qu'une demande perdue).
     try {
       var jour = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
       empreinte = empreinteReservation(r.email, jour);
+      empreinteId = empreinteIdDemande(r.idDemande, jour);
       empreintes = lireEmpreintesResa(jour);
       if (empreintes.e.indexOf(empreinte) !== -1) return true;
+      if (empreinteId && empreintes.e.indexOf(empreinteId) !== -1) return true;
     } catch (err) {
       empreinte = '';
+      empreinteId = '';
       empreintes = null;
     }
     var blocages = listeResa(r.blocage);
@@ -1070,6 +1086,7 @@ function enregistrerReservationFeuVert(r) {
     if (empreinte && empreintes) {
       try {
         empreintes.e.push(empreinte);
+        if (empreinteId) empreintes.e.push(empreinteId);
         if (empreintes.e.length > MAX_EMPREINTES_RESA) empreintes.e = empreintes.e.slice(-MAX_EMPREINTES_RESA);
         PropertiesService.getScriptProperties().setProperty(CLE_EMPREINTES_RESA, JSON.stringify(empreintes));
       } catch (err) { /* la ligne est écrite : un doublon possible, pas une perte */ }

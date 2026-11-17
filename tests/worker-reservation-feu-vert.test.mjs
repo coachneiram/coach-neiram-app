@@ -635,3 +635,83 @@ describe("B2 : aucun lien dans le prenom du mail (coach-sync.gs v2.7)", () => {
     assert.ok(!(sujet + corps).includes("pirate"));
   });
 });
+
+/* ------------------------------------------------------------------ */
+/* Identifiant de demande envoye par la page (17 novembre 2026)        */
+/* ------------------------------------------------------------------ */
+
+describe("idDemande : accepte par le Worker, jamais au CRM, cle anti-doublon du script", () => {
+  const ID = "fv-3f2a9c1e-7b4d-4e8a-9c21-0d5e6f7a8b9c";
+
+  test("facultatif : absent, la reservation passe comme avant", () => {
+    const v = T.validerReservation(reponsesValides());
+    assert.ok(v.reponse);
+    assert.ok(!("idDemande" in v.reponse));
+  });
+
+  test("bien forme : transmis au script", async () => {
+    const r = await envoyer(reponsesValides({ idDemande: ID }));
+    assert.equal(r.status, 200);
+    assert.equal(sortants.length, 1);
+    const enveloppe = JSON.parse(sortants[0].corps);
+    assert.equal(JSON.parse(enveloppe.charge).idDemande, ID);
+  });
+
+  test("mal forme : 400 champ-invalide, rien ne part", async () => {
+    for (const mauvais of ["court", "a".repeat(65), "abc def ghi", "<script>xx", "id_avec_souligne", 12345678, true, ["abcdefgh"]]) {
+      const r = await envoyer(reponsesValides({ idDemande: mauvais }), { ip: "10.9.0." + Math.floor(Math.random() * 250) });
+      assert.equal(r.status, 400, String(mauvais));
+      assert.equal((await r.json()).error, "champ-invalide");
+    }
+    assert.equal(sortants.length, 0);
+    assert.ok(T.validerReservation(reponsesValides({ idDemande: "abcd-1234" })).reponse, "8 caracteres et tiret acceptes");
+    assert.ok(T.validerReservation(reponsesValides({ idDemande: "A".repeat(64) })).reponse, "64 caracteres acceptes");
+  });
+
+  test("jamais copie au CRM", async () => {
+    env.CRM_LEAD_URL = "https://crm.test/api/hooks/lead";
+    env.CRM_LEAD_TOKEN = "jeton-crm-de-test";
+    const r = await envoyer(reponsesValides({ idDemande: ID }));
+    assert.equal(r.status, 200);
+    assert.equal(sortants.length, 2);
+    const corps = JSON.parse(sortants[1].corps);
+    assert.ok(!("idDemande" in corps));
+    assert.ok(!JSON.stringify(corps).includes(ID));
+  });
+
+  function nouveauScript() {
+    return creerScript({ reglages: { EXIGER_SECRET: true }, proprietes: { SECRET_SYNC: SECRET } });
+  }
+  const R = { type: "reservation_feu_vert", prenom: "Léa", email: "lea@exemple.fr", consentement: true, niveau: "Je n'ai jamais pratiqué", objectif: "Me renforcer", lieu: "À la maison uniquement", contreIndication: "Non" };
+
+  test("script : meme idDemande avec un email corrige -> une seule ligne", () => {
+    const s = nouveauScript();
+    s.contexte.R = { ...R, idDemande: ID };
+    assert.equal(s.appeler("(function(){ return enregistrerReservationFeuVert(R); })"), true);
+    s.contexte.R = { ...R, email: "lea.corrigee@exemple.fr", idDemande: ID };
+    assert.equal(s.appeler("(function(){ return enregistrerReservationFeuVert(R); })"), true);
+    assert.equal(s.lignes("Feu Vert – Réservations").length, 1);
+    assert.equal(s.mails.length, 1);
+    assert.ok(!JSON.stringify(s.props).includes(ID), "l'identifiant n'est garde qu'en empreinte");
+  });
+
+  test("script : meme email, idDemande different -> toujours une seule ligne (email+jour)", () => {
+    const s = nouveauScript();
+    s.contexte.R = { ...R, idDemande: ID };
+    s.appeler("(function(){ return enregistrerReservationFeuVert(R); })");
+    s.contexte.R = { ...R, idDemande: "autre-demande-0001" };
+    s.appeler("(function(){ return enregistrerReservationFeuVert(R); })");
+    assert.equal(s.lignes("Feu Vert – Réservations").length, 1);
+  });
+
+  test("script : idDemande et emails differents -> deux lignes ; idDemande mal forme ignore", () => {
+    const s = nouveauScript();
+    s.contexte.R = { ...R, idDemande: ID };
+    s.appeler("(function(){ return enregistrerReservationFeuVert(R); })");
+    s.contexte.R = { ...R, email: "autre@exemple.fr", idDemande: "demande-0002" };
+    s.appeler("(function(){ return enregistrerReservationFeuVert(R); })");
+    s.contexte.R = { ...R, email: "troisieme@exemple.fr", idDemande: "x" };
+    assert.equal(s.appeler("(function(){ return enregistrerReservationFeuVert(R); })"), true);
+    assert.equal(s.lignes("Feu Vert – Réservations").length, 3);
+  });
+});
