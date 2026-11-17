@@ -997,13 +997,14 @@ function prenomPourMail(prenom) {
 }
 
 var CLE_EMPREINTES_RESA = 'resa_fv_empreintes';
-var MAX_EMPREINTES_RESA = 500;
+// 250 empreintes de 24 caractères ≈ 7 Ko : sous la limite de 9 Ko d'une propriété de script.
+var MAX_EMPREINTES_RESA = 250;
 
-/** Empreinte hexadécimale (SHA-256) de « email:jour ». Jamais l'email en clair. */
+/** Empreinte hexadécimale (SHA-256 tronqué à 24 caractères) de « email:jour ». Jamais l'email en clair. */
 function empreinteReservation(email, jour) {
   var octets = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,
     String(email || '').trim().toLowerCase() + ':' + jour, Utilities.Charset.UTF_8);
-  return octets.map(function (o) { return ('0' + (o & 0xff).toString(16)).slice(-2); }).join('');
+  return octets.map(function (o) { return ('0' + (o & 0xff).toString(16)).slice(-2); }).join('').slice(0, 24);
 }
 
 /** Empreinte de l'identifiant de demande envoyé par la page ('' si absent ou mal formé). */
@@ -1012,7 +1013,7 @@ function empreinteIdDemande(id, jour) {
   if (!/^[A-Za-z0-9-]{8,64}$/.test(t)) return '';
   var octets = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,
     'id:' + t + ':' + jour, Utilities.Charset.UTF_8);
-  return octets.map(function (o) { return ('0' + (o & 0xff).toString(16)).slice(-2); }).join('');
+  return octets.map(function (o) { return ('0' + (o & 0xff).toString(16)).slice(-2); }).join('').slice(0, 24);
 }
 
 /** Empreintes du jour (les jours précédents sont oubliés). */
