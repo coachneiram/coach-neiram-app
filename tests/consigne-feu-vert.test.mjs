@@ -79,7 +79,9 @@ describe("Contexte Feu Vert de la consigne", () => {
 
   test("garde-fous : jamais de validation à la place de Marien, pas de promesse, pas de conseil médical", () => {
     const c = contexteFeuVert(membre, { passeport, aujourdhui: "2027-02-01" });
-    assert.match(c, /corrections de technique sont faites par Marien, sur les vidéos .* WhatsApp/);
+    assert.match(c, /corrections vidéo sont faites par Marien sur la plateforme Coach Neiram \(message privé\)/);
+    assert.match(c, /Ne parle jamais de WhatsApp pour Feu Vert/);
+    assert.doesNotMatch(c.replace("Ne parle jamais de WhatsApp pour Feu Vert", ""), /WhatsApp/i);
     assert.match(c, /Tu ne valides JAMAIS un geste, une technique ni une couleur/);
     assert.match(c, /renvoie vers Marien/);
     assert.match(c, /Aucune promesse de résultat/);

@@ -26,7 +26,7 @@ habituel :
   file d'attente et repartent dès le retour du réseau (de même pour le
   check-in Feu Vert du lundi)
 - Feu Vert : mise à jour du Passeport, tableau de régularité de la cohorte,
-  bouton WhatsApp des vidéos de correction
+  bouton « Envoyer ma vidéo à Marien sur la plateforme » (vidéos de correction)
 
 ## Vérifier que ça marche
 

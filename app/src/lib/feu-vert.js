@@ -26,7 +26,8 @@ import { CONTENU_FEU_VERT } from "./feu-vert-contenu.js";
 import { addDays, parseISO } from "./dates.js";
 import { dayIdOf } from "./semaine.js";
 import { charger, enregistrer } from "./stockage.js";
-import { PROXY_BASE_URL, lienWhatsappCoach } from "./config.js";
+import { PROXY_BASE_URL } from "./config.js";
+import { URL_PLATEFORME } from "./plateforme.js";
 import { enTetesAcces, accesActuel } from "./acces.js";
 import { ETATS_GESTE, NIVEAUX_PASSEPORT, ALIAS_GESTES, etatGeste, niveauPasseport, normaliserPasseport } from "./feu-vert-passeport.js";
 
@@ -185,19 +186,33 @@ export function videoDeLaSemaine(serveur, n) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Vidéos de correction (WhatsApp)                                     */
+/* Vidéos de correction (plateforme Coach Neiram)                      */
 /* ------------------------------------------------------------------ */
 
+/*
+ * Décision de Marien du 18/11/2026 : pour Feu Vert, tout se passe sur la
+ * plateforme Coach Neiram, plus sur WhatsApp. La vidéo part en message privé
+ * à Marien sur la plateforme (onglet « Messages privés »), jamais dans
+ * l'application. La plateforme n'a pas de lien direct vers une conversation :
+ * le bouton ouvre la plateforme (même adresse que l'envoi du bilan,
+ * lib/plateforme.js) et le chemin est écrit en toutes lettres.
+ */
 export const TEXTES_VIDEO = {
-  bouton: "Envoyer ma vidéo sur WhatsApp",
-  plafond: "2 vidéos maximum par semaine (du lundi 0 h au dimanche 23 h 59), non reportables. Réponse de Marien sous 48 h ouvrées, sur WhatsApp.",
+  titre: "Tes corrections vidéo, en privé sur la plateforme Coach Neiram",
+  bouton: "Envoyer ma vidéo à Marien sur la plateforme",
+  chemin: "Ouvre la plateforme Coach Neiram > Messages privés > Marien, puis envoie ta vidéo.",
+  legende: (texte) => "Écris avec ta vidéo : « " + texte + " »",
+  plafond: "2 vidéos maximum par semaine (du lundi 0 h au dimanche 23 h 59), non reportables. Réponse de Marien sous 48 h ouvrées, en message privé sur la plateforme Coach Neiram.",
   format: "1 geste par vidéo, 2 séries consécutives, 90 s maximum, téléphone posé. Légende : Geste n° / Parcours / Charge / Effort (1-10) / 1 question.",
   pasDeVideo: "Vidéo de démonstration bientôt disponible."
 };
 
-/** Lien WhatsApp vers le numéro pro de Marien (lib/config.js), message pré-rempli. */
-export const lienVideoWhatsapp = (geste, semaine) =>
-  lienWhatsappCoach("Feu Vert — vidéo " + (geste ? geste.nom.split(" (")[0] : "") + ", semaine " + semaine);
+/** Adresse de la plateforme Coach Neiram (la même que pour l'envoi du bilan). */
+export const LIEN_PLATEFORME_VIDEO = URL_PLATEFORME;
+
+/** Première ligne du message qui accompagne la vidéo, pour que Marien s'y retrouve. */
+export const legendeVideo = (geste, semaine) =>
+  "Feu Vert — vidéo " + (geste ? geste.nom.split(" (")[0] : "") + ", semaine " + semaine;
 
 /* ------------------------------------------------------------------ */
 /* Missions et module mental                                           */
