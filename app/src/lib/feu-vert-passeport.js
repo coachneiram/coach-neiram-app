@@ -22,15 +22,52 @@ export const NIVEAUX_PASSEPORT = [
   { niveau: 4, nom: "Feu Vert", condition: "8 gestes au vert", seuil: 8 }
 ];
 
+/**
+ * Anciens identifiants de gestes et leur remplaçant. Le hip thrust (geste 8)
+ * est devenu la presse à cuisses le 18/11/2026 : un Passeport enregistré
+ * avant (ou rendu par un Worker pas encore recollé) peut encore contenir
+ * « hipthrust ».
+ */
+export const ALIAS_GESTES = { hipthrust: "presse" };
+
+/**
+ * Passeport avec les anciens identifiants renommés. Si les deux existent,
+ * le nouvel identifiant l'emporte. Ne modifie pas l'objet reçu.
+ */
+export function normaliserPasseport(passeport) {
+  if (!passeport || typeof passeport !== "object") return {};
+  const sortie = { ...passeport };
+  for (const [ancien, nouveau] of Object.entries(ALIAS_GESTES)) {
+    if (!(ancien in sortie)) continue;
+    if (!sortie[nouveau]) sortie[nouveau] = sortie[ancien];
+    delete sortie[ancien];
+  }
+  return sortie;
+}
+
+/**
+ * Passeport à envoyer au Worker : normalisé, plus une copie sous l'ancien
+ * identifiant. Un Worker pas encore recollé (qui ne connaît que
+ * « hipthrust ») garde ainsi l'état du geste 8 ; le Worker à jour ramène
+ * l'alias sur « presse ». Le déploiement marche donc dans les deux ordres.
+ */
+export function passeportPourEnvoi(passeport) {
+  const sortie = normaliserPasseport(passeport);
+  for (const [ancien, nouveau] of Object.entries(ALIAS_GESTES)) {
+    if (sortie[nouveau]) sortie[ancien] = sortie[nouveau];
+  }
+  return sortie;
+}
+
 /** État d'un geste : rouge tant que Marien n'a rien fixé (« pas encore filmé »). */
 export function etatGeste(passeport, id) {
-  const g = passeport && passeport[id];
+  const g = normaliserPasseport(passeport)[id];
   return g && ETATS_GESTE[g.etat] ? g.etat : "rouge";
 }
 
 /** Niveau 0 à 4 (seuils 2 / 5 / 8 gestes verts) et ce qui manque pour le suivant. */
 export function niveauPasseport(passeport) {
-  const p = passeport || {};
+  const p = normaliserPasseport(passeport);
   const ids = CONTENU_FEU_VERT.gestes.map((g) => g.id);
   const verts = ids.filter((id) => etatGeste(p, id) === "vert").length;
   // « Filmé et corrigé » : Marien a posé un état (avec sa date de correction),

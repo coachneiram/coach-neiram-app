@@ -43,6 +43,7 @@ import {
   missionsDeLaSemaine,
   moduleDeLaSemaine,
   niveauPasseport,
+  normaliserPasseport,
   pointagesSemaine,
   pointageFeuVert,
   pointsMax,
@@ -810,7 +811,7 @@ export function FeuVert({ profile, sessionsApi, onToast, onOuvrirReglages }) {
   const [fiche, setFiche] = useState(null);
   const seances = sessionsApi.items;
 
-  const passeport = (local.serveur && local.serveur.passeport) || {};
+  const passeport = normaliserPasseport(local.serveur && local.serveur.passeport);
   const validees = (local.serveur && local.serveur.missions) || {};
   const jusqua = info.etat === "avant" ? 0 : info.numero;
   const mesCompteurs = useMemo(() => mesSemaines({ seances, checkins: local.checkins, reglages, jusqua }), [seances, local.checkins, reglages.cohorte, jusqua]);
