@@ -196,6 +196,10 @@ export function videoDeLaSemaine(serveur, n) {
  * l'application. La plateforme n'a pas de lien direct vers une conversation :
  * le bouton ouvre la plateforme (même adresse que l'envoi du bilan,
  * lib/plateforme.js) et le chemin est écrit en toutes lettres.
+ *
+ * Format du 18/11/2026 : la plateforme limite les vidéos à 25 Mo (≈ 30 s en
+ * 1080p). D'où 1 série (ou ses 5-6 dernières répétitions), 30 s maximum,
+ * filmée en 1080p et pas en 4K.
  */
 export const TEXTES_VIDEO = {
   titre: "Tes corrections vidéo, en privé sur la plateforme Coach Neiram",
@@ -203,8 +207,19 @@ export const TEXTES_VIDEO = {
   chemin: "Ouvre la plateforme Coach Neiram > Messages privés > Marien, puis envoie ta vidéo.",
   legende: (texte) => "Écris avec ta vidéo : « " + texte + " »",
   plafond: "2 vidéos maximum par semaine (du lundi 0 h au dimanche 23 h 59), non reportables. Réponse de Marien sous 48 h ouvrées, en message privé sur la plateforme Coach Neiram.",
-  format: "1 geste par vidéo, 2 séries consécutives, 90 s maximum, téléphone posé. Légende : Geste n° / Parcours / Charge / Effort (1-10) / 1 question.",
+  format: "1 geste par vidéo, 1 série (ou ses 5-6 dernières répétitions), 30 s maximum, téléphone posé, filmé en 1080p (pas en 4K). Légende : Geste n° / Parcours / Charge / Effort (1-10) / 1 question.",
+  tropLourde: "Si la plateforme refuse la vidéo (25 Mo max), raccourcis-la.",
   pasDeVideo: "Vidéo de démonstration bientôt disponible."
+};
+
+/**
+ * Alerte « créneaux manqués » (Creneaux.jsx) pour un membre Feu Vert qui
+ * avait choisi le coaching en ligne avant la formule : il prévient Marien
+ * sur la plateforme Coach Neiram, pas sur WhatsApp (18/11/2026).
+ */
+export const TEXTES_PREVENIR_FEU_VERT = {
+  aide: "Écris à Marien en message privé sur la plateforme Coach Neiram.",
+  bouton: "Prévenir Marien sur la plateforme"
 };
 
 /** Adresse de la plateforme Coach Neiram (la même que pour l'envoi du bilan). */

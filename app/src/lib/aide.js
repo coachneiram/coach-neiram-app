@@ -300,24 +300,38 @@ export const AIDE = [
 export const toutesLesQuestions = () => AIDE.flatMap((s) => s.questions);
 
 /**
+ * « Un souci, une idée ? » pour la formule Feu Vert (décision de Marien du
+ * 18/11/2026) : le membre écrit à Marien en message privé sur la plateforme
+ * Coach Neiram, jamais sur WhatsApp. Les autres formules gardent WhatsApp.
+ */
+export const REPONSE_SOUCI_FEU_VERT = [
+  "Écris à Marien en message privé sur la plateforme Coach Neiram. Joins une capture d'écran si tu peux et indique la version affichée en bas des Réglages."
+];
+
+/**
  * L'Aide avec les chiffres du client.
  *
  * Retour du coach du 16 octobre 2026 : chaque client doit lire ses propres
  * chiffres, pas l'exemple a 3 000 kcal. Seules les reponses qui citent un
  * objectif changent ; sans objectif calorique, l'Aide reste celle ci-dessus.
+ * `feuVert` : la réponse « Un souci, une idée ? » renvoie vers la plateforme.
  */
-export function aidePersonnalisee({ objectifCalories } = {}) {
-  if (!(Number(objectifCalories) > 0)) return AIDE;
-  const c = chiffresExemples(objectifCalories);
-  const fr = (n) => Math.round(n).toLocaleString("fr-FR");
-  const plaisir = c.plaisirMin === c.plaisirMax ? `d'environ ${fr(c.plaisirMin)} kcal` : `de ${fr(c.plaisirMin)} à ${fr(c.plaisirMax)} kcal`;
-  const personnalisees = {
-    ecart: (q) => [
+export function aidePersonnalisee({ objectifCalories, feuVert = false } = {}) {
+  const avecObjectif = Number(objectifCalories) > 0;
+  if (!avecObjectif && !feuVert) return AIDE;
+  const personnalisees = {};
+  if (avecObjectif) {
+    const c = chiffresExemples(objectifCalories);
+    const fr = (n) => Math.round(n).toLocaleString("fr-FR");
+    const plaisir = c.plaisirMin === c.plaisirMax ? `d'environ ${fr(c.plaisirMin)} kcal` : `de ${fr(c.plaisirMin)} à ${fr(c.plaisirMax)} kcal`;
+    personnalisees.ecart = (q) => [
       q.reponse[0],
       `Pour toi, avec ${fr(c.cible)} kcal par jour : un repas de fête à ${fr(c.cible + c.ecart)} kcal se lisse avec environ ${fr(c.ecartParJour)} kcal de moins sur les 5 jours suivants. La balance qui monte le lendemain, c'est surtout de l'eau et du sel.`,
       `Ton total de la journée compte plus que la répartition par repas, et un plaisir prévu ${plaisir} par jour aide à ne pas craquer.`
-    ]
-  };
+    ];
+  }
+  // Feu Vert (18/11/2026) : tout passe par la plateforme Coach Neiram, plus par WhatsApp.
+  if (feuVert) personnalisees.souci = () => REPONSE_SOUCI_FEU_VERT;
   return AIDE.map((section) => ({
     ...section,
     questions: section.questions.map((q) => (personnalisees[q.id] ? { ...q, reponse: personnalisees[q.id](q) } : q))

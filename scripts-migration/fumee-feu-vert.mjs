@@ -13,6 +13,7 @@
  *      règle « charge bloquée », séance A pointée → pointage relayé au coach ;
  *   4. FICHE : critères S/Q, bouton vidéo vers la plateforme Coach Neiram
  *      (message privé à Marien, chemin et légende écrits ; plus de WhatsApp) ;
+ *      format du 18/11/2026 : 1 série, 30 s maximum, 1080p, 25 Mo max ;
  *   5. PASSEPORT : états fixés par le coach, niveau 2 (2 verts) ;
  *   6. MISSIONS et module mental de la semaine ;
  *   7. CHECK-IN : bandeau du lundi, envoi → checkin_feu_vert au script ;
@@ -253,6 +254,12 @@ try {
       /« Feu Vert — vidéo Rowing haltère, semaine 4 »/.test(textesVideo) &&
       !/whatsapp|wa\.me/i.test(textesVideo + (await fiche.innerHTML())),
     lien
+  );
+  verifier(
+    "format vidéo du 18/11/2026 : 1 série, 30 s maximum, 1080p, limite de 25 Mo",
+    /1 geste par vidéo, 1 série \(ou ses 5-6 dernières répétitions\), 30 s maximum, téléphone posé, filmé en 1080p \(pas en 4K\)/.test(textesVideo) &&
+      /Si la plateforme refuse la vidéo \(25 Mo max\), raccourcis-la\./.test(textesVideo) &&
+      !/2 séries consécutives|90 s maximum/.test(textesVideo)
   );
   await page.locator("[data-video-plateforme]").scrollIntoViewIfNeeded();
   await capture(page, "fiche-geste-video-plateforme");

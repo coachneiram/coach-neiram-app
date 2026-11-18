@@ -1030,7 +1030,7 @@ export default function App() {
 
       <Tutos vue={vueTutos} onClose={() => setVueTutos(null)} />
       <EcranConsentementIa />
-      <Aide open={aideOuverte} onClose={() => setAideOuverte(false)} objectifCalories={targets?.calories} />
+      <Aide open={aideOuverte} onClose={() => setAideOuverte(false)} objectifCalories={targets?.calories} feuVert={feuVertActif(profile)} />
     </>
   );
 }

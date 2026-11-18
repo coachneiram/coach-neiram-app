@@ -329,9 +329,18 @@ describe("pointage, check-in, vidéos", () => {
       assert.doesNotMatch(texte, /\bOS\b/);
     }
     assert.equal("lienVideoWhatsapp" in FV, false);
+    assert.equal(
+      FV.TEXTES_VIDEO.format,
+      "1 geste par vidéo, 1 série (ou ses 5-6 dernières répétitions), 30 s maximum, téléphone posé, filmé en 1080p (pas en 4K). Légende : Geste n° / Parcours / Charge / Effort (1-10) / 1 question.",
+      "format du 18/11/2026 : la plateforme limite les vidéos à 25 Mo"
+    );
+    assert.equal(FV.TEXTES_VIDEO.tropLourde, "Si la plateforme refuse la vidéo (25 Mo max), raccourcis-la.");
+    assert.doesNotMatch(FV.TEXTES_VIDEO.format, /2 séries|90 s/);
     const ecran = lire("app/src/ecrans/FeuVert.jsx");
     assert.ok(!/whatsapp|wa\.me/i.test(ecran), "plus aucun lien WhatsApp dans l'écran Feu Vert");
     assert.ok(!/type="file"|ChoixPhoto|capture=/.test(ecran), "aucun envoi de vidéo ni de photo dans l'app");
+    assert.match(ecran, /TEXTES_VIDEO\.format/);
+    assert.match(ecran, /TEXTES_VIDEO\.tropLourde/);
   });
 });
 
