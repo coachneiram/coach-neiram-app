@@ -92,6 +92,20 @@ describe("Passeport : écrit par le coach, lu par le membre", () => {
     assert.deepEqual(r.missions, { 1: { semaine: 1 } });
   });
 
+  test("geste 8 : « hipthrust » (ancien identifiant) accepté en entrée et rendu en « presse »", async () => {
+    const lea = await clientActive("Léa B.");
+    // Application pas encore à jour : n'envoie que l'ancien identifiant.
+    await admin({ action: "enregistrer", client: lea.id, cohorte: "1", passeport: { hipthrust: { etat: "orange", date: "2027-02-05" } } });
+    let r = (await appeler("/feuvert/etat", {}, lea.jeton)).corps;
+    assert.deepEqual(r.passeport, { presse: { etat: "orange", date: "2027-02-05" } });
+    assert.equal((await admin({ action: "liste" })).corps.membres[0].passeport.presse.etat, "orange");
+    // Application à jour : envoie les deux (compatibilité) ; « presse » l'emporte.
+    await admin({ action: "enregistrer", client: lea.id, cohorte: "1", passeport: { presse: { etat: "vert", date: "2027-02-12" }, hipthrust: { etat: "orange", date: "2027-02-05" } } });
+    r = (await appeler("/feuvert/etat", {}, lea.jeton)).corps;
+    assert.deepEqual(r.passeport, { presse: { etat: "vert", date: "2027-02-12" } });
+    assert.equal("hipthrust" in r.passeport, false);
+  });
+
   test("aucune route client n'écrit le Passeport", async () => {
     const lea = await clientActive("Léa B.");
     await admin({ action: "enregistrer", client: lea.id, cohorte: "1", passeport: {}, missions: {} });
@@ -212,6 +226,10 @@ describe("Check-in du lundi", () => {
 describe("Nettoyage des données", () => {
   test("passeport, missions et compteurs bornés", () => {
     assert.deepEqual(T.passeportPropre({ squat: { etat: "vert", date: "2027-01-01", note: "x" }, autre: { etat: "vert" } }), { squat: { etat: "vert", date: "2027-01-01" } });
+    // Passeport déjà en base avant le 18/11/2026 : « hipthrust » relu comme « presse ».
+    assert.deepEqual(T.passeportPropre({ hipthrust: { etat: "vert", date: "2027-01-20" } }), { presse: { etat: "vert", date: "2027-01-20" } });
+    assert.deepEqual(T.passeportPropre({ presse: { etat: "rouge" }, hipthrust: { etat: "vert" } }), { presse: { etat: "rouge", date: "" } });
+    assert.deepEqual(T.passeportPropre({ presse: { etat: "violet" }, hipthrust: { etat: "orange" } }), { presse: { etat: "orange", date: "" } });
     assert.deepEqual(T.missionsPropres({ 4: { semaine: 6 }, 5: { semaine: 1 }, 1: { semaine: 0 } }), { 4: { semaine: 6 } });
     assert.deepEqual(T.semainesPropres({ 4: { seances: -3, bonus: 7, checkin: "1" }, 9: { seances: 2 } }), { 4: { seances: 0, bonus: 1, checkin: 1 } });
   });

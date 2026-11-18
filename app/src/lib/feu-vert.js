@@ -28,9 +28,9 @@ import { dayIdOf } from "./semaine.js";
 import { charger, enregistrer } from "./stockage.js";
 import { PROXY_BASE_URL, lienWhatsappCoach } from "./config.js";
 import { enTetesAcces, accesActuel } from "./acces.js";
-import { ETATS_GESTE, NIVEAUX_PASSEPORT, etatGeste, niveauPasseport } from "./feu-vert-passeport.js";
+import { ETATS_GESTE, NIVEAUX_PASSEPORT, ALIAS_GESTES, etatGeste, niveauPasseport, normaliserPasseport } from "./feu-vert-passeport.js";
 
-export { ETATS_GESTE, NIVEAUX_PASSEPORT, etatGeste, niveauPasseport };
+export { ETATS_GESTE, NIVEAUX_PASSEPORT, ALIAS_GESTES, etatGeste, niveauPasseport, normaliserPasseport };
 
 export { CONTENU_FEU_VERT };
 
@@ -361,7 +361,7 @@ async function appeler(chemin, corps, env) {
 export async function actualiserPasseport(env = globalThis, maintenant = new Date()) {
   try {
     const d = await appeler("/feuvert/etat", {}, env);
-    const serveur = { inscrit: !!d.inscrit, cohorte: d.cohorte || null, passeport: d.passeport || {}, missions: d.missions || {}, videos: d.videos || {}, majLe: d.majLe || null, recuLe: maintenant.toISOString() };
+    const serveur = { inscrit: !!d.inscrit, cohorte: d.cohorte || null, passeport: normaliserPasseport(d.passeport), missions: d.missions || {}, videos: d.videos || {}, majLe: d.majLe || null, recuLe: maintenant.toISOString() };
     majFeuVert({ serveur });
     return { serveur, erreur: d.inscrit ? null : "non-inscrit" };
   } catch (e) {

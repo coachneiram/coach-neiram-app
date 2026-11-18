@@ -2520,7 +2520,12 @@ async function nettoyerCommunaute(env, maintenant) {
  * comme les pointages : il arrive dans le classeur du coach.
  */
 
-const FV_GESTES = ["squat", "rdl", "rowing", "developpe", "fente", "gainage", "tirage", "hipthrust"];
+const FV_GESTES = ["squat", "rdl", "rowing", "developpe", "fente", "gainage", "tirage", "presse"];
+/* Anciens identifiants acceptes en entree et ramenes au nouveau : le hip
+ * thrust (geste 8) est devenu la presse a cuisses le 18/11/2026. Les
+ * Passeports deja en base et une application pas encore a jour peuvent
+ * encore envoyer « hipthrust ». */
+const FV_ALIAS_GESTES = { hipthrust: "presse" };
 const FV_ETATS = ["rouge", "orange", "vert"];
 const FV_SEMAINES = 6;
 const FV_MISSIONS = 4;
@@ -2560,12 +2565,16 @@ const jsonOu = (texte, repli) => {
   }
 };
 
-/** Passeport propre : seuls les 8 gestes connus, etat connu, date AAAA-MM-JJ ou vide. */
+/** Passeport propre : seuls les 8 gestes connus, etat connu, date AAAA-MM-JJ ou vide.
+ *  Un ancien identifiant (FV_ALIAS_GESTES) sert si le nouveau manque ou est invalide. */
 function passeportPropre(brut) {
   const sortie = {};
   if (!brut || typeof brut !== "object") return sortie;
+  const ancienDe = {};
+  for (const [ancien, nouveau] of Object.entries(FV_ALIAS_GESTES)) ancienDe[nouveau] = ancien;
   for (const id of FV_GESTES) {
-    const g = brut[id];
+    let g = brut[id];
+    if ((!g || !FV_ETATS.includes(g.etat)) && ancienDe[id]) g = brut[ancienDe[id]];
     if (!g || !FV_ETATS.includes(g.etat)) continue;
     sortie[id] = { etat: g.etat, date: DATE_ISO.test(String(g.date || "")) ? String(g.date) : "" };
   }

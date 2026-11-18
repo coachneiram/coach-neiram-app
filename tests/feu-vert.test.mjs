@@ -49,7 +49,7 @@ describe("contenu livré = contenu vendu", () => {
   test("8 gestes, chacun avec fiche complète et champ vidéo", () => {
     assert.deepEqual(
       C.gestes.map((g) => g.id),
-      ["squat", "rdl", "rowing", "developpe", "fente", "gainage", "tirage", "hipthrust"]
+      ["squat", "rdl", "rowing", "developpe", "fente", "gainage", "tirage", "presse"]
     );
     for (const g of C.gestes) {
       assert.ok(g.objectif && g.filmer && g.facilitee, g.id);
@@ -57,6 +57,32 @@ describe("contenu livré = contenu vendu", () => {
       assert.ok(g.criteres.some((c) => c.code.startsWith("S")) && g.criteres.some((c) => c.code.startsWith("Q")), g.id + " : critères S et Q");
       assert.equal(typeof g.video, "string");
     }
+  });
+
+  test("geste 8 = presse à cuisses (décision du 18/11/2026) : textes de la spécification, vidéo fournie par Marien", () => {
+    const g = FV.gesteParId("presse");
+    assert.equal(g.numero, 8);
+    assert.equal(g.nom, "Presse à cuisses");
+    assert.equal(g.objectif, "renforcer les cuisses et les fessiers sur une machine guidée, le dos calé contre le dossier.");
+    assert.equal(g.miseEnPlace.length, 3);
+    assert.equal(g.pointsCles.length, 4);
+    assert.equal(g.erreurs.length, 3);
+    assert.deepEqual(g.criteres.map((c) => c.code), ["S1", "S2", "S3", "Q1", "Q2", "Q3"]);
+    assert.match(g.filmer, /^profil strict \(90°\)/);
+    assert.match(g.facilitee, /squat sur banc/);
+    assert.equal(g.video, "https://youtube.com/shorts/YuLA9MY2sXg", "presse à deux jambes, même format que les autres gestes");
+    assert.equal(FV.gesteParId("hipthrust"), null);
+    // Ni la vidéo « presse unilatérale » ni celle du hip thrust.
+    const texte = lire("app/src/lib/feu-vert-contenu.js");
+    assert.ok(!/fDgGwvcHefI|rA6QacIDBPE/.test(texte));
+    assert.ok(!/hip\s*thrust|hipthrust|pont fessier/i.test(texte), "plus aucune mention du hip thrust dans Feu Vert");
+    assert.ok(!/leg press/i.test(texte));
+    // Même dosage que l'ancien hip thrust, même place (séance B).
+    const s1 = C.semaines[0].B.find((e) => e.geste === "presse");
+    assert.equal(s1.libelle, "Presse à cuisses (ou squat sur banc)");
+    assert.deepEqual([s1.reprise, s1.basesplus, s1.repos, s1.consigne], ["2 × 10", "3 × 10", "90 s", "3-1-1 · effort 5"]);
+    for (const s of C.semaines) assert.ok(s.B.some((e) => e.geste === "presse"), "S" + s.numero);
+    assert.match(JSON.stringify(C.semaines.map((s) => s.bonus || null)), /rowing haltère → presse à cuisses → gainage/);
   });
 
   test("6 semaines : A et B pour les deux parcours, bonus S4 à S6 seulement", () => {
@@ -70,7 +96,7 @@ describe("contenu livré = contenu vendu", () => {
     }
     // Séance A = gestes 1 à 4, séance B = gestes 5 à 8 (dans l'ordre du programme).
     assert.deepEqual(C.semaines[0].A.slice(0, 4).map((e) => e.geste), ["squat", "rdl", "rowing", "developpe"]);
-    assert.deepEqual(new Set(C.semaines[0].B.slice(0, 4).map((e) => e.geste)), new Set(["fente", "gainage", "tirage", "hipthrust"]));
+    assert.deepEqual(new Set(C.semaines[0].B.slice(0, 4).map((e) => e.geste)), new Set(["fente", "gainage", "tirage", "presse"]));
     assert.equal(FV.seanceFeuVert(1, "A", "reprise").exercices[0].series, "2 × 10");
     assert.equal(FV.seanceFeuVert(1, "A", "basesplus").exercices[0].series, "3 × 10");
     assert.deepEqual(FV.seancesDisponibles(3), ["A", "B"]);
@@ -148,6 +174,40 @@ describe("Passeport", () => {
     assert.equal(FV.niveauPasseport(verts(8)).niveau, 4);
     assert.equal(FV.niveauPasseport(verts(8)).suivant, null);
     assert.equal(FV.niveauPasseport(verts(3)).suivant.manque, 2);
+  });
+
+  test("geste 8 : un ancien Passeport avec « hipthrust » s'affiche sous « presse »", () => {
+    const ancien = { squat: { etat: "vert", date: "2027-01-25" }, hipthrust: { etat: "orange", date: "2027-02-05" } };
+    assert.equal(FV.etatGeste(ancien, "presse"), "orange");
+    assert.deepEqual(FV.normaliserPasseport(ancien), { squat: { etat: "vert", date: "2027-01-25" }, presse: { etat: "orange", date: "2027-02-05" } });
+    assert.ok("hipthrust" in ancien, "l'objet reçu n'est pas modifié");
+    // Les deux présents : le nouvel identifiant l'emporte.
+    assert.equal(FV.etatGeste({ presse: { etat: "vert" }, hipthrust: { etat: "rouge" } }, "presse"), "vert");
+    // Le niveau compte l'ancien identifiant comme le geste 8.
+    const huitVerts = Object.fromEntries(["squat", "rdl", "rowing", "developpe", "fente", "gainage", "tirage", "hipthrust"].map((id) => [id, { etat: "vert", date: "2027-02-20" }]));
+    assert.equal(FV.niveauPasseport(huitVerts).niveau, 4);
+    assert.deepEqual(FV.normaliserPasseport(null), {});
+  });
+
+  test("geste 8 : l'envoi au Worker garde une copie « hipthrust » (Worker pas encore recollé)", async () => {
+    const { passeportPourEnvoi } = await import("../app/src/lib/feu-vert-passeport.js");
+    assert.deepEqual(passeportPourEnvoi({ presse: { etat: "vert", date: "2027-02-12" } }), { presse: { etat: "vert", date: "2027-02-12" }, hipthrust: { etat: "vert", date: "2027-02-12" } });
+    assert.deepEqual(passeportPourEnvoi({ hipthrust: { etat: "orange", date: "" } }), { presse: { etat: "orange", date: "" }, hipthrust: { etat: "orange", date: "" } });
+    assert.deepEqual(passeportPourEnvoi({ squat: { etat: "vert", date: "" } }), { squat: { etat: "vert", date: "" } });
+    const E = await import("../app/src/lib/espace-coach.js");
+    const appels = [];
+    const env = { fetch: async (url, init) => (appels.push(JSON.parse(init.body)), { ok: true, status: 200, json: async () => ({ ok: true }) }) };
+    await E.feuVertEnregistrer({ client: "c1", cohorte: "1", passeport: { presse: { etat: "vert", date: "2027-02-12" } }, missions: {} }, "secret-de-test-assez-long-0123456789", env);
+    assert.equal(appels[0].passeport.presse.etat, "vert");
+    assert.equal(appels[0].passeport.hipthrust.etat, "vert");
+  });
+
+  test("hors ligne : un Passeport reçu avec « hipthrust » est gardé sous « presse »", async () => {
+    installerStockage();
+    localStorage.setItem(CLE_ACCES, JSON.stringify({ jeton: "j".repeat(30), libelle: "Léa B." }));
+    const reponse = { ok: true, inscrit: true, cohorte: "1", passeport: { hipthrust: { etat: "vert", date: "2027-02-05" } }, missions: {}, majLe: 1 };
+    const r = await FV.actualiserPasseport({ localStorage, fetch: async () => ({ ok: true, json: async () => reponse }) });
+    assert.deepEqual(r.serveur.passeport, { presse: { etat: "vert", date: "2027-02-05" } });
   });
 
   test("charge bloquée tant que le geste n'est pas vert", () => {

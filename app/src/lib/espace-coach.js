@@ -16,6 +16,7 @@
  */
 
 import { PROXY_BASE_URL } from "./config.js";
+import { passeportPourEnvoi } from "./feu-vert-passeport.js";
 
 /** Oubli automatique du secret sans action. */
 export const DELAI_VERROU_MS = 15 * 60000;
@@ -73,7 +74,7 @@ export const presenceClients = (secret, env) => appelerAdmin("/admin/presence", 
 // Feu Vert (14 novembre 2026) : inscription des membres et Passeport.
 export const feuVertListe = (secret, env) => appelerAdmin("/admin/feuvert", { action: "liste" }, secret, env);
 export const feuVertEnregistrer = ({ client, cohorte, passeport, missions }, secret, env) =>
-  appelerAdmin("/admin/feuvert", { action: "enregistrer", client, cohorte, passeport, missions }, secret, env);
+  appelerAdmin("/admin/feuvert", { action: "enregistrer", client, cohorte, passeport: passeportPourEnvoi(passeport), missions }, secret, env);
 export const feuVertRetirer = (client, secret, env) => appelerAdmin("/admin/feuvert", { action: "retirer", client }, secret, env);
 export const feuVertVideo = ({ cohorte, semaine, url }, secret, env) => appelerAdmin("/admin/feuvert", { action: "video", cohorte, semaine, url }, secret, env);
 export const moderation = (action, cible, secret, env) => appelerAdmin("/admin/communaute", { action, ...(cible != null ? { cible: String(cible) } : {}) }, secret, env);

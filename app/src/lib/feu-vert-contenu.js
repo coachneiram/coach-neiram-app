@@ -352,51 +352,55 @@ export const CONTENU_FEU_VERT = {
       "video": "https://youtube.com/shorts/JdN64Ad98W8"
     },
     {
-      "id": "hipthrust",
+      "id": "presse",
       "numero": 8,
-      "nom": "Hip thrust (dos appuyé sur un banc)",
-      "objectif": "muscler les fessiers en poussant les hanches vers le haut, bas du dos protégé.",
+      "nom": "Presse à cuisses",
+      "objectif": "renforcer les cuisses et les fessiers sur une machine guidée, le dos calé contre le dossier.",
       "miseEnPlace": [
-        "Le bas des omoplates appuyé contre le bord d'un banc stable (calé contre un mur ou une machine).",
-        "Pieds à plat, largeur de hanches, à une distance telle que les tibias soient verticaux en haut du mouvement.",
-        "Charge (haltère ou barre avec manchon de mousse) posée sur le pli de la hanche."
+        "Assis(e) au fond du siège, le bas du dos et les fesses collés au dossier, les mains sur les poignées latérales.",
+        "Pieds à plat au milieu de la plateforme, écartés de la largeur des hanches, pointes de pieds légèrement ouvertes.",
+        "Tu déverrouilles les sécurités seulement une fois bien installé(e), et tu les remets en place avant de te relever."
       ],
       "pointsCles": [
-        "Menton légèrement rentré, regard vers l'avant (pas vers le plafond).",
-        "Tu pousses dans les talons et tu montes les hanches jusqu'à l'alignement épaules-hanches-genoux.",
-        "Tu serres les fesses 1 s en haut, sans creuser le bas du dos.",
-        "Tu redescends en 2 s."
+        "Tu descends en 3 s en laissant les genoux plier vers la poitrine, dans l'axe des pieds.",
+        "Tu t'arrêtes avant que le bas du dos ou les fesses ne décollent du dossier (environ 90° aux genoux pour commencer).",
+        "Tu pousses dans tout le pied, talons compris, sans verrouiller les genoux en haut.",
+        "Tu expires en poussant."
       ],
       "erreurs": [
-        "Creuser le bas du dos en haut au lieu de finir avec les fesses.",
-        "Pieds trop loin (on sent l'arrière des cuisses) ou trop près (on sent les cuisses avant).",
-        "Le banc qui glisse."
+        "Descendre trop bas : les fesses décollent et le bas du dos s'enroule.",
+        "Verrouiller les genoux en haut (jambes complètement tendues).",
+        "Genoux qui rentrent vers l'intérieur ou talons qui décollent."
       ],
       "criteres": [
         {
           "code": "S1",
-          "texte": "banc stable (aucun déplacement visible)."
+          "texte": "bas du dos et fesses collés au dossier sur toute l'amplitude."
         },
         {
           "code": "S2",
-          "texte": "pas d'hyperextension du bas du dos en haut (cage thoracique qui reste « fermée », côtes qui ne pointent pas vers le plafond)."
+          "texte": "genoux jamais verrouillés en haut."
+        },
+        {
+          "code": "S3",
+          "texte": "genoux dans l'axe des pieds (ils ne rentrent pas vers l'intérieur)."
         },
         {
           "code": "Q1",
-          "texte": "tibias verticaux en haut."
+          "texte": "talons à plat sur la plateforme pendant tout le mouvement."
         },
         {
           "code": "Q2",
-          "texte": "alignement épaules-hanches-genoux atteint à chaque répétition."
+          "texte": "même amplitude à chaque répétition (environ 90° aux genoux)."
         },
         {
           "code": "Q3",
-          "texte": "pause visible en haut."
+          "texte": "descente contrôlée en 3 s, sans rebond en bas."
         }
       ],
-      "filmer": "profil strict, téléphone au sol ou sur un support bas, à 2 m.",
-      "facilitee": "pont fessier au sol (dos au sol, pas de banc), sans charge puis avec un haltère sur les hanches.",
-      "video": "https://youtube.com/shorts/rA6QacIDBPE"
+      "filmer": "profil strict (90°), à 2-3 m, téléphone à hauteur du siège, avec le dossier, les genoux et la plateforme dans le cadre.",
+      "facilitee": "presse à vide (chariot seul) avec une amplitude réduite ; si la machine est prise : squat sur banc (s'asseoir et se relever d'un banc).",
+      "video": "https://youtube.com/shorts/YuLA9MY2sXg"
     }
   ],
   "semaines": [
@@ -458,8 +462,8 @@ export const CONTENU_FEU_VERT = {
           "consigne": "3-1-1 · effort 5"
         },
         {
-          "geste": "hipthrust",
-          "libelle": "Hip thrust (ou pont fessier au sol)",
+          "geste": "presse",
+          "libelle": "Presse à cuisses (ou squat sur banc)",
           "reprise": "2 × 10",
           "basesplus": "3 × 10",
           "repos": "90 s",
@@ -550,8 +554,8 @@ export const CONTENU_FEU_VERT = {
           "consigne": "3-1-1 · effort 5-6"
         },
         {
-          "geste": "hipthrust",
-          "libelle": "Hip thrust",
+          "geste": "presse",
+          "libelle": "Presse à cuisses",
           "reprise": "3 × 10",
           "basesplus": "3 × 10-12",
           "repos": "90 s",
@@ -642,8 +646,8 @@ export const CONTENU_FEU_VERT = {
           "consigne": "idem"
         },
         {
-          "geste": "hipthrust",
-          "libelle": "Hip thrust",
+          "geste": "presse",
+          "libelle": "Presse à cuisses",
           "reprise": "3 × 10-12",
           "basesplus": "3 × 8-12",
           "repos": "90 s",
@@ -734,8 +738,8 @@ export const CONTENU_FEU_VERT = {
           "consigne": "idem"
         },
         {
-          "geste": "hipthrust",
-          "libelle": "Hip thrust",
+          "geste": "presse",
+          "libelle": "Presse à cuisses",
           "reprise": "3 × 10-12",
           "basesplus": "4 × 8-12",
           "repos": "90 s",
@@ -775,7 +779,7 @@ export const CONTENU_FEU_VERT = {
             "basesplus": "8 min"
           },
           {
-            "bloc": "Circuit : squat gobelet → rowing haltère → hip thrust → gainage (charges habituelles, 10 répétitions ou 30 s, 60 s de pause entre deux exercices)",
+            "bloc": "Circuit : squat gobelet → rowing haltère → presse à cuisses → gainage (charges habituelles, 10 répétitions ou 30 s, 60 s de pause entre deux exercices)",
             "reprise": "2 tours",
             "basesplus": "3 tours"
           },
@@ -850,8 +854,8 @@ export const CONTENU_FEU_VERT = {
           "consigne": "idem"
         },
         {
-          "geste": "hipthrust",
-          "libelle": "Hip thrust",
+          "geste": "presse",
+          "libelle": "Presse à cuisses",
           "reprise": "3 × 10-12",
           "basesplus": "4 × 8-12",
           "repos": "90 s",
@@ -966,8 +970,8 @@ export const CONTENU_FEU_VERT = {
           "consigne": "idem"
         },
         {
-          "geste": "hipthrust",
-          "libelle": "Hip thrust",
+          "geste": "presse",
+          "libelle": "Presse à cuisses",
           "reprise": "3 × 10",
           "basesplus": "3 × 8-10",
           "repos": "90 s",
@@ -1041,9 +1045,9 @@ export const CONTENU_FEU_VERT = {
       "alt2": "Tirage élastique fixé en hauteur, à genoux"
     },
     {
-      "geste": "Hip thrust (banc ou barre occupés)",
-      "alt1": "Machine hip thrust / fessiers (si présente dans ta salle)",
-      "alt2": "Pont fessier au sol avec un haltère sur les hanches"
+      "geste": "Presse à cuisses (machine prise)",
+      "alt1": "Squat sur banc (s'asseoir et se relever d'un banc)",
+      "alt2": "Squat sur box/step au poids du corps, tempo 4-1-1"
     },
     {
       "geste": "Marche du fermier",

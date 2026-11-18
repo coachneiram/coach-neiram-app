@@ -103,6 +103,7 @@ await admin({
     rowing: { etat: "orange", date: "2027-01-28" },
     developpe: { etat: "orange", date: "2027-01-29" },
     fente: { etat: "rouge", date: "2027-02-05" },
+    // Ancien identifiant du geste 8 (avant le 18/11/2026) : doit s'afficher sous « presse ».
     hipthrust: { etat: "orange", date: "2027-02-05" }
   },
   missions: { 1: { semaine: 1 }, 2: { semaine: 3 } }
@@ -259,6 +260,19 @@ try {
   await capture(page, "passeport-niveau");
   await page.locator('[data-geste="fente"]').scrollIntoViewIfNeeded();
   await capture(page, "passeport-gestes");
+  await page.locator('[data-geste="presse"]').click();
+  await page.waitForTimeout(400);
+  const fichePresse = page.locator("[data-fiche-geste='presse']");
+  const textePresse = (await fichePresse.count()) ? await fichePresse.textContent() : "";
+  verifier(
+    "fiche presse à cuisses (ancien Passeport « hipthrust ») : orange, lien vers la vidéo de démonstration",
+    /dossier/.test(textePresse) && /S3/.test(textePresse) && (await fichePresse.locator("[data-video-vide]").count()) === 0 &&
+      (await fichePresse.locator('a[href="https://youtube.com/shorts/YuLA9MY2sXg"]').count()) === 1 && (await fichePresse.locator("[data-etat-geste]").first().getAttribute("data-etat-geste")) === "orange",
+    textePresse.slice(0, 200)
+  );
+  await capture(page, "fiche-presse");
+  await page.locator(".modal-panel button[aria-label='Fermer']").last().click();
+  await page.waitForTimeout(300);
 
   // 6. Missions.
   await page.locator("[data-vue='missions']").click();

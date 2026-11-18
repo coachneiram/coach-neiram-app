@@ -12,7 +12,7 @@ import { COLORS, POLICES } from "../tokens.js";
 import { todayISO } from "../lib/dates.js";
 import { feuVertEnregistrer, feuVertListe, feuVertRetirer, feuVertVideo } from "../lib/espace-coach.js";
 import { CONTENU_FEU_VERT } from "../lib/feu-vert-contenu.js";
-import { ETATS_GESTE, niveauPasseport } from "../lib/feu-vert-passeport.js";
+import { ETATS_GESTE, niveauPasseport, normaliserPasseport } from "../lib/feu-vert-passeport.js";
 import { Btn, Card, SectionTitle, TextInput } from "./primitives.jsx";
 import { TEXTES_FEU_VERT_COACH as T } from "../lib/textes-feu-vert.js";
 
@@ -36,7 +36,7 @@ function bouton(actif, couleur) {
 
 /** Fiche éditable d'une membre. */
 function FicheMembre({ membre, onEnregistrer, onRetirer }) {
-  const [passeport, setPasseport] = useState(membre.passeport || {});
+  const [passeport, setPasseport] = useState(() => normaliserPasseport(membre.passeport));
   const [missions, setMissions] = useState(membre.missions || {});
   const [cohorte, setCohorte] = useState(membre.cohorte || "1");
   const poser = (id, etat) => setPasseport({ ...passeport, [id]: { etat, date: todayISO() } });
