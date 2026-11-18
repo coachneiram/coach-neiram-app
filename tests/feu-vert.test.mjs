@@ -39,7 +39,7 @@ const { TYPES_EVENEMENTS, synchroActive } = await import("../app/src/lib/synchro
 const { niveauAlerte } = await import("../app/src/lib/gravite-alertes.js");
 const { CLE_ACCES } = await import("../app/src/lib/acces.js");
 const { estCleClient } = await import("../app/src/lib/stockage.js");
-const { lienWhatsappCoach } = await import("../app/src/lib/config.js");
+const { URL_PLATEFORME } = await import("../app/src/lib/plateforme.js");
 
 const C = FV.CONTENU_FEU_VERT;
 const PROFIL = { name: "Léa", formule: "feuvert", feuVert: { parcours: "reprise", cohorte: "1", debut: "2027-01-18" } };
@@ -315,12 +315,22 @@ describe("pointage, check-in, vidéos", () => {
     assert.equal(niveauAlerte(e), "info");
   });
 
-  test("vidéo : WhatsApp vers le numéro pro de la configuration, message pré-rempli, plafond rappelé", () => {
+  test("vidéo : en message privé à Marien sur la plateforme Coach Neiram, plus sur WhatsApp (18/11/2026)", () => {
     const g = C.gestes[0];
-    assert.equal(FV.lienVideoWhatsapp(g, 2), lienWhatsappCoach("Feu Vert — vidéo Squat gobelet, semaine 2"));
-    assert.match(FV.lienVideoWhatsapp(g, 2), /^https:\/\/wa\.me\/\d+\?text=/);
+    assert.equal(FV.LIEN_PLATEFORME_VIDEO, URL_PLATEFORME, "même adresse que l'envoi du bilan");
+    assert.equal(FV.legendeVideo(g, 2), "Feu Vert — vidéo Squat gobelet, semaine 2");
+    assert.equal(FV.TEXTES_VIDEO.bouton, "Envoyer ma vidéo à Marien sur la plateforme");
+    assert.match(FV.TEXTES_VIDEO.chemin, /plateforme Coach Neiram > Messages privés > Marien/);
     assert.match(FV.TEXTES_VIDEO.plafond, /2 vidéos maximum par semaine/);
+    assert.match(FV.TEXTES_VIDEO.plafond, /48 h ouvrées, en message privé sur la plateforme Coach Neiram/);
+    for (const t of Object.values(FV.TEXTES_VIDEO)) {
+      const texte = typeof t === "function" ? t("x") : t;
+      assert.doesNotMatch(texte, /whatsapp|wa\.me|discord/i);
+      assert.doesNotMatch(texte, /\bOS\b/);
+    }
+    assert.equal("lienVideoWhatsapp" in FV, false);
     const ecran = lire("app/src/ecrans/FeuVert.jsx");
+    assert.ok(!/whatsapp|wa\.me/i.test(ecran), "plus aucun lien WhatsApp dans l'écran Feu Vert");
     assert.ok(!/type="file"|ChoixPhoto|capture=/.test(ecran), "aucun envoi de vidéo ni de photo dans l'app");
   });
 });

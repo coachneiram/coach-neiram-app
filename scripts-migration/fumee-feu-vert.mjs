@@ -11,7 +11,8 @@
  *   2. ONGLET : Feu Vert en tête de barre, sans Nutrition/Mesures/Tendances ;
  *   3. PROGRAMME : semaine 4, lien « Ma séance de la semaine, par Marien »,
  *      règle « charge bloquée », séance A pointée → pointage relayé au coach ;
- *   4. FICHE : critères S/Q, bouton WhatsApp (wa.me, message pré-rempli) ;
+ *   4. FICHE : critères S/Q, bouton vidéo vers la plateforme Coach Neiram
+ *      (message privé à Marien, chemin et légende écrits ; plus de WhatsApp) ;
  *   5. PASSEPORT : états fixés par le coach, niveau 2 (2 verts) ;
  *   6. MISSIONS et module mental de la semaine ;
  *   7. CHECK-IN : bandeau du lundi, envoi → checkin_feu_vert au script ;
@@ -242,10 +243,19 @@ try {
   const fiche = page.locator("[data-fiche-geste='rowing']");
   verifier("fiche : critères S et Q, lien vers la vidéo de démonstration", /S1/.test(await fiche.textContent()) && /Q1/.test(await fiche.textContent()) && (await fiche.locator("[data-video-vide]").count()) === 0 && (await fiche.locator('a[href^="https://youtube.com/shorts/"]').count()) === 1);
   await capture(page, "fiche-geste");
-  const lien = await page.locator("[data-whatsapp-video]").getAttribute("href");
-  verifier("bouton WhatsApp : numéro de la configuration, message pré-rempli", /^https:\/\/wa\.me\/\d+\?text=/.test(lien) && decodeURIComponent(lien.split("text=")[1]) === "Feu Vert — vidéo Rowing haltère, semaine 4", lien);
-  await page.locator("[data-whatsapp-video]").scrollIntoViewIfNeeded();
-  await capture(page, "fiche-geste-video-whatsapp");
+  const lien = await page.locator("[data-video-plateforme]").getAttribute("href");
+  const textesVideo = await fiche.textContent();
+  verifier(
+    "bouton vidéo : plateforme Coach Neiram (adresse de l'envoi du bilan), chemin et légende écrits, plus de WhatsApp",
+    lien === "https://coach-neiram-os.pelissier-marien.workers.dev" &&
+      /Envoyer ma vidéo à Marien sur la plateforme/.test(textesVideo) &&
+      /Ouvre la plateforme Coach Neiram > Messages privés > Marien/.test(textesVideo) &&
+      /« Feu Vert — vidéo Rowing haltère, semaine 4 »/.test(textesVideo) &&
+      !/whatsapp|wa\.me/i.test(textesVideo + (await fiche.innerHTML())),
+    lien
+  );
+  await page.locator("[data-video-plateforme]").scrollIntoViewIfNeeded();
+  await capture(page, "fiche-geste-video-plateforme");
   await page.locator(".modal-panel button[aria-label='Fermer']").last().click();
   await page.waitForTimeout(300);
 

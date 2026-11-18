@@ -2,7 +2,8 @@
  * Espace coach — Feu Vert (14 novembre 2026).
  *
  * C'est ICI, et nulle part ailleurs, que l'état des gestes est fixé :
- * rouge / orange / vert après lecture de la vidéo (reçue sur WhatsApp), et
+ * rouge / orange / vert après lecture de la vidéo (reçue en message privé
+ * sur la plateforme Coach Neiram depuis le 18/11/2026), et
  * les missions validées après le check-in. Le membre le lit dans son
  * onglet Feu Vert (POST /feuvert/etat). Route : POST /admin/feuvert.
  */

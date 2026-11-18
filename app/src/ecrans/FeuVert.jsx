@@ -7,7 +7,8 @@
  * dans lib/feu-vert-contenu.js, les phrases dans lib/textes-feu-vert.js.
  *
  * Le Passeport est en LECTURE SEULE : Marien fixe l'état des gestes dans
- * l'Espace coach. Les vidéos de correction partent sur WhatsApp, jamais
+ * l'Espace coach. Les vidéos de correction partent en message privé à
+ * Marien sur la plateforme Coach Neiram (décision du 18/11/2026), jamais
  * dans l'application. Aucun poids, aucune photo, aucune promesse de
  * résultat dans cet écran.
  */
@@ -34,7 +35,8 @@ import {
   evenementCheckin,
   gesteParId,
   libelleParcours,
-  lienVideoWhatsapp,
+  LIEN_PLATEFORME_VIDEO,
+  legendeVideo,
   ligneRegularite,
   lireFeuVert,
   majFeuVert,
@@ -96,7 +98,7 @@ const sBoutonTexte = {
   cursor: "pointer",
   fontFamily: "inherit"
 };
-const sLienWhatsapp = {
+const sLienPlateforme = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -257,10 +259,13 @@ function FicheGeste({ geste, etat, date, semaine, onClose }) {
         <p style={{ ...sTexte, marginTop: 2 }}>{maj(geste.facilitee)}</p>
 
         <div style={{ ...sEncadre, marginTop: 16 }}>
-          <a data-whatsapp-video href={lienVideoWhatsapp(geste, semaine)} target="_blank" rel="noreferrer" style={sLienWhatsapp}>
+          <div style={{ ...sSousTitre, marginTop: 0, marginBottom: 8 }}>{TEXTES_VIDEO.titre}</div>
+          <a data-video-plateforme href={LIEN_PLATEFORME_VIDEO} target="_blank" rel="noreferrer" style={sLienPlateforme}>
             <Send size={16} />
             {TEXTES_VIDEO.bouton}
           </a>
+          <p data-video-chemin style={{ ...sTexte, fontSize: 13, margin: "8px 0 0" }}>{TEXTES_VIDEO.chemin}</p>
+          <p data-video-legende style={{ ...sPetit, color: COLORS.textMuted }}>{TEXTES_VIDEO.legende(legendeVideo(geste, semaine))}</p>
           <p style={{ ...sPetit, color: COLORS.textMuted }}>{TEXTES_VIDEO.plafond}</p>
           <p style={sPetit}>{TEXTES_VIDEO.format}</p>
         </div>
