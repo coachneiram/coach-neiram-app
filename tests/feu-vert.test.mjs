@@ -85,6 +85,38 @@ describe("contenu livré = contenu vendu", () => {
     assert.match(JSON.stringify(C.semaines.map((s) => s.bonus || null)), /rowing haltère → presse à cuisses → gainage/);
   });
 
+  test("geste 5 = fente statique (décision du 18/11/2026) : textes de la spécification, même id, même vidéo, même dosage", () => {
+    const g = FV.gesteParId("fente");
+    assert.equal(g.numero, 5);
+    assert.equal(g.nom, "Fente statique (split squat)");
+    assert.equal(g.nom.split(" (")[0], "Fente statique", "nom court des listes et du Passeport");
+    assert.equal(g.objectif, "travailler une jambe à la fois et l'équilibre. Utile pour monter des escaliers, porter un enfant, se relever du sol.");
+    assert.deepEqual(g.miseEnPlace, [
+      "Debout, un haltère dans chaque main le long du corps (ou sans charge).",
+      "Fais un grand pas en avant et garde cet écart : pied avant à plat, talon arrière décollé, pieds écartés de la largeur des hanches (comme sur des rails, pas sur une ligne).",
+      "Regard devant."
+    ]);
+    assert.equal(g.pointsCles[0], "Les pieds ne bougent pas pendant toute la série : tu montes et tu descends sur place.");
+    assert.equal(g.pointsCles[3], "Tu remontes en poussant dans tout le pied avant, sans verrouiller les genoux. Toutes les répétitions d'un côté, puis l'autre.");
+    assert.equal(g.erreurs[1], "L'écart trop court : le talon avant décolle et le genou avant part loin devant.");
+    assert.deepEqual(g.criteres.map((c) => c.code), ["S1", "S2", "Q1", "Q2", "Q3"]);
+    assert.equal(g.criteres[4].texte, "pieds immobiles d'un bout à l'autre de la série (aucun pas de rattrapage).");
+    assert.equal(g.facilitee, "fente statique en tenant un support (poteau, rack) d'une main, amplitude réduite, sans charge.");
+    assert.equal(g.video, "https://youtube.com/shorts/r3aZfPPVmQg");
+    // Plus aucune fente arrière dans Feu Vert (le catalogue général garde sa « Fente arrière dynamique »).
+    assert.ok(!/fente arri/i.test(lire("app/src/lib/feu-vert-contenu.js")));
+    assert.ok(!/recules un pied|ramènes le pied/i.test(lire("app/src/lib/feu-vert-contenu.js")));
+    assert.match(lire("app/src/lib/catalogues.js"), /Fente arrière dynamique/);
+    // Dosage inchangé : semaine 1 avec appui si besoin, / jambe partout.
+    const s1 = C.semaines[0].B.find((e) => e.geste === "fente");
+    assert.equal(s1.libelle, "Fente statique (avec appui si besoin)");
+    assert.deepEqual([s1.reprise, s1.basesplus, s1.repos, s1.consigne], ["2 × 8 / jambe", "3 × 8 / jambe", "90 s", "3-1-1 · effort 5"]);
+    for (const s of C.semaines.slice(1)) assert.equal(s.B.find((e) => e.geste === "fente").libelle, "Fente statique", "S" + s.numero);
+    assert.match(JSON.stringify(C.semaines.map((s) => s.bonus || null)), /développé haltères → fente statique → tirage poulie/);
+    const alt = C.alternatives.find((a) => /^Fente/.test(a.geste));
+    assert.deepEqual(alt, { geste: "Fente statique", alt1: "Fente statique au poids du corps, tempo 3-1-1", alt2: "Montée sur banc/step (step-up), 1 jambe à la fois" });
+  });
+
   test("6 semaines : A et B pour les deux parcours, bonus S4 à S6 seulement", () => {
     assert.equal(C.semaines.length, 6);
     for (const s of C.semaines) {

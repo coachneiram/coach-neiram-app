@@ -236,7 +236,8 @@ describe("Branchement de l'ecran", () => {
   const repas = readFileSync(new URL("../app/src/ecrans/Repas.jsx", import.meta.url), "utf8");
 
   test("CoachIA construit lui-meme la consigne et relit chaque reponse", () => {
-    assert.match(coach, /systemPrompt: construireConsigneCoach\(profile, targets, restant\)/);
+    // Depuis le 18/11/2026, 4e argument : le contexte Feu Vert (vide hors formule).
+    assert.match(coach, /systemPrompt: construireConsigneCoach\(profile, targets, restant, feuVert\)/);
     assert.match(coach, /verifierReponse\(texte, profile\)/);
   });
 

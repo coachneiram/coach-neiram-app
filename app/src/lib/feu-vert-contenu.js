@@ -218,21 +218,22 @@ export const CONTENU_FEU_VERT = {
     {
       "id": "fente",
       "numero": 5,
-      "nom": "Fente (fente arrière)",
+      "nom": "Fente statique (split squat)",
       "objectif": "travailler une jambe à la fois et l'équilibre. Utile pour monter des escaliers, porter un enfant, se relever du sol.",
       "miseEnPlace": [
-        "Debout, pieds largeur de hanches, un haltère dans chaque main le long du corps (ou sans charge).",
+        "Debout, un haltère dans chaque main le long du corps (ou sans charge).",
+        "Fais un grand pas en avant et garde cet écart : pied avant à plat, talon arrière décollé, pieds écartés de la largeur des hanches (comme sur des rails, pas sur une ligne).",
         "Regard devant."
       ],
       "pointsCles": [
-        "Tu recules un pied d'un grand pas, tu poses l'avant du pied.",
+        "Les pieds ne bougent pas pendant toute la série : tu montes et tu descends sur place.",
         "Tu descends à la verticale : le genou arrière va vers le sol sans le toucher.",
         "Le genou avant reste au-dessus du pied avant, dans l'axe des orteils.",
-        "Tu remontes en poussant dans le talon du pied avant et tu ramènes le pied arrière."
+        "Tu remontes en poussant dans tout le pied avant, sans verrouiller les genoux. Toutes les répétitions d'un côté, puis l'autre."
       ],
       "erreurs": [
         "Le genou avant qui rentre vers l'intérieur.",
-        "Le pas trop court : le talon avant décolle.",
+        "L'écart trop court : le talon avant décolle et le genou avant part loin devant.",
         "Le buste qui bascule fort vers l'avant ou sur le côté."
       ],
       "criteres": [
@@ -254,11 +255,11 @@ export const CONTENU_FEU_VERT = {
         },
         {
           "code": "Q3",
-          "texte": "retour à la position debout stable, sans pas de rattrapage."
+          "texte": "pieds immobiles d'un bout à l'autre de la série (aucun pas de rattrapage)."
         }
       ],
       "filmer": "de face à 2-3 m pour l'alignement du genou, téléphone à hauteur de hanche. Si tu n'as qu'une prise : 3/4 avant.",
-      "facilitee": "fente statique (pieds déjà écartés, tu montes et descends sur place) en tenant un support (poteau, rack) d'une main.",
+      "facilitee": "fente statique en tenant un support (poteau, rack) d'une main, amplitude réduite, sans charge.",
       "video": "https://youtube.com/shorts/r3aZfPPVmQg"
     },
     {
@@ -455,7 +456,7 @@ export const CONTENU_FEU_VERT = {
       "B": [
         {
           "geste": "fente",
-          "libelle": "Fente arrière (ou fente statique avec appui)",
+          "libelle": "Fente statique (avec appui si besoin)",
           "reprise": "2 × 8 / jambe",
           "basesplus": "3 × 8 / jambe",
           "repos": "90 s",
@@ -547,7 +548,7 @@ export const CONTENU_FEU_VERT = {
       "B": [
         {
           "geste": "fente",
-          "libelle": "Fente arrière",
+          "libelle": "Fente statique",
           "reprise": "2 × 8 / jambe",
           "basesplus": "3 × 8-10 / jambe",
           "repos": "90 s",
@@ -639,7 +640,7 @@ export const CONTENU_FEU_VERT = {
       "B": [
         {
           "geste": "fente",
-          "libelle": "Fente arrière",
+          "libelle": "Fente statique",
           "reprise": "3 × 8 / jambe",
           "basesplus": "3 × 8-10 / jambe",
           "repos": "90 s",
@@ -731,7 +732,7 @@ export const CONTENU_FEU_VERT = {
       "B": [
         {
           "geste": "fente",
-          "libelle": "Fente arrière",
+          "libelle": "Fente statique",
           "reprise": "3 × 10 / jambe",
           "basesplus": "3 × 8-12 / jambe",
           "repos": "90 s",
@@ -847,7 +848,7 @@ export const CONTENU_FEU_VERT = {
       "B": [
         {
           "geste": "fente",
-          "libelle": "Fente arrière",
+          "libelle": "Fente statique",
           "reprise": "3 × 10 / jambe",
           "basesplus": "3 × 8-12 / jambe",
           "repos": "90 s",
@@ -895,7 +896,7 @@ export const CONTENU_FEU_VERT = {
             "basesplus": "8 min"
           },
           {
-            "bloc": "Circuit : soulevé de terre roumain → développé haltères → fente arrière → tirage poulie (charges habituelles, 10 répétitions, 60 s de pause entre deux exercices)",
+            "bloc": "Circuit : soulevé de terre roumain → développé haltères → fente statique → tirage poulie (charges habituelles, 10 répétitions, 60 s de pause entre deux exercices)",
             "reprise": "2 tours",
             "basesplus": "3 tours"
           },
@@ -963,7 +964,7 @@ export const CONTENU_FEU_VERT = {
       "B": [
         {
           "geste": "fente",
-          "libelle": "Fente arrière",
+          "libelle": "Fente statique",
           "reprise": "3 × 8 / jambe",
           "basesplus": "3 × 8-10 / jambe",
           "repos": "90 s",
@@ -1030,8 +1031,8 @@ export const CONTENU_FEU_VERT = {
       "alt2": "Pompes inclinées mains sur une barre de Smith machine ou un banc"
     },
     {
-      "geste": "Fente arrière",
-      "alt1": "Fente arrière au poids du corps, tempo 3-1-1",
+      "geste": "Fente statique",
+      "alt1": "Fente statique au poids du corps, tempo 3-1-1",
       "alt2": "Montée sur banc/step (step-up), 1 jambe à la fois"
     },
     {

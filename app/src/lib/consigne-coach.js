@@ -217,8 +217,13 @@ const lignesEquivalences = (liste, profile) =>
  * demande au modele de faire preciser les allergies d'abord. Les listes
  * d'aliments du coach ne sont alors pas envoyees du tout — le modele ne
  * peut pas recommander ce qu'il ne voit pas.
+ *
+ * `contexte` (facultatif, 18/11/2026) : bloc de texte ajoute apres la fiche
+ * client, aujourd'hui le contexte Feu Vert (lib/consigne-feu-vert.js,
+ * vide hors formule Feu Vert). Il part dans les deux modes, prudent ou non :
+ * il ne contient aucun aliment.
  */
-export function construireConsigneCoach(profile, targets, restant) {
+export function construireConsigneCoach(profile, targets, restant, contexte = "") {
   const c = lireContraintes(profile);
   const sur = conseilsAlimentairesSurs(c);
   const p = profile && typeof profile === "object" ? profile : {};
@@ -261,6 +266,7 @@ export function construireConsigneCoach(profile, targets, restant) {
   }
   const note = GOAL_FOOD_NOTES[p && p.goal];
   if (note && sur) client.push(note);
+  if (typeof contexte === "string" && contexte.trim()) client.push(contexte);
 
   if (!sur) return [...regles, ...client].join("\n");
 
