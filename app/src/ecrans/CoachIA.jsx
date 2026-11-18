@@ -16,6 +16,10 @@
  * arrivait autrefois par une prop que App.jsx ne passait pas : le modele
  * repondait sans rien savoir du client (audit P0-1, 17 octobre 2026).
  * Chaque reponse est en plus relue pour y reperer un allergene declare.
+ *
+ * Membre Feu Vert (18/11/2026) : la consigne recoit en plus le contexte
+ * Feu Vert (formule, semaine du cycle, 8 gestes, couleurs du Passeport,
+ * regles), construit par lib/consigne-feu-vert.js. Rien pour les autres.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -24,6 +28,9 @@ import { computeRemainingToday } from "../lib/nutrition.js";
 import { genererTexte, messageErreur } from "../lib/ia.js";
 import { TEXTES_GARDE_FOU, conseilsAlimentairesSurs, construireConsigneCoach, lireContraintes, verifierReponse } from "../lib/consigne-coach.js";
 import { charger, enregistrer } from "../lib/stockage.js";
+import { contexteFeuVert } from "../lib/consigne-feu-vert.js";
+import { lireFeuVert } from "../lib/feu-vert.js";
+import { todayISO } from "../lib/dates.js";
 import { Btn, Card, LienTuto, TextInput } from "../ui/primitives.jsx";
 import { Loader2, Sparkles } from "../ui/icones.jsx";
 
@@ -70,9 +77,11 @@ export function CoachIA({ profile, targets, logEntries }) {
 
     try {
       const restant = computeRemainingToday(logEntries, targets);
+      const serveurFeuVert = lireFeuVert().serveur;
+      const feuVert = contexteFeuVert(profile, { passeport: serveurFeuVert && serveurFeuVert.passeport, aujourdhui: todayISO() });
       const reponse = await genererTexte({
         history: avecQuestion.slice(-MAX_ENVOYES),
-        systemPrompt: construireConsigneCoach(profile, targets, restant),
+        systemPrompt: construireConsigneCoach(profile, targets, restant, feuVert),
         maxTokens: 700
       });
       const avecReponse = [...avecQuestion, { role: "assistant", text: reponse }];
