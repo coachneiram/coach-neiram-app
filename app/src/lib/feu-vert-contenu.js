@@ -64,7 +64,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "angle 3/4 avant (45°), à 2-3 m, téléphone à hauteur de hanche, corps entier dans le cadre, pieds visibles.",
       "facilitee": "squat sur banc (tu t'assois brièvement sur un banc ou un box, puis tu te relèves), sans charge ou avec un haltère léger.",
-      "video": "https://youtube.com/shorts/NCDdI_ZzxXY"
+      "video": "https://youtube.com/shorts/Ng76OUo7hyQ"
     },
     {
       "id": "rdl",
@@ -115,7 +115,7 @@ export const CONTENU_FEU_VERT = {
       ],
       "filmer": "profil strict (90°), à 2-3 m, téléphone à hauteur de hanche, de la tête aux pieds.",
       "facilitee": "charnière de hanche avec un bâton (ou un manche de balai) posé le long du dos : 3 points de contact (tête, haut du dos, bas du dos) qui ne doivent pas se décoller. Puis haltères légers.",
-      "video": "https://youtube.com/shorts/OVYq-Gi0A28"
+      "video": "https://youtube.com/shorts/GxFmQ4J-X5o"
     },
     {
       "id": "rowing",
