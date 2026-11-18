@@ -267,6 +267,18 @@ describe("branchement", () => {
     assert.match(src, /lienWhatsappCoach\(/);
   });
 
+  test("Feu Vert : « Prévenir » ouvre la plateforme Coach Neiram, pas WhatsApp (18/11/2026)", async () => {
+    const src = readFileSync(new URL("../app/src/ecrans/Creneaux.jsx", import.meta.url), "utf8");
+    assert.match(src, /const feuVert = feuVertActif\(profile\)/);
+    assert.match(src, /feuVert\s*\?\s*URL_PLATEFORME\s*:\s*lienWhatsappCoach\(/);
+    assert.match(src, /feuVert \? " " \+ TEXTES_PREVENIR_FEU_VERT\.aide : null/);
+    assert.match(src, /feuVert \? TEXTES_PREVENIR_FEU_VERT\.bouton : "Prévenir mon coach"/);
+    const { TEXTES_PREVENIR_FEU_VERT } = await import("../app/src/lib/feu-vert.js");
+    assert.equal(TEXTES_PREVENIR_FEU_VERT.aide, "Écris à Marien en message privé sur la plateforme Coach Neiram.");
+    assert.equal(TEXTES_PREVENIR_FEU_VERT.bouton, "Prévenir Marien sur la plateforme");
+    for (const t of Object.values(TEXTES_PREVENIR_FEU_VERT)) assert.doesNotMatch(t, /whatsapp|wa\.me/i);
+  });
+
   test("le profil n'a plus de champ « lien de synchro », il informe le client", () => {
     const champs = readFileSync(new URL("../app/src/ecrans/ChampsProfil.jsx", import.meta.url), "utf8");
     assert.doesNotMatch(champs, /coachSyncUrl/);

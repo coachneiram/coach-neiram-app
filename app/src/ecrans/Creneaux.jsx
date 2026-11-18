@@ -32,6 +32,8 @@ import {
   tauxRespect
 } from "../lib/creneaux.js";
 import { lienWhatsappCoach } from "../lib/config.js";
+import { URL_PLATEFORME } from "../lib/plateforme.js";
+import { TEXTES_PREVENIR_FEU_VERT, feuVertActif } from "../lib/feu-vert.js";
 import { MISSED_REASONS } from "../lib/catalogues.js";
 import { envoyerEvenement } from "../lib/synchro-coach.js";
 import {
@@ -128,6 +130,7 @@ export function Creneaux({ profile, sessionsApi, raisons, onDefinirRaison }) {
   const [precision, setPrecision] = useState("");
 
   const creneaux = useMemo(() => normaliserCreneaux(profile), [profile]);
+  const feuVert = feuVertActif(profile);
   const semaine = useMemo(
     () => semaineCreneaux(creneaux, sessionsApi.items, cleSemaine, aujourdhui),
     [creneaux, sessionsApi.items, cleSemaine, aujourdhui]
@@ -371,7 +374,11 @@ export function Creneaux({ profile, sessionsApi, raisons, onDefinirRaison }) {
 
       {/* Le client peut toujours ecrire au coach sur WhatsApp, synchro ou
           non (demande du coach du 4 octobre 2026) : l'alerte automatique
-          previent, la conversation permet de trouver une solution ensemble. */}
+          previent, la conversation permet de trouver une solution ensemble.
+          Feu Vert (18/11/2026) : la carte reste visible si le membre avait
+          deja choisi le coaching en ligne avant la formule ; le bouton ouvre
+          alors la plateforme Coach Neiram (message prive a Marien), jamais
+          WhatsApp. */}
       {alerte && (
         <div
           style={{
@@ -385,23 +392,26 @@ export function Creneaux({ profile, sessionsApi, raisons, onDefinirRaison }) {
           <p style={{ fontSize: 13, color: COLORS.text, margin: "0 0 10px", lineHeight: 1.5 }}>
             {manques.length} créneaux manqués sur les 14 derniers jours. Prends 30 secondes pour le dire à ton
             coach : c'est là qu'on ajuste, pas quand tout va bien.
+            {feuVert ? " " + TEXTES_PREVENIR_FEU_VERT.aide : null}
           </p>
           <Btn
             icon={Send}
             style={{ width: "100%" }}
             onClick={() =>
               window.open(
-                lienWhatsappCoach(
-                  "Salut Marien, j'ai manqué " +
-                    manques.length +
-                    " séances ces deux dernières semaines. On en parle ?"
-                ),
+                feuVert
+                  ? URL_PLATEFORME
+                  : lienWhatsappCoach(
+                      "Salut Marien, j'ai manqué " +
+                        manques.length +
+                        " séances ces deux dernières semaines. On en parle ?"
+                    ),
                 "_blank",
                 "noopener"
               )
             }
           >
-            Prévenir mon coach
+            {feuVert ? TEXTES_PREVENIR_FEU_VERT.bouton : "Prévenir mon coach"}
           </Btn>
         </div>
       )}

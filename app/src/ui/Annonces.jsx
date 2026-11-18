@@ -226,9 +226,10 @@ export function BandeauInstallation({ plateforme, peutProposer, onInstaller, onM
 }
 
 /** Aide : les questions frequentes, par theme, ouvertes d'un toucher. */
-export function Aide({ open, onClose, objectifCalories }) {
-  // Les reponses qui citent un objectif prennent celui du client.
-  const aide = aidePersonnalisee({ objectifCalories });
+export function Aide({ open, onClose, objectifCalories, feuVert = false }) {
+  // Les reponses qui citent un objectif prennent celui du client ; en Feu
+  // Vert, « Un souci, une idee ? » renvoie vers la plateforme Coach Neiram.
+  const aide = aidePersonnalisee({ objectifCalories, feuVert });
   return (
     <Modal open={open} onClose={onClose} title="Aide">
       <div data-aide style={{ display: "flex", flexDirection: "column", gap: 16 }}>

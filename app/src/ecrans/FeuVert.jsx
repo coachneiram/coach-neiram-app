@@ -267,7 +267,8 @@ function FicheGeste({ geste, etat, date, semaine, onClose }) {
           <p data-video-chemin style={{ ...sTexte, fontSize: 13, margin: "8px 0 0" }}>{TEXTES_VIDEO.chemin}</p>
           <p data-video-legende style={{ ...sPetit, color: COLORS.textMuted }}>{TEXTES_VIDEO.legende(legendeVideo(geste, semaine))}</p>
           <p style={{ ...sPetit, color: COLORS.textMuted }}>{TEXTES_VIDEO.plafond}</p>
-          <p style={sPetit}>{TEXTES_VIDEO.format}</p>
+          <p data-video-format style={sPetit}>{TEXTES_VIDEO.format}</p>
+          <p data-video-taille style={sPetit}>{TEXTES_VIDEO.tropLourde}</p>
         </div>
       </div>
     </Modal>

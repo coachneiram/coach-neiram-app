@@ -373,6 +373,27 @@ describe("bandeau d'installation", async () => {
     assert.equal(bandeauInstallationVisible({ plateforme: "android", masqueJusqua: fin, aujourdhui: "2026-10-22" }), true);
   });
 
+  test("« Un souci, une idée ? » : plateforme Coach Neiram en Feu Vert, WhatsApp sinon (18/11/2026)", async () => {
+    const { AIDE, aidePersonnalisee, REPONSE_SOUCI_FEU_VERT } = await import("../app/src/lib/aide.js");
+    const souci = (aide) => aide.flatMap((s) => s.questions).find((q) => q.id === "souci");
+    const fv = souci(aidePersonnalisee({ feuVert: true }));
+    assert.equal(fv.question, "Un souci, une idée ?");
+    assert.deepEqual(fv.reponse, REPONSE_SOUCI_FEU_VERT);
+    assert.match(fv.reponse[0], /^Écris à Marien en message privé sur la plateforme Coach Neiram\./);
+    assert.doesNotMatch(fv.reponse.join(" "), /whatsapp/i);
+    // Avec un objectif calorique aussi : les deux personnalisations se cumulent.
+    const fvObjectif = aidePersonnalisee({ feuVert: true, objectifCalories: 1800 });
+    assert.deepEqual(souci(fvObjectif).reponse, REPONSE_SOUCI_FEU_VERT);
+    assert.match(fvObjectif.flatMap((s) => s.questions).find((q) => q.id === "ecart").reponse.join(" "), /1\s800 kcal/);
+    // Autres formules : inchangé.
+    for (const aide of [AIDE, aidePersonnalisee({}), aidePersonnalisee({ feuVert: false, objectifCalories: 1800 })]) {
+      assert.match(souci(aide).reponse[0], /^Écris directement à ton coach sur WhatsApp/);
+    }
+    assert.equal(aidePersonnalisee({ feuVert: false }), AIDE);
+    assert.match(lire("app/src/App.jsx"), /<Aide [^\n]*feuVert=\{feuVertActif\(profile\)\}/);
+    assert.match(lire("app/src/ui/Annonces.jsx"), /aidePersonnalisee\(\{ objectifCalories, feuVert \}\)/);
+  });
+
   test("l'aide et le bandeau sont branches", () => {
     const app = lire("app/src/App.jsx");
     assert.match(app, /<Aide open=\{aideOuverte\}/);
