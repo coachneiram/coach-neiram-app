@@ -279,7 +279,8 @@ export const AIDE = [
         question: "Qui voit mes données ?",
         reponse: [
           "Ton suivi est enregistré sur ton téléphone, nulle part ailleurs. Ton coach reçoit ce que tu lui envoies : ton bilan, et en coaching en ligne tes séances pointées, ton résumé de la semaine et les alertes de séances manquées.",
-          "Les fonctions IA (photo de repas, description, bilan IA) reçoivent ce que tu leur donnes, le temps de l'analyse.",
+          "Les fonctions IA (photo de repas, description, bilan IA, menu sur mesure) reçoivent ce que tu leur donnes, le temps de l'analyse.",
+          "Les photos des plats du Menu de la semaine viennent de la banque d'images Pexels : le serveur de ton coach envoie seulement quelques mots décrivant le plat (par exemple « chicken curry rice »), jamais ton nom ni tes données, et garde la photo en cache 30 jours.",
           "Si tu actives les rappels même appli fermée, le serveur de ton coach garde seulement l'heure et le texte de tes rappels des 7 prochains jours, sans ton nom. Décocher l'option les efface."
         ],
         libelles: []

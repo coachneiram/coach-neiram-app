@@ -94,5 +94,40 @@ export const TEXTES_MENU = {
       ...(placard.length ? [`Au placard : ${placard.join(", ")}`] : [])
     ].join("\n"),
   /** Libellé d'un article de la liste Courses (onglet Courses). */
-  articleCourses: (l) => `${l.nom} (${l.quantite})`
+  articleCourses: (l) => `${l.nom} (${l.quantite})`,
+
+  // Menu sur mesure (repris de l'app Neiram le 20/11/2026, tout inclus)
+  ouvrirSurMesure: "✨ Menu sur mesure (budget, goûts, temps)",
+  nouvellesRecettesSurMesure: "✨ Nouvelles recettes sur mesure",
+  titreSurMesure: "✨ Menu sur mesure",
+  introSurMesure: "Tes calories et tes protéines sont celles fixées avec ton coach, ton régime et tes allergies sont respectés. Dis-moi le reste :",
+  repasAPrevoir: "Repas à prévoir",
+  nombreRepas: (n) => `${n} repas sur la semaine`,
+  budgetSemaine: "Budget courses pour la semaine",
+  euro: "€",
+  styleCuisine: "Style de cuisine",
+  aEviter: "Ce que tu n'aimes pas",
+  aEviterExemple: "ex. tofu, épinards, olives",
+  tempsCuisine: "Temps pour cuisiner, par repas",
+  minutes: (t) => `${t} min`,
+  materiel: "Ton matériel",
+  enCoursSurMesure: "Je compose ton menu… (jusqu'à une minute)",
+  creerSurMesure: (n) => `Créer mes ${n} repas`,
+  noteSurMesure:
+    "Les recettes sont créées par l'IA puis vérifiées par l'app (allergies, régime, aliments refusés, temps). Le coût des courses est une estimation aux prix moyens en France.",
+  erreurPeuDeRecettes:
+    "L'IA n'a pas trouvé assez de recettes qui respectent toutes tes contraintes. Élargis un réglage (temps, matériel, aliments refusés) et réessaie.",
+  erreurReponseIncomplete: "La réponse de l'IA était incomplète. Réessaie dans un instant.",
+  horsMenu: (kcal) => `Hors menu : environ ${fmt(kcal)} kcal par jour à placer toi-même (repas non prévus dans ce menu).`,
+  pasPrevu: (kcal) => `Pas prévu dans ce menu : vise environ ${fmt(kcal)} kcal.`,
+  coursesEstimees: "🛒 Courses estimées : ",
+  pourUnBudget: (budget, n) => ` pour un budget de ${fmtEuros(budget)} (${n} repas)`,
+  auDessusBudget: "Au-dessus du budget : touche « Nouveau menu » pour rebattre les recettes, ou augmente le budget.",
+  estimationPrix: "Estimation aux prix moyens en France (marques distributeur), pas un prix garanti. Hors épices et placard.",
+  coutRepas: (euros) => ` · ≈ ${fmtEuros(euros)}`,
+  coutCourses: (total, budget) => ` Coût estimé : ${fmtEuros(total)} (budget ${fmtEuros(budget)}).`,
+  creditPhoto: (auteur) => `Photo : ${auteur} / Pexels (illustration)`
 };
+
+/** « 31,50 € » */
+export const fmtEuros = (n) => `${(Math.round(num0(n) * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;

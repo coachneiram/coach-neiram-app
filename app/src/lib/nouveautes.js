@@ -28,6 +28,15 @@ export const NOUVEAUTES_MAX = 5;
  */
 export const NOUVEAUTES = [
   {
+    id: "2026-11-20-menu-sur-mesure",
+    date: "2026-11-20",
+    titre: "Ton menu sur mesure, avec ton budget",
+    texte:
+      "Repas → Menu → ✨ Menu sur mesure : combien de repas, ton budget courses, ta cuisine, ce que tu refuses, ton temps et ton matériel. Tes repas arrivent en photo, avec les quantités et le coût estimé des courses.",
+    onglet: "repas",
+    bouton: "Créer mon menu"
+  },
+  {
     id: "2026-10-29-importer-programme",
     date: "2026-10-29",
     titre: "Importe ton programme",

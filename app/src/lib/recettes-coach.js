@@ -88,7 +88,7 @@ export const CONTIENT_RECETTE = [
 ];
 
 /** Familles exclues par chaque regime de recette. */
-const EXCLUES = {
+export const EXCLUES = {
   vegan: ["viande", "volaille", "porc", "poisson", "crustaces", "lactose", "oeufs", "miel"],
   vegetarien: ["viande", "volaille", "porc", "poisson", "crustaces"],
   "sans-porc": ["porc"]
@@ -101,13 +101,13 @@ const EXCLUES = {
  * qui n'en mange pas.
  */
 const mots = (motif) => new RegExp(`(?<!\\p{L})(?:${motif})(?!\\p{L})`, "iu");
-const MOTS_PORC = mots(
+export const MOTS_PORC = mots(
   "porc|jambon|lardons?|bacon|chorizo|saucisson|saucisses?|rillettes|andouilles?|andouillettes?|boudin|pancetta|coppa|speck|mortadelle|lard|saindoux|g[ée]latine"
 );
-const MOTS_CHAIR = mots(
+export const MOTS_CHAIR = mots(
   "poulet|dinde|b(?:œ|oe)uf|veau|agneau|canard|viande|merguez|thon|saumon|cabillaud|colin|sardines?|maquereau|crevettes?|poissons?|anchois|surimi"
 );
-const MOTS_ANIMAL = mots(
+export const MOTS_ANIMAL = mots(
   "(?:œ|oe)ufs?|miel|beurre(?! de (?:cacahu[eè]te|cajou|amande|noisette))|fromages?|feta|mozzarella|parmesan|ricotta|yaourts?|skyr|cr[èe]me(?! de coco)|whey|lactos[ée]rum|lait(?! (?:de |d'|d’)?(?:coco|soja|avoine|amande|riz|noisette|cajou))"
 );
 
@@ -265,7 +265,7 @@ export function versRecetteClient(r) {
     portions: n,
     ingredients: [
       {
-        name: `${r.nom} (recette du coach)`,
+        name: `${r.nom} (${r.surMesure ? "menu sur mesure" : "recette du coach"})`,
         grams: null,
         calories: Math.round(m.kcal * n),
         protein: Math.round(m.p * n),
