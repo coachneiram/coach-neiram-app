@@ -219,3 +219,16 @@ test("schéma : une seule table ajoutée, photos_recherches, sans donnée person
   await worker.scheduled({}, env, null);
   assert.equal(env.DB.sqlite.prepare("SELECT COUNT(*) AS n FROM photos_recherches").get().n, 0);
 });
+
+test("plafond par IP : une IPv6 compte pour son bloc /64 (changer d'adresse ne contourne rien)", async () => {
+  for (let i = 0; i < PHOTOS_PAR_IP_JOUR; i++) assert.equal((await get("/photo?q=rice%20" + lettres(i), `2001:db8:1:2::${(i + 1).toString(16)}`)).status, 200);
+  assert.equal((await (await get("/photo?q=rice%20zzzz", "2001:db8:1:2::ffff")).json()).error, "trop-de-requetes");
+  assert.equal((await get("/photo?q=rice%20zzzz", "2001:db8:9:9::1")).status, 200);
+});
+
+test("images relayées : plafond par IP et par jour, le Worker n'est pas un relais illimité", async () => {
+  const { IMAGES_PAR_IP_JOUR } = PHOTOS;
+  for (let i = 0; i < IMAGES_PAR_IP_JOUR; i++) await get("/photo/img/" + (i + 1) + ".jpeg", "7.7.7.7");
+  assert.equal((await get("/photo/img/999999.jpeg", "7.7.7.7")).status, 429);
+  assert.equal((await get("/photo/img/999999.jpeg", "8.8.8.8")).status, 200);
+});

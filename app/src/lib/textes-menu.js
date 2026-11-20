@@ -126,7 +126,10 @@ export const TEXTES_MENU = {
   estimationPrix: "Estimation aux prix moyens en France (marques distributeur), pas un prix garanti. Hors épices et placard.",
   coutRepas: (euros) => ` · ≈ ${fmtEuros(euros)}`,
   coutCourses: (total, budget) => ` Coût estimé : ${fmtEuros(total)} (budget ${fmtEuros(budget)}).`,
-  creditPhoto: (auteur) => `Photo : ${auteur} / Pexels (illustration)`
+  creditPhoto: (auteur) => `Photo : ${auteur} / Pexels (illustration)`,
+  profilChange: (n) =>
+    `Ton profil a changé depuis ce menu (régime, allergies ou contraintes) : ${n} repas ${n > 1 ? "ont été retirés" : "a été retiré"}. Touche « Nouveau menu » pour les remplacer.`,
+  recetteRetiree: (kcal) => `Recette retirée (ton profil a changé) : vise environ ${fmt(kcal)} kcal, ou touche « Nouveau menu ».`
 };
 
 /** « 31,50 € » */

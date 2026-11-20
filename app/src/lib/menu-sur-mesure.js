@@ -31,7 +31,7 @@ import { normaliserRequetePhoto } from "./photos-recettes.js";
 import { num } from "./dates.js";
 import { genererTexte } from "./ia.js";
 import { extraireObjetJson } from "./photo-aliment.js";
-import { genererPlanRepas, REPAS_DU_JOUR } from "./plan-repas.js";
+import { MOTS_ALCOOL, REPAS_DU_JOUR, VINAIGRES, genererPlanRepas, recettesDuMenu } from "./plan-repas.js";
 import { CONTIENT_RECETTE, EXCLUES, MOTS_ANIMAL, MOTS_CHAIR, MOTS_PORC, REVELE, recetteCompatible } from "./recettes-coach.js";
 import { CONTRAINTES_ALIM, exclusionsContraintes, resumeRegime } from "./regimes.js";
 import { libelleAllergene } from "./allergenes.js";
@@ -103,6 +103,62 @@ const racine = (mot) => mot.replace(/(s|x)$/, "");
 
 const echapper = (m) => m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/*
+ * Revue du 20/11/2026 (app coach) : les étiquettes de l'IA ne font jamais
+ * foi, et les motifs du catalogue (REVELE, écrits pour des recettes
+ * relues à la main) ne suffisent pas pour des recettes inventées. Ces
+ * compléments ne servent qu'aux recettes de l'IA : le catalogue du coach
+ * et sa vérification ne changent pas. Un faux positif écarte une recette
+ * en trop ; un faux négatif sert un allergène.
+ */
+const motif = (m) => new RegExp(`(?<!\\p{L})(?:${m})(?!\\p{L})`, "iu");
+const REVELE_IA = {
+  gluten: motif(
+    "spaghettis?|tagliatelles?|lasagnes?|penne|fusilli|farfalle|linguine|macaronis?|coquillettes|vermicelles?|raviolis?|gnocchis?|udon|ramen|soba|panko|naan|pitas?|baguette|crackers?|cro[uû]tons?|chapatis?|pizzas?|p[âa]te (?:feuillet[ée]e|bris[ée]e|sabl[ée]e|[àa] pizza)|bi[eè]res?|bulgur|fregola|orzo"
+  ),
+  lactose: motif(
+    "gruy[eè]re|cheddar|ch[eè]vre|burrata|b[ée]chamel|raclette|reblochon|camembert|brie|roquefort|gorgonzola|halloumi|paneer|ghee|labneh|tzatziki|quark|pecorino|grana padano|stracciatella|cancoillotte|crème fraîche"
+  ),
+  poisson: motif(
+    "dorade|daurade|lieu (?:noir|jaune)|merlan|tilapia|fl[ée]tan|hareng|haddock|[ée]glefin|perche|espadon|limande|lotte|rouget|sole|bar|worcestershire|fumet de poisson|sauce (?:de )?poisson|nuoc"
+  ),
+  crustaces: motif("fruits de mer|langoustes?|tourteaux?|araign[ée]es? de mer|krill"),
+  mollusques: motif("fruits de mer|p[ée]toncles?|ormeaux?|sauce (?:d'|d’)?hu[iî]tre"),
+  soja: motif("teriyaki|hoisin|natto|shoyu|sauce soja"),
+  oeufs: motif("omelettes?|meringues?|a[iï]oli|carbonara"),
+  "fruits-a-coque": motif("pesto|pralin[ée]?s?|nougats?|frangipane|massepain|gianduja"),
+  arachides: motif("satay|sat[ée]"),
+  viande: motif(
+    "steaks?|steak hach[ée]|viande hach[ée]e|lapin|gibier|chevreuil|sanglier|cerf|gigot|magret|foie gras|kefta|escalopes?|bresaola|pastrami|bouillon de b(?:œ|oe)uf|fond de veau|carpaccio|rosbif|entrec[ôo]te|bavette"
+  ),
+  volaille: motif("cailles?|faisans?|oies?|pigeons?|poules?|chapons?|bouillon de (?:poulet|volaille)")
+};
+/** Chair animale, pour relire « végétarien » et « vegan » sur une recette de l'IA. */
+const CHAIR_IA = motif("lapin|gibier|chevreuil|sanglier|cerf|steaks?|gigot|magret|foie gras|kefta|escalopes?|cailles?|faisans?|oies?|pigeons?|bouillon de (?:poulet|volaille|b(?:œ|oe)uf)|fond de veau");
+/** Les mollusques ne sont pas végétariens : ajoutés aux exclusions, pour l'IA seulement. */
+const EXCLUES_IA = {
+  vegan: [...EXCLUES.vegan, "mollusques"],
+  vegetarien: [...EXCLUES.vegetarien, "mollusques"],
+  "sans-porc": [...EXCLUES["sans-porc"]]
+};
+
+/**
+ * Tout le texte d'une recette de l'IA : nom, ingrédients, et aussi
+ * description et étapes (« parsemer de cacahuètes » n'est pas toujours un
+ * ingrédient). « sans gluten », « sans lait » : le mot qui suit « sans »
+ * est retiré des phrases (jamais des ingrédients), sinon une recette qui
+ * précise ce qu'elle n'a pas serait écartée pour cela.
+ */
+function textesRecette(recette) {
+  const sansNegation = (t) => String(t || "").replace(/(?<!\p{L})sans\s+\p{L}+(?:\s+ni\s+\p{L}+)*/giu, " ");
+  return [
+    recette.nom,
+    ...(recette.ingredients || []).map((i) => i.nom),
+    sansNegation(recette.description),
+    ...(recette.etapes || []).map(sansNegation)
+  ].map((t) => String(t || ""));
+}
+
 /**
  * La recette contient-elle un aliment refusé (nom, ingrédients) ? Mot
  * entier, pluriel accepté : « pois » n'écarte ni « poivre » ni « poisson »,
@@ -110,15 +166,12 @@ const echapper = (m) => m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  */
 export function contientMotRefuse(recette, mots) {
   if (!mots.length) return false;
-  const texte = normaliser([recette.nom, ...(recette.ingredients || []).map((i) => i.nom)].join(" | "));
+  const texte = normaliser(textesRecette(recette).join(" | "));
   return mots.some((m) => new RegExp(`(?<![a-z0-9])${echapper(racine(m))}(?:s|x)?(?![a-z0-9])`).test(texte));
 }
 
-/** Alcool en cuisine (halal, sans alcool) : relu dans les ingrédients. */
-const MOTS_ALCOOL = new RegExp(
-  "(?<!\\p{L})(?:vins?|bi[eè]res?|rhum|alcool|mirin|sak[ée]|cognac|calvados|porto|cidre|kirsch|marsala|liqueurs?|whisky|vodka|brandy|armagnac|mad[eè]re|amaretto|grand marnier|cointreau|gin|pastis|champagne)(?!\\p{L})",
-  "iu"
-);
+/** Alcool en cuisine (halal, sans alcool) : la liste de plan-repas.js, vinaigres mis à part. */
+const contientAlcool = (texte) => MOTS_ALCOOL.test(String(texte).replace(VINAIGRES, " "));
 
 /**
  * Relit une recette de l'IA sans se fier à ses étiquettes : complète
@@ -126,14 +179,16 @@ const MOTS_ALCOOL = new RegExp(
  * catalogue) et retire les régimes que les ingrédients contredisent.
  */
 export function corrigerEtiquettes(recette) {
-  const textes = [recette.nom, ...(recette.ingredients || []).map((i) => i.nom)].map(String);
+  const textes = textesRecette(recette);
   const contient = new Set((recette.contient || []).filter((c) => CONTIENT_RECETTE.includes(c)));
-  for (const [famille, motif] of Object.entries(REVELE)) if (textes.some((t) => motif.test(t))) contient.add(famille);
+  for (const [famille, m] of Object.entries(REVELE)) if (textes.some((t) => m.test(t))) contient.add(famille);
+  for (const [famille, m] of Object.entries(REVELE_IA)) if (textes.some((t) => m.test(t))) contient.add(famille);
   const texte = textes.join(" · ");
+  const chair = (t) => MOTS_CHAIR.test(t) || CHAIR_IA.test(t) || MOTS_PORC.test(t);
   const valide = (g) => {
-    if ((EXCLUES[g] || []).some((x) => contient.has(x))) return false;
-    if (g === "vegan") return !MOTS_ANIMAL.test(texte) && !MOTS_CHAIR.test(texte) && !MOTS_PORC.test(texte);
-    if (g === "vegetarien") return !MOTS_CHAIR.test(texte) && !MOTS_PORC.test(texte);
+    if ((EXCLUES_IA[g] || []).some((x) => contient.has(x))) return false;
+    if (g === "vegan") return !MOTS_ANIMAL.test(texte) && !chair(texte);
+    if (g === "vegetarien") return !chair(texte);
     if (g === "sans-porc") return !MOTS_PORC.test(texte);
     return false;
   };
@@ -145,8 +200,8 @@ export function refusRegime(recette, profil) {
   if (!recetteCompatible(recette, profil)) return "régime ou allergies";
   const exclues = exclusionsContraintes(profil);
   if (exclues.some((x) => (recette.contient || []).includes(x))) return "régime ou allergies";
-  const texte = [recette.nom, ...(recette.ingredients || []).map((i) => i.nom)].join(" · ");
-  if (exclues.includes("alcool") && MOTS_ALCOOL.test(texte)) return "régime ou allergies";
+  const texte = textesRecette(recette).join(" · ");
+  if (exclues.includes("alcool") && contientAlcool(texte)) return "régime ou allergies";
   if (exclues.includes("porc") && MOTS_PORC.test(texte)) return "régime ou allergies";
   return null;
 }
@@ -379,4 +434,49 @@ export async function genererMenuSurMesure({ profil, cibles, prefs: brutes, debu
     throw e;
   }
   return { ...construireMenuSurMesure({ recettes, profil, cibles, prefs, debut, graine, restes }), ecartees };
+}
+
+/**
+ * Un menu gardé sur le téléphone, relu avec le profil ACTUEL (revue du
+ * 20/11/2026) : si le client a ajouté une allergie, est passé végétarien
+ * ou halal depuis, les repas devenus interdits sont retirés de l'écran, de
+ * la liste de courses et des restes, sans attendre « Nouveau menu ».
+ * Menu sur mesure : ses recettes relues (corrigerEtiquettes, refusRegime) ;
+ * menu du catalogue : les recettes que recettesDuMenu sert encore.
+ * Rend { plan, retires } ; le plan d'origine est rendu tel quel si rien
+ * n'est retiré.
+ */
+export function retirerInterdits(plan, { profil, catalogue = [] } = {}) {
+  if (!plan || !Array.isArray(plan.jours)) return { plan, retires: 0 };
+  const surMesure = Array.isArray(plan.recettes);
+  const permises = surMesure
+    ? plan.recettes.map(corrigerEtiquettes).filter((r) => !refusRegime(r, profil))
+    : recettesDuMenu(catalogue, profil);
+  const ids = new Set(permises.map((r) => r.id));
+  let retires = 0;
+  const kcalJour = num(plan.cibles && plan.cibles.calories);
+  const jours = plan.jours.map((j) => {
+    let change = false;
+    const repas = j.repas.map((x) => {
+      if (!x.recetteId || ids.has(x.recetteId)) return x;
+      change = true;
+      retires += 1;
+      const def = REPAS_DU_JOUR.find((t) => t.id === x.typeRepas);
+      return { typeRepas: x.typeRepas, recetteId: null, kcalVisees: Math.round(kcalJour * (def ? def.part : 0)), retire: true };
+    });
+    if (!change) return j;
+    const total = repas.reduce((t, x) => (x.recetteId ? { kcal: t.kcal + x.kcal, p: t.p + x.p, c: t.c + x.c, f: t.f + x.f } : t), { kcal: 0, p: 0, c: 0, f: 0 });
+    return { ...j, repas, total };
+  });
+  if (!retires) return { plan, retires: 0 };
+  const suivant = { ...plan, jours };
+  if (surMesure) {
+    suivant.recettes = permises;
+    if (plan.surMesure) {
+      const cout = coutPlan(suivant, permises);
+      const budget = num(plan.surMesure.budget);
+      suivant.cout = { ...cout, budget, depasse: cout.total > budget };
+    }
+  }
+  return { plan: suivant, retires };
 }

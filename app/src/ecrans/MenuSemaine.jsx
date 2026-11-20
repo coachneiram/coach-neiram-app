@@ -50,7 +50,8 @@ import {
   coutPlan,
   genererMenuSurMesure,
   nombreRepas,
-  preferencesValides
+  preferencesValides,
+  retirerInterdits
 } from "../lib/menu-sur-mesure.js";
 import { adresseImage, chercherPhoto, photoConnue } from "../lib/photos-recettes.js";
 import { JOURS_COURTS, TEXTES_MENU as T, fmtEuros } from "../lib/textes-menu.js";
@@ -508,7 +509,11 @@ function FicheRecette({ recette, parts, repas }) {
 
 export function MenuSemaine({ profile, targets, catalogue = RECETTES_COACH }) {
   const aujourdhui = todayISO();
-  const [plan, setPlan] = useState(() => charger(CLE_PLAN_REPAS, null));
+  const [planGarde, setPlan] = useState(() => charger(CLE_PLAN_REPAS, null));
+  // Le menu gardé est toujours relu avec le profil actuel : un repas
+  // devenu interdit (allergie, régime, halal…) n'est jamais affiché.
+  const relu = useMemo(() => retirerInterdits(planGarde, { profil: profile, catalogue }), [planGarde, profile, catalogue]);
+  const plan = relu.plan;
   const [jour, setJour] = useState(() => {
     const p = charger(CLE_PLAN_REPAS, null);
     const k = p && p.jours ? p.jours.findIndex((j) => j.date === aujourdhui) : -1;
@@ -550,7 +555,7 @@ export function MenuSemaine({ profile, targets, catalogue = RECETTES_COACH }) {
     const suivant = { ...changerRepas(plan, { catalogue: recettesDuPlan, profil: profile, jour, typeRepas }), restes };
     if (suivant.surMesure) {
       const cout = coutPlan(suivant, suivant.recettes);
-      suivant.cout = { ...suivant.cout, ...cout, depasse: cout.total > Number(suivant.surMesure.budget) };
+      suivant.cout = { ...suivant.cout, ...cout, budget: Number(suivant.surMesure.budget), depasse: cout.total > Number(suivant.surMesure.budget) };
     }
     garder(suivant);
   };
@@ -673,6 +678,11 @@ export function MenuSemaine({ profile, targets, catalogue = RECETTES_COACH }) {
               <div style={notePrix}>{T.estimationPrix}</div>
             </div>
           )}
+          {relu.retires > 0 && (
+            <p data-repas-retires style={texteOr}>
+              {T.profilChange(relu.retires)}
+            </p>
+          )}
           {termine && <p style={texteOr}>{T.termine}</p>}
           {!termine && ciblesChangees(plan, targets) && (
             <p data-cibles-changees style={texteOr}>
@@ -722,7 +732,7 @@ export function MenuSemaine({ profile, targets, catalogue = RECETTES_COACH }) {
                     </>
                   ) : (
                     <div data-repas-libre style={repasLibre}>
-                      {x.horsMenu ? T.pasPrevu(x.kcalVisees) : T.repasLibre(x.kcalVisees)}
+                      {x.horsMenu ? T.pasPrevu(x.kcalVisees) : x.retire ? T.recetteRetiree(x.kcalVisees) : T.repasLibre(x.kcalVisees)}
                     </div>
                   )}
                 </div>

@@ -112,6 +112,8 @@ const IA_IMAGE_MAX = 6 * 1024 * 1024;  // une image, en base64
 const IA_TYPES_IMAGE = ["image/jpeg", "image/png", "image/webp"];
 const IA_JETONS_SORTIE_MAX = 4096;
 const IA_DELAI_MS = 60000;
+/** Le menu sur mesure ecrit jusqu'a 14 recettes : l'app attend 120 s, le Worker 110 s. */
+const IA_DELAI_PAR_FONCTION = { planrepas: 110000 };
 
 /**
  * Fonctions nommees par l'application (champ facultatif `fonction`).
@@ -645,7 +647,7 @@ async function relaiIa(request, env, cors, ip) {
   if (v.fonction === "planrepas" && db) {
     const jour = jourUtc(maintenant);
     const qui = client ? client.id : (await hachage(ip)).slice(0, 16);
-    const raison = await depasse(db, [{ cle: `ia:planrepas:${qui}:${jour}`, limite: PLAFONDS.planRepasParJour, dureeMs: 2 * 86400000, raison: "quota-client" }], maintenant);
+    const raison = await depasse(db, [{ cle: `ia:planrepas:${qui}:${jour}`, limite: PLAFONDS.planRepasParJour, dureeMs: 2 * 86400000, raison: "quota-planrepas" }], maintenant);
     if (raison) return refus(route, 429, raison, cors, client);
   }
 
@@ -656,7 +658,7 @@ async function relaiIa(request, env, cors, ip) {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
       body: JSON.stringify(v.charge),
-      ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(IA_DELAI_MS) } : {})
+      ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout((v.fonction && IA_DELAI_PAR_FONCTION[v.fonction]) || IA_DELAI_MS) } : {})
     });
   } catch (e) {
     return refus(route, 502, "amont-injoignable", cors, client);
@@ -3070,6 +3072,8 @@ async function transmettreAuCrm(env, reponse) {
  */
 const PHOTOS_PAR_JOUR = 800;
 const PHOTOS_PAR_IP_JOUR = 60;
+/** Images relayees par adresse IP et par jour : le Worker n'est pas un relais Pexels illimite. */
+const IMAGES_PAR_IP_JOUR = 400;
 const PHOTOS_TYPES_IMAGE = ["image/jpeg", "image/png", "image/webp"];
 const PHOTOS_DUREE_CACHE_S = 30 * 86400;
 const PHOTOS_FORMAT_IMAGE = /^\/photo\/img\/(\d{1,12})\.(jpeg|jpg|png)$/;
@@ -3098,7 +3102,9 @@ function adresseImagePexels(id, ext) {
 /** Compte une recherche dans les plafonds du jour ; rend la raison du refus, ou null. */
 async function plafondPhotos(db, request, maintenant) {
   if (!db) return "service-sature";
-  const ip = (await hachage("photo:" + (request.headers.get("CF-Connecting-IP") || "inconnue"))).slice(0, 32);
+  // Une IPv6 regroupee par /64 : changer d'adresse dans son bloc ne
+  // contourne pas le plafond (meme regle que les autres compteurs).
+  const ip = (await hachage("photo:" + ipPourCompteur(request.headers.get("CF-Connecting-IP") || "inconnue"))).slice(0, 32);
   const jour = jourUtc(maintenant);
   return depasse(
     db,
@@ -3137,6 +3143,17 @@ async function routePhotos(request, url, env, cors, maintenant) {
 
   let resultat;
   if (img) {
+    let dbImages = null;
+    try {
+      dbImages = await base(env);
+    } catch (e) {
+      dbImages = null;
+    }
+    if (dbImages) {
+      const ip = (await hachage("img:" + ipPourCompteur(request.headers.get("CF-Connecting-IP") || "inconnue"))).slice(0, 32);
+      const raison = await depasse(dbImages, [{ cle: `photo:img:${ip}:${jourUtc(maintenant)}`, limite: IMAGES_PAR_IP_JOUR, dureeMs: 2 * 86400000, raison: "trop-de-requetes" }], maintenant);
+      if (raison) return refus(route, 429, raison, cors);
+    }
     let amont;
     try {
       amont = await fetch(adresseImagePexels(img[1], ext));
@@ -3214,7 +3231,7 @@ async function routePhotos(request, url, env, cors, maintenant) {
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
   Object.assign(globalThis.__COACH_TEST__, { validerReservation, parcoursIndicatif, chargeCrm, ipPourCompteur, reponseScriptOk, DELAI_SCRIPT_MS, PLAFONDS, RESERVATION_FV: { ROUTE_RESERVATION_FV, RESA_CHOIX, RESA_PAR_IP_PAR_HEURE, RESA_PAR_JOUR, RESA_ALERTE_JOUR, RESA_DUREE_MIN_MS } });
   Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
-  Object.assign(globalThis.__COACH_TEST__, { normaliserRequetePhoto, adresseImagePexels, PHOTOS: { PHOTOS_PAR_JOUR, PHOTOS_PAR_IP_JOUR }, PLAN_REPAS_PAR_JOUR: PLAFONDS.planRepasParJour, IA_FONCTIONS, IA_JETONS_SORTIE_PAR_FONCTION });
+  Object.assign(globalThis.__COACH_TEST__, { normaliserRequetePhoto, adresseImagePexels, PHOTOS: { PHOTOS_PAR_JOUR, PHOTOS_PAR_IP_JOUR, IMAGES_PAR_IP_JOUR }, PLAN_REPAS_PAR_JOUR: PLAFONDS.planRepasParJour, IA_FONCTIONS, IA_JETONS_SORTIE_PAR_FONCTION });
   Object.assign(globalThis.__COACH_TEST__, { alerterInactivite, joursInactivite, niveauInactivite, dateParis, INACTIVITE: { INACTIVITE_ATTENTION_JOURS, INACTIVITE_CRITIQUE_JOURS, PRESENCE_PAR_JOUR: PLAFONDS.presenceParJour } });
   Object.assign(globalThis.__COACH_TEST__, {
     nettoyerStatsCommunaute,

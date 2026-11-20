@@ -57,8 +57,15 @@ const PORTIONS_POUR_RESTES = 4;
  * sans alcool). Le vinaigre n'en est pas (la fermentation est achevée) :
  * « vinaigre de vin » est retiré avant de chercher.
  */
-const VINAIGRES = /vinaigre(?: de (?:vin|cidre|xérès))?/giu;
-const MOTS_ALCOOL = /(?<!\p{L})(?:vins?|bières?|rhum|cognac|calvados|kirsch|porto|madère|liqueurs?|alcool|whisky|vodka|cidre|saké|marsala|amaretto)(?!\p{L})/iu;
+export const VINAIGRES = /vinaigre(?: de (?:vin|cidre|xérès))?/giu;
+/**
+ * Liste unique, partagée avec le menu sur mesure (lib/menu-sur-mesure.js) :
+ * celle de l'app Neiram (mirin, saké, cognac…) réunie à celle-ci.
+ */
+export const MOTS_ALCOOL = new RegExp(
+  "(?<!\\p{L})(?:vins?|bi[eè]res?|rhum|alcool|mirin|sak[ée]|cognac|calvados|porto|cidre|kirsch|marsala|liqueurs?|whisky|vodka|brandy|armagnac|mad[eè]re|amaretto|grand marnier|cointreau|gin|pastis|champagne)(?!\\p{L})",
+  "iu"
+);
 
 /** Familles de `contient` écartées par une contrainte du profil. */
 const FAMILLES_CONTRAINTES = ["porc", "crustaces", "mollusques"];

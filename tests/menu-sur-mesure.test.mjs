@@ -131,6 +131,7 @@ describe("consigne envoyée à l'IA", () => {
       const statuts = [];
       for (let i = 0; i < 4; i++) statuts.push((await appel({ fonction: "planrepas" })).status);
       assert.deepEqual(statuts, [200, 200, 200, 429]);
+      assert.equal((await (await appel({ fonction: "planrepas" })).json()).error, "quota-planrepas", "un code à part, pas « toute ton IA du jour »");
       assert.equal((await appel({})).status, 200, "le plafond « planrepas » ne bloque pas les autres usages IA");
     } finally {
       globalThis.fetch = fetchOrigine;
@@ -268,5 +269,120 @@ describe("étiquettes de l'IA relues d'après les ingrédients", () => {
     const ids = new Set(menu.jours.flatMap((j) => j.repas.map((x) => x.recetteId)).filter(Boolean));
     assert.ok(![...ids].some((id) => menu.recettes.find((r) => r.id === id).nom.includes("lardons")));
     assert.equal(menu.recettes.length, 1);
+  });
+});
+
+describe("revue du 20/11/2026 : ce que les motifs du catalogue ne voyaient pas", () => {
+  // Étapes neutres : les étapes sont désormais relues elles aussi.
+  const avec = (nom, ingredients, extra = {}) => recette(nom, { ingredients: ingredients.map((n) => ({ nom: n, quantite: "100 g" })), etapes: ["Cuire.", "Servir."], contient: [], regimes: [], ...extra });
+  const garde = (profilTest, r) => lireRecettesIa(JSON.stringify({ recettes: [r] }), { profil: profilTest, prefs }).recettes.length === 1;
+  const vegetarien = { goal: "prise", dietType: "vegetarien" };
+  const vegan = { goal: "prise", dietType: "vegetalien" };
+
+  test("végétarien et vegan annoncés à tort : moules, calamars, steak haché, lapin écartés", () => {
+    assert.equal(garde(vegetarien, avec("Pâtes aux moules", ["Pâtes", "Moules"], { regimes: ["vegetarien", "sans-porc"] })), false);
+    assert.equal(garde(vegan, avec("Wok", ["Riz", "Calamars"], { regimes: ["vegan", "vegetarien", "sans-porc"] })), false);
+    assert.equal(garde(vegetarien, avec("Burger", ["Pain", "Steak haché"], { regimes: ["vegetarien"] })), false);
+    assert.equal(garde(vegetarien, avec("Civet", ["Lapin", "Carottes"], { regimes: ["vegetarien"] })), false);
+    assert.equal(garde(vegetarien, avec("Curry", ["Pois chiches", "Riz"], { regimes: ["vegetarien", "sans-porc"] })), true);
+  });
+
+  test("allergènes absents de l'étiquette et des motifs du catalogue", () => {
+    const cas = [
+      ["gluten", "Spaghetti"],
+      ["gluten", "Naan"],
+      ["gluten", "Panko"],
+      ["lactose", "Cheddar"],
+      ["lactose", "Béchamel"],
+      ["lactose", "Gruyère râpé"],
+      ["poisson", "Dorade"],
+      ["poisson", "Sauce Worcestershire"],
+      ["soja", "Sauce teriyaki"],
+      ["oeufs", "Omelette"],
+      ["fruits-a-coque", "Pesto"],
+      ["crustaces", "Fruits de mer surgelés"],
+      ["mollusques", "Fruits de mer surgelés"]
+    ];
+    for (const [allergie, ing] of cas) assert.equal(garde({ goal: "prise", allergies: [allergie] }, avec("Plat", ["Riz", ing])), false, `${ing} pour ${allergie}`);
+    assert.equal(garde({ goal: "prise", contraintesAlim: ["casher"] }, avec("Plat", ["Riz", "Fruits de mer surgelés"])), false, "casher");
+  });
+
+  test("étapes et description relues : cacahuètes ajoutées à la fin, aliment refusé cité en garniture", () => {
+    const r = avec("Nouilles sautées", ["Nouilles de riz", "Carottes"], { etapes: ["Cuire les nouilles.", "Parsemer de cacahuètes concassées."] });
+    assert.equal(garde({ goal: "prise", allergies: ["arachides"] }, r), false);
+    const coriandre = avec("Riz sauté", ["Riz", "Poulet"], { etapes: ["Cuire.", "Garnir de coriandre."] });
+    assert.equal(lireRecettesIa(JSON.stringify({ recettes: [coriandre] }), { profil: { goal: "prise" }, prefs: { ...prefs, aEviter: "coriandre" } }).recettes.length, 0);
+    const sans = avec("Riz sauté", ["Riz", "Poulet"], { description: "Sans lait ni crème, sans gluten.", etapes: ["Cuire.", "Servir sans attendre."] });
+    assert.equal(garde({ goal: "prise", allergies: ["lactose", "gluten"] }, sans), true, "« sans lait » n'écarte pas la recette");
+  });
+
+  test("halal : vinaigre de vin accepté (comme le catalogue), mirin et champagne refusés", () => {
+    const halal = { goal: "prise", contraintesAlim: ["halal"] };
+    assert.equal(garde(halal, avec("Salade", ["Riz", "Vinaigre de vin"])), true);
+    assert.equal(garde(halal, avec("Plat", ["Riz", "Champagne"])), false);
+  });
+});
+
+describe("menu gardé, profil modifié depuis (revue du 20/11/2026)", () => {
+  test("menu sur mesure : les repas devenus interdits disparaissent de l'écran, des restes et des courses", async () => {
+    const { retirerInterdits } = await import("../app/src/lib/menu-sur-mesure.js");
+    const rs = lireRecettesIa(
+      JSON.stringify({ recettes: [recette("Poulet mirin", { ingredients: [{ nom: "Poulet", quantite: "500 g" }, { nom: "Mirin", quantite: "30 ml" }, { nom: "Riz", quantite: "300 g" }] }), recette("Bœuf brocolis", { categorie: "dejeuner", contient: [], ingredients: [{ nom: "Bœuf", quantite: "500 g" }, { nom: "Riz", quantite: "300 g" }] })] }),
+      { profil: { goal: "prise" }, prefs }
+    ).recettes;
+    const menu = construireMenuSurMesure({ recettes: rs, profil: { goal: "prise" }, cibles, prefs, debut: "2026-11-23", graine: 2 });
+    assert.equal(retirerInterdits(menu, { profil: { goal: "prise" } }).retires, 0);
+    const { plan, retires } = retirerInterdits(menu, { profil: { goal: "prise", contraintesAlim: ["halal"] } });
+    assert.ok(retires > 0);
+    assert.ok(!plan.jours.some((j) => j.repas.some((x) => x.nom === "Poulet mirin")));
+    assert.ok(plan.jours.some((j) => j.repas.some((x) => x.retire)));
+    assert.ok(!plan.recettes.some((r) => r.nom === "Poulet mirin"));
+    assert.ok(!listeCoursesPlan(plan, plan.recettes).some((l) => /mirin/i.test(l.nom)));
+    assert.ok(plan.cout.total < menu.cout.total && plan.cout.budget === 30);
+  });
+
+  test("menu du catalogue : une allergie ajoutée retire les recettes qui la contiennent", async () => {
+    const { retirerInterdits } = await import("../app/src/lib/menu-sur-mesure.js");
+    const { RECETTES_COACH } = await import("../app/src/lib/recettes-coach-catalogue.js");
+    const { genererPlanRepas } = await import("../app/src/lib/plan-repas.js");
+    const plan = genererPlanRepas({ catalogue: RECETTES_COACH, profil: { goal: "maintien" }, cibles, debut: "2026-11-23", graine: 4 });
+    const parId = new Map(RECETTES_COACH.map((r) => [r.id, r]));
+    const { plan: relu, retires } = retirerInterdits(plan, { profil: { goal: "maintien", allergies: ["gluten"] }, catalogue: RECETTES_COACH });
+    const avecGluten = plan.jours.flatMap((j) => j.repas).filter((x) => x.recetteId && parId.get(x.recetteId).contient.includes("gluten")).length;
+    assert.equal(retires, avecGluten);
+    assert.ok(!relu.jours.some((j) => j.repas.some((x) => x.recetteId && parId.get(x.recetteId).contient.includes("gluten"))));
+  });
+
+  test("catalogue halal : le mirin et le champagne sont aussi reconnus (liste d'alcools commune)", async () => {
+    const { filtrerContraintes } = await import("../app/src/lib/plan-repas.js");
+    const r = (nom, ing) => ({ id: nom, nom, contient: [], ingredients: [{ nom: ing, quantite: "20 ml" }] });
+    const gardees = filtrerContraintes([r("a", "Mirin"), r("b", "Champagne"), r("c", "Vinaigre de vin"), r("d", "Gingembre")], { contraintesAlim: ["halal"] }).map((x) => x.id);
+    assert.deepEqual(gardees, ["c", "d"]);
+  });
+});
+
+describe("app : appel de l'IA pour le menu sur mesure", () => {
+  test("un seul modèle, aucun repli : un appui ne consomme qu'un menu ; codes traduits", async () => {
+    const { creerLocalStorage } = await import("./outils-neiram.mjs");
+    globalThis.localStorage = creerLocalStorage({ acces_neiram: JSON.stringify({ jeton: "j".repeat(40), libelle: "Test", activeLe: "2026-11-20T00:00:00Z" }) });
+    const { genererTexte, messageErreur } = await import("../app/src/lib/ia.js");
+    const fetchOrigine = globalThis.fetch;
+    let appels = 0;
+    try {
+      globalThis.fetch = async () => {
+        appels += 1;
+        return new Response(JSON.stringify({ ok: false, error: "amont-injoignable" }), { status: 502 });
+      };
+      await assert.rejects(genererTexte({ fonction: "planrepas", prompt: "x", maxTokens: 8192 }));
+      assert.equal(appels, 1);
+      globalThis.fetch = async () => new Response(JSON.stringify({ ok: false, error: "quota-planrepas" }), { status: 429 });
+      const e1 = await genererTexte({ fonction: "planrepas", prompt: "x" }).catch((e) => e);
+      assert.match(messageErreur(e1), /3 menus sur mesure du jour/);
+      globalThis.fetch = async () => new Response(JSON.stringify({ ok: false, error: "fonction-invalide" }), { status: 400 });
+      const e2 = await genererTexte({ fonction: "planrepas", prompt: "x" }).catch((e) => e);
+      assert.match(messageErreur(e2), /pas encore ouvert sur le serveur de ton coach/);
+    } finally {
+      globalThis.fetch = fetchOrigine;
+    }
   });
 });
