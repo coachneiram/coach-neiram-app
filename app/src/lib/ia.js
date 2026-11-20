@@ -29,6 +29,9 @@ export const MSG_ERREUR = {
   // Acces par jeton client (17 octobre 2026, audit P0-3).
   acces: "L'assistant IA n'est pas activé sur ce téléphone : entre le code d'accès donné par ton coach dans les Réglages.",
   "quota-client": "Tu as utilisé toute ton IA du jour. Elle revient demain.",
+  // Menu sur mesure (20 novembre 2026) : son plafond est a part.
+  "quota-menu": "Tu as créé tes 3 menus sur mesure du jour. Tu peux en refaire demain ; « Nouveau menu » rebat déjà ces recettes.",
+  "menu-pas-pret": "Le menu sur mesure n'est pas encore ouvert sur le serveur de ton coach. Réessaie plus tard ou préviens-le.",
   frequence: "Beaucoup de demandes d'affilée : patiente une minute, puis réessaie.",
   // Accord refuse a l'ecran d'accord : rien n'a ete envoye.
   consentement: "Rien n'a été envoyé : cette fonction a besoin de ton accord pour transmettre ces informations au service d'IA."
@@ -93,6 +96,9 @@ async function appelerModele({ fonction, model, systemPrompt, messages, maxToken
   if (reponse.status === 503 && code === "acces-non-configure") throw new Error("indisponible");
   if (reponse.status === 503 && code === "fournisseur-refus") throw new Error("bad-key");
   if (reponse.status === 429 && code === "quota-client") throw new Error("quota-client");
+  if (reponse.status === 429 && code === "quota-planrepas") throw new Error("quota-menu");
+  // Worker pas encore mis a jour : il ne connait pas la fonction.
+  if (reponse.status === 400 && code === "fonction-invalide" && fonction === "planrepas") throw new Error("menu-pas-pret");
   if (reponse.status === 429 && code === "trop-de-requetes") throw new Error("frequence");
 
   // Statuts conserves a l'identique : l'interface s'appuie dessus.
@@ -129,8 +135,9 @@ async function appelerModele({ fonction, model, systemPrompt, messages, maxToken
 /**
  * Genere du texte, en essayant les modeles dans l'ordre.
  *
- * `fonction` (facultatif) nomme l'usage aupres du proxy : seul « programme »
- * existe, il autorise un PDF et une reponse plus longue (worker/).
+ * `fonction` (facultatif) nomme l'usage aupres du proxy : « programme »
+ * autorise un PDF et une reponse plus longue, « planrepas » (menu sur
+ * mesure) une reponse plus longue et un seul modele (worker/).
  *
  * Une cle invalide interrompt tout de suite : reessayer sur un autre modele
  * ne ferait que repeter la meme erreur. Un quota atteint laisse une seconde
@@ -142,15 +149,19 @@ export async function genererTexte({ fonction, prompt, images, history, systemPr
   const messages = construireMessages({ prompt, images, history });
   let derniereErreur = null;
 
-  for (const model of GEMINI_MODELS) {
+  // Menu sur mesure : un seul modele, sans repli. Chaque essai compte dans
+  // les 3 menus du jour : un repli sur deux autres modeles pouvait les
+  // consommer tous en un seul appui.
+  const modeles = fonction === "planrepas" ? GEMINI_MODELS.slice(0, 1) : GEMINI_MODELS;
+  for (const model of modeles) {
     try {
       return await appelerModele({ fonction, model, systemPrompt, messages, maxTokens, delaiMs });
     } catch (e) {
       derniereErreur = e;
       // Un delai depasse ne se rattrape pas en essayant le modele suivant :
       // l'attente s'additionnerait, et c'est justement ce qu'on veut borner.
-      if (["bad-key", "delai", "acces", "quota-client", "frequence", "consentement"].includes(e.message)) throw e;
-      if (e.message === "quota") {
+      if (["bad-key", "delai", "acces", "quota-client", "quota-menu", "menu-pas-pret", "frequence", "consentement"].includes(e.message)) throw e;
+      if (e.message === "quota" && fonction !== "planrepas") {
         await new Promise((r) => setTimeout(r, 1600));
         try {
           return await appelerModele({ fonction, model, systemPrompt, messages, maxTokens, delaiMs });

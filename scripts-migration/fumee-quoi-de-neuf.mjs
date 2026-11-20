@@ -170,6 +170,7 @@ try {
     const { ctx, page } = await ouvrir({
       profil: PROFIL,
       vues: [
+        "2026-11-20-menu-sur-mesure",
         "2026-10-26-photos-du-mois",
         "2026-10-25-aujourdhui",
         "2026-10-24-communaute",

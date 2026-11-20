@@ -25,6 +25,11 @@
  *                            coach, missions validees, tableau de regularite de
  *                            la cohorte (jeton client obligatoire)
  *   POST /admin/feuvert   -> le coach inscrit une membre et met a jour son Passeport
+ *   GET  /photo?q=…       -> photo d'une recette du Menu de la semaine (banque
+ *                            d'images libre Pexels), sans jeton : plafonds par
+ *                            adresse IP et par jour, recherches gardees 30 jours
+ *   GET  /photo/img/<id>.<jpeg|png> -> relais de l'image (le telephone ne
+ *                            contacte jamais Pexels)
  *   POST /reservation-feu-vert -> questionnaire d'admission de la page publique
  *                            Feu Vert (sans jeton, origine coachneiram.github.io
  *                            seulement) : valide, puis remet au script Google
@@ -50,6 +55,8 @@
  *                       virgules ; defaut : https://coachneiram.github.io
  *   DB                  (liaison D1) invitations, jetons et compteurs ;
  *                       sans elle, /ai et /coach-sync repondent 503 en mode obligatoire
+ *   PEXELS_API_KEY      (secret, optionnel) photos des recettes ; sans elle,
+ *                       /photo repond 503 et le menu s'affiche sans photo
  *   PUSH_KV             (liaison KV, pour les rappels push) espace de stockage des
  *                       abonnements ; sans lui, les routes /push repondent 503
  *
@@ -105,18 +112,22 @@ const IA_IMAGE_MAX = 6 * 1024 * 1024;  // une image, en base64
 const IA_TYPES_IMAGE = ["image/jpeg", "image/png", "image/webp"];
 const IA_JETONS_SORTIE_MAX = 4096;
 const IA_DELAI_MS = 60000;
+/** Le menu sur mesure ecrit jusqu'a 14 recettes : l'app attend 120 s, le Worker 110 s. */
+const IA_DELAI_PAR_FONCTION = { planrepas: 110000 };
 
 /**
- * Fonctions nommees par l'application (champ facultatif `fonction`). Seule
- * « programme » (lecture d'un programme sur photo, PDF ou texte dicte)
- * obtient un traitement propre : un PDF n'est accepte que pour elle, et
- * ses reponses ont 8 192 jetons de sortie (un programme de plusieurs
- * semaines tient rarement dans 4 096). Les autres appels n'ont pas de
- * fonction et gardent exactement les regles d'avant.
+ * Fonctions nommees par l'application (champ facultatif `fonction`).
+ * « programme » (lecture d'un programme sur photo, PDF ou texte dicte) :
+ * un PDF n'est accepte que pour elle, et ses reponses ont 8 192 jetons de
+ * sortie (un programme de plusieurs semaines tient rarement dans 4 096).
+ * « planrepas » (menu sur mesure de la semaine, 20/11/2026) : jusqu'a 14
+ * recettes completes, 8 192 jetons aussi, et 3 menus par jour et par
+ * client. Les autres appels n'ont pas de fonction et gardent exactement
+ * les regles d'avant.
  */
-const IA_FONCTIONS = ["programme"];
+const IA_FONCTIONS = ["programme", "planrepas"];
 const IA_TYPES_DOCUMENT = { programme: ["application/pdf"] };
-const IA_JETONS_SORTIE_PAR_FONCTION = { programme: 8192 };
+const IA_JETONS_SORTIE_PAR_FONCTION = { programme: 8192, planrepas: 8192 };
 
 // Origines autorisees quand ALLOWED_ORIGINS n'est pas renseignee.
 const ORIGINES_PAR_DEFAUT = ["https://coachneiram.github.io"];
@@ -131,6 +142,7 @@ const PLAFONDS = {
   iaParJour: 80,
   iaGlobalParJour: 800,      // remplacable par PLAFOND_IA_JOUR
   programmeParJour: 5,       // lectures de programme (photo/PDF), par client : un appel coute plusieurs fois une photo de repas
+  planRepasParJour: 3,       // menus sur mesure de la semaine, par client (recettes creees par l'IA)
   iaAnonymeParHeure: 20,     // par adresse IP (empreinte), mode transition
   iaAnonymeParJour: 200,     // toutes adresses confondues, mode transition
   syncParMinute: 20,
@@ -186,7 +198,7 @@ function enTetesCors(request, env) {
   const autorisee = origine && origineAcceptee(request, env);
   return {
     "Access-Control-Allow-Origin": autorisee ? origine : "null",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin"
@@ -239,6 +251,16 @@ export default {
     }
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: cors });
+    }
+    // Photos des recettes : seules routes en GET (balises <img>). Jamais
+    // d'erreur 500 : sans base, sans cle ou en panne, 503 et l'application
+    // affiche le menu sans photo.
+    if (request.method === "GET" && (url.pathname === "/photo" || url.pathname.startsWith("/photo/img/"))) {
+      try {
+        return await routePhotos(request, url, env, cors, Date.now());
+      } catch (e) {
+        return refus(url.pathname, 503, "photos-indisponibles", cors);
+      }
     }
     if (request.method !== "POST") {
       return reponseJson({ ok: false, error: "method-not-allowed" }, 405, cors);
@@ -309,7 +331,9 @@ const SCHEMA = [
   // Feu Vert (coaching collectif, 14 novembre 2026) : voir la section dediee plus bas.
   "CREATE TABLE IF NOT EXISTS feuvert (client_id TEXT PRIMARY KEY, cohorte TEXT NOT NULL, passeport TEXT NOT NULL DEFAULT '{}', missions TEXT NOT NULL DEFAULT '{}', maj_le INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS feuvert_videos (cohorte TEXT NOT NULL, semaine INTEGER NOT NULL, url TEXT NOT NULL, maj_le INTEGER NOT NULL, PRIMARY KEY (cohorte, semaine))",
-  "CREATE TABLE IF NOT EXISTS feuvert_tableau (client_id TEXT PRIMARY KEY, cohorte TEXT NOT NULL, pseudo TEXT NOT NULL, pseudo_norme TEXT NOT NULL, semaines TEXT NOT NULL DEFAULT '{}', maj_le INTEGER NOT NULL, UNIQUE (cohorte, pseudo_norme))"
+  "CREATE TABLE IF NOT EXISTS feuvert_tableau (client_id TEXT PRIMARY KEY, cohorte TEXT NOT NULL, pseudo TEXT NOT NULL, pseudo_norme TEXT NOT NULL, semaines TEXT NOT NULL DEFAULT '{}', maj_le INTEGER NOT NULL, UNIQUE (cohorte, pseudo_norme))",
+  // Photos des recettes (20 novembre 2026) : voir la section dediee plus bas.
+  "CREATE TABLE IF NOT EXISTS photos_recherches (cle TEXT PRIMARY KEY, photo TEXT, expire_le INTEGER NOT NULL)"
 ];
 
 // Schema cree une fois par base et par instance du Worker.
@@ -426,7 +450,10 @@ async function depasse(db, liste, maintenant) {
 
 async function nettoyerCompteurs(env, maintenant) {
   const db = await base(env);
-  if (db) await db.prepare("DELETE FROM compteurs WHERE expire_le < ?1").bind(maintenant).run();
+  if (db) {
+    await db.prepare("DELETE FROM compteurs WHERE expire_le < ?1").bind(maintenant).run();
+    await db.prepare("DELETE FROM photos_recherches WHERE expire_le < ?1").bind(maintenant).run();
+  }
 }
 
 const modeAcces = (env) => (String(env.ACCES_CLIENTS || "").trim() === "transition" ? "transition" : "obligatoire");
@@ -615,6 +642,15 @@ async function relaiIa(request, env, cors, ip) {
     if (raison) return refus(route, 429, raison, cors, client);
   }
 
+  // Menu sur mesure : 3 par jour et par client (ou par adresse en mode
+  // transition), en plus des plafonds generaux.
+  if (v.fonction === "planrepas" && db) {
+    const jour = jourUtc(maintenant);
+    const qui = client ? client.id : (await hachage(ip)).slice(0, 16);
+    const raison = await depasse(db, [{ cle: `ia:planrepas:${qui}:${jour}`, limite: PLAFONDS.planRepasParJour, dureeMs: 2 * 86400000, raison: "quota-planrepas" }], maintenant);
+    if (raison) return refus(route, 429, raison, cors, client);
+  }
+
   const cible = "https://generativelanguage.googleapis.com/v1beta/models/" + v.modele + ":generateContent";
   let amont;
   try {
@@ -622,7 +658,7 @@ async function relaiIa(request, env, cors, ip) {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
       body: JSON.stringify(v.charge),
-      ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(IA_DELAI_MS) } : {})
+      ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout((v.fonction && IA_DELAI_PAR_FONCTION[v.fonction]) || IA_DELAI_MS) } : {})
     });
   } catch (e) {
     return refus(route, 502, "amont-injoignable", cors, client);
@@ -3015,10 +3051,187 @@ async function transmettreAuCrm(env, reponse) {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Photos des recettes (Menu de la semaine), 20 novembre 2026          */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Reprise de l'app Neiram (worker/photos.js, PR #76), dans ce fichier
+ * unique puisque ce Worker se colle a la main dans l'editeur Cloudflare.
+ *
+ * GET /photo?q=chicken+curry[&fr=1] -> { ok, photo: { id, ext, auteur } | null }
+ * GET /photo/img/<id>.<jpeg|png>    -> l'image (640 x 400), mise en cache
+ *
+ * Sans jeton client : une balise <img> n'envoie pas d'en-tete, et seuls
+ * quelques mots decrivant un plat partent chez Pexels (jamais qui
+ * regarde). Les recherches sont gardees 30 jours dans D1 (le cache de
+ * Cloudflare ne garde rien sur une adresse workers.dev), les images dans
+ * le cache HTTP. Plafonds : 60 recherches par adresse IP et par jour,
+ * 800 par jour au total, pour proteger le quota Pexels. Sans D1 (mode
+ * transition sans base), aucune recherche ne part : 503.
+ */
+const PHOTOS_PAR_JOUR = 800;
+const PHOTOS_PAR_IP_JOUR = 60;
+/** Images relayees par adresse IP et par jour : le Worker n'est pas un relais Pexels illimite. */
+const IMAGES_PAR_IP_JOUR = 400;
+const PHOTOS_TYPES_IMAGE = ["image/jpeg", "image/png", "image/webp"];
+const PHOTOS_DUREE_CACHE_S = 30 * 86400;
+const PHOTOS_FORMAT_IMAGE = /^\/photo\/img\/(\d{1,12})\.(jpeg|jpg|png)$/;
+
+/** Quelques mots en minuscules, sans accents ni ponctuation ; null si inutilisable. */
+function normaliserRequetePhoto(texte) {
+  const q = String(texte || "")
+    .replace(/œ/gi, "oe")
+    .replace(/æ/gi, "ae")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60)
+    .trim();
+  return q.length >= 3 ? q : null;
+}
+
+/** Adresse de l'image chez Pexels, recadree pour une carte de recette. */
+function adresseImagePexels(id, ext) {
+  return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.${ext}?auto=compress&cs=tinysrgb&w=640&h=400&fit=crop`;
+}
+
+/** Compte une recherche dans les plafonds du jour ; rend la raison du refus, ou null. */
+async function plafondPhotos(db, request, maintenant) {
+  if (!db) return "service-sature";
+  // Une IPv6 regroupee par /64 : changer d'adresse dans son bloc ne
+  // contourne pas le plafond (meme regle que les autres compteurs).
+  const ip = (await hachage("photo:" + ipPourCompteur(request.headers.get("CF-Connecting-IP") || "inconnue"))).slice(0, 32);
+  const jour = jourUtc(maintenant);
+  return depasse(
+    db,
+    [
+      { cle: `photo:ip:${ip}:${jour}`, limite: PHOTOS_PAR_IP_JOUR, dureeMs: 2 * 86400000, raison: "trop-de-requetes" },
+      { cle: `photo:global:${jour}`, limite: PHOTOS_PAR_JOUR, dureeMs: 2 * 86400000, raison: "service-sature" }
+    ],
+    maintenant
+  );
+}
+
+/**
+ * Routes GET /photo et /photo/img/… La cle de cache est normalisee :
+ * varier la casse ou ajouter des parametres ne contourne ni le cache ni
+ * les plafonds.
+ */
+async function routePhotos(request, url, env, cors, maintenant) {
+  const route = url.pathname === "/photo" ? "/photo" : "/photo/img";
+  const img = url.pathname.match(PHOTOS_FORMAT_IMAGE);
+  const q = url.pathname === "/photo" ? normaliserRequetePhoto(url.searchParams.get("q")) : null;
+  const fr = url.searchParams.get("fr") === "1";
+  if (!img && url.pathname !== "/photo") return refus(route, 404, "not-found", cors);
+  if (url.pathname === "/photo" && !q) return refus(route, 400, "requete-invalide", cors);
+  const ext = img ? (img[2] === "jpg" ? "jpeg" : img[2]) : null;
+  const canonique = img ? `${url.origin}/photo/img/${img[1]}.${ext}` : `${url.origin}/photo?q=${encodeURIComponent(q)}${fr ? "&fr=1" : ""}`;
+  const cache = typeof caches !== "undefined" && caches.default ? caches.default : null;
+  const cle = new Request(canonique, { method: "GET" });
+  if (cache) {
+    const garde = await cache.match(cle).catch(() => null);
+    if (garde) {
+      const r = new Response(garde.body, garde);
+      for (const [k, v] of Object.entries(cors)) r.headers.set(k, v);
+      return r;
+    }
+  }
+
+  let resultat;
+  if (img) {
+    let dbImages = null;
+    try {
+      dbImages = await base(env);
+    } catch (e) {
+      dbImages = null;
+    }
+    if (dbImages) {
+      const ip = (await hachage("img:" + ipPourCompteur(request.headers.get("CF-Connecting-IP") || "inconnue"))).slice(0, 32);
+      const raison = await depasse(dbImages, [{ cle: `photo:img:${ip}:${jourUtc(maintenant)}`, limite: IMAGES_PAR_IP_JOUR, dureeMs: 2 * 86400000, raison: "trop-de-requetes" }], maintenant);
+      if (raison) return refus(route, 429, raison, cors);
+    }
+    let amont;
+    try {
+      amont = await fetch(adresseImagePexels(img[1], ext));
+    } catch (e) {
+      return refus(route, 503, "photos-indisponibles", cors);
+    }
+    const type = (amont.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+    // Jamais de SVG ni de HTML servi depuis le domaine du Worker.
+    if (!amont.ok || !PHOTOS_TYPES_IMAGE.includes(type)) return refus(route, 404, "image-introuvable", cors);
+    resultat = new Response(amont.body, {
+      status: 200,
+      headers: { "Content-Type": type, "X-Content-Type-Options": "nosniff", "Cache-Control": `public, max-age=${PHOTOS_DUREE_CACHE_S}`, ...cors }
+    });
+  } else {
+    const cleBase = (fr ? "fr:" : "en:") + q;
+    const enTetesOk = { "Cache-Control": `public, max-age=${PHOTOS_DUREE_CACHE_S}`, ...cors };
+    let db = null;
+    try {
+      db = await base(env);
+    } catch (e) {
+      db = null;
+    }
+    if (db) {
+      const ligne = await db
+        .prepare("SELECT photo FROM photos_recherches WHERE cle = ?1 AND expire_le > ?2")
+        .bind(cleBase, maintenant)
+        .first()
+        .catch(() => null);
+      if (ligne) {
+        let photo = null;
+        try {
+          photo = ligne.photo ? JSON.parse(ligne.photo) : null;
+        } catch (e) {
+          photo = null;
+        }
+        return reponseJson({ ok: true, photo }, 200, enTetesOk);
+      }
+    }
+    if (!env.PEXELS_API_KEY) return refus(route, 503, "photos-non-configurees", cors);
+    const depassement = await plafondPhotos(db, request, maintenant);
+    if (depassement) return refus(route, depassement === "trop-de-requetes" ? 429 : 503, depassement, cors);
+    const recherche = new URL("https://api.pexels.com/v1/search");
+    recherche.searchParams.set("query", q);
+    recherche.searchParams.set("per_page", "1");
+    recherche.searchParams.set("orientation", "landscape");
+    if (fr) recherche.searchParams.set("locale", "fr-FR");
+    let amont;
+    try {
+      amont = await fetch(recherche.toString(), { headers: { Authorization: env.PEXELS_API_KEY } });
+    } catch (e) {
+      return refus(route, 503, "photos-indisponibles", cors);
+    }
+    if (!amont.ok) return refus(route, 503, "photos-indisponibles", cors);
+    const donnees = await amont.json().catch(() => null);
+    const p = donnees && Array.isArray(donnees.photos) ? donnees.photos[0] : null;
+    const src = String((p && p.src && (p.src.medium || p.src.original)) || "");
+    const extTrouvee = (src.split("?")[0].match(/\.(jpeg|jpg|png)$/i) || [])[1];
+    const photo =
+      p && Number.isInteger(p.id) && extTrouvee
+        ? { id: p.id, ext: extTrouvee.toLowerCase() === "jpg" ? "jpeg" : extTrouvee.toLowerCase(), auteur: String(p.photographer || "").slice(0, 60) }
+        : null;
+    await db
+      .prepare("INSERT INTO photos_recherches (cle, photo, expire_le) VALUES (?1, ?2, ?3) ON CONFLICT(cle) DO UPDATE SET photo = ?2, expire_le = ?3")
+      .bind(cleBase, photo ? JSON.stringify(photo) : null, maintenant + PHOTOS_DUREE_CACHE_S * 1000)
+      .run()
+      .catch(() => null);
+    resultat = reponseJson({ ok: true, photo }, 200, enTetesOk);
+  }
+
+  if (cache) await cache.put(cle, resultat.clone()).catch(() => null);
+  return resultat;
+}
+
 // Acces des tests aux fonctions internes (sans effet en production).
 if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) {
   Object.assign(globalThis.__COACH_TEST__, { validerReservation, parcoursIndicatif, chargeCrm, ipPourCompteur, reponseScriptOk, DELAI_SCRIPT_MS, PLAFONDS, RESERVATION_FV: { ROUTE_RESERVATION_FV, RESA_CHOIX, RESA_PAR_IP_PAR_HEURE, RESA_PAR_JOUR, RESA_ALERTE_JOUR, RESA_DUREE_MIN_MS } });
   Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
+  Object.assign(globalThis.__COACH_TEST__, { normaliserRequetePhoto, adresseImagePexels, PHOTOS: { PHOTOS_PAR_JOUR, PHOTOS_PAR_IP_JOUR, IMAGES_PAR_IP_JOUR }, PLAN_REPAS_PAR_JOUR: PLAFONDS.planRepasParJour, IA_FONCTIONS, IA_JETONS_SORTIE_PAR_FONCTION });
   Object.assign(globalThis.__COACH_TEST__, { alerterInactivite, joursInactivite, niveauInactivite, dateParis, INACTIVITE: { INACTIVITE_ATTENTION_JOURS, INACTIVITE_CRITIQUE_JOURS, PRESENCE_PAR_JOUR: PLAFONDS.presenceParJour } });
   Object.assign(globalThis.__COACH_TEST__, {
     nettoyerStatsCommunaute,

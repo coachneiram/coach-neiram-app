@@ -510,3 +510,21 @@ et clauses contractuelles types.
    `worker/coach-neiram-proxy.js`, Deploy.
 4. Test : `node --test tests/worker-reservation-feu-vert.test.mjs`, puis un
    vrai envoi depuis la page (voir la PR du site).
+
+## Menu sur mesure et photos des plats — ajout du 20 novembre 2026
+
+Repris de l'app Neiram (PR #76). Deux nouveautés côté Worker, sans nouvelle liaison :
+
+- **`/ai`, fonction `planrepas`** : le « ✨ Menu sur mesure » de l'onglet Repas → Menu. Réponses jusqu'à 8 192 jetons, délai amont de 110 s, **3 menus par jour et par client** (compteur `ia:planrepas:<client>:<jour>`, refus `429 quota-planrepas`), en plus des plafonds IA habituels. L'application n'essaie qu'un modèle pour cette fonction : un appui ne consomme qu'un menu.
+- **`GET /photo?q=…` et `GET /photo/img/<id>.<jpeg|png>`** : photos des plats, tirées de la banque d'images libre Pexels. Le téléphone ne contacte jamais Pexels ; seuls quelques mots décrivant le plat y partent. Sans jeton (une balise `<img>` n'en envoie pas), donc des plafonds : 60 recherches par adresse IP (IPv6 regroupée par /64) et 800 au total par jour, 400 images relayées par adresse IP et par jour. Recherches gardées 30 jours dans D1 (table `photos_recherches`, sans donnée personnelle, vidée par la tâche planifiée). Seules des images JPEG, PNG ou WebP sont relayées, avec `X-Content-Type-Options: nosniff`.
+- **Secret** : `PEXELS_API_KEY` (Settings → Variables and Secrets → Secret). Sans lui, ou sans base D1, `/photo` répond 503 et l'application affiche le menu sans photo : jamais d'erreur 500.
+
+### Mise en service (déploiement manuel)
+
+1. Cloudflare → Workers & Pages → `coach-neiram-proxy` → **Deployments** : note la version active (retour arrière).
+2. **Edit code** : remplace tout par `worker/coach-neiram-proxy.js` de `main` → **Deploy**.
+3. Vérifie dans le navigateur : `https://coach-neiram-proxy.pelissier-marien.workers.dev/photo?q=chicken%20curry` doit répondre `"ok":true` avec une `photo`.
+4. Dans l'application : Repas → Menu → « ✨ Menu sur mesure » → « Créer mes 14 repas ».
+5. **Retour arrière** : Deployments → version notée à l'étape 1 → **Rollback**.
+
+Tant que le Worker n'est pas déployé, le menu sur mesure affiche « pas encore ouvert sur le serveur de ton coach » et les menus s'affichent sans photo ; tout le reste fonctionne.

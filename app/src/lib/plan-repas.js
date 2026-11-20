@@ -57,8 +57,15 @@ const PORTIONS_POUR_RESTES = 4;
  * sans alcool). Le vinaigre n'en est pas (la fermentation est achevée) :
  * « vinaigre de vin » est retiré avant de chercher.
  */
-const VINAIGRES = /vinaigre(?: de (?:vin|cidre|xérès))?/giu;
-const MOTS_ALCOOL = /(?<!\p{L})(?:vins?|bières?|rhum|cognac|calvados|kirsch|porto|madère|liqueurs?|alcool|whisky|vodka|cidre|saké|marsala|amaretto)(?!\p{L})/iu;
+export const VINAIGRES = /vinaigre(?: de (?:vin|cidre|xérès))?/giu;
+/**
+ * Liste unique, partagée avec le menu sur mesure (lib/menu-sur-mesure.js) :
+ * celle de l'app Neiram (mirin, saké, cognac…) réunie à celle-ci.
+ */
+export const MOTS_ALCOOL = new RegExp(
+  "(?<!\\p{L})(?:vins?|bi[eè]res?|rhum|alcool|mirin|sak[ée]|cognac|calvados|porto|cidre|kirsch|marsala|liqueurs?|whisky|vodka|brandy|armagnac|mad[eè]re|amaretto|grand marnier|cointreau|gin|pastis|champagne)(?!\\p{L})",
+  "iu"
+);
 
 /** Familles de `contient` écartées par une contrainte du profil. */
 const FAMILLES_CONTRAINTES = ["porc", "crustaces", "mollusques"];
@@ -123,7 +130,7 @@ const sommer = (repas) =>
  * pertinence pour l'objectif, densité en protéines proche de la cible,
  * pas reprise récemment, puis un peu de hasard pour varier les menus.
  */
-function choisir(candidates, { typeRepas, utilisees, jour, ratioProteines, pertinentes, alea, exclure = [] }) {
+function choisir(candidates, { typeRepas, utilisees, jour, ratioProteines, pertinentes, alea, exclure = [], kcalVisees = 0, budgetRepas = 0 }) {
   const possibles = candidates.filter((r) => typeRepas.categories.includes(r.categorie) && !exclure.includes(r.id));
   if (!possibles.length) return null;
   const score = (r) => {
@@ -133,7 +140,11 @@ function choisir(candidates, { typeRepas, utilisees, jour, ratioProteines, perti
     const kcal = num(r.parPortion.kcal);
     const ratio = kcal > 0 ? (num(r.parPortion.p) * 4) / kcal : 0;
     const ecartProteines = ratioProteines ? Math.min(1, Math.abs(ratio - ratioProteines) * 3) : 0;
-    return (pertinentes.has(r.id) ? 0 : 1) + recente + categoriePrincipale + ecartProteines + alea() * 0.9;
+    // Budget (menu sur mesure) : un repas plus cher que sa part du budget
+    // est pénalisé, d'autant plus qu'il dépasse.
+    const cout = budgetRepas > 0 && num(r.coutPortion) > 0 && kcal > 0 ? num(r.coutPortion) * partsPour(kcalVisees, kcal) : 0;
+    const depassement = cout ? Math.max(0, cout / budgetRepas - 1) * 2 : 0;
+    return (pertinentes.has(r.id) ? 0 : 1) + recente + categoriePrincipale + ecartProteines + depassement + alea() * 0.9;
   };
   return possibles.map((r) => ({ r, s: score(r) })).sort((a, b) => a.s - b.s)[0].r;
 }
@@ -144,8 +155,14 @@ function choisir(candidates, { typeRepas, utilisees, jour, ratioProteines, perti
  * Rend { debut, graine, cibles, jours: [{ date, repas: [{ typeRepas, recetteId,
  * nom, parts, restes, kcal, p, c, f }], total }], repasVides: [ids] },
  * ou null sans calories : pas de cible inventée.
+ *
+ * `typesRepas` (menu sur mesure, repris de l'app Neiram le 20/11/2026)
+ * limite les repas planifiés, par exemple déjeuner et dîner : les autres
+ * restent « hors menu », avec leur part des calories à placer soi-même.
+ * `budgetRepas` (en euros) écarte en priorité les recettes qui dépassent
+ * leur part du budget (champ `coutPortion`).
  */
-export function genererPlanRepas({ catalogue, profil, cibles, debut, graine = 1, restes = true, fixes = {} }) {
+export function genererPlanRepas({ catalogue, profil, cibles, debut, graine = 1, restes = true, fixes = {}, typesRepas = null, budgetRepas = 0 }) {
   const kcalJour = num(cibles && cibles.calories);
   if (!(kcalJour > 0)) return null;
   const proteinesJour = num(cibles && cibles.protein);
@@ -164,6 +181,10 @@ export function genererPlanRepas({ catalogue, profil, cibles, debut, graine = 1,
     const repas = [];
     for (const typeRepas of REPAS_DU_JOUR) {
       const visees = kcalJour * typeRepas.part;
+      if (typesRepas && !typesRepas.includes(typeRepas.id)) {
+        repas.push({ typeRepas: typeRepas.id, recetteId: null, kcalVisees: Math.round(visees), horsMenu: true });
+        continue;
+      }
       const cle = `${j}:${typeRepas.id}`;
       let recette = null;
       let estReste = false;
@@ -171,7 +192,7 @@ export function genererPlanRepas({ catalogue, profil, cibles, debut, graine = 1,
       else if (typeRepas.id === "dejeuner" && resteDuSoir) {
         recette = resteDuSoir;
         estReste = true;
-      } else recette = choisir(candidates, { typeRepas, utilisees, jour: j, ratioProteines, pertinentes, alea });
+      } else recette = choisir(candidates, { typeRepas, utilisees, jour: j, ratioProteines, pertinentes, alea, kcalVisees: visees, budgetRepas });
       if (!recette) {
         vides.add(typeRepas.id);
         repas.push({ typeRepas: typeRepas.id, recetteId: null, kcalVisees: Math.round(visees) });
@@ -186,7 +207,7 @@ export function genererPlanRepas({ catalogue, profil, cibles, debut, graine = 1,
     resteDuSoir = restes && recetteDiner && num(recetteDiner.portions) >= PORTIONS_POUR_RESTES && !diner.restes ? recetteDiner : null;
     jours.push({ date: addDays(debut, j), repas, total: sommer(repas) });
   }
-  return { debut, graine, cibles: { calories: kcalJour, protein: proteinesJour || null }, jours, repasVides: [...vides] };
+  return { debut, graine, cibles: { calories: kcalJour, protein: proteinesJour || null }, jours, repasVides: [...vides], ...(typesRepas ? { typesRepas: [...typesRepas] } : {}) };
 }
 
 /** Remplace un repas par une autre recette compatible, le reste du plan ne bouge pas. */
@@ -207,7 +228,9 @@ export function changerRepas(plan, { catalogue, profil, jour, typeRepas }) {
     ratioProteines: ratio,
     pertinentes,
     alea: tirage((plan.graine || 1) * 31 + jour * 7 + Date.now() % 1000),
-    exclure: actuel && actuel.recetteId ? [actuel.recetteId] : []
+    exclure: actuel && actuel.recetteId ? [actuel.recetteId] : [],
+    kcalVisees: visees,
+    budgetRepas: num(plan.budgetRepas)
   });
   if (!r) return plan;
   const parts = partsPour(visees, r.parPortion.kcal);
@@ -233,7 +256,9 @@ export function changerRepas(plan, { catalogue, profil, jour, typeRepas }) {
         ratioProteines: ratio,
         pertinentes,
         alea: tirage((plan.graine || 1) * 37 + jour * 11 + (Date.now() % 1000)),
-        exclure: [r.id]
+        exclure: [r.id],
+        kcalVisees: num(plan.cibles.calories) * defDej.part,
+        budgetRepas: num(plan.budgetRepas)
       });
       nouveauDej = autre ? servir(autre, "dejeuner", false) : { typeRepas: "dejeuner", recetteId: null, kcalVisees: Math.round(num(plan.cibles.calories) * defDej.part) };
     }
@@ -384,8 +409,12 @@ export function bilanPlan(plan) {
   const moy = (k) => Math.round(jours.reduce((s, j) => s + j.total[k], 0) / jours.length);
   // Les repas sans recette compatible restent libres : on dit combien
   // de calories il reste à y placer, plutôt que de les ignorer.
-  const libres = Math.round(jours.reduce((s, j) => s + j.repas.reduce((t, x) => t + (x.recetteId ? 0 : num(x.kcalVisees)), 0), 0) / jours.length);
-  return { kcal: moy("kcal"), p: moy("p"), c: moy("c"), f: moy("f"), libresKcal: libres, cibleKcal: plan.cibles.calories, cibleP: plan.cibles.protein };
+  const parJour = (filtre) => Math.round(jours.reduce((s, j) => s + j.repas.reduce((t, x) => t + (!x.recetteId && filtre(x) ? num(x.kcalVisees) : 0), 0), 0) / jours.length);
+  const libres = parJour((x) => !x.horsMenu);
+  // Repas volontairement hors du menu sur mesure (ex. petit-déjeuner) :
+  // comptés à part, ce n'est pas un manque de recettes.
+  const horsMenu = parJour((x) => x.horsMenu);
+  return { kcal: moy("kcal"), p: moy("p"), c: moy("c"), f: moy("f"), libresKcal: libres, horsMenuKcal: horsMenu, cibleKcal: plan.cibles.calories, cibleP: plan.cibles.protein };
 }
 
 /**
