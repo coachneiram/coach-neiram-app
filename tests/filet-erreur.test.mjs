@@ -18,7 +18,8 @@ test("toute l'app est sous un filet de dernier recours", () => {
 test("chaque onglet a son filet, remis a zero quand on change d'onglet", () => {
   assert.match(
     lire("App.jsx"),
-    /<FiletEcran key=\{ongletActif\} ecran=\{ongletActif\} onRetourJournal=\{\(\) => setOngletActif\("journal"\)\}>\s*\{ecrans\[ongletActif\]\}\s*<\/FiletEcran>/
+    // Feu Vert (25/11/2026) : pas de « retour au Journal », il n'a que son onglet.
+    /<FiletEcran key=\{ongletActif\} ecran=\{ongletActif\} onRetourJournal=\{feuVert \? undefined : \(\) => setOngletActif\("journal"\)\}>\s*\{ecrans\[ongletActif\]\}\s*<\/FiletEcran>/
   );
 });
 

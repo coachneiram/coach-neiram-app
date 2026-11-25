@@ -39,7 +39,9 @@ function instantLocal(dateISO, minutes) {
  *   - dimanche : a 17 h, sauf si le bilan de cette semaine est deja parti.
  */
 export function planningRappels({ profil, seances = [], bilanEnvoye = null, maintenant = new Date() }) {
-  if (!profil) return [];
+  // Feu Vert (25/11/2026) : ni creneau ni bilan du dimanche dans son
+  // application. Planning vide : le serveur efface ceux d'avant.
+  if (!profil || profil.formule === "feuvert") return [];
   const rappels = [];
   const t = maintenant.getTime();
   const aujourdhui = toLocalISODate(maintenant);

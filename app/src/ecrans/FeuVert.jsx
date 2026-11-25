@@ -805,7 +805,7 @@ function VueRegularite({ info, mesCompteurs, validees, local, tableau, erreurTab
 /* Écran                                                               */
 /* ------------------------------------------------------------------ */
 
-export function FeuVert({ profile, sessionsApi, onToast, onOuvrirReglages }) {
+export function FeuVert({ profile, sessionsApi, onToast, onOuvrirReglages, onReglagesServeur }) {
   const reglages = reglagesFeuVert(profile);
   const aujourdhui = todayISO();
   const info = semaineFeuVert(reglages.debut, aujourdhui);
@@ -826,6 +826,8 @@ export function FeuVert({ profile, sessionsApi, onToast, onOuvrirReglages }) {
     setEnCours(true);
     const r = await actualiserPasseport();
     setErreur(r.erreur);
+    // Cohorte, parcours, début fixés par Marien : le profil suit (App.jsx).
+    if (r.reglages && onReglagesServeur) onReglagesServeur(r.reglages);
     setLocal(lireFeuVert());
     setEnCours(false);
   };

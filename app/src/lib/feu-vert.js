@@ -2,9 +2,12 @@
  * Feu Vert : coaching collectif en ligne pour débutants en salle
  * (cohortes de 12, cycles de 6 semaines, cohorte 1 le lundi 18 janvier 2027).
  *
- * PAS UNE NOUVELLE APPLICATION : un mode de celle-ci, activé dans le profil
- * (« Formule : Feu Vert (collectif) »). Il ajoute un onglet « Feu Vert » et
- * allège la barre du bas (lib/onglets.js, ongletsPour).
+ * PAS UNE NOUVELLE APPLICATION : un mode de celle-ci, porté par le profil
+ * (formule « feuvert »). Depuis le 25/11/2026, un profil Feu Vert ne voit
+ * QUE l'onglet « Feu Vert » (lib/onglets.js, ongletsPour), des Réglages
+ * réduits en lecture seule et l'Aide Feu Vert. Il ne se crée plus à la main :
+ * seulement par le code d'accès d'un membre inscrit par Marien (« J'ai un
+ * code Feu Vert » à l'accueil), qui pré-règle cohorte, parcours et début.
  *
  * CE QUI VIENT DU COACH (lecture seule ici) : le Passeport (rouge / orange /
  * vert de chacun des 8 gestes) et les missions validées. Marien les fixe dans
@@ -28,7 +31,7 @@ import { dayIdOf } from "./semaine.js";
 import { charger, enregistrer } from "./stockage.js";
 import { PROXY_BASE_URL } from "./config.js";
 import { URL_PLATEFORME } from "./plateforme.js";
-import { enTetesAcces, accesActuel } from "./acces.js";
+import { enTetesAcces, accesActuel, activerCode, MSG_ACTIVATION } from "./acces.js";
 import { ETATS_GESTE, NIVEAUX_PASSEPORT, ALIAS_GESTES, etatGeste, niveauPasseport, normaliserPasseport } from "./feu-vert-passeport.js";
 
 export { ETATS_GESTE, NIVEAUX_PASSEPORT, ALIAS_GESTES, etatGeste, niveauPasseport, normaliserPasseport };
@@ -38,11 +41,6 @@ export { CONTENU_FEU_VERT };
 export const FORMULE_FEU_VERT = "feuvert";
 export const DEBUT_COHORTE_1 = "2027-01-18";
 export const NB_SEMAINES = 6;
-
-export const FORMULES = [
-  { id: "", label: "Coaching individuel" },
-  { id: FORMULE_FEU_VERT, label: "Feu Vert (collectif)" }
-];
 
 export const PARCOURS_FEU_VERT = [
   { id: "reprise", label: "Reprise", aide: "Jamais pratiqué, ou arrêt depuis plus d'un an." },
@@ -59,6 +57,73 @@ export function reglagesFeuVert(profil) {
     cohorte: String(fv.cohorte || "1"),
     debut: /^\d{4}-\d{2}-\d{2}$/.test(String(fv.debut || "")) ? fv.debut : DEBUT_COHORTE_1
   };
+}
+
+const PARCOURS_IDS = PARCOURS_FEU_VERT.map((p) => p.id);
+const DATE_AAAA_MM_JJ = /^\d{4}-\d{2}-\d{2}$/;
+const COHORTE_VALIDE = /^[A-Za-z0-9-]{1,12}$/;
+
+/* ------------------------------------------------------------------ */
+/* Pré-réglage par le serveur (25 novembre 2026)                        */
+/* ------------------------------------------------------------------ */
+/*
+ * Le proxy renvoie, pour un membre inscrit par Marien, { cohorte, parcours,
+ * debut } (réponse de /auth/activer et de /feuvert/etat). Cohorte et début
+ * viennent TOUJOURS du serveur ; le membre ne les choisit pas. Le parcours :
+ *   - fixé par Marien (parcours non nul) : il s'impose, parcoursFixe: true ;
+ *   - pas encore fixé (null) : « Reprise » par défaut, et le membre peut le
+ *     choisir UNE fois dans ses Réglages (champ parcours absent du profil
+ *     tant qu'il n'a pas choisi) ;
+ *   - début inconnu (cohorte sans date côté proxy) : champ absent, l'app
+ *     garde DEBUT_COHORTE_1 (reglagesFeuVert).
+ */
+
+/** Réglages lus dans une réponse du proxy, ou null (non inscrit, réponse illisible). */
+export function reglagesDuServeur(d) {
+  const brut = d && d.feuVert && typeof d.feuVert === "object" ? d.feuVert : d && d.inscrit && d.cohorte ? { cohorte: d.cohorte } : null;
+  if (!brut || !COHORTE_VALIDE.test(String(brut.cohorte || ""))) return null;
+  return {
+    cohorte: String(brut.cohorte),
+    parcours: PARCOURS_IDS.includes(brut.parcours) ? brut.parcours : null,
+    debut: DATE_AAAA_MM_JJ.test(String(brut.debut || "")) ? brut.debut : null
+  };
+}
+
+/** Profil Feu Vert pré-réglé : le profil donné (ou rien), mis à la formule et aux réglages du serveur. */
+export function profilFeuVert(profil, serveur) {
+  const avant = (profil && profil.feuVert) || {};
+  const fv = { cohorte: String(serveur.cohorte) };
+  if (serveur.parcours) {
+    fv.parcours = serveur.parcours;
+    fv.parcoursFixe = true;
+  } else if (PARCOURS_IDS.includes(avant.parcours)) {
+    // Choix déjà fait (par le membre, ou par Marien avant qu'il ne le retire) : gardé.
+    fv.parcours = avant.parcours;
+  }
+  if (serveur.debut) fv.debut = serveur.debut;
+  return { ...(profil || {}), formule: FORMULE_FEU_VERT, feuVert: fv };
+}
+
+/** Profil mis à jour si le serveur dit autre chose (Marien a changé cohorte ou parcours), sinon null. */
+export function feuVertAJour(profil, serveur) {
+  if (!feuVertActif(profil) || !serveur) return null;
+  const suivant = profilFeuVert(profil, serveur);
+  const a = profil.feuVert || {};
+  const b = suivant.feuVert;
+  const pareil = ["cohorte", "parcours", "debut"].every((k) => (a[k] || null) === (b[k] || null)) && !!a.parcoursFixe === !!b.parcoursFixe;
+  return pareil ? null : suivant;
+}
+
+/** Le membre peut-il encore choisir son parcours ? (une fois, tant que Marien ne l'a pas fixé) */
+export const peutChoisirParcours = (profil) => {
+  const fv = (profil && profil.feuVert) || {};
+  return feuVertActif(profil) && !fv.parcoursFixe && !PARCOURS_IDS.includes(fv.parcours);
+};
+
+/** Choix unique du parcours ; profil inchangé si le choix n'est plus ouvert ou invalide. */
+export function choisirParcours(profil, parcours) {
+  if (!peutChoisirParcours(profil) || !PARCOURS_IDS.includes(parcours)) return profil;
+  return { ...profil, feuVert: { ...profil.feuVert, parcours } };
 }
 
 export const libelleParcours = (id) => (PARCOURS_FEU_VERT.find((p) => p.id === id) || PARCOURS_FEU_VERT[0]).label;
@@ -393,9 +458,45 @@ export async function actualiserPasseport(env = globalThis, maintenant = new Dat
     const d = await appeler("/feuvert/etat", {}, env);
     const serveur = { inscrit: !!d.inscrit, cohorte: d.cohorte || null, passeport: normaliserPasseport(d.passeport), missions: d.missions || {}, videos: d.videos || {}, majLe: d.majLe || null, recuLe: maintenant.toISOString() };
     majFeuVert({ serveur });
-    return { serveur, erreur: d.inscrit ? null : "non-inscrit" };
+    // reglages : cohorte, parcours et début fixés par Marien (App.jsx met le profil à jour).
+    return { serveur, reglages: reglagesDuServeur(d), erreur: d.inscrit ? null : "non-inscrit" };
   } catch (e) {
-    return { serveur: lireFeuVert().serveur, erreur: e.message };
+    return { serveur: lireFeuVert().serveur, reglages: null, erreur: e.message };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Accueil : « J'ai un code Feu Vert » (25 novembre 2026)               */
+/* ------------------------------------------------------------------ */
+
+export const MSG_REJOINDRE = {
+  ...MSG_ACTIVATION,
+  "non-inscrit":
+    "Ton code est activé, mais tu n'es pas encore inscrit dans une cohorte Feu Vert. Préviens Marien, puis touche « Réessayer ». Tu es en coaching individuel ? Crée ton profil plus bas : ton accès est déjà actif."
+};
+
+/**
+ * Active le code (s'il y en a un) et rend les réglages Feu Vert du membre :
+ * { ok: true, reglages } ou { ok: false, erreur } (clé de MSG_REJOINDRE).
+ * Sans code, réessaie avec l'accès déjà actif sur ce téléphone (code déjà
+ * utilisé, inscription faite depuis par Marien). Un proxy pas encore à jour
+ * ne renvoie pas les réglages à l'activation : ils sont alors demandés à
+ * /feuvert/etat.
+ */
+export async function rejoindreFeuVert(code, env = globalThis) {
+  if (code) {
+    const r = await activerCode(code, env);
+    if (!r.ok) return r;
+    const reglages = reglagesDuServeur(r);
+    if (reglages) return { ok: true, reglages };
+  } else if (!accesActuel(env)) {
+    return { ok: false, erreur: "code-invalide" };
+  }
+  try {
+    const reglages = reglagesDuServeur(await appeler("/feuvert/etat", {}, env));
+    return reglages ? { ok: true, reglages } : { ok: false, erreur: "non-inscrit" };
+  } catch (e) {
+    return { ok: false, erreur: e.message === "reseau" ? "reseau" : "indisponible" };
   }
 }
 

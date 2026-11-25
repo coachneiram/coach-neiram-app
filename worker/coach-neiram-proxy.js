@@ -9,6 +9,7 @@
  *   POST /ai              -> relaie vers Google Gemini avec la cle du coach
  *   POST /coach-sync      -> relaie vers le Google Apps Script, signe (HMAC)
  *   POST /auth/activer    -> echange un code d'invitation contre un jeton client
+ *                            (+ reglages Feu Vert d'un membre inscrit, 25/11/2026)
  *   POST /admin/...       -> invitations et revocations (secret du coach)
  *   POST /push/cle        -> cle publique des notifications push (VAPID)
  *   POST /push/abonner    -> enregistre un telephone et ses rappels a venir
@@ -25,6 +26,7 @@
  *                            coach, missions validees, tableau de regularite de
  *                            la cohorte (jeton client obligatoire)
  *   POST /admin/feuvert   -> le coach inscrit une membre et met a jour son Passeport
+ *                            (et son parcours, 25/11/2026)
  *   GET  /photo?q=…       -> photo d'une recette du Menu de la semaine (banque
  *                            d'images libre Pexels), sans jeton : plafonds par
  *                            adresse IP et par jour, recherches gardees 30 jours
@@ -336,15 +338,47 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS photos_recherches (cle TEXT PRIMARY KEY, photo TEXT, expire_le INTEGER NOT NULL)"
 ];
 
+/*
+ * Migrations sans perte : colonnes ajoutees a une table qui existe deja en
+ * production. SQLite n'a pas de « ADD COLUMN IF NOT EXISTS » : la colonne
+ * est cherchee d'abord (pragma_table_info), et une colonne deja la (deux
+ * instances du Worker qui migrent en meme temps) n'est pas une erreur.
+ * Jamais de DROP ni de reecriture : les lignes existantes gardent tout,
+ * la nouvelle colonne vaut NULL.
+ */
+const MIGRATIONS = [
+  // Feu Vert (25 novembre 2026) : parcours fixe par le coach (reprise |
+  // basesplus). NULL : pas encore fixe, le membre le choisit une fois.
+  { table: "feuvert", colonne: "parcours", sql: "ALTER TABLE feuvert ADD COLUMN parcours TEXT" }
+];
+
+async function migrer(db) {
+  for (const m of MIGRATIONS) {
+    let deja = false;
+    try {
+      const r = await db.prepare(`SELECT name FROM pragma_table_info('${m.table}')`).all();
+      deja = (r.results || []).some((c) => c.name === m.colonne);
+    } catch (e) {
+      // Lecture du schema impossible : on tente l'ajout, le doublon est ignore.
+    }
+    if (deja) continue;
+    try {
+      await db.prepare(m.sql).run();
+    } catch (e) {
+      if (!/duplicate column/i.test(String((e && e.message) || ""))) throw e;
+    }
+  }
+}
+
 // Schema cree une fois par base et par instance du Worker.
 const schemasPrets = new WeakMap();
 
-/** La base, schema pret ; null si la liaison DB n'existe pas. */
+/** La base, schema pret (tables puis migrations) ; null si la liaison DB n'existe pas. */
 async function base(env) {
   if (!env.DB) return null;
   let pret = schemasPrets.get(env.DB);
   if (!pret) {
-    pret = env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s)));
+    pret = env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s))).then(() => migrer(env.DB));
     schemasPrets.set(env.DB, pret);
     pret.catch(() => schemasPrets.delete(env.DB));
   }
@@ -750,8 +784,19 @@ async function activerCode(request, env, cors, ip) {
     .prepare("INSERT INTO jetons (empreinte, client_id, cree_le, revoque_le) VALUES (?1, ?2, ?3, NULL)")
     .bind(await hachage(jeton), client.id, maintenant)
     .run();
+  // Feu Vert (25/11/2026) : un membre inscrit par le coach recoit ses
+  // reglages (cohorte, parcours, debut), et seulement les siens, pour que
+  // l'application se pre-regle. Le code est deja consomme : une lecture
+  // qui echoue ne doit pas faire echouer l'activation.
+  let feuVert = null;
+  try {
+    const fiche = await db.prepare("SELECT cohorte, parcours FROM feuvert WHERE client_id = ?1").bind(client.id).first();
+    if (fiche) feuVert = reglagesFeuVertServeur(fiche);
+  } catch (e) {
+    feuVert = null;
+  }
   journal(route, 200, null, client);
-  return reponseJson({ ok: true, jeton, libelle: client.libelle }, 200, cors);
+  return reponseJson({ ok: true, jeton, libelle: client.libelle, ...(feuVert ? { feuVert } : {}) }, 200, cors);
 }
 
 /* ------------------------------------------------------------------ */
@@ -2569,6 +2614,26 @@ const FV_COHORTE = /^[A-Za-z0-9-]{1,12}$/;
 const FV_APPELS_PAR_JOUR = 60;
 const TAILLE_MAX_FEUVERT = 2 * 1024;
 const FV_URL_MAX = 300;
+/* Parcours (25/11/2026), fixe par le coach. NULL en base : pas encore fixe. */
+const FV_PARCOURS = ["reprise", "basesplus"];
+/* Date de debut (lundi de la semaine 1) de chaque cohorte. Cohorte absente :
+ * pas de date envoyee, l'application garde la sienne (DEBUT_COHORTE_1).
+ * Nouvelle cohorte : ajouter sa ligne ici, puis redeployer le Worker. */
+const FV_DEBUT_COHORTES = new Map([["1", "2027-01-18"]]);
+
+/**
+ * Reglages qui pre-reglent l'application d'un membre (reponses de
+ * /auth/activer et de /feuvert/etat) : { cohorte, parcours | null,
+ * debut | null }. Lus dans SA ligne de la table feuvert, rien d'autre.
+ */
+function reglagesFeuVertServeur(fiche) {
+  const cohorte = String(fiche.cohorte);
+  return {
+    cohorte,
+    parcours: FV_PARCOURS.includes(fiche.parcours) ? fiche.parcours : null,
+    debut: FV_DEBUT_COHORTES.get(cohorte) || null
+  };
+}
 
 /** Lien de video : https seulement (jamais javascript: ni data:), 300 caracteres au plus. */
 function urlVideoPropre(brut) {
@@ -2667,7 +2732,7 @@ async function routeFeuVert(chemin, request, env, cors) {
   if (lu.reponse) return lu.reponse;
   const corps = lu.corps;
 
-  const fiche = await db.prepare("SELECT cohorte, passeport, missions, maj_le FROM feuvert WHERE client_id = ?1").bind(client.id).first();
+  const fiche = await db.prepare("SELECT cohorte, parcours, passeport, missions, maj_le FROM feuvert WHERE client_id = ?1").bind(client.id).first();
 
   if (chemin === "/feuvert/etat") {
     journal(route, 200, null, client);
@@ -2680,7 +2745,9 @@ async function routeFeuVert(chemin, request, env, cors) {
         passeport: passeportPropre(jsonOu(fiche.passeport, {})),
         missions: missionsPropres(jsonOu(fiche.missions, {})),
         videos: await videosCohorte(db, fiche.cohorte),
-        majLe: Number(fiche.maj_le)
+        majLe: Number(fiche.maj_le),
+        // Cohorte, parcours et debut : l'application suit le coach (25/11/2026).
+        feuVert: reglagesFeuVertServeur(fiche)
       },
       200,
       cors
@@ -2717,8 +2784,12 @@ async function routeFeuVert(chemin, request, env, cors) {
 /**
  * Espace coach : { action: "liste" } (tous les membres inscrits, ou ceux
  * d'une cohorte), { action: "enregistrer", client, cohorte, passeport,
- * missions }, { action: "retirer", client }, { action: "video", cohorte,
- * semaine, url } (url vide : lien retire).
+ * missions, parcours? }, { action: "retirer", client }, { action: "video",
+ * cohorte, semaine, url } (url vide : lien retire).
+ *
+ * parcours (25/11/2026) : absent, inchange ; null ou "", retire (le membre
+ * le choisira une fois dans l'application) ; sinon "reprise" ou
+ * "basesplus", rien d'autre (400 parcours-invalide).
  */
 async function adminFeuVert(db, corps, maintenant) {
   const action = String(corps.action || "");
@@ -2726,12 +2797,12 @@ async function adminFeuVert(db, corps, maintenant) {
     const cohorte = corps.cohorte ? String(corps.cohorte) : null;
     const r = await db
       .prepare(
-        "SELECT c.id AS id, c.libelle AS libelle, f.cohorte AS cohorte, f.passeport AS passeport, f.missions AS missions, f.maj_le AS maj_le, t.pseudo AS pseudo FROM feuvert f JOIN clients c ON c.id = f.client_id LEFT JOIN feuvert_tableau t ON t.client_id = f.client_id WHERE c.revoque_le IS NULL ORDER BY c.libelle"
+        "SELECT c.id AS id, c.libelle AS libelle, f.cohorte AS cohorte, f.parcours AS parcours, f.passeport AS passeport, f.missions AS missions, f.maj_le AS maj_le, t.pseudo AS pseudo FROM feuvert f JOIN clients c ON c.id = f.client_id LEFT JOIN feuvert_tableau t ON t.client_id = f.client_id WHERE c.revoque_le IS NULL ORDER BY c.libelle"
       )
       .all();
     const membres = (r.results || [])
       .filter((l) => !cohorte || l.cohorte === cohorte)
-      .map((l) => ({ id: l.id, libelle: l.libelle, cohorte: l.cohorte, passeport: passeportPropre(jsonOu(l.passeport, {})), missions: missionsPropres(jsonOu(l.missions, {})), majLe: Number(l.maj_le), pseudo: l.pseudo || null }));
+      .map((l) => ({ id: l.id, libelle: l.libelle, cohorte: l.cohorte, parcours: FV_PARCOURS.includes(l.parcours) ? l.parcours : null, passeport: passeportPropre(jsonOu(l.passeport, {})), missions: missionsPropres(jsonOu(l.missions, {})), majLe: Number(l.maj_le), pseudo: l.pseudo || null }));
     // Videos de la seance de la semaine, par cohorte (celles des membres listees).
     const videos = {};
     for (const c of new Set(membres.map((m) => m.cohorte).concat(cohorte ? [cohorte] : []))) videos[c] = await videosCohorte(db, c);
@@ -2767,19 +2838,24 @@ async function adminFeuVert(db, corps, maintenant) {
   if (action === "enregistrer") {
     const cohorte = String(corps.cohorte || "").trim();
     if (!FV_COHORTE.test(cohorte)) return { erreur: "cohorte-invalide" };
+    // Parcours : absent = inchange (changer = 0) ; null ou "" = retire ; sinon une valeur connue.
+    const changer = Object.prototype.hasOwnProperty.call(corps, "parcours") && corps.parcours !== undefined ? 1 : 0;
+    const parcours = changer && corps.parcours !== null && corps.parcours !== "" ? corps.parcours : null;
+    if (parcours !== null && !FV_PARCOURS.includes(parcours)) return { erreur: "parcours-invalide" };
     const passeport = passeportPropre(corps.passeport);
     const missions = missionsPropres(corps.missions);
     await db.batch([
       db
         .prepare(
-          "INSERT INTO feuvert (client_id, cohorte, passeport, missions, maj_le) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(client_id) DO UPDATE SET cohorte = ?2, passeport = ?3, missions = ?4, maj_le = ?5"
+          "INSERT INTO feuvert (client_id, cohorte, passeport, missions, maj_le, parcours) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(client_id) DO UPDATE SET cohorte = ?2, passeport = ?3, missions = ?4, maj_le = ?5, parcours = CASE WHEN ?7 = 1 THEN ?6 ELSE parcours END"
         )
-        .bind(clientId, cohorte, JSON.stringify(passeport), JSON.stringify(missions), maintenant),
+        .bind(clientId, cohorte, JSON.stringify(passeport), JSON.stringify(missions), maintenant, parcours, changer),
       // Changement de cohorte : la ligne du tableau suit (ou disparait si le pseudo y est deja pris).
       db.prepare("UPDATE OR IGNORE feuvert_tableau SET cohorte = ?2 WHERE client_id = ?1").bind(clientId, cohorte),
       db.prepare("DELETE FROM feuvert_tableau WHERE client_id = ?1 AND cohorte != ?2").bind(clientId, cohorte)
     ]);
-    return { passeport, missions, cohorte };
+    const apres = await db.prepare("SELECT parcours FROM feuvert WHERE client_id = ?1").bind(clientId).first();
+    return { passeport, missions, cohorte, parcours: apres && FV_PARCOURS.includes(apres.parcours) ? apres.parcours : null };
   }
   return { erreur: "action-inconnue" };
 }
@@ -3233,6 +3309,7 @@ if (typeof globalThis.__COACH_TEST__ === "object" && globalThis.__COACH_TEST__) 
   Object.assign(globalThis.__COACH_TEST__, { chiffrerWebPush, enTeteVapid, envoyerRappelsDus, envoyerAnnonces, heureParis, abonnementPropre, deB64url, b64url, validerRequeteIa, signerEvenement, validerPseudo, prenomDuLibelle, genererCodeDefi, valeurDefiBornee, nettoyerDefis, DEFIS_LIMITES: { DEFIS_PAR_JOUR, DEFIS_PARTICIPANTS_MAX, DEFIS_ACTIFS_MAX, DEFIS_CONSERVATION_JOURS } });
   Object.assign(globalThis.__COACH_TEST__, { normaliserRequetePhoto, adresseImagePexels, PHOTOS: { PHOTOS_PAR_JOUR, PHOTOS_PAR_IP_JOUR, IMAGES_PAR_IP_JOUR }, PLAN_REPAS_PAR_JOUR: PLAFONDS.planRepasParJour, IA_FONCTIONS, IA_JETONS_SORTIE_PAR_FONCTION });
   Object.assign(globalThis.__COACH_TEST__, { alerterInactivite, joursInactivite, niveauInactivite, dateParis, INACTIVITE: { INACTIVITE_ATTENTION_JOURS, INACTIVITE_CRITIQUE_JOURS, PRESENCE_PAR_JOUR: PLAFONDS.presenceParJour } });
+  Object.assign(globalThis.__COACH_TEST__, { MIGRATIONS, migrer, reglagesFeuVertServeur, FV_DEBUT_COHORTES });
   Object.assign(globalThis.__COACH_TEST__, {
     nettoyerStatsCommunaute,
     validerTransformationCommunaute,

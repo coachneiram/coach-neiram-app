@@ -234,3 +234,109 @@ describe("Nettoyage des données", () => {
     assert.deepEqual(T.semainesPropres({ 4: { seances: -3, bonus: 7, checkin: "1" }, 9: { seances: 2 } }), { 4: { seances: 0, bonus: 1, checkin: 1 } });
   });
 });
+
+describe("Pré-réglage de l'application (25/11/2026)", () => {
+  const invitation = async (libelle) => (await appeler("/admin/invitations", { libelle }, ADMIN)).corps;
+
+  test("/auth/activer : réglages Feu Vert pour un membre inscrit, rien pour un autre client", async () => {
+    const nina = await invitation("Nina E.");
+    const paul = await invitation("Paul F.");
+    // Inscrite AVANT l'activation de son code, parcours fixé.
+    assert.equal((await admin({ action: "enregistrer", client: nina.client, cohorte: "1", parcours: "basesplus", passeport: { squat: { etat: "vert" } } })).statut, 200);
+    const a = (await appeler("/auth/activer", { code: nina.code })).corps;
+    assert.equal(a.ok, true);
+    assert.deepEqual(a.feuVert, { cohorte: "1", parcours: "basesplus", debut: "2027-01-18" });
+    assert.equal("passeport" in a || "missions" in a, false, "ni Passeport ni missions à l'activation");
+    const b = (await appeler("/auth/activer", { code: paul.code })).corps;
+    assert.equal(b.ok, true);
+    assert.equal("feuVert" in b, false, "client individuel : aucun réglage Feu Vert");
+  });
+
+  test("jamais les données d'un autre membre ; cohorte sans date : début null", async () => {
+    const anna = await invitation("Anna C.");
+    const zoe = await invitation("Zoé A.");
+    await admin({ action: "enregistrer", client: anna.client, cohorte: "1", parcours: "reprise" });
+    await admin({ action: "enregistrer", client: zoe.client, cohorte: "2" });
+    const a = (await appeler("/auth/activer", { code: anna.code })).corps;
+    const z = (await appeler("/auth/activer", { code: zoe.code })).corps;
+    assert.deepEqual(a.feuVert, { cohorte: "1", parcours: "reprise", debut: "2027-01-18" });
+    assert.deepEqual(z.feuVert, { cohorte: "2", parcours: null, debut: null });
+    const etatZ = (await appeler("/feuvert/etat", {}, z.jeton)).corps;
+    assert.deepEqual(etatZ.feuVert, { cohorte: "2", parcours: null, debut: null });
+    assert.ok(!JSON.stringify(etatZ).includes("Anna") && !JSON.stringify(etatZ).includes(anna.client));
+  });
+
+  test("/feuvert/etat suit le coach ; un membre ne peut changer ni sa cohorte ni son parcours", async () => {
+    const lea = await clientActive("Léa B.");
+    await admin({ action: "enregistrer", client: lea.id, cohorte: "1", parcours: "reprise" });
+    for (const chemin of ["/feuvert/etat", "/feuvert/tableau", "/feuvert/reglages", "/feuvert/parcours"]) {
+      await appeler(chemin, { cohorte: "9", parcours: "basesplus", feuVert: { cohorte: "9", parcours: "basesplus" }, accord: false }, lea.jeton);
+    }
+    assert.equal((await appeler("/admin/feuvert", { action: "enregistrer", client: lea.id, cohorte: "9", parcours: "basesplus" }, lea.jeton)).statut, 401);
+    let r = (await appeler("/feuvert/etat", {}, lea.jeton)).corps;
+    assert.deepEqual(r.feuVert, { cohorte: "1", parcours: "reprise", debut: "2027-01-18" });
+    assert.equal(r.cohorte, "1");
+    // Le coach change le parcours : le membre le lit.
+    await admin({ action: "enregistrer", client: lea.id, cohorte: "1", parcours: "basesplus" });
+    r = (await appeler("/feuvert/etat", {}, lea.jeton)).corps;
+    assert.equal(r.feuVert.parcours, "basesplus");
+  });
+
+  test("/admin/feuvert : parcours validé strictement ; absent = inchangé ; vide = retiré", async () => {
+    const lea = await clientActive("Léa B.");
+    for (const mauvais of ["expert", "Reprise", 1, true, ["reprise"], { id: "reprise" }, "reprise "]) {
+      const e = await admin({ action: "enregistrer", client: lea.id, cohorte: "1", parcours: mauvais });
+      assert.equal(e.statut, 400, JSON.stringify(mauvais));
+      assert.equal(e.corps.error, "parcours-invalide");
+    }
+    assert.equal((await admin({ action: "liste" })).corps.membres.length, 0, "rien d'écrit sur un refus");
+    assert.equal((await admin({ action: "enregistrer", client: lea.id, cohorte: "1", parcours: "basesplus" })).corps.parcours, "basesplus");
+    assert.equal((await admin({ action: "enregistrer", client: lea.id, cohorte: "1", passeport: {} })).corps.parcours, "basesplus", "absent : inchangé");
+    assert.equal((await admin({ action: "liste" })).corps.membres[0].parcours, "basesplus");
+    assert.equal((await admin({ action: "enregistrer", client: lea.id, cohorte: "1", parcours: "" })).corps.parcours, null);
+    assert.equal((await admin({ action: "enregistrer", client: lea.id, cohorte: "1", parcours: "reprise" })).corps.parcours, "reprise");
+    assert.equal((await admin({ action: "enregistrer", client: lea.id, cohorte: "1", parcours: null })).corps.parcours, null);
+  });
+
+  test("migration sans perte : ancienne table feuvert (sans parcours) complétée, une seule fois", async () => {
+    const db = env.DB;
+    // Base de production d'avant le 25/11/2026 : table sans colonne parcours, une membre inscrite.
+    db.sqlite.exec("CREATE TABLE feuvert (client_id TEXT PRIMARY KEY, cohorte TEXT NOT NULL, passeport TEXT NOT NULL DEFAULT '{}', missions TEXT NOT NULL DEFAULT '{}', maj_le INTEGER NOT NULL)");
+    db.sqlite.exec(`INSERT INTO feuvert VALUES ('ancienne', '1', '{"squat":{"etat":"vert","date":"2027-01-20"}}', '{"1":{"semaine":1}}', 1)`);
+    const lea = await clientActive("Léa B."); // premier appel : schéma, puis migrations
+    const colonnes = db.sqlite.prepare("SELECT name FROM pragma_table_info('feuvert')").all().map((c) => c.name);
+    assert.ok(colonnes.includes("parcours"));
+    const ligne = db.sqlite.prepare("SELECT * FROM feuvert WHERE client_id = 'ancienne'").get();
+    assert.equal(ligne.cohorte, "1");
+    assert.equal(JSON.parse(ligne.passeport).squat.etat, "vert");
+    assert.equal(JSON.parse(ligne.missions)["1"].semaine, 1);
+    assert.equal(ligne.parcours, null);
+    // Rejouée (autre instance du Worker, ou colonne déjà là) : sans erreur, sans doublon.
+    await T.migrer(db);
+    await T.migrer(db);
+    assert.equal(db.sqlite.prepare("SELECT name FROM pragma_table_info('feuvert')").all().filter((c) => c.name === "parcours").length, 1);
+    assert.ok(T.MIGRATIONS.every((m) => /^ALTER TABLE \w+ ADD COLUMN /.test(m.sql)), "jamais de DROP ni de réécriture");
+    // Et la route marche sur la table migrée.
+    await admin({ action: "enregistrer", client: lea.id, cohorte: "1", parcours: "reprise" });
+    assert.equal((await appeler("/feuvert/etat", {}, lea.jeton)).corps.feuVert.parcours, "reprise");
+  });
+
+  test("colonne déjà ajoutée par une autre instance : l'erreur « duplicate column » est ignorée", async () => {
+    let alter = 0;
+    const faux = {
+      prepare: (sql) => ({
+        all: async () => {
+          throw new Error("pragma refusé");
+        },
+        run: async () => {
+          alter++;
+          throw new Error("duplicate column name: parcours");
+        }
+      })
+    };
+    await T.migrer(faux);
+    assert.equal(alter, T.MIGRATIONS.length);
+    const casse = { prepare: () => ({ all: async () => ({ results: [] }), run: async () => { throw new Error("disk I/O error"); } }) };
+    await assert.rejects(() => T.migrer(casse), /disk I\/O/);
+  });
+});

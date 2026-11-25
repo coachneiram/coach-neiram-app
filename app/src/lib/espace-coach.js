@@ -73,8 +73,9 @@ export const revoquerClient = (client, secret, env) => appelerAdmin("/admin/revo
 export const presenceClients = (secret, env) => appelerAdmin("/admin/presence", {}, secret, env);
 // Feu Vert (14 novembre 2026) : inscription des membres et Passeport.
 export const feuVertListe = (secret, env) => appelerAdmin("/admin/feuvert", { action: "liste" }, secret, env);
-export const feuVertEnregistrer = ({ client, cohorte, passeport, missions }, secret, env) =>
-  appelerAdmin("/admin/feuvert", { action: "enregistrer", client, cohorte, passeport: passeportPourEnvoi(passeport), missions }, secret, env);
+// parcours (25/11/2026) : absent = inchangé, "" = non fixé, sinon reprise | basesplus.
+export const feuVertEnregistrer = ({ client, cohorte, parcours, passeport, missions }, secret, env) =>
+  appelerAdmin("/admin/feuvert", { action: "enregistrer", client, cohorte, ...(parcours !== undefined ? { parcours } : {}), passeport: passeportPourEnvoi(passeport), missions }, secret, env);
 export const feuVertRetirer = (client, secret, env) => appelerAdmin("/admin/feuvert", { action: "retirer", client }, secret, env);
 export const feuVertVideo = ({ cohorte, semaine, url }, secret, env) => appelerAdmin("/admin/feuvert", { action: "video", cohorte, semaine, url }, secret, env);
 export const moderation = (action, cible, secret, env) => appelerAdmin("/admin/communaute", { action, ...(cible != null ? { cible: String(cible) } : {}) }, secret, env);

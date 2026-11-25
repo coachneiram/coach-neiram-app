@@ -94,19 +94,26 @@ const styleBoutonEntete = {
   display: "flex"
 };
 
+/** Classe de la coque sans barre d'onglets (styles.css). */
+const CLASSE_ONGLET_UNIQUE = "onglet-unique";
+
 export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, onOuvrirTuto, toast, onFermerToast, iconeToast, onglets = ONGLETS, children }) {
+  // Un seul onglet (Feu Vert, 25/11/2026) : ni barre du bas ni menu d'onglets,
+  // il n'y aurait rien a choisir. L'en-tete et les Reglages restent.
+  const plusieurs = onglets.length > 1;
+  const classeCoque = plusieurs ? "app-shell" : "app-shell " + CLASSE_ONGLET_UNIQUE;
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: POLICES.texte, color: COLORS.text }}>
       <Toast message={toast} onClose={onFermerToast} icone={iconeToast} />
 
-      <div className="app-shell">
+      <div className={classeCoque}>
         <aside className="sidebar">
           <div className="brand">
             <Marque taille={22} tailleTitre={14.5} tailleSurtitre={7.5} />
           </div>
 
           <nav className="nav-list">
-            {onglets.map((o) => (
+            {plusieurs && onglets.map((o) => (
               <button
                 key={o.id}
                 onClick={() => onChangerOnglet(o.id)}
@@ -156,18 +163,20 @@ export function Coque({ ongletActif, onChangerOnglet, onOuvrirReglages, onOuvrir
           <main className="main-content">{children}</main>
         </div>
 
-        <nav className="bottom-nav">
-          {onglets.map((o) => (
-            <button
-              key={o.id}
-              onClick={() => onChangerOnglet(o.id)}
-              className={ongletActif === o.id ? "active" : ""}
-            >
-              <o.icon size={19} />
-              <span>{o.short}</span>
-            </button>
-          ))}
-        </nav>
+        {plusieurs && (
+          <nav className="bottom-nav">
+            {onglets.map((o) => (
+              <button
+                key={o.id}
+                onClick={() => onChangerOnglet(o.id)}
+                className={ongletActif === o.id ? "active" : ""}
+              >
+                <o.icon size={19} />
+                <span>{o.short}</span>
+              </button>
+            ))}
+          </nav>
+        )}
       </div>
     </div>
   );

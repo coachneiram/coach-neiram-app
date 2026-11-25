@@ -150,12 +150,10 @@ describe("contenu livré = contenu vendu", () => {
 });
 
 describe("réglage et onglets", () => {
-  test("formule désactivée : barre inchangée ; active : Feu Vert en tête, sans nutrition, mensurations ni tendances", () => {
+  test("formule désactivée : barre inchangée ; active : l'onglet Feu Vert seul (25/11/2026)", () => {
     assert.equal(ongletsPour({}), ONGLETS);
     assert.equal(ongletsPour(null), ONGLETS);
-    const ids = ongletsPour(PROFIL).map((o) => o.id);
-    assert.equal(ids[0], "feuvert");
-    assert.deepEqual(ids, ["feuvert", "entrainements", "sommeil", "journal"]);
+    assert.deepEqual(ongletsPour(PROFIL).map((o) => o.id), ["feuvert"]);
   });
 
   test("valeurs par défaut : cohorte 1, lundi 18 janvier 2027, parcours Reprise", () => {

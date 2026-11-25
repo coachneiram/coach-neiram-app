@@ -128,24 +128,61 @@ export const TEXTES_FEU_VERT = {
   colonnes: ["Pseudo", "Sem.", "Cumul", "Série"],
   toastAccord: (oui) => (oui ? "Tu apparais dans le tableau de ta cohorte." : "Tu n'apparais plus dans le tableau."),
 
-  // Réglage du profil.
+  // Réglage du profil (lu par les Réglages Feu Vert).
   formule: "Formule",
-  formuleAide: (actif) =>
-    actif
-      ? "Feu Vert : ton programme de 6 semaines, ton Passeport, tes missions et ton check-in du lundi sont dans l'onglet Feu Vert."
-      : "Coaching individuel : l'application fonctionne comme avant.",
   parcours: "Parcours",
-  parcoursAide: (aide) => aide + " Marien te l'a indiqué après le questionnaire.",
   cohorte: "Cohorte n°",
   debut: "Début du cycle"
+};
+
+/**
+ * Réglages Feu Vert (25 novembre 2026) : tout est pré-réglé par Marien et
+ * affiché en lecture seule. Seuls le prénom et le code d'accès se changent ;
+ * le parcours se choisit une fois, tant que Marien ne l'a pas fixé.
+ */
+export const TEXTES_REGLAGES_FEU_VERT = {
+  titre: "Réglages",
+  prenom: "Prénom (optionnel)",
+  monInscription: "Mon inscription Feu Vert",
+  inscriptionAide: "Réglée par Marien à ton inscription : tu n'as rien à faire. Une erreur ? Écris-lui sur la plateforme Coach Neiram.",
+  formuleValeur: "Feu Vert (collectif)",
+  parcoursFixe: "Fixé par Marien.",
+  parcoursDefaut: (aide) => aide + " Choisis ton parcours une seule fois ; ensuite, seul Marien pourra le changer.",
+  choisirParcours: "Choisir ce parcours",
+  confirmerParcours: (libelle) => `Choisir le parcours ${libelle} ? Tu ne pourras plus le changer toi-même ensuite.`,
+  enregistrer: "Enregistrer",
+  version: (v) => "Version " + v,
+  acces: {
+    titre: "Accès de ton coach",
+    explication: "Le code à 8 caractères donné par Marien relie ce téléphone à ton inscription Feu Vert : Passeport, missions, check-in et tableau.",
+    actif: (libelle) => `Activé${libelle ? " pour " + libelle : ""}. Ton Passeport et ton check-in passent par ce téléphone.`,
+    champ: "Code d'accès (ex. K7PM-Q4XT)",
+    bouton: "Activer",
+    retirer: "Retirer l'accès de ce téléphone",
+    confirmationRetrait: "Retirer l'accès ? Ton Passeport ne se mettra plus à jour et ton check-in ne partira plus jusqu'à un nouveau code."
+  }
+};
+
+/** Accueil : « J'ai un code Feu Vert » (25 novembre 2026). */
+export const TEXTES_ACCUEIL_FEU_VERT = {
+  bouton: "J'ai un code Feu Vert",
+  aide: "Membre Feu Vert ? Entre le code reçu de Marien : ton application se règle toute seule.",
+  code: "Code Feu Vert (ex. K7PM-Q4XT)",
+  prenom: "Prénom (optionnel)",
+  activer: "Activer mon code",
+  reessayer: "Réessayer",
+  enCours: "Activation…",
+  separateur: "Coaching individuel"
 };
 
 /** Espace coach : carte « Feu Vert · Passeports ». */
 export const TEXTES_FEU_VERT_COACH = {
   titre: "Feu Vert · Passeports",
-  aide: "Inscris chaque membre (après l'activation de son code d'accès), puis fixe l'état de ses gestes après chaque correction vidéo et valide ses missions après le check-in. Le membre ne peut rien modifier.",
+  aide: "Crée le code d'accès du membre, puis inscris-le ici (cohorte et parcours) AVANT de lui envoyer son code : à l'activation (« J'ai un code Feu Vert »), son application se règle toute seule. Ensuite, fixe l'état de ses gestes après chaque correction vidéo et valide ses missions après le check-in. Le membre ne peut rien modifier.",
   choisir: "Choisir un client…",
   cohorte: "Cohorte",
+  parcours: "Parcours",
+  parcoursNonFixe: "Parcours non fixé",
   inscrire: "Inscrire",
   chargement: "Chargement…",
   aucun: "Aucun membre inscrit.",

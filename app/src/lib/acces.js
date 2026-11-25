@@ -82,7 +82,9 @@ export async function activerCode(code, env = globalThis) {
   } catch (e) {
     return { ok: false, erreur: "indisponible" };
   }
-  return { ok: true, libelle: d.libelle || "" };
+  // feuVert (25/11/2026) : réglages d'un membre inscrit dans Feu Vert
+  // (cohorte, parcours, début), pour pré-régler son profil (lib/feu-vert.js).
+  return { ok: true, libelle: d.libelle || "", ...(d.feuVert && typeof d.feuVert === "object" ? { feuVert: d.feuVert } : {}) };
 }
 
 /** Textes de la carte « Accès de ton coach » (Reglages). */
