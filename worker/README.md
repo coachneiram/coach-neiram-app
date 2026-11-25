@@ -1,5 +1,7 @@
 # Sécurisation de la clé IA et du webhook coach
 
+> **25 novembre 2026 : déploiement automatique.** Le proxy se déploie seul à chaque fusion dans `main` (Cloudflare Workers Builds, répertoire racine `worker`, config `wrangler.toml`). Ne plus recoller le code dans l'éditeur Cloudflare : la fusion suivante écraserait la modification. Un nouveau binding ou un nouveau cron s'ajoute dans `wrangler.toml` ; variables et secrets restent dans le tableau de bord.
+
 > **17 octobre 2026 : codes d'accès clients et synchro signée (v2.2).** La procédure à jour est dans [`SECURITE.md`](SECURITE.md). Elle remplace l'étape « Installer la v2.1 » ci-dessous pour toute nouvelle mise en place. Le reste de ce fichier décrit l'historique.
 
 Ce dossier contient les deux pièces qui mettent les secrets hors du navigateur :
