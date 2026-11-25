@@ -260,8 +260,27 @@ describe("contournement fermé : code Feu Vert entré dans un profil individuel 
 
   test("au lancement, un profil individuel avec le code d'un inscrit bascule en Feu Vert", () => {
     const app = lire("app/src/App.jsx");
-    assert.match(app, /if \(!pret \|\| !profile \|\| feuVertActif\(profile\) \|\| inscriptionVerifiee\.current \|\| !accesActuel\(\)\) return;/);
-    assert.match(app, /if \(r\.statut === "inscrit" && p && !feuVertActif\(p\)\) enregistrerProfil\(profilFeuVert\(p, r\.reglages\)\);/);
+    assert.match(app, /if \(!pret \|\| !profile \|\| feuVertActif\(profile\) \|\| inscriptionVerifiee\.current \|\| !accesActuel\(\) \|\| inscriptionDejaVerifiee\(\)\) return;/);
+    assert.match(app, /if \(reglages && p && !feuVertActif\(p\)\) enregistrerProfil\(profilFeuVert\(p, reglages\)\);/);
+  });
+
+  test("vérification au lancement : une seule fois par code, rien de mémorisé sans réseau", async () => {
+    assert.equal(await FV.verifierInscriptionAuLancement(), null, "sans code : aucun appel");
+    localStorage.setItem(CLE_ACCES, JSON.stringify({ jeton: JETON, activeLe: "2027-01-10T08:00:00Z" }));
+    reseau([new Error("hors ligne")]);
+    assert.equal(await FV.verifierInscriptionAuLancement(), null);
+    assert.equal(FV.inscriptionDejaVerifiee(), false, "échec réseau : sera retentée");
+    reseau([{ json: { ok: true, inscrit: false } }]);
+    assert.equal(await FV.verifierInscriptionAuLancement(), null);
+    assert.equal(FV.inscriptionDejaVerifiee(), true);
+    reseau([]);
+    assert.equal(await FV.verifierInscriptionAuLancement(), null);
+    assert.equal(appels.length, 0, "même code : aucun nouvel appel");
+    assert.ok(!FV.CLE_VERIF_INSCRIPTION.startsWith("coach_") && !FV.CLE_VERIF_INSCRIPTION.startsWith("cn_"), "hors sauvegarde");
+    // Nouveau code (inscrit) : nouvelle vérification.
+    localStorage.setItem(CLE_ACCES, JSON.stringify({ jeton: "k".repeat(43), activeLe: "2027-01-11T08:00:00Z" }));
+    reseau([{ json: { ok: true, inscrit: true, cohorte: "1", feuVert: { cohorte: "1", parcours: "reprise", debut: "2027-01-18" } } }]);
+    assert.deepEqual(await FV.verifierInscriptionAuLancement(), { cohorte: "1", parcours: "reprise", debut: "2027-01-18" });
   });
 
   test("message « non inscrit » : plus d'invitation à créer un profil individuel", () => {

@@ -59,7 +59,7 @@ import { totauxDuJour } from "./lib/score-jour.js";
 import { Coque, avecIcones } from "./ui/Coque.jsx";
 import { ongletPermis, ongletsPour } from "./lib/onglets.js";
 import { FeuVert } from "./ecrans/FeuVert.jsx";
-import { feuVertActif, feuVertAJour, profilFeuVert, statutInscription } from "./lib/feu-vert.js";
+import { feuVertActif, feuVertAJour, inscriptionDejaVerifiee, profilFeuVert, verifierInscriptionAuLancement } from "./lib/feu-vert.js";
 import { accesActuel } from "./lib/acces.js";
 import { ReglagesFeuVert } from "./ecrans/ReglagesFeuVert.jsx";
 import { ChoixPhoto } from "./ui/ChoixPhoto.jsx";
@@ -781,16 +781,17 @@ export default function App() {
 
   // Client individuel dont le code est celui d'un membre Feu Vert inscrit
   // (profil créé à l'accueil, code entré ensuite) : une vérification par
-  // lancement, et le profil bascule en Feu Vert verrouillé, sans rien effacer.
+  // lancement et une seule fois par code (mémorisée), et le profil bascule
+  // en Feu Vert verrouillé, sans rien effacer.
   const inscriptionVerifiee = useRef(false);
   const profilCourant = useRef(profile);
   profilCourant.current = profile;
   useEffect(() => {
-    if (!pret || !profile || feuVertActif(profile) || inscriptionVerifiee.current || !accesActuel()) return;
+    if (!pret || !profile || feuVertActif(profile) || inscriptionVerifiee.current || !accesActuel() || inscriptionDejaVerifiee()) return;
     inscriptionVerifiee.current = true;
-    statutInscription().then((r) => {
+    verifierInscriptionAuLancement().then((reglages) => {
       const p = profilCourant.current;
-      if (r.statut === "inscrit" && p && !feuVertActif(p)) enregistrerProfil(profilFeuVert(p, r.reglages));
+      if (reglages && p && !feuVertActif(p)) enregistrerProfil(profilFeuVert(p, reglages));
     });
   }, [pret, profile]);
 

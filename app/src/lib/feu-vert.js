@@ -141,6 +141,39 @@ export async function statutInscription(env = globalThis) {
   }
 }
 
+/*
+ * Vérification au lancement d'un profil individuel (App.jsx) : UNE fois par
+ * code d'accès. La réponse (inscrit ou non) est mémorisée sous une empreinte
+ * courte du code ; un échec réseau ne mémorise rien. Clé hors préfixes
+ * coach_ / cn_ : jamais dans la sauvegarde, comme le jeton.
+ */
+export const CLE_VERIF_INSCRIPTION = "acces_neiram_verif_feuvert";
+
+const empreinteAcces = (a) => (a ? String(a.activeLe || "") + ":" + String(a.jeton).slice(0, 6) : "");
+
+/** Ce code a-t-il déjà été vérifié sur ce téléphone ? */
+export function inscriptionDejaVerifiee(env = globalThis) {
+  try {
+    const a = accesActuel(env);
+    return !!a && env.localStorage.getItem(CLE_VERIF_INSCRIPTION) === empreinteAcces(a);
+  } catch (e) {
+    return true; // Stockage illisible : on ne relance rien.
+  }
+}
+
+/** Vérification au lancement : rend les réglages d'un inscrit, sinon null ; mémorise la réponse. */
+export async function verifierInscriptionAuLancement(env = globalThis) {
+  if (!accesActuel(env) || inscriptionDejaVerifiee(env)) return null;
+  const r = await statutInscription(env);
+  if (r.statut === "inconnu") return null;
+  try {
+    env.localStorage.setItem(CLE_VERIF_INSCRIPTION, empreinteAcces(accesActuel(env)));
+  } catch (e) {
+    // Sans stockage : la vérification repartira au prochain lancement.
+  }
+  return r.statut === "inscrit" ? r.reglages : null;
+}
+
 /** Le membre peut-il encore choisir son parcours ? (une fois, tant que Marien ne l'a pas fixé) */
 export const peutChoisirParcours = (profil) => {
   const fv = (profil && profil.feuVert) || {};
