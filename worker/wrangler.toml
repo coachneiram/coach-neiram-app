@@ -1,0 +1,27 @@
+# Déploiement automatique (Cloudflare Workers Builds, répertoire racine « worker ») : chaque fusion dans main déploie le proxy.
+# Valeurs relevées sur la production le 25/11/2026. Variables et secrets restent dans le tableau de bord (keep_vars).
+name = "coach-neiram-proxy"
+main = "coach-neiram-proxy.js"
+compatibility_date = "2026-09-05"
+keep_vars = true
+workers_dev = true
+preview_urls = false
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "coach-neiram-acces"
+database_id = "2dfdc67e-d102-452b-96b1-525734cbd658"
+
+[[kv_namespaces]]
+binding = "PUSH_KV"
+id = "c1433745cedb41ddb7b32ccf0a506570"
+
+[[services]]
+binding = "CRM"
+service = "coach-neiram-crm"
+
+[observability]
+enabled = true
