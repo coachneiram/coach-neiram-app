@@ -467,6 +467,15 @@ pré-règle l'application :
 - Inscrire le membre **avant** de lui envoyer son code : à l'activation, son
   application se règle seule. Inscrit après : il touche « Réessayer ».
 - Aucune route membre n'écrit la cohorte ni le parcours.
+- `enregistrer` refuse (400 `cohorte-sans-date`) une cohorte absente de
+  `FV_DEBUT_COHORTES`.
+- **Défense côté serveur** : un client présent dans `feuvert` reçoit 403
+  `reserve-coaching-individuel` sur `/ai`, `/defis/*`, `/communaute/*` et sur
+  `/coach-sync` pour tout type autre que `pointage` et `checkin_feu_vert`.
+  Restent ouverts : `/feuvert/*`, `/presence`, `/push/*`, `/auth/activer`.
+  Retiré de Feu Vert (`retirer`) : tout se rouvre.
+- Migration en panne (autre chose qu'une colonne déjà là) : journalisée
+  (`/migration`), les autres routes répondent, la requête suivante la retente.
   Niveau **info** : une ligne dans le Journal et dans l'onglet Alertes (colonne
   Statut pour pointer les réponses de la journée), **sans mail**.
 - Tests : `node --test tests/worker-feu-vert.test.mjs tests/feu-vert.test.mjs` ;

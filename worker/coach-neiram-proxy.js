@@ -231,6 +231,18 @@ function refus(route, statut, erreur, cors, client) {
   return reponseJson({ ok: false, error: erreur }, statut, cors);
 }
 
+/*
+ * Feu Vert (25/11/2026) : un membre inscrit dans la table feuvert n'a que
+ * son programme collectif. Le proxy le garantit aussi (l'application n'est
+ * qu'un confort) : /ai, /defis, /communaute et les evenements /coach-sync
+ * autres que ceux de l'ecran Feu Vert lui sont refuses (403). Restent :
+ * /feuvert/*, /coach-sync « pointage » et « checkin_feu_vert », /presence et
+ * /push (planning vide en Feu Vert), /auth/activer.
+ */
+const ERREUR_RESERVE_INDIVIDUEL = "reserve-coaching-individuel";
+const TYPES_FEU_VERT = ["pointage", "checkin_feu_vert"];
+const refusFeuVert = (route, cors, client) => refus(route, 403, ERREUR_RESERVE_INDIVIDUEL, cors, client);
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -352,7 +364,13 @@ const MIGRATIONS = [
   { table: "feuvert", colonne: "parcours", sql: "ALTER TABLE feuvert ADD COLUMN parcours TEXT" }
 ];
 
+/**
+ * Rend true si tout est en place. Un ALTER qui echoue pour une autre raison
+ * qu'une colonne deja la est journalise, sans faire tomber les autres routes :
+ * base() la retentera a la requete suivante.
+ */
 async function migrer(db) {
+  let complet = true;
   for (const m of MIGRATIONS) {
     let deja = false;
     try {
@@ -365,9 +383,12 @@ async function migrer(db) {
     try {
       await db.prepare(m.sql).run();
     } catch (e) {
-      if (!/duplicate column/i.test(String((e && e.message) || ""))) throw e;
+      if (/duplicate column/i.test(String((e && e.message) || ""))) continue;
+      complet = false;
+      journal("/migration", 500, "migration-echouee:" + m.table + "." + m.colonne, null);
     }
   }
+  return complet;
 }
 
 // Schema cree une fois par base et par instance du Worker.
@@ -378,7 +399,12 @@ async function base(env) {
   if (!env.DB) return null;
   let pret = schemasPrets.get(env.DB);
   if (!pret) {
-    pret = env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s))).then(() => migrer(env.DB));
+    pret = env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s)))
+      .then(() => migrer(env.DB))
+      .then((complet) => {
+        // Migration incomplete : la base sert quand meme, la suivante retente.
+        if (!complet) schemasPrets.delete(env.DB);
+      });
     schemasPrets.set(env.DB, pret);
     pret.catch(() => schemasPrets.delete(env.DB));
   }
@@ -522,12 +548,13 @@ async function identifier(route, request, env, cors) {
   if (!m) return { reponse: refus(route, 401, "jeton-invalide", cors) };
   const ligne = await db
     .prepare(
-      "SELECT c.id AS id, c.libelle AS libelle FROM jetons j JOIN clients c ON c.id = j.client_id WHERE j.empreinte = ?1 AND j.revoque_le IS NULL AND c.revoque_le IS NULL"
+      "SELECT c.id AS id, c.libelle AS libelle, f.client_id AS feuvert FROM jetons j JOIN clients c ON c.id = j.client_id LEFT JOIN feuvert f ON f.client_id = c.id WHERE j.empreinte = ?1 AND j.revoque_le IS NULL AND c.revoque_le IS NULL"
     )
     .bind(await hachage(m[1]))
     .first();
   if (!ligne) return { reponse: refus(route, 401, "jeton-invalide", cors) };
-  return { client: { id: ligne.id, libelle: ligne.libelle }, db };
+  // feuVert : client inscrit dans Feu Vert (table feuvert), lu a chaque appel.
+  return { client: { id: ligne.id, libelle: ligne.libelle, feuVert: Boolean(ligne.feuvert) }, db };
 }
 
 /** Lit un corps JSON plafonne ; rend { corps } ou { reponse }. */
@@ -652,6 +679,7 @@ async function relaiIa(request, env, cors, ip) {
   const id = await identifier(route, request, env, cors);
   if (id.reponse) return id.reponse;
   const { client, db } = id;
+  if (client && client.feuVert) return refusFeuVert(route, cors, client);
   const maintenant = Date.now();
 
   if (db) {
@@ -1074,6 +1102,10 @@ async function relaiCoachSync(request, env, cors, ip) {
   // client ne doit pas pouvoir en fabriquer une, ni en effacer une vraie.
   if (TYPES_SERVEUR.includes(String(evenement.type))) {
     return refus(route, 400, "type-reserve", cors, client);
+  }
+  // Membre Feu Vert : seulement le pointage et le check-in de son ecran.
+  if (client && client.feuVert && !TYPES_FEU_VERT.includes(String(evenement.type))) {
+    return refusFeuVert(route, cors, client);
   }
 
   // On reconstruit l'evenement champ par champ : rien d'inattendu ne passe,
@@ -1837,6 +1869,7 @@ async function routeDefis(chemin, request, env, cors) {
   // Mode transition : identifier accepte une requete sans jeton. Pas ici.
   if (!client) return refus(route, 401, "acces-requis", cors);
   if (!db) return refus(route, 503, "acces-non-configure", cors);
+  if (client.feuVert) return refusFeuVert(route, cors, client);
 
   const maintenant = Date.now();
   const lent = await depasse(
@@ -2273,6 +2306,7 @@ async function routeCommunaute(chemin, request, env, cors) {
   // Mode transition : identifier accepte une requete sans jeton. Pas ici.
   if (!client) return refus(route, 401, "acces-requis", cors);
   if (!db) return refus(route, 503, "acces-non-configure", cors);
+  if (client.feuVert) return refusFeuVert(route, cors, client);
 
   const maintenant = Date.now();
   const lent = await depasse(
@@ -2838,6 +2872,9 @@ async function adminFeuVert(db, corps, maintenant) {
   if (action === "enregistrer") {
     const cohorte = String(corps.cohorte || "").trim();
     if (!FV_COHORTE.test(cohorte)) return { erreur: "cohorte-invalide" };
+    // Cohorte sans date de debut (FV_DEBUT_COHORTES) : l'application du membre
+    // ne saurait pas quand commence son cycle. A ajouter d'abord ici.
+    if (!FV_DEBUT_COHORTES.has(cohorte)) return { erreur: "cohorte-sans-date" };
     // Parcours : absent = inchange (changer = 0) ; null ou "" = retire ; sinon une valeur connue.
     const changer = Object.prototype.hasOwnProperty.call(corps, "parcours") && corps.parcours !== undefined ? 1 : 0;
     const parcours = changer && corps.parcours !== null && corps.parcours !== "" ? corps.parcours : null;

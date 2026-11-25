@@ -31,6 +31,8 @@ const fetchOrigine = globalThis.fetch;
 const logOrigine = console.log;
 
 beforeEach(() => {
+  // Deuxième cohorte datée pour les tests (une cohorte sans date est refusée).
+  T.FV_DEBUT_COHORTES.set("2", "2027-03-08");
   env = { ADMIN_SECRET: ADMIN, COACH_SYNC_URL: "https://exemple.invalid/exec", COACH_SYNC_SECRET: SECRET, DB: fauxD1() };
   sortants = [];
   globalThis.fetch = async (url, init) => {
@@ -40,6 +42,7 @@ beforeEach(() => {
   console.log = () => {};
 });
 afterEach(() => {
+  T.FV_DEBUT_COHORTES.delete("2");
   globalThis.fetch = fetchOrigine;
   console.log = logOrigine;
 });
@@ -252,7 +255,7 @@ describe("Pré-réglage de l'application (25/11/2026)", () => {
     assert.equal("feuVert" in b, false, "client individuel : aucun réglage Feu Vert");
   });
 
-  test("jamais les données d'un autre membre ; cohorte sans date : début null", async () => {
+  test("jamais les données d'un autre membre ; chaque cohorte a sa date", async () => {
     const anna = await invitation("Anna C.");
     const zoe = await invitation("Zoé A.");
     await admin({ action: "enregistrer", client: anna.client, cohorte: "1", parcours: "reprise" });
@@ -260,9 +263,9 @@ describe("Pré-réglage de l'application (25/11/2026)", () => {
     const a = (await appeler("/auth/activer", { code: anna.code })).corps;
     const z = (await appeler("/auth/activer", { code: zoe.code })).corps;
     assert.deepEqual(a.feuVert, { cohorte: "1", parcours: "reprise", debut: "2027-01-18" });
-    assert.deepEqual(z.feuVert, { cohorte: "2", parcours: null, debut: null });
+    assert.deepEqual(z.feuVert, { cohorte: "2", parcours: null, debut: "2027-03-08" });
     const etatZ = (await appeler("/feuvert/etat", {}, z.jeton)).corps;
-    assert.deepEqual(etatZ.feuVert, { cohorte: "2", parcours: null, debut: null });
+    assert.deepEqual(etatZ.feuVert, { cohorte: "2", parcours: null, debut: "2027-03-08" });
     assert.ok(!JSON.stringify(etatZ).includes("Anna") && !JSON.stringify(etatZ).includes(anna.client));
   });
 
@@ -321,6 +324,18 @@ describe("Pré-réglage de l'application (25/11/2026)", () => {
     assert.equal((await appeler("/feuvert/etat", {}, lea.jeton)).corps.feuVert.parcours, "reprise");
   });
 
+  test("/admin/feuvert : cohorte sans date de début refusée (400 cohorte-sans-date), rien d'écrit", async () => {
+    const lea = await clientActive("Léa B.");
+    const r = await admin({ action: "enregistrer", client: lea.id, cohorte: "3", parcours: "reprise" });
+    assert.equal(r.statut, 400);
+    assert.equal(r.corps.error, "cohorte-sans-date");
+    assert.equal((await admin({ action: "liste" })).corps.membres.length, 0);
+    assert.equal((await appeler("/feuvert/etat", {}, lea.jeton)).corps.inscrit, false);
+    // Ligne ancienne d'une cohorte sans date (écrite avant ce contrôle) : début null, l'app garde le sien.
+    env.DB.sqlite.prepare("INSERT INTO feuvert (client_id, cohorte, passeport, missions, maj_le) VALUES (?, '9', '{}', '{}', 1)").run(lea.id);
+    assert.deepEqual((await appeler("/feuvert/etat", {}, lea.jeton)).corps.feuVert, { cohorte: "9", parcours: null, debut: null });
+  });
+
   test("colonne déjà ajoutée par une autre instance : l'erreur « duplicate column » est ignorée", async () => {
     let alter = 0;
     const faux = {
@@ -334,9 +349,80 @@ describe("Pré-réglage de l'application (25/11/2026)", () => {
         }
       })
     };
-    await T.migrer(faux);
+    assert.equal(await T.migrer(faux), true);
     assert.equal(alter, T.MIGRATIONS.length);
+    // Autre panne : journalisée, sans exception ; la base reste servie et la migration sera retentée.
     const casse = { prepare: () => ({ all: async () => ({ results: [] }), run: async () => { throw new Error("disk I/O error"); } }) };
-    await assert.rejects(() => T.migrer(casse), /disk I\/O/);
+    assert.equal(await T.migrer(casse), false);
+  });
+
+  test("migration en panne : les autres routes répondent, et elle est retentée ensuite", async () => {
+    const db = env.DB;
+    const prepareOrigine = db.prepare;
+    let pannes = 1;
+    db.prepare = (sql) => {
+      const i = prepareOrigine(sql);
+      if (/^ALTER TABLE/.test(sql) && pannes-- > 0) return { ...i, run: async () => { throw new Error("disk I/O error"); } };
+      return i;
+    };
+    const lea = await clientActive("Léa B."); // invitations et activation : servies malgré la panne
+    assert.ok(lea.jeton);
+    await appeler("/feuvert/etat", {}, lea.jeton); // requête suivante : migration retentée
+    db.prepare = prepareOrigine;
+    assert.ok(db.sqlite.prepare("SELECT name FROM pragma_table_info('feuvert')").all().some((c) => c.name === "parcours"));
+  });
+});
+
+describe("Membre Feu Vert : routes du coaching individuel refusées (25/11/2026)", () => {
+  async function deux() {
+    const lea = await clientActive("Léa B.");
+    const paul = await clientActive("Paul F.");
+    await admin({ action: "enregistrer", client: lea.id, cohorte: "1", parcours: "reprise" });
+    return { lea, paul };
+  }
+  const iaEnv = () => ({ ...env, GEMINI_API_KEY: "cle-de-test" });
+
+  test("/ai : 403 reserve-coaching-individuel pour un membre Feu Vert, servi pour un client individuel", async () => {
+    const { lea, paul } = await deux();
+    const corps = { fonction: "chat", contents: [{ role: "user", parts: [{ text: "Bonjour" }] }] };
+    const r = await appeler("/ai", corps, lea.jeton, iaEnv());
+    assert.equal(r.statut, 403);
+    assert.equal(r.corps.error, "reserve-coaching-individuel");
+    assert.equal(sortants.length, 0, "rien n'est parti vers l'IA");
+    const p = await appeler("/ai", corps, paul.jeton, iaEnv());
+    assert.notEqual(p.statut, 403, "client individuel : pas de refus Feu Vert");
+  });
+
+  test("/defis et /communaute : 403 pour un membre Feu Vert", async () => {
+    const { lea, paul } = await deux();
+    for (const chemin of ["/defis/mes", "/defis/creer", "/communaute/profil", "/communaute/classement"]) {
+      const r = await appeler(chemin, {}, lea.jeton);
+      assert.equal(r.statut, 403, chemin);
+      assert.equal(r.corps.error, "reserve-coaching-individuel", chemin);
+      assert.notEqual((await appeler(chemin, {}, paul.jeton)).corps.error, "reserve-coaching-individuel", chemin + " (individuel)");
+    }
+  });
+
+  test("/coach-sync : pointage et check-in Feu Vert passent, tout autre type est refusé", async () => {
+    const { lea, paul } = await deux();
+    const base = { date: "2027-01-19", weekKey: "2027-01-18", message: "x", note: "x" };
+    assert.equal((await appeler("/coach-sync", { ...base, type: "pointage", creneau: "Feu Vert" }, lea.jeton)).statut, 200);
+    assert.equal((await appeler("/coach-sync", { ...base, type: "checkin_feu_vert" }, lea.jeton)).statut, 200);
+    for (const type of ["alerte_seances_manquees", "resume_hebdo", "activite", "alerte_poids", "alerte_nutrition", "justification"]) {
+      const r = await appeler("/coach-sync", { ...base, type }, lea.jeton);
+      assert.equal(r.statut, 403, type);
+      assert.equal(r.corps.error, "reserve-coaching-individuel");
+    }
+    assert.equal(sortants.length, 2, "seuls pointage et check-in sont relayés");
+    assert.equal((await appeler("/coach-sync", { ...base, type: "resume_hebdo" }, paul.jeton)).statut, 200, "individuel : inchangé");
+  });
+
+  test("/feuvert/*, /presence et /auth/activer restent ouverts ; retiré de Feu Vert : tout se rouvre", async () => {
+    const { lea } = await deux();
+    assert.equal((await appeler("/feuvert/etat", {}, lea.jeton)).statut, 200);
+    assert.equal((await appeler("/feuvert/tableau", {}, lea.jeton)).statut, 200);
+    assert.notEqual((await appeler("/presence", { derniereSaisie: "2027-01-19" }, lea.jeton)).corps.error, "reserve-coaching-individuel");
+    await admin({ action: "retirer", client: lea.id });
+    assert.notEqual((await appeler("/defis/mes", {}, lea.jeton)).corps.error, "reserve-coaching-individuel");
   });
 });

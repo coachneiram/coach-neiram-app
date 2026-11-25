@@ -30,6 +30,10 @@ export const ERREURS_ESPACE_COACH = {
   "lien-invalide": "Lien refusé : il doit commencer par https:// (300 caractères au plus).",
   "semaine-invalide": "Semaine inconnue (1 à 6).",
   "cohorte-invalide": "Cohorte : lettres, chiffres ou tiret, 12 caractères au plus (ex. « 1 »).",
+  // 25/11/2026 : sans date de début, l'application du membre ne saurait pas quand démarre son cycle.
+  "cohorte-sans-date":
+    "Cohorte refusée : elle n'a pas encore de date de début dans le proxy. Ajoute-la dans FV_DEBUT_COHORTES (worker/coach-neiram-proxy.js), redéploie le Worker, puis réessaie. Cohorte datée aujourd'hui : « 1 » (lundi 18 janvier 2027).",
+  "parcours-invalide": "Parcours refusé : Reprise, Bases+ ou non fixé.",
   introuvable: "Pseudo ou publication introuvable.",
   reseau: "Pas de connexion au serveur : réessaie.",
   indisponible: "Le serveur ne répond pas comme prévu : réessaie plus tard."

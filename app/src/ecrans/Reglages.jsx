@@ -35,6 +35,7 @@ import { ChampsProfil } from "./ChampsProfil.jsx";
 import { avecAllergiesDeclarees } from "../lib/consigne-coach.js";
 import { Btn, Field, LienTuto, Modal, STYLE_ENTETE_TUTO, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { MSG_ACTIVATION, TEXTES_ACCES, accesActuel, activerCode, oublierAcces } from "../lib/acces.js";
+import { profilApresActivation } from "../lib/feu-vert.js";
 import { TEXTES_PLATEFORME, enregistrerCodePlateforme, lireCodePlateforme, oublierCodePlateforme } from "../lib/plateforme.js";
 import { LienAide, LienNouveautes, RappelsAppFermee, TestNotifications } from "../ui/Annonces.jsx";
 import { TEXTES_TUTOS } from "../lib/tutos.js";
@@ -460,7 +461,15 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
               {TEXTES_TUTOS.lienGuide}
             </Btn>
           )}
-          {PROXY_BASE_URL && <CarteAcces />}
+          {/* Code d'un membre Feu Vert entré ici : le profil bascule en Feu Vert verrouillé. */}
+          {PROXY_BASE_URL && (
+            <CarteAcces
+              onActive={(r) => {
+                const suivant = profilApresActivation(profile, r);
+                if (suivant) onSave(suivant);
+              }}
+            />
+          )}
           <CartePlateforme />
           <div style={styleLienTutoReglages}>
             <LienTuto id="profil-objectifs" />

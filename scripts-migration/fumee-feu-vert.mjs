@@ -31,7 +31,12 @@
  *  12. NOUVEAU MEMBRE : plus de choix manuel de la formule ; « J'ai un code
  *      Feu Vert » (code d'un client non inscrit : refusé) → profil Feu Vert
  *      pré-réglé, onglet Feu Vert seul, tuto Feu Vert, parcours choisi UNE
- *      fois ; aucune adresse n'ouvre un autre onglet.
+ *      fois ; aucune adresse n'ouvre un autre onglet ;
+ *  13. CONTOURNEMENT FERMÉ (revue du 25/11/2026) : profil individuel, puis
+ *      code d'un membre inscrit dans Réglages > « Accès de ton coach » → le
+ *      profil bascule en Feu Vert verrouillé ; /ai refusé par le proxy ;
+ *  14. PROFIL FEU VERT SANS INSCRIPTION : « Revenir au coaching individuel »
+ *      (application complète, rien d'effacé).
  *
  *   cd app && npm run build && cd ..
  *   node scripts-migration/fumee-feu-vert.mjs
@@ -106,6 +111,7 @@ const lea = await membre("Léa B.");
 const invitation = async (libelle) => (await appelWorker("/admin/invitations", { libelle }, { Authorization: "Bearer " + ADMIN })).corps;
 const nina = await invitation("Nina E.");
 const paul = await invitation("Paul F.");
+const marc = await invitation("Marc G.");
 const anna = await membre("Anna C.");
 const zoe = await membre("Zoé A.");
 const tom = await membre("Tom D.");
@@ -126,6 +132,8 @@ await admin({
   },
   missions: { 1: { semaine: 1 }, 2: { semaine: 3 } }
 });
+// Marc : inscrit, mais il créera d'abord un profil individuel (contournement).
+await admin({ action: "enregistrer", client: marc.client, cohorte: "1", parcours: "reprise", passeport: {}, missions: {} });
 // Nina : inscrite AVANT d'activer son code, parcours pas encore fixé.
 await admin({ action: "enregistrer", client: nina.client, cohorte: "1", passeport: {}, missions: {} });
 for (const m of [anna, zoe, tom]) await admin({ action: "enregistrer", client: m.client, cohorte: "1", passeport: {}, missions: m === zoe ? { 1: { semaine: 2 } } : {} });
@@ -376,6 +384,8 @@ try {
   await page.waitForTimeout(500);
   const reglages = page.locator("[data-reglages-feu-vert]");
   const texteReglages = (await reglages.count()) ? await reglages.textContent() : "";
+  await page.waitForTimeout(600);
+  verifier("réglages d'un membre inscrit : pas de « Revenir au coaching individuel »", (await page.locator("[data-non-inscrit-feu-vert]").count()) === 0);
   verifier(
     "réglages : formule, cohorte, début et parcours en lecture seule",
     /Feu Vert \(collectif\)/.test(await page.locator("[data-lecture-formule]").textContent()) &&
@@ -449,6 +459,13 @@ try {
   await page.waitForTimeout(1500);
   verifier("téléphone de Léa : parcours suivi à la réouverture", (await profilStocke(page)).feuVert.parcours === "reprise" && /parcours Reprise/.test(await page.locator("[data-ecran-feu-vert]").textContent()));
   verifier("inscription : choix du parcours à côté de la cohorte", (await carte.locator("[data-parcours-inscription]").count()) === 1);
+  // Cohorte sans date de début : refusée, message clair dans l'Espace coach.
+  await carte.locator("[data-inscrire]").selectOption({ label: "Paul F." });
+  await carte.locator("input[aria-label='Cohorte']").fill("3");
+  await carte.getByRole("button", { name: "Inscrire" }).click();
+  await coach.waitForTimeout(800);
+  verifier("espace coach : cohorte sans date refusée avec un message clair", /pas encore de date de début/.test(await coach.locator("body").textContent()));
+  await capture(coach, "espace-coach-cohorte-sans-date");
   await carte.locator("[data-fiche-membre]").scrollIntoViewIfNeeded();
   await capture(coach, "espace-coach-passeport");
   await carte.locator("[data-videos-coach]").scrollIntoViewIfNeeded();
@@ -517,6 +534,73 @@ try {
     verifier("nouveau membre, adresse " + q + " : Feu Vert seul", (await p2.locator("[data-ecran-feu-vert]").count()) === 1 && (await p2.locator(".bottom-nav, [data-filet-ecran]").count()) === 0);
   }
   await neuf.close();
+
+  // Contexte de téléphone neuf, proxy réel pour l'accès et Feu Vert, le reste coupé.
+  async function telephone(initial) {
+    const c = await nav.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: "fr-FR", timezoneId: "Europe/Paris" });
+    await c.clock.setFixedTime(new Date("2027-01-12T19:00:00+01:00"));
+    await c.addInitScript(sansAides);
+    await c.addInitScript((v) => {
+      if (localStorage.getItem("coach_profile")) return;
+      localStorage.setItem("neiram_tutos_vus", JSON.stringify(["journal", "repas", "nutrition", "sommeil", "mensurations", "entrainements", "tendances", "feuvert"]));
+      localStorage.setItem("coach_profile", JSON.stringify(v));
+    }, initial);
+    for (const motif of ["**/feuvert/**", "**/auth/activer", "**/coach-sync"]) await c.route(motif, versWorker);
+    for (const motif of ["**/presence", "**/communaute/**", "**/push/**", "**/ai", "**/defis/**"]) await c.route(motif, (r) => r.abort("internetdisconnected"));
+    const pg = await c.newPage();
+    pg.on("pageerror", (e) => erreurs.push("téléphone : " + e.message));
+    pg.on("dialog", (d) => d.accept());
+    await pg.goto(URL_APP, { waitUntil: "domcontentloaded" });
+    await pg.waitForTimeout(1200);
+    return { c, pg };
+  }
+
+  // 13. Contournement : profil individuel, puis code Feu Vert dans les Réglages.
+  const individuel = { name: "Marc", sex: "homme", age: 33, heightCm: 180, startWeightKg: 84, activityLevel: "leger", goal: "maintien", trainingMode: "app", coachingMode: "presentiel", dietType: "aucun", allergies: [] };
+  const t1 = await telephone(individuel);
+  verifier("contournement : profil individuel, application complète au départ", (await t1.pg.locator(".bottom-nav button").count()) === 7);
+  await t1.pg.locator(".mobile-header button[aria-label='Réglages']").click();
+  await t1.pg.waitForTimeout(500);
+  await t1.pg.locator("[data-carte-acces] input").fill(marc.code);
+  await t1.pg.locator("[data-carte-acces]").getByRole("button", { name: "Activer" }).click();
+  await t1.pg.waitForTimeout(1500);
+  const pMarc = await profilStocke(t1.pg);
+  verifier(
+    "contournement : le code d'un membre inscrit fait basculer le profil en Feu Vert verrouillé, sans rien effacer",
+    pMarc.formule === "feuvert" && pMarc.feuVert.cohorte === "1" && pMarc.feuVert.parcours === "reprise" && pMarc.startWeightKg === 84 &&
+      (await t1.pg.locator("[data-reglages-feu-vert]").count()) === 1,
+    JSON.stringify(pMarc)
+  );
+  await capture(t1.pg, "contournement-reglages-bascule");
+  await t1.pg.locator(".modal-panel button[aria-label='Fermer']").last().click();
+  await t1.pg.waitForTimeout(400);
+  verifier("contournement : écran Feu Vert seul ensuite", (await t1.pg.locator("[data-ecran-feu-vert]").count()) === 1 && (await t1.pg.locator(".bottom-nav, .nav-item").count()) === 0);
+  await capture(t1.pg, "contournement-feu-vert-seul");
+  const jetonMarc = JSON.parse(await t1.pg.evaluate(() => localStorage.getItem("acces_neiram"))).jeton;
+  const ia = await silencieux(async () => {
+    const r = await worker.fetch(new Request("https://proxy.test/ai", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + jetonMarc }, body: JSON.stringify({ fonction: "chat", contents: [] }) }), { ...env, GEMINI_API_KEY: "cle-de-fumee" });
+    return { statut: r.status, corps: await r.json() };
+  });
+  verifier("contournement : /ai refusé par le proxy (403 reserve-coaching-individuel)", ia.statut === 403 && ia.corps.error === "reserve-coaching-individuel", JSON.stringify(ia));
+  await t1.c.close();
+
+  // 14. Ancien profil Feu Vert créé à la main, jamais inscrit (pas de code).
+  const t2 = await telephone({ ...individuel, name: "Sam", formule: "feuvert", feuVert: { parcours: "reprise", cohorte: "1", debut: "2027-01-18" } });
+  await t2.pg.locator(".mobile-header button[aria-label='Réglages']").click();
+  await t2.pg.waitForTimeout(800);
+  verifier("non inscrit : « Revenir au coaching individuel » proposé", (await t2.pg.locator("[data-non-inscrit-feu-vert]").count()) === 1);
+  await t2.pg.locator("[data-non-inscrit-feu-vert]").scrollIntoViewIfNeeded();
+  await capture(t2.pg, "non-inscrit-revenir-individuel");
+  await t2.pg.getByRole("button", { name: "Revenir au coaching individuel" }).click();
+  await t2.pg.waitForTimeout(800);
+  const pSam = await profilStocke(t2.pg);
+  verifier(
+    "retour au coaching individuel : application complète, rien d'effacé",
+    (await t2.pg.locator(".bottom-nav button").count()) === 7 && pSam.formule === "" && pSam.feuVert.cohorte === "1" && pSam.startWeightKg === 84,
+    JSON.stringify(pSam)
+  );
+  await capture(t2.pg, "retour-individuel");
+  await t2.c.close();
 } catch (e) {
   erreurs.push("script : " + e.message);
 }

@@ -13,6 +13,11 @@
  *
  * Ce verrouillage est un confort : la cohorte et le parcours qui comptent
  * sont ceux du proxy, qu'aucune route client ne peut modifier.
+ *
+ * Profil Feu Vert sans inscription (créé à la main avant le 25/11/2026) :
+ * si le proxy dit « non inscrit » (ou s'il n'y a pas de code d'accès), le
+ * bouton « Revenir au coaching individuel » remet la formule à vide, sans
+ * rien effacer. Jamais proposé à un membre inscrit, ni sans réseau.
  */
 
 import { useEffect, useState } from "react";
@@ -23,7 +28,7 @@ import { Btn, Field, Modal, SelectInput, TextInput } from "../ui/primitives.jsx"
 import { LienAide } from "../ui/Annonces.jsx";
 import { X } from "../ui/icones.jsx";
 import { TEXTES_TUTOS } from "../lib/tutos.js";
-import { PARCOURS_FEU_VERT, choisirParcours, feuVertAJour, libelleParcours, peutChoisirParcours, reglagesDuServeur, reglagesFeuVert } from "../lib/feu-vert.js";
+import { PARCOURS_FEU_VERT, choisirParcours, feuVertAJour, libelleParcours, peutChoisirParcours, reglagesDuServeur, reglagesFeuVert, statutInscription } from "../lib/feu-vert.js";
 import { TEXTES_FEU_VERT as TFV, TEXTES_REGLAGES_FEU_VERT as T } from "../lib/textes-feu-vert.js";
 
 const VERSION_APP = typeof __VERSION_APP__ === "string" ? __VERSION_APP__ : "développement";
@@ -56,6 +61,17 @@ export function ReglagesFeuVert({ open, onClose, profile, onSave, onOuvrirAide, 
   const [prenom, setPrenom] = useState(profile?.name || "");
   const [parcours, setParcours] = useState("reprise");
   useEffect(() => setPrenom(profile?.name || ""), [profile, open]);
+  // Inscription vérifiée à chaque ouverture : « inscrit », « non-inscrit » ou « inconnu ».
+  const [inscription, setInscription] = useState("inconnu");
+  const [verification, setVerification] = useState(0);
+  useEffect(() => {
+    if (!open) return undefined;
+    let actif = true;
+    statutInscription().then((r) => actif && setInscription(r.statut));
+    return () => {
+      actif = false;
+    };
+  }, [open, verification]);
 
   if (!profile) return null;
   const r = reglagesFeuVert(profile);
@@ -71,6 +87,13 @@ export function ReglagesFeuVert({ open, onClose, profile, onSave, onOuvrirAide, 
   const accesActive = (reponse) => {
     const suivant = feuVertAJour(profile, reglagesDuServeur(reponse));
     if (suivant) onSave({ ...suivant, name: prenom });
+    setVerification((n) => n + 1);
+  };
+  const revenirIndividuel = () => {
+    if (!window.confirm(T.confirmerRevenir)) return;
+    // Formule vide : l'application complète revient. feuVert reste (rien n'est effacé).
+    onSave({ ...profile, name: prenom, formule: "" });
+    onClose();
   };
 
   return (
@@ -114,6 +137,16 @@ export function ReglagesFeuVert({ open, onClose, profile, onSave, onOuvrirAide, 
         </div>
 
         {PROXY_BASE_URL && <CarteAcces textes={T.acces} onActive={accesActive} />}
+
+        {inscription === "non-inscrit" && (
+          <div data-non-inscrit-feu-vert style={styleSection}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>{T.nonInscritTitre}</div>
+            <p style={{ ...styleAide, marginBottom: 10 }}>{T.nonInscritAide}</p>
+            <Btn variant="ghost" onClick={revenirIndividuel} style={{ width: "100%" }}>
+              {T.revenirIndividuel}
+            </Btn>
+          </div>
+        )}
 
         <Btn
           onClick={() => {

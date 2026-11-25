@@ -238,3 +238,67 @@ describe("profil créé par le code d'un membre inscrit", () => {
     assert.match(lire("app/src/App.jsx"), /onReglagesServeur=\{reglagesFeuVertRecus\}/);
   });
 });
+
+describe("contournement fermé : code Feu Vert entré dans un profil individuel (revue du 25/11/2026)", () => {
+  test("profilApresActivation : bascule en Feu Vert verrouillé pour un inscrit, rien sinon, sans rien effacer", () => {
+    const individuel = { name: "Léa", startWeightKg: 62, goal: "perte", formule: "" };
+    const p = FV.profilApresActivation(individuel, { ok: true, libelle: "Léa B.", feuVert: { cohorte: "1", parcours: "reprise", debut: "2027-01-18" } });
+    assert.equal(p.formule, "feuvert");
+    assert.deepEqual(p.feuVert, { cohorte: "1", parcours: "reprise", parcoursFixe: true, debut: "2027-01-18" });
+    assert.equal(p.startWeightKg, 62);
+    assert.deepEqual(ongletsPour(p).map((o) => o.id), ["feuvert"]);
+    assert.equal(FV.profilApresActivation(individuel, { ok: true, libelle: "Paul F." }), null);
+  });
+
+  test("Réglages (« Accès de ton coach ») : la réponse de l'activation est appliquée", () => {
+    const reglages = lire("app/src/ecrans/Reglages.jsx");
+    assert.match(reglages, /<CarteAcces\s+onActive=\{\(r\) => \{\s*const suivant = profilApresActivation\(profile, r\);\s*if \(suivant\) onSave\(suivant\);/);
+    // Aucune autre activation de code sans pré-réglage.
+    assert.equal((reglages.match(/<CarteAcces\b/g) || []).length, 1);
+    assert.match(lire("app/src/ecrans/ReglagesFeuVert.jsx"), /<CarteAcces textes=\{T\.acces\} onActive=\{accesActive\} \/>/);
+  });
+
+  test("au lancement, un profil individuel avec le code d'un inscrit bascule en Feu Vert", () => {
+    const app = lire("app/src/App.jsx");
+    assert.match(app, /if \(!pret \|\| !profile \|\| feuVertActif\(profile\) \|\| inscriptionVerifiee\.current \|\| !accesActuel\(\)\) return;/);
+    assert.match(app, /if \(r\.statut === "inscrit" && p && !feuVertActif\(p\)\) enregistrerProfil\(profilFeuVert\(p, r\.reglages\)\);/);
+  });
+
+  test("message « non inscrit » : plus d'invitation à créer un profil individuel", () => {
+    assert.ok(!/profil plus bas|accès est déjà actif|coaching individuel/i.test(FV.MSG_REJOINDRE["non-inscrit"]));
+  });
+
+  test("statutInscription : inscrit, non inscrit (ou sans code), inconnu sans réseau", async () => {
+    assert.deepEqual(await FV.statutInscription(), { statut: "non-inscrit", reglages: null }, "sans code d'accès");
+    localStorage.setItem(CLE_ACCES, JSON.stringify({ jeton: JETON }));
+    reseau([{ json: { ok: true, inscrit: false } }]);
+    assert.equal((await FV.statutInscription()).statut, "non-inscrit");
+    reseau([{ json: { ok: true, inscrit: true, cohorte: "1", feuVert: { cohorte: "1", parcours: null, debut: "2027-01-18" } } }]);
+    assert.deepEqual(await FV.statutInscription(), { statut: "inscrit", reglages: { cohorte: "1", parcours: null, debut: "2027-01-18" } });
+    reseau([new Error("hors ligne")]);
+    assert.equal((await FV.statutInscription()).statut, "inconnu");
+    reseau([{ status: 503, json: { ok: false } }]);
+    assert.equal((await FV.statutInscription()).statut, "inconnu");
+  });
+
+  test("Réglages Feu Vert : « Revenir au coaching individuel » seulement si non inscrit, formule vide, rien effacé", () => {
+    const r = sansCommentaires(lire("app/src/ecrans/ReglagesFeuVert.jsx"));
+    assert.match(r, /\{inscription === "non-inscrit" && \(/);
+    assert.match(r, /onSave\(\{ \.\.\.profile, name: prenom, formule: "" \}\);/);
+    assert.ok(!/feuVert: undefined|delete .*feuVert/.test(r));
+  });
+
+  test("synchro : un événement refusé au membre Feu Vert (403 reserve-coaching-individuel) sort de la file", () => {
+    assert.match(lire("app/src/lib/synchro-coach.js"), /if \(refus && refus\.error === "reserve-coaching-individuel"\) return true;/);
+  });
+
+  test("Aide Feu Vert : textes propres (pas de rappels), aucune réponse empruntée par index", () => {
+    const aide = lire("app/src/lib/aide.js");
+    assert.ok(!/AIDE\[\d\]/.test(aide));
+    assert.ok(!/rappel/i.test(JSON.stringify(AIDE_FEU_VERT)));
+  });
+
+  test("bandeau « Rien ne s'enregistre » : en Feu Vert, pas de renvoi vers les réglages", () => {
+    assert.match(lire("app/src/App.jsx"), /\? feuVert\s*\? "La mémoire du navigateur est pleine : libère de la place sur ton téléphone/);
+  });
+});

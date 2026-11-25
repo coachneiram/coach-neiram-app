@@ -325,7 +325,11 @@ export const AIDE_FEU_VERT = [
       {
         id: "fv-installer",
         question: "Comment installer l'appli sur mon téléphone ?",
-        reponse: AIDE[0].questions[0].reponse,
+        reponse: [
+          "Sur iPhone : ouvre le lien de l'appli dans Safari, touche le bouton Partager (le carré avec une flèche), puis « Sur l'écran d'accueil » et « Ajouter ».",
+          "Sur Android : dans Chrome, touche « Installer » dans le bandeau de l'appli, ou le menu ⋮ puis « Installer l'application ».",
+          "Ensuite, ouvre toujours l'appli depuis son icône : ton programme Feu Vert s'ouvre directement."
+        ],
         libelles: []
       },
       {
@@ -348,8 +352,11 @@ export const AIDE_FEU_VERT = [
       },
       {
         id: "fv-mettre-a-jour",
-        question: "Je ne vois pas les nouveautés : comment mettre l'appli à jour ?",
-        reponse: AIDE[0].questions[1].reponse,
+        question: "Comment mettre l'appli à jour ?",
+        reponse: [
+          "Ferme complètement l'appli (fais-la glisser hors de tes applis ouvertes), puis rouvre-la avec une connexion internet. Recommence une fois si besoin.",
+          "Ton Passeport et tes missions validées sont gardés par Marien : rien n'est perdu."
+        ],
         libelles: []
       }
     ]
@@ -389,7 +396,7 @@ export const AIDE_FEU_VERT = [
         id: "fv-checkin",
         question: "Comment envoyer mon check-in du lundi ?",
         reponse: [
-          "Le lundi, un bandeau te le rappelle. Dans « Check-in » : tes séances de la semaine écoulée, 1 victoire, 1 blocage, puis « Envoyer mon check-in ». Sans réseau, il part au retour de la connexion.",
+          "Le lundi, un bandeau en haut de ton écran Feu Vert te le signale. Dans « Check-in » : tes séances de la semaine écoulée, 1 victoire, 1 blocage, puis « Envoyer mon check-in ». Sans réseau, il part au retour de la connexion.",
           "Coche tes missions faites dans « Missions » : Marien les valide après ton check-in."
         ],
         libelles: ["Check-in", "Envoyer mon check-in", "Missions"]

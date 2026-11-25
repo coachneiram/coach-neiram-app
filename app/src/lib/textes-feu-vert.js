@@ -152,10 +152,15 @@ export const TEXTES_REGLAGES_FEU_VERT = {
   confirmerParcours: (libelle) => `Choisir le parcours ${libelle} ? Tu ne pourras plus le changer toi-même ensuite.`,
   enregistrer: "Enregistrer",
   version: (v) => "Version " + v,
+  // Profil Feu Vert sans inscription (créé à la main avant le 25/11/2026).
+  nonInscritTitre: "Tu n'es inscrit dans aucune cohorte Feu Vert",
+  nonInscritAide: "Ce téléphone n'est relié à aucune inscription Feu Vert. Tu es en coaching individuel ? Reviens à l'application complète : rien n'est effacé.",
+  revenirIndividuel: "Revenir au coaching individuel",
+  confirmerRevenir: "Revenir au coaching individuel ? L'onglet Feu Vert disparaît, tes données restent sur ce téléphone.",
   acces: {
     titre: "Accès de ton coach",
     explication: "Le code à 8 caractères donné par Marien relie ce téléphone à ton inscription Feu Vert : Passeport, missions, check-in et tableau.",
-    actif: (libelle) => `Activé${libelle ? " pour " + libelle : ""}. Ton Passeport et ton check-in passent par ce téléphone.`,
+    actif: (libelle) => `Activé${libelle ? " pour " + libelle : ""}${/\.$/.test(libelle || "") ? "" : "."} Ton Passeport et ton check-in passent par ce téléphone.`,
     champ: "Code d'accès (ex. K7PM-Q4XT)",
     bouton: "Activer",
     retirer: "Retirer l'accès de ce téléphone",

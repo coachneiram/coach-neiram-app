@@ -138,10 +138,6 @@ export function Bienvenue({ onSave }) {
           >
             Coaching Sportif
           </div>
-          <p style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 14 }}>
-            Configure ton suivi : ces infos calculent tes objectifs caloriques et macros. Modifiable à tout
-            moment.
-          </p>
         </div>
 
         <div data-accueil-feu-vert style={{ marginBottom: 18 }}>
@@ -196,6 +192,11 @@ export function Bienvenue({ onSave }) {
         >
           {TA.separateur}
         </div>
+        {/* Sous le separateur : ces infos ne concernent que le coaching individuel. */}
+        <p style={{ fontSize: 13, color: COLORS.textMuted, margin: "0 0 14px", textAlign: "center" }}>
+          Configure ton suivi : ces infos calculent tes objectifs caloriques et macros. Modifiable à tout
+          moment.
+        </p>
 
         <ChampsProfil value={valeur} onChange={setValeur} />
 

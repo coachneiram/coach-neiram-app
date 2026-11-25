@@ -59,7 +59,8 @@ import { totauxDuJour } from "./lib/score-jour.js";
 import { Coque, avecIcones } from "./ui/Coque.jsx";
 import { ongletPermis, ongletsPour } from "./lib/onglets.js";
 import { FeuVert } from "./ecrans/FeuVert.jsx";
-import { feuVertActif, feuVertAJour } from "./lib/feu-vert.js";
+import { feuVertActif, feuVertAJour, profilFeuVert, statutInscription } from "./lib/feu-vert.js";
+import { accesActuel } from "./lib/acces.js";
 import { ReglagesFeuVert } from "./ecrans/ReglagesFeuVert.jsx";
 import { ChoixPhoto } from "./ui/ChoixPhoto.jsx";
 import { Modal } from "./ui/primitives.jsx";
@@ -778,6 +779,21 @@ export default function App() {
     enregistrer(STORAGE_KEYS.profile, suivant);
   };
 
+  // Client individuel dont le code est celui d'un membre Feu Vert inscrit
+  // (profil créé à l'accueil, code entré ensuite) : une vérification par
+  // lancement, et le profil bascule en Feu Vert verrouillé, sans rien effacer.
+  const inscriptionVerifiee = useRef(false);
+  const profilCourant = useRef(profile);
+  profilCourant.current = profile;
+  useEffect(() => {
+    if (!pret || !profile || feuVertActif(profile) || inscriptionVerifiee.current || !accesActuel()) return;
+    inscriptionVerifiee.current = true;
+    statutInscription().then((r) => {
+      const p = profilCourant.current;
+      if (r.statut === "inscrit" && p && !feuVertActif(p)) enregistrerProfil(profilFeuVert(p, r.reglages));
+    });
+  }, [pret, profile]);
+
   // Feu Vert : cohorte, parcours ou début changés par Marien (réponse de
   // /feuvert/etat, lue par l'écran à chaque ouverture) → profil mis à jour.
   const reglagesFeuVertRecus = (reglages) => {
@@ -958,7 +974,9 @@ export default function App() {
         >
           <strong>Rien ne s'enregistre.</strong>{" "}
           {pannePersistance.quota
-            ? "La mémoire de l'application est pleine. Ouvre « Mon profil & réglages » pour faire de la place — tes saisies récentes ne sont pas conservées tant que ce message est là."
+            ? feuVert
+              ? "La mémoire du navigateur est pleine : libère de la place sur ton téléphone, puis rouvre l'application. Tes pointages récents ne sont pas conservés tant que ce message est là ; préviens Marien sur la plateforme Coach Neiram."
+              : "La mémoire de l'application est pleine. Ouvre « Mon profil & réglages » pour faire de la place — tes saisies récentes ne sont pas conservées tant que ce message est là."
             : "Le navigateur refuse d'écrire. Vérifie que la navigation privée est désactivée, puis rouvre l'application."}
         </div>
       )}

@@ -114,6 +114,33 @@ export function feuVertAJour(profil, serveur) {
   return pareil ? null : suivant;
 }
 
+/**
+ * Code activé ailleurs qu'à l'accueil (Réglages, « Accès de ton coach ») :
+ * si la réponse porte des réglages Feu Vert, le profil bascule en Feu Vert
+ * verrouillé (rien n'est effacé). Sinon null. Ferme le contournement « profil
+ * individuel créé à l'accueil, puis code Feu Vert entré dans les Réglages ».
+ */
+export function profilApresActivation(profil, reponse) {
+  const reglages = reglagesDuServeur(reponse);
+  return reglages ? profilFeuVert(profil, reglages) : null;
+}
+
+/**
+ * Statut d'inscription vu du serveur, pour un profil donné :
+ * "inscrit" (avec reglages), "non-inscrit" (jeton refusé ou pas de jeton :
+ * aucune inscription possible), ou "inconnu" (réseau, panne : on ne décide rien).
+ */
+export async function statutInscription(env = globalThis) {
+  if (!accesActuel(env)) return { statut: "non-inscrit", reglages: null };
+  try {
+    const d = await appeler("/feuvert/etat", {}, env);
+    const reglages = reglagesDuServeur(d);
+    return reglages ? { statut: "inscrit", reglages } : { statut: "non-inscrit", reglages: null };
+  } catch (e) {
+    return { statut: "inconnu", reglages: null };
+  }
+}
+
 /** Le membre peut-il encore choisir son parcours ? (une fois, tant que Marien ne l'a pas fixé) */
 export const peutChoisirParcours = (profil) => {
   const fv = (profil && profil.feuVert) || {};
@@ -472,7 +499,7 @@ export async function actualiserPasseport(env = globalThis, maintenant = new Dat
 export const MSG_REJOINDRE = {
   ...MSG_ACTIVATION,
   "non-inscrit":
-    "Ton code est activé, mais tu n'es pas encore inscrit dans une cohorte Feu Vert. Préviens Marien, puis touche « Réessayer ». Tu es en coaching individuel ? Crée ton profil plus bas : ton accès est déjà actif."
+    "Ton code est activé, mais tu n'es pas encore inscrit dans une cohorte Feu Vert. Préviens Marien sur la plateforme Coach Neiram, puis touche « Réessayer » une fois ton inscription faite."
 };
 
 /**
