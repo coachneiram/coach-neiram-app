@@ -426,8 +426,8 @@ CREATE TABLE IF NOT EXISTS feuvert_tableau (client_id TEXT PRIMARY KEY, cohorte 
 |---|---|---|
 | `/feuvert/etat` | membre (jeton) | **lire** son Passeport (8 gestes rouge/orange/vert + date), ses missions validées, les liens « Ma séance de la semaine, par Marien » de sa cohorte |
 | `/feuvert/tableau` | membre (jeton) | `{ accord: true, pseudo, semaines }` publie ses compteurs ; `{ accord: false }` efface sa ligne ; `{}` lit seulement. Rend le tableau de **sa** cohorte : pseudo, compteurs, missions validées, par ordre alphabétique |
-| `/admin/feuvert` `liste` | coach | membres inscrits (libellé, cohorte, Passeport, missions, pseudo) et liens vidéo |
-| `/admin/feuvert` `enregistrer` | coach | `{ client, cohorte, passeport, missions }` : inscrire un membre, fixer ses états et ses missions validées (`{ "1": { semaine: 2 } }`) |
+| `/admin/feuvert` `liste` | coach | membres inscrits (libellé, cohorte, parcours, Passeport, missions, pseudo) et liens vidéo |
+| `/admin/feuvert` `enregistrer` | coach | `{ client, cohorte, parcours?, passeport, missions }` : inscrire un membre, fixer ses états et ses missions validées (`{ "1": { semaine: 2 } }`) |
 | `/admin/feuvert` `retirer` | coach | efface Passeport et ligne du tableau |
 | `/admin/feuvert` `video` | coach | `{ cohorte, semaine, url }` : lien https de la séance filmée de la semaine (url vide : retiré) |
 
@@ -443,6 +443,39 @@ CREATE TABLE IF NOT EXISTS feuvert_tableau (client_id TEXT PRIMARY KEY, cohorte 
 - `/admin/revoquer` efface aussi les données Feu Vert du client.
 - Check-in du lundi : par `/coach-sync`, type `checkin_feu_vert` (semaine dans
   `weekKey`, résumé dans `message`, victoire dans `note`, blocage dans `motif`).
+
+### Accès restreint et pré-réglage (25 novembre 2026)
+
+Un membre Feu Vert n'a plus que l'onglet Feu Vert, et son profil se crée
+**uniquement** par son code (« J'ai un code Feu Vert » à l'accueil). Le proxy
+pré-règle l'application :
+
+- **Migration sans perte**, jouée seule à la première requête (liste
+  `MIGRATIONS`, idempotente : colonne cherchée d'abord, « duplicate column »
+  ignoré) :
+  ```sql
+  ALTER TABLE feuvert ADD COLUMN parcours TEXT; -- reprise | basesplus | NULL (pas encore fixé)
+  ```
+- `/auth/activer` et `/feuvert/etat` renvoient, pour un client inscrit dans
+  `feuvert` et seulement le sien : `feuVert: { cohorte, parcours, debut }`.
+  `debut` vient de `FV_DEBUT_COHORTES` (cohorte « 1 » → `2027-01-18`) ; cohorte
+  inconnue → `null` (l'application garde le 18 janvier 2027). **Nouvelle
+  cohorte : ajouter sa date dans `FV_DEBUT_COHORTES`, puis redéployer.**
+- `/admin/feuvert` `enregistrer` accepte `parcours` : absent = inchangé,
+  `null` ou `""` = retiré (le membre le choisit une fois), sinon `reprise` ou
+  `basesplus` (tout le reste : 400 `parcours-invalide`). `liste` le rend.
+- Inscrire le membre **avant** de lui envoyer son code : à l'activation, son
+  application se règle seule. Inscrit après : il touche « Réessayer ».
+- Aucune route membre n'écrit la cohorte ni le parcours.
+- `enregistrer` refuse (400 `cohorte-sans-date`) une cohorte absente de
+  `FV_DEBUT_COHORTES`.
+- **Défense côté serveur** : un client présent dans `feuvert` reçoit 403
+  `reserve-coaching-individuel` sur `/ai`, `/defis/*`, `/communaute/*` et sur
+  `/coach-sync` pour tout type autre que `pointage` et `checkin_feu_vert`.
+  Restent ouverts : `/feuvert/*`, `/presence`, `/push/*`, `/auth/activer`.
+  Retiré de Feu Vert (`retirer`) : tout se rouvre.
+- Migration en panne (autre chose qu'une colonne déjà là) : journalisée
+  (`/migration`), les autres routes répondent, la requête suivante la retente.
   Niveau **info** : une ligne dans le Journal et dans l'onglet Alertes (colonne
   Statut pour pointer les réponses de la journée), **sans mail**.
 - Tests : `node --test tests/worker-feu-vert.test.mjs tests/feu-vert.test.mjs` ;

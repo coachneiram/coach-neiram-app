@@ -35,6 +35,7 @@ import { ChampsProfil } from "./ChampsProfil.jsx";
 import { avecAllergiesDeclarees } from "../lib/consigne-coach.js";
 import { Btn, Field, LienTuto, Modal, STYLE_ENTETE_TUTO, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { MSG_ACTIVATION, TEXTES_ACCES, accesActuel, activerCode, oublierAcces } from "../lib/acces.js";
+import { profilApresActivation } from "../lib/feu-vert.js";
 import { TEXTES_PLATEFORME, enregistrerCodePlateforme, lireCodePlateforme, oublierCodePlateforme } from "../lib/plateforme.js";
 import { LienAide, LienNouveautes, RappelsAppFermee, TestNotifications } from "../ui/Annonces.jsx";
 import { TEXTES_TUTOS } from "../lib/tutos.js";
@@ -208,8 +209,12 @@ const VERSION_APP = typeof __VERSION_APP__ === "string" ? __VERSION_APP__ : "dé
  * Code d'acces donne par le coach (17 octobre 2026, audit P0-3 et P0-4) :
  * sans lui, le proxy refuse l'IA et l'envoi des seances. Les textes sont
  * dans lib/acces.js.
+ *
+ * Reprise par les Reglages Feu Vert (25/11/2026) : `textes` remplace les
+ * phrases propres a l'IA, `onActive` recoit la reponse (reglages Feu Vert
+ * du membre inscrit) pour mettre le profil a jour.
  */
-function CarteAcces() {
+export function CarteAcces({ textes = TEXTES_ACCES, onActive } = {}) {
   const [acces, setAcces] = useState(() => accesActuel());
   const [code, setCode] = useState("");
   const [enCours, setEnCours] = useState(false);
@@ -223,43 +228,44 @@ function CarteAcces() {
     if (r.ok) {
       setAcces(accesActuel());
       setCode("");
+      if (onActive) onActive(r);
     } else {
       setErreur(MSG_ACTIVATION[r.erreur] || MSG_ACTIVATION.indisponible);
     }
   };
   const retirer = () => {
-    if (!window.confirm(TEXTES_ACCES.confirmationRetrait)) return;
+    if (!window.confirm(textes.confirmationRetrait)) return;
     oublierAcces();
     setAcces(null);
   };
 
   return (
     <div data-carte-acces style={styleSection}>
-      <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>{TEXTES_ACCES.titre}</div>
+      <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>{textes.titre}</div>
       {acces ? (
         <>
-          <p style={{ ...styleAide, color: COLORS.good }}>{TEXTES_ACCES.actif(acces.libelle)}</p>
+          <p style={{ ...styleAide, color: COLORS.good }}>{textes.actif(acces.libelle)}</p>
           <button
             onClick={retirer}
             style={{ background: "none", border: "none", padding: 0, color: COLORS.textMuted, fontSize: 11.5, textDecoration: "underline", cursor: "pointer" }}
           >
-            {TEXTES_ACCES.retirer}
+            {textes.retirer}
           </button>
         </>
       ) : (
         <>
-          <p style={styleAide}>{TEXTES_ACCES.explication}</p>
+          <p style={styleAide}>{textes.explication}</p>
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <TextInput
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder={TEXTES_ACCES.champ}
-              aria-label={TEXTES_ACCES.champ}
+              placeholder={textes.champ}
+              aria-label={textes.champ}
               autoCapitalize="characters"
               autoComplete="one-time-code"
             />
             <Btn onClick={activer} disabled={enCours || code.replace(/[\s-]/g, "").length < 8}>
-              {TEXTES_ACCES.bouton}
+              {textes.bouton}
             </Btn>
           </div>
           {erreur && <p style={{ ...styleAide, color: COLORS.bad, marginTop: 6 }}>{erreur}</p>}
@@ -455,7 +461,15 @@ export function Reglages({ open, onClose, profile, onSave, onRestaurer, onVoirNo
               {TEXTES_TUTOS.lienGuide}
             </Btn>
           )}
-          {PROXY_BASE_URL && <CarteAcces />}
+          {/* Code d'un membre Feu Vert entré ici : le profil bascule en Feu Vert verrouillé. */}
+          {PROXY_BASE_URL && (
+            <CarteAcces
+              onActive={(r) => {
+                const suivant = profilApresActivation(profile, r);
+                if (suivant) onSave(suivant);
+              }}
+            />
+          )}
           <CartePlateforme />
           <div style={styleLienTutoReglages}>
             <LienTuto id="profil-objectifs" />

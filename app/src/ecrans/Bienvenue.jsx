@@ -28,14 +28,29 @@
  *     effrayante au pire moment ;
  *   - le bouton reste discret et second. La voie normale est de creer un
  *     profil ; la restauration ne concerne que ceux qui reviennent.
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * « J'AI UN CODE FEU VERT » (25 novembre 2026)
+ * ─────────────────────────────────────────────────────────────────────
+ *
+ * En tete : le membre Feu Vert entre le code donne par Marien, et rien
+ * d'autre (prenom optionnel). Le code est active, le proxy renvoie la
+ * cohorte, le parcours et le debut fixes par Marien, et le profil Feu Vert
+ * est cree pre-regle. C'est desormais la SEULE facon de creer un profil
+ * Feu Vert : le choix manuel de la formule a disparu, pour qu'un client
+ * individuel ou un inconnu ne puisse pas se mettre en Feu Vert lui-meme.
  */
 
 import { useRef, useState } from "react";
+import { accesActuel } from "../lib/acces.js";
+import { MSG_REJOINDRE, profilFeuVert, rejoindreFeuVert } from "../lib/feu-vert.js";
+import { TEXTES_ACCUEIL_FEU_VERT as TA } from "../lib/textes-feu-vert.js";
 import { COLORS } from "../tokens.js";
 import { PROFIL_PAR_DEFAUT } from "../lib/profil.js";
 import { ChampsProfil } from "./ChampsProfil.jsx";
-import { Btn, Card } from "../ui/primitives.jsx";
+import { Btn, Card, Field, TextInput } from "../ui/primitives.jsx";
 import { Dumbbell, Upload } from "../ui/icones.jsx";
+import { FeuTricolore } from "../ui/icones-feu-vert.jsx";
 import { messageErreurRestauration, restaurerDepuisFichier } from "../lib/sauvegarde-fichier.js";
 
 export function Bienvenue({ onSave }) {
@@ -44,8 +59,27 @@ export function Bienvenue({ onSave }) {
   const champFichier = useRef(null);
 
   // Age, taille et poids : sans eux, computeTargets n'a rien a calculer.
-  // Feu Vert (14/11/2026) : jamais de poids corporel, le profil s'enregistre sans.
-  const peutEnregistrer = valeur.formule === "feuvert" || (valeur.age && valeur.heightCm && valeur.startWeightKg);
+  const peutEnregistrer = valeur.age && valeur.heightCm && valeur.startWeightKg;
+
+  // « J'ai un code Feu Vert » : formulaire ouvert, code, prenom, envoi, erreur.
+  const [codeOuvert, setCodeOuvert] = useState(false);
+  const [code, setCode] = useState("");
+  const [prenom, setPrenom] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [erreurCode, setErreurCode] = useState(null);
+
+  const rejoindre = async (avecCode) => {
+    setEnCours(true);
+    setErreurCode(null);
+    const r = await rejoindreFeuVert(avecCode ? code : null);
+    setEnCours(false);
+    if (!r.ok) {
+      setErreurCode(r.erreur);
+      return;
+    }
+    const nom = prenom.trim();
+    onSave(profilFeuVert({ ...PROFIL_PAR_DEFAUT, ...(nom ? { name: nom } : {}) }, r.reglages));
+  };
 
   const restaurer = async (evenement) => {
     const fichier = evenement.target.files[0];
@@ -104,11 +138,65 @@ export function Bienvenue({ onSave }) {
           >
             Coaching Sportif
           </div>
-          <p style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 14 }}>
-            Configure ton suivi : ces infos calculent tes objectifs caloriques et macros. Modifiable à tout
-            moment.
-          </p>
         </div>
+
+        <div data-accueil-feu-vert style={{ marginBottom: 18 }}>
+          {!codeOuvert ? (
+            <Btn icon={FeuTricolore} onClick={() => setCodeOuvert(true)} style={{ width: "100%" }}>
+              {TA.bouton}
+            </Btn>
+          ) : (
+            <div data-formulaire-code-feu-vert>
+              <Field label={TA.code}>
+                <TextInput
+                  data-code-feu-vert
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder={TA.code}
+                  autoCapitalize="characters"
+                  autoComplete="one-time-code"
+                />
+              </Field>
+              <Field label={TA.prenom}>
+                <TextInput data-prenom-feu-vert value={prenom} maxLength={40} onChange={(e) => setPrenom(e.target.value)} />
+              </Field>
+              <Btn onClick={() => rejoindre(true)} disabled={enCours || code.replace(/[\s-]/g, "").length < 8} style={{ width: "100%" }}>
+                {enCours ? TA.enCours : TA.activer}
+              </Btn>
+              {erreurCode === "non-inscrit" && accesActuel() && (
+                <Btn variant="ghost" onClick={() => rejoindre(false)} disabled={enCours} style={{ width: "100%", marginTop: 8 }}>
+                  {TA.reessayer}
+                </Btn>
+              )}
+              {erreurCode && (
+                <p data-erreur-code-feu-vert style={{ fontSize: 12, color: COLORS.bad, margin: "8px 0 0", lineHeight: 1.5 }}>
+                  {MSG_REJOINDRE[erreurCode] || MSG_REJOINDRE.indisponible}
+                </p>
+              )}
+            </div>
+          )}
+          <p style={{ fontSize: 11.5, color: COLORS.textMuted, textAlign: "center", margin: "8px 0 0" }}>{TA.aide}</p>
+        </div>
+
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 0.6,
+            textTransform: "uppercase",
+            color: COLORS.textFaint,
+            borderTop: `1px solid ${COLORS.border}`,
+            paddingTop: 14,
+            marginBottom: 12
+          }}
+        >
+          {TA.separateur}
+        </div>
+        {/* Sous le separateur : ces infos ne concernent que le coaching individuel. */}
+        <p style={{ fontSize: 13, color: COLORS.textMuted, margin: "0 0 14px", textAlign: "center" }}>
+          Configure ton suivi : ces infos calculent tes objectifs caloriques et macros. Modifiable à tout
+          moment.
+        </p>
 
         <ChampsProfil value={valeur} onChange={setValeur} />
 

@@ -57,9 +57,11 @@ import { CLE_HABITUDES } from "./lib/habitudes.js";
 import { viderFile } from "./lib/synchro-coach.js";
 import { totauxDuJour } from "./lib/score-jour.js";
 import { Coque, avecIcones } from "./ui/Coque.jsx";
-import { ongletsPour } from "./lib/onglets.js";
+import { ongletPermis, ongletsPour } from "./lib/onglets.js";
 import { FeuVert } from "./ecrans/FeuVert.jsx";
-import { feuVertActif } from "./lib/feu-vert.js";
+import { feuVertActif, feuVertAJour, inscriptionDejaVerifiee, profilFeuVert, verifierInscriptionAuLancement } from "./lib/feu-vert.js";
+import { accesActuel } from "./lib/acces.js";
+import { ReglagesFeuVert } from "./ecrans/ReglagesFeuVert.jsx";
 import { ChoixPhoto } from "./ui/ChoixPhoto.jsx";
 import { Modal } from "./ui/primitives.jsx";
 import { Droplet, Loader2 } from "./ui/icones.jsx";
@@ -107,11 +109,16 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [ongletChoisi, setOngletActif] = useState("journal");
   const [reglagesOuverts, setReglagesOuverts] = useState(false);
-  // Onglets selon la formule (lib/onglets.js, Feu Vert du 14/11/2026). Un
-  // onglet sorti de la barre (formule changee dans les reglages) renvoie
-  // sur le premier de la liste.
+  // Onglets selon la formule (lib/onglets.js). Garde-fou central (Feu Vert,
+  // 25/11/2026) : un onglet hors de la liste — raccourci, notification,
+  // « Quoi de neuf », ecran en erreur, ancien etat — affiche le premier
+  // onglet permis ; pour un profil Feu Vert, toujours « feuvert ».
   const listeOnglets = ongletsPour(profile);
-  const ongletActif = listeOnglets.some((o) => o.id === ongletChoisi) ? ongletChoisi : listeOnglets[0].id;
+  const ongletActif = ongletPermis(profile, ongletChoisi);
+  const feuVert = feuVertActif(profile);
+  useEffect(() => {
+    if (ongletChoisi !== ongletActif) setOngletActif(ongletActif);
+  }, [ongletChoisi, ongletActif]);
   const [toast, setToast] = useState(null);
   // « Quoi de neuf » (7 octobre 2026) : annonces non vues, montrees a l'ouverture.
   const [nouveautes, setNouveautes] = useState([]);
@@ -415,6 +422,9 @@ export default function App() {
   // lib/raccourcis.js. Le traitement lit toujours l'etat le plus recent.
   const gererRaccourci = useRef(null);
   gererRaccourci.current = async (action) => {
+    // Feu Vert : aucun raccourci ni notification n'ouvre un autre ecran
+    // (eau du Journal, seance, repas, bilan). L'app reste sur Feu Vert.
+    if (feuVertActif(profile)) return;
     setReglagesOuverts(false);
     if (action.id === "eau") {
       const date = todayISO();
@@ -443,7 +453,8 @@ export default function App() {
   // Communaute Team Neiram (lib/communaute.js) : avec un profil seulement,
   // les chiffres permis par les accords partent au plus toutes les 30 min.
   useEffect(() => {
-    if (!pret || !profile) return undefined;
+    // Feu Vert : pas de communaute Team Neiram (hors de son application).
+    if (!pret || !profile || feuVertActif(profile)) return undefined;
     const minuteur = setTimeout(() => {
       publierSiBesoin({
         stats: statsCommunaute({ date: todayISO(), seances: sessions, repas: logEntries, journal: dailyForm, corps: bodyLogs, profil: profile, maxis: maxisForce })
@@ -481,7 +492,9 @@ export default function App() {
    * pour etre testable sans navigateur.
    */
   useEffect(() => {
-    if (!pret || !profile) return;
+    // Feu Vert : ces rappels (bilan du dimanche, eau, nutrition, creneau)
+    // renvoient vers des ecrans qu'il n'a pas.
+    if (!pret || !profile || feuVertActif(profile)) return;
     let arrete = false;
     const verifier = () => {
       if (arrete) return;
@@ -515,7 +528,9 @@ export default function App() {
    * relire la meme situation sans rien de neuf.
    */
   useEffect(() => {
-    if (!pret || !profile) return;
+    // Feu Vert : creneaux et semaines difficiles vivent dans Séances, hors de
+    // son application ; son suivi passe par le pointage et le check-in.
+    if (!pret || !profile || feuVertActif(profile)) return;
     let arrete = false;
     verifierAlertesCoach({
       profile,
@@ -556,7 +571,7 @@ export default function App() {
   }, [pret, profile, dateDerniereSaisie]);
 
   useEffect(() => {
-    if (!pret || !profile || !targets) return;
+    if (!pret || !profile || !targets || feuVertActif(profile)) return;
     verifierAlerteNutrition({ profile, repas: logEntries, cibles: targets });
   }, [pret, profile, targets]);
 
@@ -578,7 +593,7 @@ export default function App() {
   );
   const peseesVues = useRef(null);
   useEffect(() => {
-    if (!pret || !profile) return undefined;
+    if (!pret || !profile || feuVertActif(profile)) return undefined;
     if (peseesVues.current === null) {
       peseesVues.current = signaturePesees;
       return undefined;
@@ -758,10 +773,33 @@ export default function App() {
   };
 
   const enregistrerProfil = (suivant) => {
-    // Passage en Feu Vert (accueil ou réglages) : on ouvre son onglet.
+    // Passage en Feu Vert (code a l'accueil ou dans les réglages) : on ouvre son onglet.
     if (feuVertActif(suivant) && !feuVertActif(profile)) setOngletActif("feuvert");
     setProfile(suivant);
     enregistrer(STORAGE_KEYS.profile, suivant);
+  };
+
+  // Client individuel dont le code est celui d'un membre Feu Vert inscrit
+  // (profil créé à l'accueil, code entré ensuite) : une vérification par
+  // lancement et une seule fois par code (mémorisée), et le profil bascule
+  // en Feu Vert verrouillé, sans rien effacer.
+  const inscriptionVerifiee = useRef(false);
+  const profilCourant = useRef(profile);
+  profilCourant.current = profile;
+  useEffect(() => {
+    if (!pret || !profile || feuVertActif(profile) || inscriptionVerifiee.current || !accesActuel() || inscriptionDejaVerifiee()) return;
+    inscriptionVerifiee.current = true;
+    verifierInscriptionAuLancement().then((reglages) => {
+      const p = profilCourant.current;
+      if (reglages && p && !feuVertActif(p)) enregistrerProfil(profilFeuVert(p, reglages));
+    });
+  }, [pret, profile]);
+
+  // Feu Vert : cohorte, parcours ou début changés par Marien (réponse de
+  // /feuvert/etat, lue par l'écran à chaque ouverture) → profil mis à jour.
+  const reglagesFeuVertRecus = (reglages) => {
+    const suivant = feuVertAJour(profile, reglages);
+    if (suivant) enregistrerProfil(suivant);
   };
 
   if (!pret) {
@@ -813,7 +851,7 @@ export default function App() {
 
   const ecrans = {
     feuvert: feuVertActif(profil) ? (
-      <FeuVert profile={profil} sessionsApi={sessionsApi} onToast={afficherToast} onOuvrirReglages={() => setReglagesOuverts(true)} />
+      <FeuVert profile={profil} sessionsApi={sessionsApi} onToast={afficherToast} onOuvrirReglages={() => setReglagesOuverts(true)} onReglagesServeur={reglagesFeuVertRecus} />
     ) : null,
     journal: (
       <Journal
@@ -937,7 +975,9 @@ export default function App() {
         >
           <strong>Rien ne s'enregistre.</strong>{" "}
           {pannePersistance.quota
-            ? "La mémoire de l'application est pleine. Ouvre « Mon profil & réglages » pour faire de la place — tes saisies récentes ne sont pas conservées tant que ce message est là."
+            ? feuVert
+              ? "La mémoire du navigateur est pleine : libère de la place sur ton téléphone, puis rouvre l'application. Tes pointages récents ne sont pas conservés tant que ce message est là ; préviens Marien sur la plateforme Coach Neiram."
+              : "La mémoire de l'application est pleine. Ouvre « Mon profil & réglages » pour faire de la place — tes saisies récentes ne sont pas conservées tant que ce message est là."
             : "Le navigateur refuse d'écrire. Vérifie que la navigation privée est désactivée, puis rouvre l'application."}
         </div>
       )}
@@ -962,7 +1002,7 @@ export default function App() {
           />
         )}
         {/* Un ecran qui plante n'emporte pas l'app (ui/FiletErreur.jsx). */}
-        <FiletEcran key={ongletActif} ecran={ongletActif} onRetourJournal={() => setOngletActif("journal")}>
+        <FiletEcran key={ongletActif} ecran={ongletActif} onRetourJournal={feuVert ? undefined : () => setOngletActif("journal")}>
           {ecrans[ongletActif]}
         </FiletEcran>
       </Coque>
@@ -997,25 +1037,44 @@ export default function App() {
         )}
       </Modal>
 
-      <Reglages
-        open={reglagesOuverts}
-        onClose={() => setReglagesOuverts(false)}
-        profile={profil}
-        onSave={enregistrerProfil}
-        seances={sessions}
-        onOuvrirAide={() => {
-          setReglagesOuverts(false);
-          setAideOuverte(true);
-        }}
-        onOuvrirGuide={() => {
-          setReglagesOuverts(false);
-          setVueTutos({ guide: true });
-        }}
-        onVoirNouveautes={() => {
-          setReglagesOuverts(false);
-          setNouveautes(nouveautesPour(profil).slice(0, NOUVEAUTES_MAX));
-        }}
-      />
+      {feuVert ? (
+        // Feu Vert : réglages réduits, pré-réglés et en lecture seule
+        // (prénom et code d'accès seuls modifiables), aide et guide Feu Vert.
+        <ReglagesFeuVert
+          open={reglagesOuverts}
+          onClose={() => setReglagesOuverts(false)}
+          profile={profil}
+          onSave={enregistrerProfil}
+          onOuvrirAide={() => {
+            setReglagesOuverts(false);
+            setAideOuverte(true);
+          }}
+          onOuvrirGuide={() => {
+            setReglagesOuverts(false);
+            setVueTutos({ guide: true });
+          }}
+        />
+      ) : (
+        <Reglages
+          open={reglagesOuverts}
+          onClose={() => setReglagesOuverts(false)}
+          profile={profil}
+          onSave={enregistrerProfil}
+          seances={sessions}
+          onOuvrirAide={() => {
+            setReglagesOuverts(false);
+            setAideOuverte(true);
+          }}
+          onOuvrirGuide={() => {
+            setReglagesOuverts(false);
+            setVueTutos({ guide: true });
+          }}
+          onVoirNouveautes={() => {
+            setReglagesOuverts(false);
+            setNouveautes(nouveautesPour(profil).slice(0, NOUVEAUTES_MAX));
+          }}
+        />
+      )}
 
       <QuoiDeNeuf
         nouveautes={nouveautes}
@@ -1028,7 +1087,7 @@ export default function App() {
         }}
       />
 
-      <Tutos vue={vueTutos} onClose={() => setVueTutos(null)} />
+      <Tutos vue={vueTutos} onClose={() => setVueTutos(null)} feuVert={feuVert} />
       <EcranConsentementIa />
       <Aide open={aideOuverte} onClose={() => setAideOuverte(false)} objectifCalories={targets?.calories} feuVert={feuVertActif(profile)} />
     </>

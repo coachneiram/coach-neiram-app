@@ -184,6 +184,13 @@ async function remettre(evenement) {
       headers: { "Content-Type": "application/json", ...enTetesAcces() },
       body: JSON.stringify(evenement)
     });
+    // Membre Feu Vert (25/11/2026) : le proxy refuse tout evenement hors de
+    // son ecran (403 reserve-coaching-individuel). Definitif : retire de la
+    // file plutot que renvoye a chaque ouverture.
+    if (reponse.status === 403) {
+      const refus = await reponse.json().catch(() => ({}));
+      if (refus && refus.error === "reserve-coaching-individuel") return true;
+    }
     if (!reponse.ok) return false;
     // Le proxy repond { ok: false } quand le script coach refuse l'envoi :
     // un statut 200 ne suffit donc pas a conclure.

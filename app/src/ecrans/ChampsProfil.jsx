@@ -29,49 +29,11 @@ import { TOUS_LES_ALLERGENES } from "../lib/allergenes.js";
 import { TEXTES_CONTRAINTES_ALIM } from "../lib/textes-nutrition-perso.js";
 import { Btn, Field, IconBtn, NumberInput, SelectInput, TextInput } from "../ui/primitives.jsx";
 import { Plus, Trash2 } from "../ui/icones.jsx";
-import { FORMULES, FORMULE_FEU_VERT, PARCOURS_FEU_VERT, reglagesFeuVert } from "../lib/feu-vert.js";
-import { TEXTES_FEU_VERT as TFV } from "../lib/textes-feu-vert.js";
-
-/**
- * Formule Feu Vert (coaching collectif, 14 novembre 2026) : parcours,
- * cohorte et date de debut. Le programme vit dans l'onglet Feu Vert : le
- * choix « Où se passent tes séances » disparait tant que la formule est
- * active (il reste enregistre, et revient si on la quitte).
- */
-function ChampsFormule({ value, set }) {
-  const actif = value.formule === FORMULE_FEU_VERT;
-  const r = reglagesFeuVert(value);
-  const poser = (modif) => set({ feuVert: { ...r, ...modif } });
-  return (
-    <>
-      <Field label={TFV.formule}>
-        <SelectInput
-          data-formule
-          options={FORMULES}
-          value={actif ? FORMULE_FEU_VERT : ""}
-          onChange={(e) => set(e.target.value === FORMULE_FEU_VERT ? { formule: FORMULE_FEU_VERT, feuVert: r } : { formule: "" })}
-        />
-        <p style={styleAide}>{TFV.formuleAide(actif)}</p>
-      </Field>
-      {actif && (
-        <>
-          <Field label={TFV.parcours}>
-            <SelectInput data-parcours options={PARCOURS_FEU_VERT} value={r.parcours} onChange={(e) => poser({ parcours: e.target.value })} />
-            <p style={styleAide}>{TFV.parcoursAide((PARCOURS_FEU_VERT.find((p) => p.id === r.parcours) || {}).aide || "")}</p>
-          </Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label={TFV.cohorte}>
-              <TextInput data-cohorte value={r.cohorte} maxLength={12} onChange={(e) => poser({ cohorte: e.target.value.replace(/[^A-Za-z0-9-]/g, "") })} />
-            </Field>
-            <Field label={TFV.debut}>
-              <TextInput data-debut-cohorte type="date" value={r.debut} onChange={(e) => e.target.value && poser({ debut: e.target.value })} />
-            </Field>
-          </div>
-        </>
-      )}
-    </>
-  );
-}
+// Feu Vert : la formule ne se choisit plus ici (25/11/2026). Un profil Feu
+// Vert naît du code d'un membre inscrit (accueil, « J'ai un code Feu Vert »)
+// et a ses propres réglages (ReglagesFeuVert.jsx). Les champs de poids
+// restent masqués pour un profil Feu Vert restauré d'une sauvegarde.
+import { FORMULE_FEU_VERT } from "../lib/feu-vert.js";
 
 /** Types de metier : l'activite professionnelle entre dans la depense. */
 const TYPES_METIER = [
@@ -240,9 +202,6 @@ export function ChampsProfil({ value, onChange }) {
       <Field label="Prénom (optionnel)">
         <TextInput value={value.name || ""} onChange={(e) => set({ name: e.target.value })} />
       </Field>
-
-      {/* Feu Vert : la formule se choisit en premier, elle retire les champs de poids. */}
-      <ChampsFormule value={value} set={set} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label="Sexe">

@@ -29,18 +29,28 @@ export const ONGLETS = [
 /**
  * Onglets selon la formule du client.
  *
- * Feu Vert (coaching collectif, 14 novembre 2026) : l'onglet « Feu Vert »
- * passe en tete, et la barre se limite a ce que la formule utilise. La
- * nutrition detaillee, les mensurations et les tendances (poids, photos)
- * sont hors du perimetre vendu : elles sortent de la barre, sans que rien
- * ne soit efface. Revenir a la formule individuelle les rend.
+ * Feu Vert (coaching collectif) : UN SEUL onglet, « Feu Vert » (demande de
+ * Marien du 25 novembre 2026 : un membre Feu Vert n'a accès qu'à son
+ * programme, pas au reste de l'application). Séances, Journal et Sommeil,
+ * gardés jusque-la, sortent aussi. Rien n'est efface : les donnees restent
+ * sur le telephone.
  */
 export const ONGLET_FEU_VERT = { id: "feuvert", label: "Feu Vert", short: "Feu Vert" };
-const IDS_FEU_VERT = ["entrainements", "journal", "sommeil"];
 
 export function ongletsPour(profil) {
   if (!profil || profil.formule !== "feuvert") return ONGLETS;
-  return [ONGLET_FEU_VERT, ...ONGLETS.filter((o) => IDS_FEU_VERT.includes(o.id))];
+  return [ONGLET_FEU_VERT];
+}
+
+/**
+ * Garde-fou central : l'onglet a afficher pour ce profil. Un onglet hors de
+ * la liste (raccourci, notification, lien, « Quoi de neuf », ecran en
+ * erreur, ancien etat) renvoie sur le premier onglet permis — pour un
+ * profil Feu Vert, toujours « feuvert ».
+ */
+export function ongletPermis(profil, onglet) {
+  const liste = ongletsPour(profil);
+  return liste.some((o) => o.id === onglet) ? onglet : liste[0].id;
 }
 
 /**

@@ -94,13 +94,13 @@ function Etapes({ tuto, onFin, onGuide }) {
   );
 }
 
-function Guide({ onChoisir }) {
+function Guide({ onChoisir, feuVert }) {
   return (
     <div data-guide-tutos style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <p style={{ fontSize: 13, color: COLORS.textMuted, margin: 0, lineHeight: 1.5 }}>
         {T.introGuide}
       </p>
-      {tutosParOnglet().map((groupe) => (
+      {tutosParOnglet({ feuVert }).map((groupe) => (
         <div key={groupe.id}>
           <div
             style={{
@@ -155,7 +155,8 @@ function Guide({ onChoisir }) {
   );
 }
 
-export function Tutos({ vue, onClose }) {
+/** `feuVert` : guide reduit au tuto Feu Vert (le membre n'a que cet onglet). */
+export function Tutos({ vue, onClose, feuVert = false }) {
   // Ouvert depuis le guide : on y revient a la fin du tuto.
   const [depuisGuide, setDepuisGuide] = useState(false);
   const [courant, setCourant] = useState(vue);
@@ -188,6 +189,7 @@ export function Tutos({ vue, onClose }) {
         />
       ) : (
         <Guide
+          feuVert={feuVert}
           onChoisir={(id) => {
             setDepuisGuide(true);
             setCourant({ tuto: id });

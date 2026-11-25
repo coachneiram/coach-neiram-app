@@ -22,7 +22,7 @@
  * Cle « neiram_ » : etat de l'app sur ce telephone, hors sauvegarde.
  */
 
-import { ONGLETS } from "./onglets.js";
+import { ONGLETS, ONGLET_FEU_VERT } from "./onglets.js";
 import { TUTOS } from "./tutos-contenu.js";
 
 export { TUTOS };
@@ -37,12 +37,18 @@ export const trouverTuto = (id) => TUTOS.find((t) => t.id === id) || null;
 /** Le tuto qui presente un onglet (ouvert a la premiere visite). */
 export const tutoPrincipal = (onglet) => TUTOS.find((t) => t.onglet === onglet && t.principal) || null;
 
-/** Groupes du guide : les onglets, puis les Reglages. */
-export const GROUPES_GUIDE = [...ONGLETS.map((o) => ({ id: o.id, label: o.label })), { id: "reglages", label: "Réglages" }];
+/** Groupes du guide : les onglets, les Reglages, puis Feu Vert (25/11/2026). */
+export const GROUPES_GUIDE = [...ONGLETS.map((o) => ({ id: o.id, label: o.label })), { id: "reglages", label: "Réglages" }, { id: ONGLET_FEU_VERT.id, label: ONGLET_FEU_VERT.label }];
 
-/** Tous les tutos, ranges dans l'ordre des onglets, le principal en tete. */
-export function tutosParOnglet() {
-  return GROUPES_GUIDE.map((o) => ({
+/**
+ * Tous les tutos, ranges dans l'ordre des onglets, le principal en tete.
+ * `feuVert` (guide de l'app) : true, seulement le groupe Feu Vert (le membre
+ * n'a que cet onglet) ; false, tous sauf lui. Sans option : tout.
+ */
+export function tutosParOnglet({ feuVert } = {}) {
+  const groupes =
+    feuVert === true ? GROUPES_GUIDE.filter((g) => g.id === ONGLET_FEU_VERT.id) : feuVert === false ? GROUPES_GUIDE.filter((g) => g.id !== ONGLET_FEU_VERT.id) : GROUPES_GUIDE;
+  return groupes.map((o) => ({
     id: o.id,
     label: o.label,
     tutos: TUTOS.filter((t) => t.onglet === o.id).sort((a, b) => Number(!!b.principal) - Number(!!a.principal))

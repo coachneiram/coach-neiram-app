@@ -78,6 +78,8 @@ const aujourdhui = new Date().toISOString().slice(0, 10);
 
 async function telephone({ prenom, acces, pas }) {
   const ctx = await nav.newContext(appareil());
+  // Feu Vert (25/11/2026) : un profil individuel avec un code vérifie une fois son inscription Feu Vert : non inscrit.
+  await ctx.route("**/feuvert/**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true,"inscrit":false}' }));
   await ctx.addInitScript(sansAides);
   const page = await ctx.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));

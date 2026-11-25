@@ -46,6 +46,8 @@ const PROFIL = {
 
 async function contexte(profil, extra = () => {}) {
   const ctx = await nav.newContext({ ...appareil(), acceptDownloads: true });
+  // Feu Vert (25/11/2026) : un profil individuel avec un code vérifie une fois son inscription Feu Vert : non inscrit.
+  await ctx.route("**/feuvert/**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true,"inscrit":false}' }));
   await ctx.addInitScript(sansAides);
   const page = await ctx.newPage();
   page.on("pageerror", (e) => erreurs.push(e.message));

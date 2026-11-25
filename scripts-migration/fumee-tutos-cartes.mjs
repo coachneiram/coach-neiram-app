@@ -182,11 +182,14 @@ try {
   await page.getByRole("button", { name: "Guide d'utilisation (tutos)" }).click();
   await page.waitForTimeout(500);
   const dansGuide = await page.locator("[data-guide-tutos] [data-lien-tuto]").count();
+  // Le tuto Feu Vert (25/11/2026) n'est montré qu'aux membres Feu Vert : un
+  // client individuel voit tous les autres, aucun ne disparaît.
+  const attendusGuide = TUTOS.filter((t) => t.onglet !== "feuvert").length;
   console.log(
     "3. RÉGLAGES ET GUIDE    :",
-    dansReglages >= 4 && reglagesToujoursOuverts && dansGuide === TUTOS.length
+    dansReglages >= 4 && reglagesToujoursOuverts && dansGuide === attendusGuide
       ? `${dansReglages} « ? » dans les Réglages (fermeture : retour aux Réglages), guide de ${dansGuide} tutos`
-      : `*** réglages ${dansReglages}, toujours ouverts ${reglagesToujoursOuverts}, guide ${dansGuide}/${TUTOS.length} ***`
+      : `*** réglages ${dansReglages}, toujours ouverts ${reglagesToujoursOuverts}, guide ${dansGuide}/${attendusGuide} ***`
   );
 
   // 4. Couverture : chaque tuto de fonction relie a une carte a ete ouvert.

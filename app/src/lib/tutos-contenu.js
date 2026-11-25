@@ -799,4 +799,43 @@ const TUTOS_BASE = [
  * l'etape « voix » de « minuteur-repos » (Séances) et les raccourcis
  * (Réglages) viendront s'ajouter dans les fichiers de leur domaine.
  */
-export const TUTOS = [...TUTOS_BASE, ...TUTOS_SEANCES, ...TUTOS_ALIMENTATION, ...TUTOS_VIE];
+/*
+ * Feu Vert (25 novembre 2026) : le seul tuto d'un membre Feu Vert, qui n'a
+ * que cet onglet. Son guide ne montre que ce groupe (lib/tutos.js,
+ * tutosParOnglet) ; celui des autres clients ne le montre pas.
+ */
+const TUTOS_FEU_VERT = [
+  {
+    id: "feuvert",
+    onglet: "feuvert",
+    principal: true,
+    emoji: "🚦",
+    titre: "Feu Vert",
+    resume: "Ton programme collectif de 6 semaines, en un seul écran.",
+    etapes: [
+      {
+        titre: "Ta semaine",
+        texte: "Dans « Programme », ta semaine en cours : séance A, séance B (et bonus à partir de la semaine 4). Après ta séance, touche « J'ai fait la séance A » : elle part à Marien."
+      },
+      {
+        titre: "Ton Passeport",
+        texte: "Dans « Passeport », tes 8 gestes en rouge, orange ou vert. C'est Marien qui les fixe après la correction de ta vidéo : la charge ne bouge pas tant qu'un geste n'est pas vert."
+      },
+      {
+        titre: "Ta vidéo de correction",
+        texte: "Touche un geste pour sa fiche, puis « Envoyer ma vidéo à Marien sur la plateforme » : elle part en message privé sur la plateforme Coach Neiram. 2 vidéos maximum par semaine."
+      },
+      {
+        titre: "Missions et check-in",
+        texte: "Dans « Missions », la mission de la semaine. Chaque lundi, dans « Check-in », 3 lignes sur ta semaine écoulée, puis « Envoyer mon check-in »."
+      },
+      {
+        titre: "Ta régularité",
+        texte: "Dans « Régularité », ton compteur de points. Le tableau de ta cohorte est facultatif : tu y apparais seulement si tu le choisis."
+      }
+    ],
+    libelles: ["Programme", "Passeport", "Missions", "Check-in", "Régularité", "Envoyer ma vidéo à Marien sur la plateforme", "Envoyer mon check-in"]
+  }
+];
+
+export const TUTOS = [...TUTOS_BASE, ...TUTOS_SEANCES, ...TUTOS_ALIMENTATION, ...TUTOS_VIE, ...TUTOS_FEU_VERT];

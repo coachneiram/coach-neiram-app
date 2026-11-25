@@ -227,8 +227,8 @@ export function BandeauInstallation({ plateforme, peutProposer, onInstaller, onM
 
 /** Aide : les questions frequentes, par theme, ouvertes d'un toucher. */
 export function Aide({ open, onClose, objectifCalories, feuVert = false }) {
-  // Les reponses qui citent un objectif prennent celui du client ; en Feu
-  // Vert, « Un souci, une idee ? » renvoie vers la plateforme Coach Neiram.
+  // Les reponses qui citent un objectif prennent celui du client. Feu Vert
+  // (25/11/2026) : l'Aide du membre Feu Vert seule (lib/aide.js, AIDE_FEU_VERT).
   const aide = aidePersonnalisee({ objectifCalories, feuVert });
   return (
     <Modal open={open} onClose={onClose} title="Aide">

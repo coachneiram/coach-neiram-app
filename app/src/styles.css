@@ -298,6 +298,11 @@ textarea:focus-visible {
     max-width: 100%;
   }
 
+  /* Un seul onglet (Feu Vert) : pas de barre du bas, pas de place a lui reserver. */
+  .app-shell.onglet-unique .main-content {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+
   .modal-panel {
     max-height: 92vh;
   }

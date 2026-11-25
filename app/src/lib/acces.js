@@ -82,7 +82,9 @@ export async function activerCode(code, env = globalThis) {
   } catch (e) {
     return { ok: false, erreur: "indisponible" };
   }
-  return { ok: true, libelle: d.libelle || "" };
+  // feuVert (25/11/2026) : réglages d'un membre inscrit dans Feu Vert
+  // (cohorte, parcours, début), pour pré-régler son profil (lib/feu-vert.js).
+  return { ok: true, libelle: d.libelle || "", ...(d.feuVert && typeof d.feuVert === "object" ? { feuVert: d.feuVert } : {}) };
 }
 
 /** Textes de la carte « Accès de ton coach » (Reglages). */
@@ -90,7 +92,7 @@ export const TEXTES_ACCES = {
   titre: "Accès de ton coach",
   explication:
     "Ton coach t'a donné un code à 8 caractères. Il active l'assistant IA et l'envoi automatique de tes séances. À saisir une seule fois sur ce téléphone.",
-  actif: (libelle) => `Activé${libelle ? " pour " + libelle : ""}. L'IA et l'envoi au coach fonctionnent sur ce téléphone.`,
+  actif: (libelle) => `Activé${libelle ? " pour " + libelle : ""}${/\.$/.test(libelle || "") ? "" : "."} L'IA et l'envoi au coach fonctionnent sur ce téléphone.`,
   champ: "Code d'accès (ex. K7PM-Q4XT)",
   bouton: "Activer",
   retirer: "Retirer l'accès de ce téléphone",

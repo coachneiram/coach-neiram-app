@@ -265,8 +265,12 @@ export const NOUVEAUTES = [
   }
 ];
 
-/** Annonces que ce client peut recevoir, selon sa formule. */
+/**
+ * Annonces que ce client peut recevoir, selon sa formule. Feu Vert
+ * (25/11/2026) : aucune, elles presentent des ecrans qu'il n'a pas.
+ */
 export function nouveautesPour(profil, liste = NOUVEAUTES) {
+  if (profil && profil.formule === "feuvert") return [];
   return liste.filter((n) => n.pour !== "enligne" || enLigne(profil));
 }
 

@@ -6,6 +6,10 @@
  * sur la plateforme Coach Neiram depuis le 18/11/2026), et
  * les missions validées après le check-in. Le membre le lit dans son
  * onglet Feu Vert (POST /feuvert/etat). Route : POST /admin/feuvert.
+ *
+ * Parcours (25/11/2026) : fixé ici, à l'inscription ou plus tard (Reprise /
+ * Bases+). L'application du membre se pré-règle avec, et le membre ne peut
+ * plus le changer. « Non fixé » : il le choisit une fois lui-même.
  */
 
 import { useEffect, useState } from "react";
@@ -14,12 +18,28 @@ import { todayISO } from "../lib/dates.js";
 import { feuVertEnregistrer, feuVertListe, feuVertRetirer, feuVertVideo } from "../lib/espace-coach.js";
 import { CONTENU_FEU_VERT } from "../lib/feu-vert-contenu.js";
 import { ETATS_GESTE, niveauPasseport, normaliserPasseport } from "../lib/feu-vert-passeport.js";
+import { PARCOURS_FEU_VERT } from "../lib/feu-vert.js";
 import { Btn, Card, SectionTitle, TextInput } from "./primitives.jsx";
 import { TEXTES_FEU_VERT_COACH as T } from "../lib/textes-feu-vert.js";
 
 const COULEUR = { rouge: COLORS.bad, orange: COLORS.orange, vert: COLORS.good };
 const sDetail = { fontSize: 11.5, color: COLORS.textMuted, lineHeight: 1.45 };
 const sLigne = { padding: "8px 0", borderBottom: `1px solid ${COLORS.border}` };
+const sSelect = { background: COLORS.bgAlt, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "5px 6px", fontSize: 12 };
+
+/** Choix du parcours : non fixé, Reprise ou Bases+. */
+function ChoixParcours({ value, onChange, attribut }) {
+  return (
+    <select {...{ [attribut]: "" }} aria-label={T.parcours} value={value} onChange={(e) => onChange(e.target.value)} style={sSelect}>
+      <option value="">{T.parcoursNonFixe}</option>
+      {PARCOURS_FEU_VERT.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 function bouton(actif, couleur) {
   return {
@@ -40,6 +60,7 @@ function FicheMembre({ membre, onEnregistrer, onRetirer }) {
   const [passeport, setPasseport] = useState(() => normaliserPasseport(membre.passeport));
   const [missions, setMissions] = useState(membre.missions || {});
   const [cohorte, setCohorte] = useState(membre.cohorte || "1");
+  const [parcours, setParcours] = useState(membre.parcours || "");
   const poser = (id, etat) => setPasseport({ ...passeport, [id]: { etat, date: todayISO() } });
   const niv = niveauPasseport(passeport);
   return (
@@ -56,6 +77,10 @@ function FicheMembre({ membre, onEnregistrer, onRetirer }) {
           <TextInput value={cohorte} maxLength={12} onChange={(e) => setCohorte(e.target.value.replace(/[^A-Za-z0-9-]/g, ""))} style={{ width: 54, padding: "5px 7px", fontSize: 12.5 }} />
         </label>
       </div>
+      <label style={{ ...sDetail, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginTop: 8 }}>
+        {T.parcours}
+        <ChoixParcours value={parcours} onChange={setParcours} attribut="data-parcours-coach" />
+      </label>
       {CONTENU_FEU_VERT.gestes.map((g) => {
         const etat = passeport[g.id]?.etat || null;
         return (
@@ -89,7 +114,7 @@ function FicheMembre({ membre, onEnregistrer, onRetirer }) {
               else delete suivant[String(m.numero)];
               setMissions(suivant);
             }}
-            style={{ background: COLORS.bgAlt, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "5px 6px", fontSize: 12 }}
+            style={sSelect}
           >
             <option value="">{T.nonValidee}</option>
             {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -101,7 +126,7 @@ function FicheMembre({ membre, onEnregistrer, onRetirer }) {
         </div>
       ))}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <Btn onClick={() => onEnregistrer({ client: membre.id, cohorte, passeport, missions })} style={{ flex: 1, padding: "8px 12px", fontSize: 13 }}>
+        <Btn onClick={() => onEnregistrer({ client: membre.id, cohorte, parcours, passeport, missions })} style={{ flex: 1, padding: "8px 12px", fontSize: 13 }}>
           <span data-enregistrer-passeport>{T.enregistrer}</span>
         </Btn>
         <Btn variant="danger" onClick={() => onRetirer(membre)} style={{ padding: "8px 12px", fontSize: 13 }}>
@@ -145,6 +170,7 @@ export function CarteFeuVertCoach({ secret, clients, agir }) {
   const [ouverte, setOuverte] = useState(null);
   const [aInscrire, setAInscrire] = useState("");
   const [cohorte, setCohorte] = useState("1");
+  const [parcoursInscription, setParcoursInscription] = useState("");
 
   const charger = async () => {
     const r = await agir(() => feuVertListe(secret));
@@ -197,7 +223,8 @@ export function CarteFeuVertCoach({ secret, clients, agir }) {
           ))}
         </select>
         <TextInput value={cohorte} maxLength={12} aria-label={T.cohorte} onChange={(e) => setCohorte(e.target.value.replace(/[^A-Za-z0-9-]/g, ""))} style={{ width: 60 }} />
-        <Btn disabled={!aInscrire || !cohorte} onClick={() => enregistrer({ client: aInscrire, cohorte, passeport: {}, missions: {} }, T.inscrit(cohorte)).then(() => setAInscrire(""))}>
+        <ChoixParcours value={parcoursInscription} onChange={setParcoursInscription} attribut="data-parcours-inscription" />
+        <Btn disabled={!aInscrire || !cohorte} onClick={() => enregistrer({ client: aInscrire, cohorte, parcours: parcoursInscription, passeport: {}, missions: {} }, T.inscrit(cohorte)).then(() => setAInscrire(""))}>
           {T.inscrire}
         </Btn>
       </div>

@@ -310,6 +310,132 @@ export const REPONSE_SOUCI_FEU_VERT = [
 ];
 
 /**
+ * Aide d'un membre Feu Vert (25 novembre 2026). Il n'a que l'onglet Feu
+ * Vert : l'Aide ne parle que de lui (installer, son code, son programme,
+ * son Passeport, ses vidéos, son check-in, son tableau, un souci), jamais
+ * des repas, de la nutrition, des mesures ni du bilan.
+ *
+ * `libelles` : comme pour AIDE, verifies dans le code par les tests.
+ */
+export const AIDE_FEU_VERT = [
+  {
+    id: "fv-demarrer",
+    titre: "Démarrer",
+    questions: [
+      {
+        id: "fv-installer",
+        question: "Comment installer l'appli sur mon téléphone ?",
+        reponse: [
+          "Sur iPhone : ouvre le lien de l'appli dans Safari, touche le bouton Partager (le carré avec une flèche), puis « Sur l'écran d'accueil » et « Ajouter ».",
+          "Sur Android : dans Chrome, touche « Installer » dans le bandeau de l'appli, ou le menu ⋮ puis « Installer l'application ».",
+          "Ensuite, ouvre toujours l'appli depuis son icône : ton programme Feu Vert s'ouvre directement."
+        ],
+        libelles: []
+      },
+      {
+        id: "fv-code",
+        question: "Où entrer mon code Feu Vert ?",
+        reponse: [
+          "Au premier lancement, touche « J'ai un code Feu Vert », entre le code à 8 caractères reçu de Marien, puis « Activer mon code ». L'appli se règle toute seule : ta cohorte, ton parcours et la date de début viennent de ton inscription.",
+          "Tu changes de téléphone, ou ton code ne passe pas ? Demande un nouveau code à Marien : chaque code ne sert qu'une fois. Tu peux aussi l'entrer dans Réglages, carte « Accès de ton coach »."
+        ],
+        libelles: ["J'ai un code Feu Vert", "Activer mon code", "Accès de ton coach"]
+      },
+      {
+        id: "fv-reglages",
+        question: "Pourquoi je ne peux pas changer ma cohorte ou mon parcours ?",
+        reponse: [
+          "Ils sont réglés par Marien à ton inscription, d'après ton questionnaire : « Mon inscription Feu Vert » dans les Réglages les affiche. Tant que Marien n'a pas fixé ton parcours, tu peux le choisir une seule fois.",
+          "Une erreur ? Écris à Marien en message privé sur la plateforme Coach Neiram : il la corrige, et ton appli se met à jour à la prochaine ouverture."
+        ],
+        libelles: ["Mon inscription Feu Vert", "Choisir ce parcours"]
+      },
+      {
+        id: "fv-mettre-a-jour",
+        question: "Comment mettre l'appli à jour ?",
+        reponse: [
+          "Ferme complètement l'appli (fais-la glisser hors de tes applis ouvertes), puis rouvre-la avec une connexion internet. Recommence une fois si besoin.",
+          "Ton Passeport et tes missions validées sont gardés par Marien : rien n'est perdu."
+        ],
+        libelles: []
+      }
+    ]
+  },
+  {
+    id: "fv-semaine",
+    titre: "Ma semaine Feu Vert",
+    questions: [
+      {
+        id: "fv-pointer",
+        question: "Comment noter une séance faite ?",
+        reponse: [
+          "Dans « Programme », choisis la séance (A, B ou bonus), puis touche « J'ai fait la séance A » (ou B) après l'avoir faite. Elle part à Marien et compte dans ton check-in et ta régularité.",
+          "Note ta charge à côté de chaque geste : elle reste sur ton téléphone pour la séance suivante."
+        ],
+        libelles: ["Programme"]
+      },
+      {
+        id: "fv-passeport",
+        question: "Comment un geste passe-t-il au vert ?",
+        reponse: [
+          "C'est Marien qui fixe l'état de chaque geste, après la correction de ta vidéo. « Passeport » te montre les 8 gestes et ton niveau ; touche « Actualiser » pour voir sa dernière correction.",
+          "Tant qu'un geste n'est pas vert, la charge ne bouge pas : tu progresses en appliquant sa correction (amplitude, placement, tempo)."
+        ],
+        libelles: ["Passeport", "Actualiser"]
+      },
+      {
+        id: "fv-video",
+        question: "Comment envoyer ma vidéo de correction ?",
+        reponse: [
+          "Touche un geste pour ouvrir sa fiche, puis « Envoyer ma vidéo à Marien sur la plateforme » : la vidéo part en message privé sur la plateforme Coach Neiram, pas dans l'appli.",
+          "1 geste par vidéo, 30 s maximum, filmée en 1080p (25 Mo maximum). 2 vidéos par semaine ; Marien répond sous 48 h ouvrées."
+        ],
+        libelles: ["Envoyer ma vidéo à Marien sur la plateforme"]
+      },
+      {
+        id: "fv-checkin",
+        question: "Comment envoyer mon check-in du lundi ?",
+        reponse: [
+          "Le lundi, un bandeau en haut de ton écran Feu Vert te le signale. Dans « Check-in » : tes séances de la semaine écoulée, 1 victoire, 1 blocage, puis « Envoyer mon check-in ». Sans réseau, il part au retour de la connexion.",
+          "Coche tes missions faites dans « Missions » : Marien les valide après ton check-in."
+        ],
+        libelles: ["Check-in", "Envoyer mon check-in", "Missions"]
+      },
+      {
+        id: "fv-tableau",
+        question: "Qui voit mon tableau de régularité ?",
+        reponse: [
+          "Seulement les membres de ta cohorte qui ont, eux aussi, donné leur accord, et seulement ton pseudo, tes séances, tes check-ins et tes missions validées. Jamais ta charge, ton nom ni ton numéro.",
+          "Tu peux t'en retirer à tout moment dans « Régularité » : « Me retirer du tableau »."
+        ],
+        libelles: ["Régularité", "Me retirer du tableau"]
+      }
+    ]
+  },
+  {
+    id: "fv-coach",
+    titre: "Marien et tes données",
+    questions: [
+      {
+        id: "fv-donnees",
+        question: "Qui voit mes données ?",
+        reponse: [
+          "Marien reçoit tes séances pointées et ton check-in. Ton Passeport et tes missions validées sont gardés par son serveur, sous ton code d'accès.",
+          "Tes charges notées et tes coches de missions restent sur ton téléphone. Si tu changes de téléphone, ton Passeport revient avec ton nouveau code, mais pas ces notes."
+        ],
+        libelles: []
+      },
+      {
+        id: "souci",
+        question: "Un souci, une idée ?",
+        reponse: REPONSE_SOUCI_FEU_VERT,
+        libelles: []
+      }
+    ]
+  }
+];
+
+/**
  * L'Aide avec les chiffres du client.
  *
  * Retour du coach du 16 octobre 2026 : chaque client doit lire ses propres
@@ -318,8 +444,10 @@ export const REPONSE_SOUCI_FEU_VERT = [
  * `feuVert` : la réponse « Un souci, une idée ? » renvoie vers la plateforme.
  */
 export function aidePersonnalisee({ objectifCalories, feuVert = false } = {}) {
+  // Feu Vert (25/11/2026) : son Aide à lui, sans repas ni nutrition.
+  if (feuVert) return AIDE_FEU_VERT;
   const avecObjectif = Number(objectifCalories) > 0;
-  if (!avecObjectif && !feuVert) return AIDE;
+  if (!avecObjectif) return AIDE;
   const personnalisees = {};
   if (avecObjectif) {
     const c = chiffresExemples(objectifCalories);
@@ -331,8 +459,6 @@ export function aidePersonnalisee({ objectifCalories, feuVert = false } = {}) {
       `Ton total de la journée compte plus que la répartition par repas, et un plaisir prévu ${plaisir} par jour aide à ne pas craquer.`
     ];
   }
-  // Feu Vert (18/11/2026) : tout passe par la plateforme Coach Neiram, plus par WhatsApp.
-  if (feuVert) personnalisees.souci = () => REPONSE_SOUCI_FEU_VERT;
   return AIDE.map((section) => ({
     ...section,
     questions: section.questions.map((q) => (personnalisees[q.id] ? { ...q, reponse: personnalisees[q.id](q) } : q))
