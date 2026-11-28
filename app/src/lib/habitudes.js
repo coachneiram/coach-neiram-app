@@ -14,7 +14,14 @@
  * (lib/habitudes-bilan.js).
  *
  * Etat : « cn_habitudes » = { choisies: [id], perso: [{ id, label, emoji }],
- *   coches: { "2026-10-24": [id] } }.
+ *   coches: { "2026-10-24": [id] }, historique: [{ depuis, choisies }] }.
+ *
+ * Historique (27/11/2026) : changer ses habitudes ne vaut qu'a partir du
+ * jour du changement. Chaque modification enregistre la liste du jour
+ * (« depuis » = date du changement) ; un jour passe affiche la liste qui
+ * etait en vigueur ce jour-la, plus les habitudes cochees ce jour-la.
+ * Sans historique (etat d'avant ce correctif), la liste actuelle vaut pour
+ * tous les jours, comme avant.
  */
 
 import { addDays, todayISO } from "./dates.js";
@@ -63,34 +70,70 @@ export function normaliserHabitudes(brut) {
   for (const [d, ids] of Object.entries(e.coches && typeof e.coches === "object" ? e.coches : {})) {
     if (ISO.test(d) && Array.isArray(ids)) coches[d] = [...new Set(ids.filter((id) => typeof id === "string"))];
   }
-  return { choisies, perso, coches };
+  const parDate = new Map();
+  for (const h of Array.isArray(e.historique) ? e.historique : []) {
+    if (!h || typeof h.depuis !== "string" || !(ISO.test(h.depuis) || h.depuis === DEPUIS_TOUJOURS) || !Array.isArray(h.choisies)) continue;
+    parDate.set(h.depuis, [...new Set(h.choisies.filter((id) => connus.has(id)))].slice(0, HABITUDES_MAX));
+  }
+  const historique = [...parDate.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([depuis, ids]) => ({ depuis, choisies: ids }));
+  return { choisies, perso, coches, historique };
+}
+
+/** Date de debut de la premiere liste connue (habitudes d'avant l'historique). */
+export const DEPUIS_TOUJOURS = "0000-01-01";
+
+/**
+ * Nouvelle liste d'habitudes, valable a partir de `date` (aujourd'hui).
+ * Les jours d'avant gardent la liste qui etait en vigueur.
+ */
+function avecListe(e, choisies, date = todayISO()) {
+  const nouvelles = [...new Set(choisies)].slice(0, HABITUDES_MAX);
+  let historique = e.historique.slice();
+  if (!historique.length) historique.push({ depuis: DEPUIS_TOUJOURS, choisies: e.choisies });
+  historique = historique.filter((h) => h.depuis < date);
+  historique.push({ depuis: date, choisies: nouvelles });
+  return normaliserHabitudes({ ...e, choisies: nouvelles, historique });
+}
+
+/** Ids de la liste en vigueur au jour `date`. */
+export function choisiesLe(etat, date = todayISO()) {
+  const e = normaliserHabitudes(etat);
+  if (!e.historique.length || date >= todayISO()) return e.choisies;
+  let liste = e.historique[0].choisies;
+  for (const h of e.historique) if (h.depuis <= date) liste = h.choisies;
+  return liste;
 }
 
 export const habitudeParId = (etat, id) =>
   CATALOGUE_HABITUDES.find((h) => h.id === id) || normaliserHabitudes(etat).perso.find((p) => p.id === id) || null;
 
-/** Habitudes actives : toutes les choisies (10 au plus). */
-export function habitudesActives(etat) {
+/**
+ * Habitudes actives au jour `date` (10 au plus) : sans date, la liste
+ * actuelle ; pour un jour passe, la liste en vigueur ce jour-la plus les
+ * habitudes cochees ce jour-la.
+ */
+export function habitudesActives(etat, date = null) {
   const e = normaliserHabitudes(etat);
-  return e.choisies.slice(0, HABITUDES_MAX).map((id) => habitudeParId(e, id)).filter(Boolean);
+  const ids = date ? [...new Set([...choisiesLe(e, date), ...(date < todayISO() ? e.coches[date] || [] : [])])] : e.choisies;
+  return ids.map((id) => habitudeParId(e, id)).filter(Boolean);
 }
 
 export function peutAjouter(etat) {
   return normaliserHabitudes(etat).choisies.length < HABITUDES_MAX;
 }
 
-export function choisir(etat, id, actif) {
+export function choisir(etat, id, actif, date = todayISO()) {
   const e = normaliserHabitudes(etat);
   const choisies = actif ? [...new Set([...e.choisies, id])] : e.choisies.filter((x) => x !== id);
-  return normaliserHabitudes({ ...e, choisies });
+  return avecListe(e, choisies, date);
 }
 
-export function ajouterPerso(etat, label, emoji = "✨") {
+export function ajouterPerso(etat, label, emoji = "✨", date = todayISO()) {
   const e = normaliserHabitudes(etat);
   const nom = String(label || "").trim();
-  if (nom.length < 2) return e;
+  if (nom.length < 2 || e.choisies.length >= HABITUDES_MAX) return e;
   const id = "perso-" + Date.now().toString(36);
-  return normaliserHabitudes({ ...e, perso: [...e.perso, { id, label: nom, emoji }], choisies: [...e.choisies, id] });
+  return avecListe({ ...e, perso: [...e.perso, { id, label: nom, emoji }] }, [...e.choisies, id], date);
 }
 
 export const estCochee = (etat, date, id) => (normaliserHabitudes(etat).coches[date] || []).includes(id);
@@ -100,7 +143,7 @@ export function basculer(etat, date, id) {
   const jour = e.coches[date] || [];
   const coches = { ...e.coches, [date]: jour.includes(id) ? jour.filter((x) => x !== id) : [...jour, id] };
   if (!coches[date].length) delete coches[date];
-  return { ...e, coches };
+  return normaliserHabitudes({ ...e, coches });
 }
 
 /**

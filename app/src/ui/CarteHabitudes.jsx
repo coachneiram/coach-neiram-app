@@ -139,7 +139,7 @@ export function CarteHabitudes({ date = todayISO() }) {
     setEtat(suivant);
     enregistrer(CLE_HABITUDES, suivant);
   };
-  const actives = habitudesActives(etat);
+  const actives = habitudesActives(etat, date);
   const aujourdhui = todayISO();
   const futur = date > aujourdhui;
   const place = peutAjouter(etat);
